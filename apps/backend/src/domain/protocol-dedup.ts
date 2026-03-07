@@ -59,8 +59,7 @@ export function consolidateDelegators(
         delegatorId: canonicalId,
         delegateId: existing.delegateId,
         timeWeightedBalance: wei(
-          (existing.timeWeightedBalance as bigint) +
-            (score.timeWeightedBalance as bigint),
+          existing.timeWeightedBalance + score.timeWeightedBalance,
         ),
       });
     } else {
@@ -72,15 +71,4 @@ export function consolidateDelegators(
   }
 
   return Array.from(merged.values());
-}
-
-/**
- * @deprecated Use consolidateDelegators instead.
- * Kept for backward compatibility during migration.
- */
-export function deduplicateDelegators(
-  scores: DelegatorScore[],
-  mappings: ProtocolMapping[],
-): DelegatorScore[] {
-  return consolidateDelegators(scores, mappings, []);
 }

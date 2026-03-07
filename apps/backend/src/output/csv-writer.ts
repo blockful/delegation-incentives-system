@@ -13,8 +13,8 @@ export function distributionToCsv(result: DistributionResult): string {
   for (const payout of result.directPayouts) {
     rows.push([
       payout.address,
-      bigintToString(payout.amount as bigint),
-      weiToEnsString(payout.amount as bigint),
+      bigintToString(payout.amount),
+      weiToEnsString(payout.amount),
       payout.role,
       "direct",
     ]);
@@ -24,8 +24,8 @@ export function distributionToCsv(result: DistributionResult): string {
   for (const pool of result.lotteryPools) {
     rows.push([
       pool.winner,
-      bigintToString(pool.totalPrize as bigint),
-      weiToEnsString(pool.totalPrize as bigint),
+      bigintToString(pool.totalPrize),
+      weiToEnsString(pool.totalPrize),
       pool.entries.find((e) => e.address === pool.winner)?.role ?? "delegator",
       "lottery_winner",
     ]);

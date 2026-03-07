@@ -428,33 +428,33 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
       const { currentAVP, previousAVP, currentTierIndex } =
         await fetchMonthContext(dataSource, activeDelegateArray);
 
-      const growthBps = percentageGrowthBps(currentAVP as bigint, previousAVP as bigint);
+      const growthBps = percentageGrowthBps(currentAVP, previousAVP);
 
       const tiers = POOL_TIERS.map((tier, index) => {
-        const requiredAVP = (previousAVP as bigint) === 0n
+        const requiredAVP = previousAVP === 0n
           ? 0n
-          : (previousAVP as bigint) + mulDiv(previousAVP as bigint, tier.momGrowthMinBps as bigint, 10000n);
-        const additionalVPNeeded = requiredAVP > (currentAVP as bigint)
-          ? requiredAVP - (currentAVP as bigint)
+          : previousAVP + mulDiv(previousAVP, tier.momGrowthMinBps, 10000n);
+        const additionalVPNeeded = requiredAVP > currentAVP
+          ? requiredAVP - currentAVP
           : 0n;
 
         return {
           index,
           momGrowthMinPct: `${Number(tier.momGrowthMinBps) / 100}`,
           momGrowthMaxPct: `${Number(tier.momGrowthMaxBps) / 100}`,
-          poolSizeEns: formatWholeEns(tier.poolSize as bigint),
-          delegateCapEns: formatWholeEns(tier.delegateCap as bigint),
-          delegatorCapEns: formatWholeEns(tier.delegatorCap as bigint),
+          poolSizeEns: formatWholeEns(tier.poolSize),
+          delegateCapEns: formatWholeEns(tier.delegateCap),
+          delegatorCapEns: formatWholeEns(tier.delegatorCap),
           isCurrent: index === currentTierIndex,
-          isUnlocked: growthBps >= (tier.momGrowthMinBps as bigint),
+          isUnlocked: growthBps >= tier.momGrowthMinBps,
           additionalVPNeeded: additionalVPNeeded.toString(),
           requiredAVP: requiredAVP.toString(),
         };
       });
 
       return c.json({
-        currentAVP: (currentAVP as bigint).toString(),
-        previousAVP: (previousAVP as bigint).toString(),
+        currentAVP: currentAVP.toString(),
+        previousAVP: previousAVP.toString(),
         currentGrowthBps: growthBps.toString(),
         currentGrowthPct: `${Number(growthBps) / 100}`,
         currentTierIndex,
@@ -475,7 +475,7 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
       const { monthEnd, poolTier, currentTierIndex } =
         await fetchMonthContext(dataSource, activeDelegateArray);
 
-      const monthlyPool = poolTier.poolSize as bigint;
+      const monthlyPool = poolTier.poolSize;
       const isActiveDelegate = activeLower.has(address.toLowerCase());
       const accountBalances = await dataSource.delegations.getAccountBalances();
       const accountBalance = accountBalances.find(
@@ -500,18 +500,18 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
         }, 200);
       }
 
-      const twbWindowStart = seconds((monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint));
+      const twbWindowStart = seconds(monthEnd - TWB_WINDOW_SECONDS);
 
       if (isActiveDelegate) {
         const vpMap = await dataSource.votingPower.getVotingPower(activeDelegateArray);
         const userVP = vpMap.get(address) ?? vpMap.get(address.toLowerCase()) ?? wei(0n);
         let totalVP = 0n;
-        for (const vp of vpMap.values()) totalVP += vp as bigint;
+        for (const vp of vpMap.values()) totalVP += vp;
 
-        const delegatePool = applyBasisPoints(monthlyPool, DELEGATE_POOL_BPS as bigint);
-        const estimatedReward = totalVP > 0n ? mulDiv(userVP as bigint, delegatePool, totalVP) : 0n;
-        const cappedReward = estimatedReward > (poolTier.delegateCap as bigint)
-          ? (poolTier.delegateCap as bigint) : estimatedReward;
+        const delegatePool = applyBasisPoints(monthlyPool, DELEGATE_POOL_BPS);
+        const estimatedReward = totalVP > 0n ? mulDiv(userVP, delegatePool, totalVP) : 0n;
+        const cappedReward = estimatedReward > poolTier.delegateCap
+          ? poolTier.delegateCap : estimatedReward;
 
         return c.json({
           address,
@@ -520,10 +520,10 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
           currentTierIndex,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: formatEns(cappedReward),
-          estimatedApyPct: computeApyPct(cappedReward, userVP as bigint),
-          userWeight: (userVP as bigint).toString(),
+          estimatedApyPct: computeApyPct(cappedReward, userVP),
+          userWeight: userVP.toString(),
           totalPoolWeight: totalVP.toString(),
-          currentBalanceEns: formatEns(userVP as bigint),
+          currentBalanceEns: formatEns(userVP),
         }, 200);
       }
 
@@ -540,13 +540,13 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
       for (const delegatorId of allDelegatorIds) {
         const events = await dataSource.balances.getBalanceHistory([delegatorId], twbWindowStart, monthEnd);
         const initBal = await dataSource.balances.getBalanceAt(delegatorId, twbWindowStart);
-        totalTWB += computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initBal) as bigint;
+        totalTWB += computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initBal);
       }
 
-      const delegatorPool = applyBasisPoints(monthlyPool, DELEGATOR_POOL_BPS as bigint);
-      const estimatedReward = totalTWB > 0n ? mulDiv(userTWB as bigint, delegatorPool, totalTWB) : 0n;
-      const cappedReward = estimatedReward > (poolTier.delegatorCap as bigint)
-        ? (poolTier.delegatorCap as bigint) : estimatedReward;
+      const delegatorPool = applyBasisPoints(monthlyPool, DELEGATOR_POOL_BPS);
+      const estimatedReward = totalTWB > 0n ? mulDiv(userTWB, delegatorPool, totalTWB) : 0n;
+      const cappedReward = estimatedReward > poolTier.delegatorCap
+        ? poolTier.delegatorCap : estimatedReward;
 
       return c.json({
         address,
@@ -555,10 +555,10 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
         currentTierIndex,
         poolSizeEns: formatWholeEns(monthlyPool),
         estimatedMonthlyRewardEns: formatEns(cappedReward),
-        estimatedApyPct: computeApyPct(cappedReward, currentBalance as bigint),
-        userWeight: (userTWB as bigint).toString(),
+        estimatedApyPct: computeApyPct(cappedReward, currentBalance),
+        userWeight: userTWB.toString(),
         totalPoolWeight: totalTWB.toString(),
-        currentBalanceEns: formatEns(currentBalance as bigint),
+        currentBalanceEns: formatEns(currentBalance),
       }, 200);
     } catch (error) {
       return c.json({ error: errorMessage(error) }, 500);

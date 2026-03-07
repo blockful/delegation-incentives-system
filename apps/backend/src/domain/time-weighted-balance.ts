@@ -57,12 +57,12 @@ export function computeTimeWeightedBalance(
     if (segmentDuration > 0n) {
       weightedSum += currentBalance * segmentDuration;
     }
-    currentBalance = event.balance as bigint;
-    currentTimestamp = event.timestamp as bigint;
+    currentBalance = event.balance;
+    currentTimestamp = event.timestamp;
   }
 
   // Final segment from last event to window end
-  const finalDuration = (windowEnd as bigint) - currentTimestamp;
+  const finalDuration = windowEnd - currentTimestamp;
   if (finalDuration > 0n) {
     weightedSum += currentBalance * finalDuration;
   }

@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  deduplicateDelegators,
-  consolidateDelegators,
-} from "@/domain/protocol-dedup.js";
+import { consolidateDelegators } from "@/domain/protocol-dedup.js";
 import {
   type DelegatorScore,
   type ProtocolMapping,
@@ -23,10 +20,10 @@ function score(
   };
 }
 
-describe("deduplicateDelegators (legacy)", () => {
+describe("consolidateDelegators (protocol mappings only)", () => {
   it("returns unchanged scores when no mappings", () => {
     const scores = [score("0xa", 100n), score("0xb", 200n)];
-    const result = deduplicateDelegators(scores, []);
+    const result = consolidateDelegators(scores, [], []);
     expect(result.length).toBe(2);
   });
 
@@ -44,7 +41,7 @@ describe("deduplicateDelegators (legacy)", () => {
         protocol: "MultiDelegate",
       },
     ];
-    const result = deduplicateDelegators(scores, mappings);
+    const result = consolidateDelegators(scores, mappings, []);
     expect(result.length).toBe(1);
     expect(result[0].delegatorId).toBe("0xoperator");
     expect(result[0].timeWeightedBalance).toBe(wei(300n * ONE_ENS));
@@ -59,7 +56,7 @@ describe("deduplicateDelegators (legacy)", () => {
         protocol: "Hedgey",
       },
     ];
-    const result = deduplicateDelegators(scores, mappings);
+    const result = consolidateDelegators(scores, mappings, []);
     expect(result.length).toBe(1);
     expect(result[0].delegatorId.toLowerCase()).toBe("0xoperator");
     expect(result[0].timeWeightedBalance).toBe(wei(100n * ONE_ENS));
@@ -74,7 +71,7 @@ describe("deduplicateDelegators (legacy)", () => {
         protocol: "MultiDelegate",
       },
     ];
-    const result = deduplicateDelegators(scores, mappings);
+    const result = consolidateDelegators(scores, mappings, []);
     expect(result.length).toBe(3);
     const operatorScore = result.find(
       (r) => r.delegatorId.toLowerCase() === "0xoperator",
@@ -87,7 +84,7 @@ describe("deduplicateDelegators (legacy)", () => {
     const mappings: ProtocolMapping[] = [
       { childAddress: "0xa", operatorAddress: "0xa", protocol: "Self" },
     ];
-    const result = deduplicateDelegators(scores, mappings);
+    const result = consolidateDelegators(scores, mappings, []);
     expect(result.length).toBe(1);
     expect(result[0].timeWeightedBalance).toBe(wei(100n * ONE_ENS));
   });
@@ -101,7 +98,7 @@ describe("deduplicateDelegators (legacy)", () => {
         protocol: "Hedgey",
       },
     ];
-    const result = deduplicateDelegators(scores, mappings);
+    const result = consolidateDelegators(scores, mappings, []);
     expect(result.length).toBe(1);
     expect(result[0].timeWeightedBalance).toBe(wei(300n * ONE_ENS));
   });
