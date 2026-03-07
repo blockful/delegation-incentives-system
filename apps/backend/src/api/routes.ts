@@ -23,9 +23,74 @@ import {
   parseMonth,
   monthEndTimestamp,
   previousMonth,
+  currentMonth,
 } from "@/util/time.js";
 
-// --- Zod Schemas for OpenAPI ---
+// ─── Shared helpers ─────────────────────────────────────────────────────────
+
+/** Fetch proposals/votes and identify active delegates. Reused across routes. */
+async function fetchActiveDelegates(dataSource: IncentivesDataSource) {
+  const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE);
+  const proposalIds = proposals.map((p) => p.id);
+  const votes = await dataSource.votes.getVotesForProposals(proposalIds);
+  const activeDelegates = identifyActiveDelegates(proposals, votes);
+  return { proposals, votes, activeDelegates };
+}
+
+/** Case-insensitive set from a Set<string>. */
+function toLowerSet(addresses: Set<string>): Set<string> {
+  return new Set(Array.from(addresses).map((a) => a.toLowerCase()));
+}
+
+/** Resolve current and previous month boundaries + aggregate VP + tier. */
+async function fetchMonthContext(
+  dataSource: IncentivesDataSource,
+  activeDelegateArray: string[],
+) {
+  const monthStr = currentMonth();
+  const { year, month } = parseMonth(monthStr);
+  const monthEnd = monthEndTimestamp(year, month);
+  const prevMonthStr = previousMonth(monthStr);
+  const { year: prevYear, month: prevMonth } = parseMonth(prevMonthStr);
+  const prevMonthEnd = monthEndTimestamp(prevYear, prevMonth);
+
+  const [currentAVP, previousAVP] = activeDelegateArray.length > 0
+    ? await Promise.all([
+        dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, monthEnd),
+        dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, prevMonthEnd),
+      ])
+    : [wei(0n), wei(0n)];
+
+  const poolTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
+  const currentTierIndex = POOL_TIERS.indexOf(poolTier);
+
+  return { monthEnd, currentAVP, previousAVP, poolTier, currentTierIndex };
+}
+
+/** Convert a Wei reward and Wei balance to an APY percentage string. */
+function computeApyPct(monthlyReward: bigint, balance: bigint): string {
+  const rewardEns = Number(monthlyReward) / Number(ONE_ENS);
+  const balanceEns = Number(balance) / Number(ONE_ENS);
+  const apyPct = balanceEns > 0 ? (rewardEns * 12 / balanceEns) * 100 : 0;
+  return apyPct.toFixed(2);
+}
+
+/** Format Wei as ENS string (4 decimal places). */
+function formatEns(value: bigint): string {
+  return (Number(value) / Number(ONE_ENS)).toFixed(4);
+}
+
+/** Format Wei as whole ENS string (for pool sizes/caps). */
+function formatWholeEns(value: bigint): string {
+  return `${value / BigInt(ONE_ENS)}`;
+}
+
+/** Extract error message from unknown catch value. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+// ─── Zod Schemas for OpenAPI ────────────────────────────────────────────────
 
 const ErrorSchema = z
   .object({ error: z.string() })
@@ -131,89 +196,6 @@ const DistributionSchema = z
   })
   .openapi("Distribution");
 
-// --- Route definitions ---
-
-const healthRoute = createRoute({
-  method: "get",
-  path: "/health",
-  tags: ["System"],
-  summary: "Health check",
-  responses: {
-    200: { content: { "application/json": { schema: HealthSchema } }, description: "OK" },
-  },
-});
-
-const computeRoute = createRoute({
-  method: "post",
-  path: "/distributions/{month}/compute",
-  tags: ["Distributions"],
-  summary: "Trigger distribution computation for a month",
-  request: { params: z.object({ month: MonthParam }) },
-  responses: {
-    200: { content: { "application/json": { schema: ComputeResultSchema } }, description: "Computation result" },
-    400: { content: { "application/json": { schema: ErrorSchema } }, description: "Invalid month format" },
-    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Computation error" },
-  },
-});
-
-const getDistributionRoute = createRoute({
-  method: "get",
-  path: "/distributions/{month}",
-  tags: ["Distributions"],
-  summary: "Get computed distribution result (JSON)",
-  request: { params: z.object({ month: MonthParam }) },
-  responses: {
-    200: { content: { "application/json": { schema: DistributionSchema } }, description: "Distribution data" },
-    404: { content: { "application/json": { schema: ErrorSchema } }, description: "Not computed yet" },
-  },
-});
-
-const getCsvRoute = createRoute({
-  method: "get",
-  path: "/distributions/{month}/csv",
-  tags: ["Distributions"],
-  summary: "Download distribution as CSV",
-  request: { params: z.object({ month: MonthParam }) },
-  responses: {
-    200: { content: { "text/csv": { schema: z.string() } }, description: "CSV file" },
-    404: { content: { "application/json": { schema: ErrorSchema } }, description: "Not computed yet" },
-  },
-});
-
-const activeDelegatesRoute = createRoute({
-  method: "get",
-  path: "/delegates/active",
-  tags: ["Delegates"],
-  summary: "List current active delegates",
-  responses: {
-    200: { content: { "application/json": { schema: ActiveDelegatesSchema } }, description: "Active delegates" },
-    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Error" },
-  },
-});
-
-const eligibilityRoute = createRoute({
-  method: "get",
-  path: "/eligibility/{address}",
-  tags: ["Eligibility"],
-  summary: "Check reward eligibility for an address",
-  request: { params: z.object({ address: AddressParam }) },
-  responses: {
-    200: { content: { "application/json": { schema: EligibilitySchema } }, description: "Eligibility status" },
-    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Error" },
-  },
-});
-
-const statusRoute = createRoute({
-  method: "get",
-  path: "/status",
-  tags: ["System"],
-  summary: "Get system status",
-  responses: {
-    200: { content: { "application/json": { schema: StatusSchema } }, description: "System status" },
-    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Error" },
-  },
-});
-
 const TierProgressionEntrySchema = z.object({
   index: z.number(),
   momGrowthMinPct: z.string(),
@@ -254,10 +236,73 @@ const ApyEstimateSchema = z
   })
   .openapi("ApyEstimate");
 
+// ─── Route definitions ─────────────────────────────────────────────────────
+
+const healthRoute = createRoute({
+  method: "get", path: "/health", tags: ["System"], summary: "Health check",
+  responses: { 200: { content: { "application/json": { schema: HealthSchema } }, description: "OK" } },
+});
+
+const computeRoute = createRoute({
+  method: "post", path: "/distributions/{month}/compute", tags: ["Distributions"],
+  summary: "Trigger distribution computation for a month",
+  request: { params: z.object({ month: MonthParam }) },
+  responses: {
+    200: { content: { "application/json": { schema: ComputeResultSchema } }, description: "Computation result" },
+    400: { content: { "application/json": { schema: ErrorSchema } }, description: "Invalid month format" },
+    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Computation error" },
+  },
+});
+
+const getDistributionRoute = createRoute({
+  method: "get", path: "/distributions/{month}", tags: ["Distributions"],
+  summary: "Get computed distribution result (JSON)",
+  request: { params: z.object({ month: MonthParam }) },
+  responses: {
+    200: { content: { "application/json": { schema: DistributionSchema } }, description: "Distribution data" },
+    404: { content: { "application/json": { schema: ErrorSchema } }, description: "Not computed yet" },
+  },
+});
+
+const getCsvRoute = createRoute({
+  method: "get", path: "/distributions/{month}/csv", tags: ["Distributions"],
+  summary: "Download distribution as CSV",
+  request: { params: z.object({ month: MonthParam }) },
+  responses: {
+    200: { content: { "text/csv": { schema: z.string() } }, description: "CSV file" },
+    404: { content: { "application/json": { schema: ErrorSchema } }, description: "Not computed yet" },
+  },
+});
+
+const activeDelegatesRoute = createRoute({
+  method: "get", path: "/delegates/active", tags: ["Delegates"],
+  summary: "List current active delegates",
+  responses: {
+    200: { content: { "application/json": { schema: ActiveDelegatesSchema } }, description: "Active delegates" },
+    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Error" },
+  },
+});
+
+const eligibilityRoute = createRoute({
+  method: "get", path: "/eligibility/{address}", tags: ["Eligibility"],
+  summary: "Check reward eligibility for an address",
+  request: { params: z.object({ address: AddressParam }) },
+  responses: {
+    200: { content: { "application/json": { schema: EligibilitySchema } }, description: "Eligibility status" },
+    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Error" },
+  },
+});
+
+const statusRoute = createRoute({
+  method: "get", path: "/status", tags: ["System"], summary: "Get system status",
+  responses: {
+    200: { content: { "application/json": { schema: StatusSchema } }, description: "System status" },
+    500: { content: { "application/json": { schema: ErrorSchema } }, description: "Error" },
+  },
+});
+
 const tierProgressionRoute = createRoute({
-  method: "get",
-  path: "/tiers/progression",
-  tags: ["Tiers"],
+  method: "get", path: "/tiers/progression", tags: ["Tiers"],
   summary: "Get current tier and VP needed for each higher tier",
   responses: {
     200: { content: { "application/json": { schema: TierProgressionSchema } }, description: "Tier progression" },
@@ -266,9 +311,7 @@ const tierProgressionRoute = createRoute({
 });
 
 const apyRoute = createRoute({
-  method: "get",
-  path: "/apy/{address}",
-  tags: ["APY"],
+  method: "get", path: "/apy/{address}", tags: ["APY"],
   summary: "Get estimated APY for an address based on current conditions",
   request: { params: z.object({ address: AddressParam }) },
   responses: {
@@ -277,7 +320,7 @@ const apyRoute = createRoute({
   },
 });
 
-// --- App factory ---
+// ─── App factory ────────────────────────────────────────────────────────────
 
 export interface ApiDeps {
   dataSource: IncentivesDataSource;
@@ -286,33 +329,25 @@ export interface ApiDeps {
 export function createApi(deps: ApiDeps): OpenAPIHono {
   const app = new OpenAPIHono();
   const { dataSource } = deps;
-
   const distributionCache = new Map<string, DistributionResult>();
 
-  app.openapi(healthRoute, (c) => {
-    return c.json({ status: "ok" as const }, 200);
-  });
+  app.openapi(healthRoute, (c) => c.json({ status: "ok" as const }, 200));
 
   app.openapi(computeRoute, async (c) => {
     const { month } = c.req.valid("param");
-
     try {
       const result = await runDistributionPipeline({ month, dataSource });
       distributionCache.set(month, result);
-      return c.json(
-        {
-          month: result.month,
-          totalDistributed: result.metadata.totalDistributed.toString(),
-          activeDelegateCount: result.metadata.activeDelegateCount,
-          eligibleDelegatorCount: result.metadata.eligibleDelegatorCount,
-          directPayoutCount: result.directPayouts.length,
-          lotteryPoolCount: result.lotteryPools.length,
-        },
-        200,
-      );
+      return c.json({
+        month: result.month,
+        totalDistributed: result.metadata.totalDistributed.toString(),
+        activeDelegateCount: result.metadata.activeDelegateCount,
+        eligibleDelegatorCount: result.metadata.eligibleDelegatorCount,
+        directPayoutCount: result.directPayouts.length,
+        lotteryPoolCount: result.lotteryPools.length,
+      }, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      return c.json({ error: errorMessage(error) }, 500);
     }
   });
 
@@ -320,13 +355,9 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
     const { month } = c.req.valid("param");
     const result = distributionCache.get(month);
     if (!result) {
-      return c.json(
-        { error: "Distribution not computed yet. POST to /distributions/:month/compute first" },
-        404,
-      );
+      return c.json({ error: "Distribution not computed yet. POST to /distributions/:month/compute first" }, 404);
     }
-    const body = JSON.parse(distributionToJson(result));
-    return c.json(body, 200);
+    return c.json(JSON.parse(distributionToJson(result)), 200);
   });
 
   app.openapi(getCsvRoute, async (c) => {
@@ -343,31 +374,19 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
 
   app.openapi(activeDelegatesRoute, async (c) => {
     try {
-      const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE);
-      const proposalIds = proposals.map((p) => p.id);
-      const votes = await dataSource.votes.getVotesForProposals(proposalIds);
-      const activeDelegates = identifyActiveDelegates(proposals, votes);
-      return c.json(
-        { count: activeDelegates.size, delegates: Array.from(activeDelegates) },
-        200,
-      );
+      const { activeDelegates } = await fetchActiveDelegates(dataSource);
+      return c.json({ count: activeDelegates.size, delegates: Array.from(activeDelegates) }, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      return c.json({ error: errorMessage(error) }, 500);
     }
   });
 
   app.openapi(eligibilityRoute, async (c) => {
     const { address } = c.req.valid("param");
     try {
-      const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE);
-      const proposalIds = proposals.map((p) => p.id);
-      const votes = await dataSource.votes.getVotesForProposals(proposalIds);
-      const activeDelegates = identifyActiveDelegates(proposals, votes);
-      const activeDelegatesLower = new Set(
-        Array.from(activeDelegates).map((d) => d.toLowerCase()),
-      );
-      const isActiveDelegate = activeDelegatesLower.has(address.toLowerCase());
+      const { activeDelegates } = await fetchActiveDelegates(dataSource);
+      const activeLower = toLowerSet(activeDelegates);
+      const isActiveDelegate = activeLower.has(address.toLowerCase());
 
       const accountBalances = await dataSource.delegations.getAccountBalances();
       const accountBalance = accountBalances.find(
@@ -375,76 +394,43 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
       );
       const isDelegatorToActive =
         accountBalance !== undefined &&
-        activeDelegatesLower.has(accountBalance.delegate.toLowerCase());
+        activeLower.has(accountBalance.delegate.toLowerCase());
 
-      return c.json(
-        {
-          address,
-          isActiveDelegate,
-          isDelegatorToActiveDelegate: isDelegatorToActive,
-          eligible: isActiveDelegate || isDelegatorToActive,
-          delegatedTo: accountBalance?.delegate ?? null,
-        },
-        200,
-      );
+      return c.json({
+        address,
+        isActiveDelegate,
+        isDelegatorToActiveDelegate: isDelegatorToActive,
+        eligible: isActiveDelegate || isDelegatorToActive,
+        delegatedTo: accountBalance?.delegate ?? null,
+      }, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      return c.json({ error: errorMessage(error) }, 500);
     }
   });
 
   app.openapi(statusRoute, async (c) => {
     try {
-      const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE);
-      const proposalIds = proposals.map((p) => p.id);
-      const votes = await dataSource.votes.getVotesForProposals(proposalIds);
-      const activeDelegates = identifyActiveDelegates(proposals, votes);
-      return c.json(
-        {
-          activeDelegateCount: activeDelegates.size,
-          proposalCount: proposals.length,
-          cachedDistributions: Array.from(distributionCache.keys()),
-        },
-        200,
-      );
+      const { proposals, activeDelegates } = await fetchActiveDelegates(dataSource);
+      return c.json({
+        activeDelegateCount: activeDelegates.size,
+        proposalCount: proposals.length,
+        cachedDistributions: Array.from(distributionCache.keys()),
+      }, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      return c.json({ error: errorMessage(error) }, 500);
     }
   });
 
   app.openapi(tierProgressionRoute, async (c) => {
     try {
-      // Get active delegates
-      const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE);
-      const proposalIds = proposals.map((p) => p.id);
-      const votes = await dataSource.votes.getVotesForProposals(proposalIds);
-      const activeDelegates = identifyActiveDelegates(proposals, votes);
+      const { activeDelegates } = await fetchActiveDelegates(dataSource);
       const activeDelegateArray = Array.from(activeDelegates);
-
-      // Get current month boundaries
-      const now = new Date();
-      const currentMonthStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-      const { year, month } = parseMonth(currentMonthStr);
-      const monthEnd = monthEndTimestamp(year, month);
-      const prevMonthStr = previousMonth(currentMonthStr);
-      const { year: prevYear, month: prevMonth } = parseMonth(prevMonthStr);
-      const prevMonthEnd = monthEndTimestamp(prevYear, prevMonth);
-
-      // Get aggregate VP
-      const currentAVP = activeDelegateArray.length > 0
-        ? await dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, monthEnd)
-        : wei(0n);
-      const previousAVP = activeDelegateArray.length > 0
-        ? await dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, prevMonthEnd)
-        : wei(0n);
+      const { currentAVP, previousAVP, currentTierIndex } =
+        await fetchMonthContext(dataSource, activeDelegateArray);
 
       const growthBps = percentageGrowthBps(currentAVP as bigint, previousAVP as bigint);
-      const currentTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
-      const currentTierIndex = POOL_TIERS.indexOf(currentTier);
 
       const tiers = POOL_TIERS.map((tier, index) => {
-        // VP needed to reach this tier's minimum growth
         const requiredAVP = (previousAVP as bigint) === 0n
           ? 0n
           : (previousAVP as bigint) + mulDiv(previousAVP as bigint, tier.momGrowthMinBps as bigint, 10000n);
@@ -456,9 +442,9 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
           index,
           momGrowthMinPct: `${Number(tier.momGrowthMinBps) / 100}`,
           momGrowthMaxPct: `${Number(tier.momGrowthMaxBps) / 100}`,
-          poolSizeEns: `${(tier.poolSize as bigint) / (ONE_ENS as bigint)}`,
-          delegateCapEns: `${(tier.delegateCap as bigint) / (ONE_ENS as bigint)}`,
-          delegatorCapEns: `${(tier.delegatorCap as bigint) / (ONE_ENS as bigint)}`,
+          poolSizeEns: formatWholeEns(tier.poolSize as bigint),
+          delegateCapEns: formatWholeEns(tier.delegateCap as bigint),
+          delegatorCapEns: formatWholeEns(tier.delegatorCap as bigint),
           isCurrent: index === currentTierIndex,
           isUnlocked: growthBps >= (tier.momGrowthMinBps as bigint),
           additionalVPNeeded: additionalVPNeeded.toString(),
@@ -466,200 +452,119 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
         };
       });
 
-      return c.json(
-        {
-          currentAVP: (currentAVP as bigint).toString(),
-          previousAVP: (previousAVP as bigint).toString(),
-          currentGrowthBps: growthBps.toString(),
-          currentGrowthPct: `${Number(growthBps) / 100}`,
-          currentTierIndex,
-          activeDelegateCount: activeDelegates.size,
-          tiers,
-        },
-        200,
-      );
+      return c.json({
+        currentAVP: (currentAVP as bigint).toString(),
+        previousAVP: (previousAVP as bigint).toString(),
+        currentGrowthBps: growthBps.toString(),
+        currentGrowthPct: `${Number(growthBps) / 100}`,
+        currentTierIndex,
+        activeDelegateCount: activeDelegates.size,
+        tiers,
+      }, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      return c.json({ error: errorMessage(error) }, 500);
     }
   });
 
   app.openapi(apyRoute, async (c) => {
     const { address } = c.req.valid("param");
     try {
-      // Identify active delegates
-      const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE);
-      const proposalIds = proposals.map((p) => p.id);
-      const votes = await dataSource.votes.getVotesForProposals(proposalIds);
-      const activeDelegates = identifyActiveDelegates(proposals, votes);
-      const activeDelegatesLower = new Set(
-        Array.from(activeDelegates).map((d) => d.toLowerCase()),
-      );
+      const { activeDelegates } = await fetchActiveDelegates(dataSource);
+      const activeLower = toLowerSet(activeDelegates);
       const activeDelegateArray = Array.from(activeDelegates);
+      const { monthEnd, poolTier, currentTierIndex } =
+        await fetchMonthContext(dataSource, activeDelegateArray);
 
-      // Determine current tier
-      const now = new Date();
-      const currentMonthStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-      const { year, month } = parseMonth(currentMonthStr);
-      const monthEnd = monthEndTimestamp(year, month);
-      const prevMonthStr = previousMonth(currentMonthStr);
-      const { year: prevYear, month: prevMonth } = parseMonth(prevMonthStr);
-      const prevMonthEnd = monthEndTimestamp(prevYear, prevMonth);
-
-      const currentAVP = activeDelegateArray.length > 0
-        ? await dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, monthEnd)
-        : wei(0n);
-      const previousAVP = activeDelegateArray.length > 0
-        ? await dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, prevMonthEnd)
-        : wei(0n);
-
-      const poolTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
-      const currentTierIndex = POOL_TIERS.indexOf(poolTier);
       const monthlyPool = poolTier.poolSize as bigint;
-
-      // Determine role
-      const isActiveDelegate = activeDelegatesLower.has(address.toLowerCase());
+      const isActiveDelegate = activeLower.has(address.toLowerCase());
       const accountBalances = await dataSource.delegations.getAccountBalances();
       const accountBalance = accountBalances.find(
         (ab) => ab.accountId.toLowerCase() === address.toLowerCase(),
       );
       const isDelegatorToActive =
         accountBalance !== undefined &&
-        activeDelegatesLower.has(accountBalance.delegate.toLowerCase());
+        activeLower.has(accountBalance.delegate.toLowerCase());
 
       if (!isActiveDelegate && !isDelegatorToActive) {
-        return c.json(
-          {
-            address,
-            role: "ineligible" as const,
-            delegatedTo: accountBalance?.delegate ?? null,
-            currentTierIndex,
-            poolSizeEns: `${monthlyPool / (ONE_ENS as bigint)}`,
-            estimatedMonthlyRewardEns: "0",
-            estimatedApyPct: "0",
-            userWeight: "0",
-            totalPoolWeight: "0",
-            currentBalanceEns: "0",
-          },
-          200,
-        );
+        return c.json({
+          address,
+          role: "ineligible" as const,
+          delegatedTo: accountBalance?.delegate ?? null,
+          currentTierIndex,
+          poolSizeEns: formatWholeEns(monthlyPool),
+          estimatedMonthlyRewardEns: "0",
+          estimatedApyPct: "0",
+          userWeight: "0",
+          totalPoolWeight: "0",
+          currentBalanceEns: "0",
+        }, 200);
       }
 
-      const twbWindowStart = seconds(
-        (monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint),
-      );
+      const twbWindowStart = seconds((monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint));
 
       if (isActiveDelegate) {
-        // Delegate APY: based on their VP share of the 10% pool
         const vpMap = await dataSource.votingPower.getVotingPower(activeDelegateArray);
         const userVP = vpMap.get(address) ?? vpMap.get(address.toLowerCase()) ?? wei(0n);
         let totalVP = 0n;
         for (const vp of vpMap.values()) totalVP += vp as bigint;
 
         const delegatePool = applyBasisPoints(monthlyPool, DELEGATE_POOL_BPS as bigint);
-        const estimatedReward = totalVP > 0n
-          ? mulDiv(userVP as bigint, delegatePool, totalVP)
-          : 0n;
+        const estimatedReward = totalVP > 0n ? mulDiv(userVP as bigint, delegatePool, totalVP) : 0n;
         const cappedReward = estimatedReward > (poolTier.delegateCap as bigint)
-          ? (poolTier.delegateCap as bigint)
-          : estimatedReward;
+          ? (poolTier.delegateCap as bigint) : estimatedReward;
 
-        const rewardEns = Number(cappedReward) / Number(ONE_ENS);
-        const balanceEns = Number(userVP) / Number(ONE_ENS);
-        const apyPct = balanceEns > 0 ? (rewardEns * 12 / balanceEns) * 100 : 0;
-
-        return c.json(
-          {
-            address,
-            role: "delegate" as const,
-            delegatedTo: null,
-            currentTierIndex,
-            poolSizeEns: `${monthlyPool / (ONE_ENS as bigint)}`,
-            estimatedMonthlyRewardEns: rewardEns.toFixed(4),
-            estimatedApyPct: apyPct.toFixed(2),
-            userWeight: (userVP as bigint).toString(),
-            totalPoolWeight: totalVP.toString(),
-            currentBalanceEns: balanceEns.toFixed(4),
-          },
-          200,
-        );
+        return c.json({
+          address,
+          role: "delegate" as const,
+          delegatedTo: null,
+          currentTierIndex,
+          poolSizeEns: formatWholeEns(monthlyPool),
+          estimatedMonthlyRewardEns: formatEns(cappedReward),
+          estimatedApyPct: computeApyPct(cappedReward, userVP as bigint),
+          userWeight: (userVP as bigint).toString(),
+          totalPoolWeight: totalVP.toString(),
+          currentBalanceEns: formatEns(userVP as bigint),
+        }, 200);
       }
 
-      // Delegator APY: based on their TWB share of the 90% pool
-      const balanceEvents = await dataSource.balances.getBalanceHistory(
-        [address],
-        twbWindowStart,
-        monthEnd,
-      );
-      const initialBalance = await dataSource.balances.getBalanceAt(
-        address,
-        twbWindowStart,
-      );
-      const userTWB = computeTimeWeightedBalance(
-        balanceEvents,
-        twbWindowStart,
-        monthEnd,
-        initialBalance,
-      );
-
-      // Get current balance for APY denominator
+      // Delegator APY
+      const balanceEvents = await dataSource.balances.getBalanceHistory([address], twbWindowStart, monthEnd);
+      const initialBalance = await dataSource.balances.getBalanceAt(address, twbWindowStart);
+      const userTWB = computeTimeWeightedBalance(balanceEvents, twbWindowStart, monthEnd, initialBalance);
       const currentBalance = await dataSource.balances.getBalanceAt(address, monthEnd);
 
-      // Get total TWB of all eligible delegators (simplified: use all account balances as proxy)
-      const delegations = await dataSource.delegations.getActiveDelegations(
-        activeDelegateArray,
-        monthEnd,
-      );
+      const delegations = await dataSource.delegations.getActiveDelegations(activeDelegateArray, monthEnd);
       const allDelegatorIds = [...new Set(delegations.map((d) => d.delegatorId))];
 
       let totalTWB = 0n;
       for (const delegatorId of allDelegatorIds) {
-        const events = await dataSource.balances.getBalanceHistory(
-          [delegatorId],
-          twbWindowStart,
-          monthEnd,
-        );
-        const initBal = await dataSource.balances.getBalanceAt(
-          delegatorId,
-          twbWindowStart,
-        );
+        const events = await dataSource.balances.getBalanceHistory([delegatorId], twbWindowStart, monthEnd);
+        const initBal = await dataSource.balances.getBalanceAt(delegatorId, twbWindowStart);
         totalTWB += computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initBal) as bigint;
       }
 
       const delegatorPool = applyBasisPoints(monthlyPool, DELEGATOR_POOL_BPS as bigint);
-      const estimatedReward = totalTWB > 0n
-        ? mulDiv(userTWB as bigint, delegatorPool, totalTWB)
-        : 0n;
+      const estimatedReward = totalTWB > 0n ? mulDiv(userTWB as bigint, delegatorPool, totalTWB) : 0n;
       const cappedReward = estimatedReward > (poolTier.delegatorCap as bigint)
-        ? (poolTier.delegatorCap as bigint)
-        : estimatedReward;
+        ? (poolTier.delegatorCap as bigint) : estimatedReward;
 
-      const rewardEns = Number(cappedReward) / Number(ONE_ENS);
-      const balanceEns = Number(currentBalance) / Number(ONE_ENS);
-      const apyPct = balanceEns > 0 ? (rewardEns * 12 / balanceEns) * 100 : 0;
-
-      return c.json(
-        {
-          address,
-          role: "delegator" as const,
-          delegatedTo: accountBalance?.delegate ?? null,
-          currentTierIndex,
-          poolSizeEns: `${monthlyPool / (ONE_ENS as bigint)}`,
-          estimatedMonthlyRewardEns: rewardEns.toFixed(4),
-          estimatedApyPct: apyPct.toFixed(2),
-          userWeight: (userTWB as bigint).toString(),
-          totalPoolWeight: totalTWB.toString(),
-          currentBalanceEns: balanceEns.toFixed(4),
-        },
-        200,
-      );
+      return c.json({
+        address,
+        role: "delegator" as const,
+        delegatedTo: accountBalance?.delegate ?? null,
+        currentTierIndex,
+        poolSizeEns: formatWholeEns(monthlyPool),
+        estimatedMonthlyRewardEns: formatEns(cappedReward),
+        estimatedApyPct: computeApyPct(cappedReward, currentBalance as bigint),
+        userWeight: (userTWB as bigint).toString(),
+        totalPoolWeight: totalTWB.toString(),
+        currentBalanceEns: formatEns(currentBalance as bigint),
+      }, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      return c.json({ error: errorMessage(error) }, 500);
     }
   });
 
-  // OpenAPI JSON spec endpoint
   app.doc("/doc", {
     openapi: "3.1.0",
     info: {
