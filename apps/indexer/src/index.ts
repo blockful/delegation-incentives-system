@@ -5,6 +5,19 @@ import { zeroAddress } from "viem";
 const ENS_TOKEN = "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72".toLowerCase();
 const HEDGEY_VESTING_ADDRESS = "0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C".toLowerCase();
 
+/** Ponder database context type, extracted for readability. */
+type Db = Parameters<Parameters<typeof ponder.on>[1]>[0]["context"]["db"];
+
+/** Extracts block metadata common to all event handlers. */
+function eventMeta(event: { block: { number: number; timestamp: number }; transaction: { hash: string }; log: { logIndex: number } }) {
+  return {
+    blockNumber: BigInt(event.block.number),
+    timestamp: BigInt(event.block.timestamp),
+    transactionHash: event.transaction.hash,
+    logId: `${event.transaction.hash}-${event.log.logIndex}`,
+  };
+}
+
 /**
  * Converts a uint256 token ID to a delegate address.
  * In ERC20MultiDelegate, the token ID is the delegate address cast to uint256.
@@ -15,6 +28,18 @@ function tokenIdToAddress(tokenId: bigint): string {
 
 // ─── Shared helper for ERC20MultiDelegate transfer processing ───────────────
 
+interface MultiDelegateTransferParams {
+  db: Db;
+  transferId: string;
+  from: string;
+  to: string;
+  tokenId: bigint;
+  value: bigint;
+  blockNumber: bigint;
+  timestamp: bigint;
+  transactionHash: string;
+}
+
 /**
  * Processes a single ERC1155 transfer within the ERC20MultiDelegate contract.
  * Shared between TransferSingle and TransferBatch handlers to eliminate duplication.
@@ -23,17 +48,8 @@ function tokenIdToAddress(tokenId: bigint): string {
  * insert-on-conflict-update, sender positions still need find-then-update
  * because we may need to delete on zero balance.
  */
-async function processMultiDelegateTransfer(
-  db: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"]["db"],
-  transferId: string,
-  from: string,
-  to: string,
-  tokenId: bigint,
-  value: bigint,
-  blockNumber: bigint,
-  timestamp: bigint,
-  transactionHash: string,
-) {
+async function processMultiDelegateTransfer(params: MultiDelegateTransferParams) {
+  const { db, transferId, from, to, tokenId, value, blockNumber, timestamp, transactionHash } = params;
   const delegateAddress = tokenIdToAddress(tokenId);
 
   // Record the transfer
@@ -104,6 +120,7 @@ async function processMultiDelegateTransfer(
 ponder.on("ERC20MultiDelegate:ProxyDeployed", async ({ event, context }) => {
   const { delegate, proxyAddress } = event.args;
   const { db } = context;
+  const { blockNumber } = eventMeta(event);
 
   await db
     .insert(schema.multiDelegateProxy)
@@ -111,7 +128,7 @@ ponder.on("ERC20MultiDelegate:ProxyDeployed", async ({ event, context }) => {
       id: proxyAddress.toLowerCase(),
       delegate: delegate.toLowerCase(),
       deployer: event.transaction.from.toLowerCase(),
-      createdAtBlock: BigInt(event.block.number),
+      createdAtBlock: blockNumber,
     })
     .onConflictDoNothing();
 });
@@ -123,35 +140,37 @@ ponder.on("ERC20MultiDelegate:DelegationProcessed", async ({ event, context }) =
 
 ponder.on("ERC20MultiDelegate:TransferSingle", async ({ event, context }) => {
   const { from, to, id, value } = event.args;
+  const meta = eventMeta(event);
 
-  await processMultiDelegateTransfer(
-    context.db,
-    `${event.transaction.hash}-${event.log.logIndex}`,
+  await processMultiDelegateTransfer({
+    db: context.db,
+    transferId: meta.logId,
     from,
     to,
-    id,
+    tokenId: id,
     value,
-    BigInt(event.block.number),
-    BigInt(event.block.timestamp),
-    event.transaction.hash,
-  );
+    blockNumber: meta.blockNumber,
+    timestamp: meta.timestamp,
+    transactionHash: meta.transactionHash,
+  });
 });
 
 ponder.on("ERC20MultiDelegate:TransferBatch", async ({ event, context }) => {
   const { from, to, ids, values } = event.args;
+  const meta = eventMeta(event);
 
   for (let i = 0; i < ids.length; i++) {
-    await processMultiDelegateTransfer(
-      context.db,
-      `${event.transaction.hash}-${event.log.logIndex}-${i}`,
+    await processMultiDelegateTransfer({
+      db: context.db,
+      transferId: `${meta.logId}-${i}`,
       from,
       to,
-      ids[i]!,
-      values[i]!,
-      BigInt(event.block.number),
-      BigInt(event.block.timestamp),
-      event.transaction.hash,
-    );
+      tokenId: ids[i]!,
+      value: values[i]!,
+      blockNumber: meta.blockNumber,
+      timestamp: meta.timestamp,
+      transactionHash: meta.transactionHash,
+    });
   }
 });
 
@@ -160,6 +179,7 @@ ponder.on("ERC20MultiDelegate:TransferBatch", async ({ event, context }) => {
 ponder.on("HedgeyVesting:PlanCreated", async ({ event, context }) => {
   const { id, recipient, token, amount, start, cliff, rate, period } = event.args;
   const { db } = context;
+  const { blockNumber } = eventMeta(event);
 
   // Only index plans for the ENS token
   if (token.toLowerCase() !== ENS_TOKEN) return;
@@ -174,7 +194,7 @@ ponder.on("HedgeyVesting:PlanCreated", async ({ event, context }) => {
     rate,
     period,
     amountRedeemed: 0n,
-    createdAtBlock: BigInt(event.block.number),
+    createdAtBlock: blockNumber,
   });
 
   // Map the vesting contract address to the recipient
@@ -192,6 +212,7 @@ ponder.on("HedgeyVesting:PlanCreated", async ({ event, context }) => {
 ponder.on("HedgeyVesting:PlanRedeemed", async ({ event, context }) => {
   const { id, amountRedeemed, planRemainder } = event.args;
   const { db } = context;
+  const { blockNumber, timestamp } = eventMeta(event);
 
   // Check if this plan exists (i.e., it's an ENS token plan we're tracking)
   const plan = await db.find(schema.vestingPlan, { id });
@@ -206,12 +227,12 @@ ponder.on("HedgeyVesting:PlanRedeemed", async ({ event, context }) => {
 
   // Record the redemption event
   await db.insert(schema.vestingRedemption).values({
-    id: `${id.toString()}-${event.block.number}`,
+    id: `${id.toString()}-${blockNumber}`,
     planId: id,
     amountRedeemed,
     planRemainder,
-    blockNumber: BigInt(event.block.number),
-    timestamp: BigInt(event.block.timestamp),
+    blockNumber,
+    timestamp,
   });
 });
 
@@ -262,15 +283,12 @@ ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {
 ponder.on("ENSToken:Transfer", async ({ event, context }) => {
   const { from, to, value } = event.args;
   const { db } = context;
-  const blockNumber = BigInt(event.block.number);
-  const timestamp = BigInt(event.block.timestamp);
-  const logId = `${event.transaction.hash}-${event.log.logIndex}`;
+  const { blockNumber, timestamp, transactionHash, logId } = eventMeta(event);
 
   // Update sender balance atomically and record event (skip mints from zero address)
   if (from !== zeroAddress) {
     const fromAddr = from.toLowerCase();
 
-    // Atomic upsert: insert with -value or decrement existing balance
     const { balance: currentSenderBalance } = await db
       .insert(schema.ensBalance)
       .values({ id: fromAddr, balance: -value, lastUpdatedBlock: blockNumber })
@@ -287,7 +305,7 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
       deltaMod: value,
       blockNumber,
       timestamp,
-      transactionHash: event.transaction.hash,
+      transactionHash,
     });
   }
 
@@ -295,7 +313,6 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
   if (to !== zeroAddress) {
     const toAddr = to.toLowerCase();
 
-    // Atomic upsert: insert with +value or increment existing balance
     const { balance: currentReceiverBalance } = await db
       .insert(schema.ensBalance)
       .values({ id: toAddr, balance: value, lastUpdatedBlock: blockNumber })
@@ -312,7 +329,7 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
       deltaMod: value,
       blockNumber,
       timestamp,
-      transactionHash: event.transaction.hash,
+      transactionHash,
     });
   }
 });
@@ -327,9 +344,7 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
 ponder.on("ENSToken:DelegateChanged", async ({ event, context }) => {
   const { delegator, fromDelegate, toDelegate } = event.args;
   const { db } = context;
-  const blockNumber = BigInt(event.block.number);
-  const timestamp = BigInt(event.block.timestamp);
-  const logId = `${event.transaction.hash}-${event.log.logIndex}`;
+  const { blockNumber, timestamp, transactionHash, logId } = eventMeta(event);
 
   // Look up delegator's current ENS balance for delegated value tracking
   const delegatorBalance = await db.find(schema.ensBalance, {
@@ -359,7 +374,7 @@ ponder.on("ENSToken:DelegateChanged", async ({ event, context }) => {
     delegatedValue,
     blockNumber,
     timestamp,
-    transactionHash: event.transaction.hash,
+    transactionHash,
   });
 });
 
@@ -373,18 +388,19 @@ ponder.on("ENSToken:DelegateChanged", async ({ event, context }) => {
 ponder.on("ENSToken:DelegateVotesChanged", async ({ event, context }) => {
   const { delegate, previousBalance, newBalance } = event.args;
   const { db } = context;
+  const { blockNumber, timestamp, transactionHash, logId } = eventMeta(event);
 
   const delta = newBalance - previousBalance;
   const deltaMod = delta > 0n ? delta : -delta;
 
   await db.insert(schema.ensVotingPowerSnapshot).values({
-    id: `${event.transaction.hash}-${event.log.logIndex}`,
+    id: logId,
     accountId: delegate.toLowerCase(),
     votingPower: newBalance,
     delta,
     deltaMod,
-    blockNumber: BigInt(event.block.number),
-    timestamp: BigInt(event.block.timestamp),
-    transactionHash: event.transaction.hash,
+    blockNumber,
+    timestamp,
+    transactionHash,
   });
 });
