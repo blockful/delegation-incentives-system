@@ -83,6 +83,7 @@ export const ensBalanceEvent = onchainTable("ens_balance_event", (t) => ({
   accountId: t.text().notNull(),
   balance: t.bigint().notNull(),       // balance AFTER the transfer
   delta: t.bigint().notNull(),         // signed change (negative for sender)
+  deltaMod: t.bigint().notNull(),      // absolute value of delta (for sorting/filtering)
   blockNumber: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
@@ -107,6 +108,7 @@ export const ensDelegationEvent = onchainTable("ens_delegation_event", (t) => ({
   delegatorId: t.text().notNull(),
   fromDelegateId: t.text().notNull(),
   toDelegateId: t.text().notNull(),
+  delegatedValue: t.bigint().notNull(), // delegator's token balance at time of delegation
   blockNumber: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
@@ -122,6 +124,7 @@ export const ensVotingPowerSnapshot = onchainTable("ens_voting_power_snapshot", 
   accountId: t.text().notNull(),       // delegate whose VP changed
   votingPower: t.bigint().notNull(),   // new voting power
   delta: t.bigint().notNull(),         // change (newBalance - previousBalance)
+  deltaMod: t.bigint().notNull(),      // absolute value of delta (for sorting/filtering)
   blockNumber: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),

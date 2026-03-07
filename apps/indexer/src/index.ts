@@ -1,7 +1,7 @@
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
+import { zeroAddress } from "viem";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ENS_TOKEN = "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72".toLowerCase();
 const HEDGEY_VESTING_ADDRESS = "0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C".toLowerCase();
 
@@ -18,6 +18,10 @@ function tokenIdToAddress(tokenId: bigint): string {
 /**
  * Processes a single ERC1155 transfer within the ERC20MultiDelegate contract.
  * Shared between TransferSingle and TransferBatch handlers to eliminate duplication.
+ *
+ * Following the anticapture pattern: receiver positions use atomic
+ * insert-on-conflict-update, sender positions still need find-then-update
+ * because we may need to delete on zero balance.
  */
 async function processMultiDelegateTransfer(
   db: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"]["db"],
@@ -45,7 +49,7 @@ async function processMultiDelegateTransfer(
   });
 
   // Update positions — decrease sender's position
-  if (from !== ZERO_ADDRESS) {
+  if (from !== zeroAddress) {
     const fromPositionId = `${from.toLowerCase()}-${delegateAddress}`;
     const existing = await db.find(schema.multiDelegatePosition, { id: fromPositionId });
     if (existing) {
@@ -60,8 +64,8 @@ async function processMultiDelegateTransfer(
     }
   }
 
-  // Update positions — increase receiver's position
-  if (to !== ZERO_ADDRESS) {
+  // Update positions — increase receiver's position (atomic upsert)
+  if (to !== zeroAddress) {
     const toPositionId = `${to.toLowerCase()}-${delegateAddress}`;
     await db
       .insert(schema.multiDelegatePosition)
@@ -216,7 +220,7 @@ ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {
   const { db } = context;
 
   // Skip mint events (from = zero address) — handled by PlanCreated
-  if (from === ZERO_ADDRESS) return;
+  if (from === zeroAddress) return;
 
   // Check if this plan exists (i.e., it's an ENS token plan we're tracking)
   const plan = await db.find(schema.vestingPlan, { id: tokenId });
@@ -225,7 +229,7 @@ ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {
   const mappingId = `hedgey_vesting-${tokenId.toString()}`;
 
   // Handle burn: NFT sent to zero address means the plan is concluded
-  if (to === ZERO_ADDRESS) {
+  if (to === zeroAddress) {
     await db.delete(schema.protocolMapping, { id: mappingId });
     return;
   }
@@ -247,6 +251,14 @@ ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {
 
 // ─── ENS Token Handlers ─────────────────────────────────────────────────────
 
+/**
+ * Handles ENS token Transfer events.
+ *
+ * Inspired by anticapture's tokenTransfer pattern:
+ * - Uses atomic insert-on-conflict-update for balance tracking
+ * - Records balance events with both signed delta and absolute deltaMod
+ * - The resulting balance is derived from the atomic upsert
+ */
 ponder.on("ENSToken:Transfer", async ({ event, context }) => {
   const { from, to, value } = event.args;
   const { db } = context;
@@ -254,46 +266,50 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
   const timestamp = BigInt(event.block.timestamp);
   const logId = `${event.transaction.hash}-${event.log.logIndex}`;
 
-  // Update sender balance and record event (skip mints from zero address)
-  if (from !== ZERO_ADDRESS) {
+  // Update sender balance atomically and record event (skip mints from zero address)
+  if (from !== zeroAddress) {
     const fromAddr = from.toLowerCase();
-    const existing = await db.find(schema.ensBalance, { id: fromAddr });
-    const prevBalance = existing?.balance ?? 0n;
-    const newBalance = prevBalance - value;
 
-    await db
+    // Atomic upsert: insert with -value or decrement existing balance
+    const { balance: currentSenderBalance } = await db
       .insert(schema.ensBalance)
-      .values({ id: fromAddr, balance: newBalance, lastUpdatedBlock: blockNumber })
-      .onConflictDoUpdate({ balance: newBalance, lastUpdatedBlock: blockNumber });
+      .values({ id: fromAddr, balance: -value, lastUpdatedBlock: blockNumber })
+      .onConflictDoUpdate((row) => ({
+        balance: row.balance - value,
+        lastUpdatedBlock: blockNumber,
+      }));
 
     await db.insert(schema.ensBalanceEvent).values({
       id: `${logId}-from`,
       accountId: fromAddr,
-      balance: newBalance,
+      balance: currentSenderBalance,
       delta: -value,
+      deltaMod: value,
       blockNumber,
       timestamp,
       transactionHash: event.transaction.hash,
     });
   }
 
-  // Update receiver balance and record event (skip burns to zero address)
-  if (to !== ZERO_ADDRESS) {
+  // Update receiver balance atomically and record event (skip burns to zero address)
+  if (to !== zeroAddress) {
     const toAddr = to.toLowerCase();
-    const existing = await db.find(schema.ensBalance, { id: toAddr });
-    const prevBalance = existing?.balance ?? 0n;
-    const newBalance = prevBalance + value;
 
-    await db
+    // Atomic upsert: insert with +value or increment existing balance
+    const { balance: currentReceiverBalance } = await db
       .insert(schema.ensBalance)
-      .values({ id: toAddr, balance: newBalance, lastUpdatedBlock: blockNumber })
-      .onConflictDoUpdate({ balance: newBalance, lastUpdatedBlock: blockNumber });
+      .values({ id: toAddr, balance: value, lastUpdatedBlock: blockNumber })
+      .onConflictDoUpdate((row) => ({
+        balance: row.balance + value,
+        lastUpdatedBlock: blockNumber,
+      }));
 
     await db.insert(schema.ensBalanceEvent).values({
       id: `${logId}-to`,
       accountId: toAddr,
-      balance: newBalance,
+      balance: currentReceiverBalance,
       delta: value,
+      deltaMod: value,
       blockNumber,
       timestamp,
       transactionHash: event.transaction.hash,
@@ -301,12 +317,25 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
   }
 });
 
+/**
+ * Handles ENS token DelegateChanged events.
+ *
+ * Inspired by anticapture's delegateChanged pattern:
+ * - Looks up the delegator's current token balance and stores it as delegatedValue
+ * - This provides the backend with delegation weight at delegation time
+ */
 ponder.on("ENSToken:DelegateChanged", async ({ event, context }) => {
   const { delegator, fromDelegate, toDelegate } = event.args;
   const { db } = context;
   const blockNumber = BigInt(event.block.number);
   const timestamp = BigInt(event.block.timestamp);
   const logId = `${event.transaction.hash}-${event.log.logIndex}`;
+
+  // Look up delegator's current ENS balance for delegated value tracking
+  const delegatorBalance = await db.find(schema.ensBalance, {
+    id: delegator.toLowerCase(),
+  });
+  const delegatedValue = delegatorBalance?.balance ?? 0n;
 
   // Update current delegation state
   await db
@@ -321,27 +350,39 @@ ponder.on("ENSToken:DelegateChanged", async ({ event, context }) => {
       lastUpdatedBlock: blockNumber,
     });
 
-  // Record the delegation change event
+  // Record the delegation change event with delegated value
   await db.insert(schema.ensDelegationEvent).values({
     id: logId,
     delegatorId: delegator.toLowerCase(),
     fromDelegateId: fromDelegate.toLowerCase(),
     toDelegateId: toDelegate.toLowerCase(),
+    delegatedValue,
     blockNumber,
     timestamp,
     transactionHash: event.transaction.hash,
   });
 });
 
+/**
+ * Handles ENS token DelegateVotesChanged events.
+ *
+ * Inspired by anticapture's delegatedVotesChanged pattern:
+ * - Stores both signed delta and absolute deltaMod
+ * - deltaMod enables efficient queries for significant VP changes regardless of direction
+ */
 ponder.on("ENSToken:DelegateVotesChanged", async ({ event, context }) => {
   const { delegate, previousBalance, newBalance } = event.args;
   const { db } = context;
+
+  const delta = newBalance - previousBalance;
+  const deltaMod = delta > 0n ? delta : -delta;
 
   await db.insert(schema.ensVotingPowerSnapshot).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
     accountId: delegate.toLowerCase(),
     votingPower: newBalance,
-    delta: newBalance - previousBalance,
+    delta,
+    deltaMod,
     blockNumber: BigInt(event.block.number),
     timestamp: BigInt(event.block.timestamp),
     transactionHash: event.transaction.hash,
