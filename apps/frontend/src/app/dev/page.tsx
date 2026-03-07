@@ -8,6 +8,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { TierLadder } from "@/components/rounds/TierLadder";
 import { HowItWorksCards } from "@/components/landing/HowItWorksCards";
 import { HowDrawWorks } from "@/components/lottery/HowDrawWorks";
@@ -346,6 +348,22 @@ export default function DevPage() {
               <Skeleton className="h-3 w-1/3" />
             </div>
           </div>
+        </div>
+      </Section>
+
+      {/* Error & Empty States */}
+      <Section title="Error & Empty States">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-sp-4">
+          <ErrorState
+            title="Couldn't load delegates"
+            message="The API may be unavailable. Please try again."
+            onRetry={() => alert("Retry clicked")}
+          />
+          <EmptyState
+            title="No active delegates"
+            message="There are no active delegates at the moment. Check back later."
+            action={<Button variant="secondary">Refresh</Button>}
+          />
         </div>
       </Section>
 
