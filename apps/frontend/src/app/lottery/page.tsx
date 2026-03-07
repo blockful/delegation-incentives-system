@@ -1,10 +1,24 @@
+"use client";
+
 import { PageContainer } from "@/components/layout/PageContainer";
+import { LotteryHeader } from "@/components/lottery/LotteryHeader";
+import { UserStatusCard } from "@/components/lottery/UserStatusCard";
+import { PrizePoolDisplay } from "@/components/lottery/PrizePoolDisplay";
+import { HowDrawWorks } from "@/components/lottery/HowDrawWorks";
 
 export default function LotteryPage() {
   return (
     <PageContainer>
-      <h1 className="text-h1">Lottery</h1>
-      <p className="mt-sp-2 text-body text-text-body">Coming soon</p>
+      <div className="space-y-sp-8">
+        <LotteryHeader />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-sp-6">
+          <UserStatusCard />
+          <PrizePoolDisplay />
+        </div>
+
+        <HowDrawWorks />
+      </div>
     </PageContainer>
   );
 }
