@@ -161,7 +161,7 @@ curl http://localhost:3000/eligibility/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA9604
 }
 ```
 
-### Distribution Pipeline (12 Steps)
+### Distribution Pipeline (13 Steps)
 
 The core computation is orchestrated by `distribution-pipeline.ts`. Each month's distribution runs through these steps in sequence:
 
@@ -174,11 +174,12 @@ The core computation is orchestrated by `distribution-pipeline.ts`. Each month's
 | 5 | `time-weighted-balance.ts` | Compute each active delegate's average voting power over the month |
 | 6 | `delegate-rewards.ts` | Allocate the delegate sub-pool (10%) pro-rata by AVP, applying per-entity caps |
 | 7 | Data layer | Fetch all active delegations to active delegates at month-end |
-| 8 | `protocol-dedup.ts` | Consolidate wallets — merge proxy/contract addresses and known EOA aliases to canonical addresses |
+| 8 | Data layer | Fetch protocol mappings and wallet aliases for address deduplication |
 | 9 | `time-weighted-balance.ts` | Compute 180-day time-weighted balance for each eligible delegator |
-| 10 | `delegator-rewards.ts` | Allocate the delegator sub-pool (90%) pro-rata by TWB, applying per-entity caps |
-| 11 | `lottery.ts` | Group payouts < 1 ENS into ~10 ENS lottery pools with RANDAO-seeded winner selection |
-| 12 | `invariant.ts` | Post-computation validation — total <= pool, caps respected, lottery winners valid |
+| 10 | `protocol-dedup.ts` | Consolidate wallets — merge proxy/contract and EOA aliases to canonical addresses, combining TWBs |
+| 11 | `delegator-rewards.ts` | Allocate the delegator sub-pool (90%) pro-rata by consolidated TWB, applying per-entity caps |
+| 12 | `lottery.ts` | Group payouts < 1 ENS into ~10 ENS lottery pools with RANDAO-seeded winner selection |
+| 13 | `invariant.ts` | Post-computation validation — total <= pool, caps respected, lottery winners valid |
 
 ### Domain Concepts
 
