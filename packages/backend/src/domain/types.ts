@@ -129,6 +129,22 @@ export interface ProtocolMapping {
   protocol: string;
 }
 
+/**
+ * Known wallet alias — maps secondary wallets to a primary (canonical) address.
+ * Used when multiple EOAs are known to belong to the same entity.
+ * Consolidation happens BEFORE cap calculation so the entity's
+ * combined TWB is capped as a single participant.
+ * Rewards are routed to the primary address.
+ */
+export interface WalletAlias {
+  /** Secondary address to be consolidated */
+  secondaryAddress: string;
+  /** Primary address that receives the consolidated rewards */
+  primaryAddress: string;
+  /** Optional label for audit trail (e.g., "manual-review", "ens-dao-verified") */
+  source: string;
+}
+
 // --- Lottery ---
 
 export interface LotteryEntry {

@@ -19,7 +19,7 @@ import { computeTimeWeightedBalance } from "@/domain/time-weighted-balance.js";
 import { computeDelegateRewards } from "@/domain/delegate-rewards.js";
 import { computeDelegatorRewards } from "@/domain/delegator-rewards.js";
 import { runLottery } from "@/domain/lottery.js";
-import { deduplicateDelegators } from "@/domain/protocol-dedup.js";
+import { consolidateDelegators } from "@/domain/protocol-dedup.js";
 import { POOL_TIERS, MIN_PAYOUT_THRESHOLD, LOTTERY_TARGET_POOL_SIZE } from "@/config.js";
 import { sum, percentageGrowthBps } from "@/util/bigint-math.js";
 import {
@@ -149,8 +149,9 @@ export async function runDistributionPipeline(
     monthEnd,
   );
 
-  // Step 8: Apply protocol deduplication
+  // Step 8: Fetch protocol mappings and wallet aliases
   const protocolMappings = await dataSource.protocolMappings.getMappings();
+  const walletAliases = await dataSource.walletAliases.getAliases();
 
   const rawDelegatorScores: DelegatorScore[] = [];
   const delegatorIds = [...new Set(delegations.map((d) => d.delegatorId))];
@@ -185,9 +186,13 @@ export async function runDistributionPipeline(
     });
   }
 
-  const dedupedScores = deduplicateDelegators(
+  // Step 10: Consolidate wallets BEFORE cap calculation
+  // Protocol mappings (proxy/contract → owner) + known wallet aliases (secondary → primary)
+  // Combined TWBs ensure caps apply to the entity, not individual wallets
+  const dedupedScores = consolidateDelegators(
     rawDelegatorScores,
     protocolMappings,
+    walletAliases,
   );
 
   // Step 10: Compute delegator rewards

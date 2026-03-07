@@ -3,3 +3,6 @@ dist/
 .env
 coverage/
 *.tsbuildinfo
+.ponder/
+generated/
+package-lock.json

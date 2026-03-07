@@ -1,38 +1,20 @@
 {
   "name": "delegation-incentives-system",
-  "version": "1.0.0",
-  "description": "ENS Delegation Incentives Program - Distribution Calculator",
-  "type": "module",
-  "main": "dist/index.js",
+  "private": true,
+  "description": "ENS Delegation Incentives Program — Monorepo",
   "scripts": {
-    "build": "tsc",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
   },
   "repository": {
     "type": "git",
     "url": "http://local_proxy@127.0.0.1:21340/git/blockful/delegation-incentives-system"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "@types/node": "^25.3.5",
-    "drizzle-kit": "^0.31.9",
-    "fast-check": "^4.5.3",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+  "engines": {
+    "node": ">=18"
   },
-  "dependencies": {
-    "@hono/node-server": "^1.19.11",
-    "csv-stringify": "^6.6.0",
-    "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.1",
-    "hono": "^4.12.5",
-    "postgres": "^3.4.8",
-    "viem": "^2.47.0",
-    "zod": "^4.3.6"
-  }
+  "packageManager": "pnpm@9.15.0"
 }

@@ -6,6 +6,7 @@ import {
   type Delegation,
   type AccountBalance,
   type ProtocolMapping,
+  type WalletAlias,
   type Wei,
   type Seconds,
 } from "@/domain/types.js";
@@ -69,6 +70,11 @@ export interface ProtocolMappingRepository {
   getMappings(): Promise<ProtocolMapping[]>;
 }
 
+export interface WalletAliasRepository {
+  /** Get known wallet aliases (same entity, multiple addresses) */
+  getAliases(): Promise<WalletAlias[]>;
+}
+
 export interface BlockRepository {
   /** Get the RANDAO value from the last block of a given date (UTC) */
   getRandaoForDate(date: string): Promise<bigint>;
@@ -85,5 +91,6 @@ export interface IncentivesDataSource {
   balances: BalanceRepository;
   delegations: DelegationRepository;
   protocolMappings: ProtocolMappingRepository;
+  walletAliases: WalletAliasRepository;
   blocks: BlockRepository;
 }

@@ -1,0 +1,36 @@
+{
+  "name": "@ens-dis/backend",
+  "version": "1.0.0",
+  "description": "ENS Delegation Incentives — Backend API & Distribution Calculator",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "fast-check": "^4.5.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "@hono/zod-openapi": "^0.19.6",
+    "csv-stringify": "^6.6.0",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.12.5",
+    "postgres": "^3.4.8",
+    "viem": "^2.47.0",
+    "zod": "^4.3.6"
+  }
+}

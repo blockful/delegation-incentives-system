@@ -6,6 +6,7 @@ import type {
   BalanceRepository,
   DelegationRepository,
   ProtocolMappingRepository,
+  WalletAliasRepository,
   BlockRepository,
 } from "./interfaces.js";
 import {
@@ -16,6 +17,7 @@ import {
   type Delegation,
   type AccountBalance,
   type ProtocolMapping,
+  type WalletAlias,
   type Wei,
   type Seconds,
   wei,
@@ -33,6 +35,7 @@ export class InMemoryDataSource implements IncentivesDataSource {
   balances: InMemoryBalanceRepository;
   delegations: InMemoryDelegationRepository;
   protocolMappings: InMemoryProtocolMappingRepository;
+  walletAliases: InMemoryWalletAliasRepository;
   blocks: InMemoryBlockRepository;
 
   constructor(data: {
@@ -43,6 +46,7 @@ export class InMemoryDataSource implements IncentivesDataSource {
     delegations?: Delegation[];
     accountBalances?: AccountBalance[];
     protocolMappings?: ProtocolMapping[];
+    walletAliases?: WalletAlias[];
     randaoValues?: Map<string, bigint>;
   }) {
     this.proposals = new InMemoryProposalRepository(data.proposals ?? []);
@@ -57,6 +61,9 @@ export class InMemoryDataSource implements IncentivesDataSource {
     );
     this.protocolMappings = new InMemoryProtocolMappingRepository(
       data.protocolMappings ?? [],
+    );
+    this.walletAliases = new InMemoryWalletAliasRepository(
+      data.walletAliases ?? [],
     );
     this.blocks = new InMemoryBlockRepository(
       data.randaoValues ?? new Map(),
@@ -105,11 +112,10 @@ class InMemoryVotingPowerRepository implements VotingPowerRepository {
     at: Seconds,
   ): Promise<Wei> {
     const ids = new Set(activeDelegateIds);
-    // Get the most recent snapshot for each active delegate at or before `at`
     const latestByAccount = new Map<string, VotingPowerSnapshot>();
     for (const s of this.data) {
       if (!ids.has(s.accountId)) continue;
-      if (s.timestamp > at) continue; // Only consider snapshots at or before `at`
+      if (s.timestamp > at) continue;
       const existing = latestByAccount.get(s.accountId);
       if (!existing || s.timestamp > existing.timestamp) {
         latestByAccount.set(s.accountId, s);
@@ -164,7 +170,6 @@ class InMemoryBalanceRepository implements BalanceRepository {
   }
 
   async getBalanceAt(accountId: string, at: Seconds): Promise<Wei> {
-    // Find the most recent balance event at or before the given time
     const events = this.data
       .filter((e) => e.accountId === accountId && e.timestamp <= at)
       .sort((a, b) => Number(b.timestamp - a.timestamp));
@@ -183,7 +188,6 @@ class InMemoryDelegationRepository implements DelegationRepository {
     _at: Seconds,
   ): Promise<Delegation[]> {
     const ids = new Set(delegateIds);
-    // Return the most recent delegation per delegator that points to an active delegate
     const latestByDelegator = new Map<string, Delegation>();
     for (const d of this.delegationData) {
       if (!ids.has(d.delegateId)) continue;
@@ -204,6 +208,14 @@ class InMemoryProtocolMappingRepository implements ProtocolMappingRepository {
   constructor(private data: ProtocolMapping[]) {}
 
   async getMappings(): Promise<ProtocolMapping[]> {
+    return this.data;
+  }
+}
+
+class InMemoryWalletAliasRepository implements WalletAliasRepository {
+  constructor(private data: WalletAlias[]) {}
+
+  async getAliases(): Promise<WalletAlias[]> {
     return this.data;
   }
 }

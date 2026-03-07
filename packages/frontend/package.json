@@ -1,0 +1,7 @@
+{
+  "name": "@ens-dis/frontend",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ENS Delegation Incentives — Frontend (placeholder)",
+  "scripts": {}
+}
