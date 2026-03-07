@@ -285,6 +285,7 @@ All monetary values use **BigInt** with branded types to prevent unit mixing at 
 
 ### External References
 
+- [Delegation Incentives Program — Temp Check](https://discuss.ens.domains/t/temp-check-delegation-incentives-program/21824) — Original proposal and specification on the ENS Governance Forum
 - [ENS Governance](https://docs.ens.domains/dao) — ENS DAO governance documentation
 - [ERC20MultiDelegate](https://etherscan.io/address/0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446) — Multi-delegation contract on Etherscan
 - [Hedgey TokenVestingPlans](https://etherscan.io/address/0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C) — Vesting contract on Etherscan
