@@ -7,3 +7,4 @@ coverage/
 generated/
 package-lock.json
 .worktrees/
+.next/
