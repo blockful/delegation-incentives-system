@@ -85,7 +85,71 @@ The backend exposes an OpenAPI 3.1 spec at `GET /doc`. All endpoints are defined
 | `GET` | `/distributions/{month}/csv` | Distributions | Download a distribution as a CSV file |
 | `GET` | `/delegates/active` | Delegates | List addresses that voted on >= 7 of the last 10 proposals |
 | `GET` | `/eligibility/{address}` | Eligibility | Check whether an address is an active delegate or delegator to one |
+| `GET` | `/tiers/progression` | Tiers | Current tier, VP needed for each higher tier, growth metrics |
+| `GET` | `/apy/{address}` | APY | Estimated monthly reward and annualized APY for an address |
 | `GET` | `/doc` | — | OpenAPI 3.1 JSON spec |
+
+#### Example: Tier progression
+
+```bash
+curl http://localhost:3000/tiers/progression
+```
+
+```json
+{
+  "currentAVP": "5000000000000000000000000",
+  "previousAVP": "4500000000000000000000000",
+  "currentGrowthBps": "1111",
+  "currentGrowthPct": "11.11",
+  "currentTierIndex": 1,
+  "activeDelegateCount": 42,
+  "tiers": [
+    {
+      "index": 0,
+      "momGrowthMinPct": "0",
+      "momGrowthMaxPct": "10",
+      "poolSizeEns": "5000",
+      "delegateCapEns": "50",
+      "delegatorCapEns": "250",
+      "isCurrent": false,
+      "isUnlocked": true,
+      "additionalVPNeeded": "0",
+      "requiredAVP": "4500000000000000000000000"
+    },
+    {
+      "index": 1,
+      "momGrowthMinPct": "10",
+      "momGrowthMaxPct": "20",
+      "poolSizeEns": "8000",
+      "isCurrent": true,
+      "isUnlocked": true,
+      "additionalVPNeeded": "0",
+      "requiredAVP": "4950000000000000000000000"
+    }
+  ]
+}
+```
+
+#### Example: APY estimate
+
+```bash
+curl http://localhost:3000/apy/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+```
+
+```json
+{
+  "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "role": "delegator",
+  "delegatedTo": "0x...",
+  "currentTierIndex": 1,
+  "poolSizeEns": "8000",
+  "estimatedMonthlyRewardEns": "12.5000",
+  "estimatedApyPct": "4.28",
+  "userWeight": "350000000000000000000000",
+  "totalPoolWeight": "2100000000000000000000000",
+  "currentBalanceEns": "3500.0000"
+}
+```
 
 #### Example: Compute a distribution
 
