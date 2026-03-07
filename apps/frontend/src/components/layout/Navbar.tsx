@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { ConnectButton } from "@/components/wallet/ConnectButton";
 
 const NAV_LINKS = [
   { href: "/", label: "Dashboard" },
@@ -51,9 +51,7 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-sp-3">
-          <Button variant="pill" id="connect-wallet-btn">
-            Connect
-          </Button>
+          <ConnectButton />
 
           {/* Mobile hamburger */}
           <button

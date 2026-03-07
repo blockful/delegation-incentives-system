@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
+import { Providers } from "@/components/providers/Providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
@@ -16,9 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans text-text-primary bg-white antialiased">
-        <Navbar />
-        <main className="min-h-[calc(100vh-64px)]">{children}</main>
-        <Footer />
+        <Providers>
+          <Navbar />
+          <main className="min-h-[calc(100vh-64px)]">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );
