@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/backend" },
-    { "path": "./packages/indexer" }
+    { "path": "./apps/backend" },
+    { "path": "./apps/indexer" }
   ]
 }

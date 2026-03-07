@@ -1,4 +1,4 @@
-import { onchainTable, index } from "@ponder/core";
+import { onchainTable, index } from "ponder";
 
 // ERC20MultiDelegate tables
 

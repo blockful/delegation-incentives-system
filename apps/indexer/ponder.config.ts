@@ -1,4 +1,5 @@
-import { createConfig, http } from "@ponder/core";
+import { createConfig } from "ponder";
+import { http } from "viem";
 
 const erc20MultiDelegateAbi = [
   {
@@ -79,21 +80,21 @@ const hedgeyVestingAbi = [
 ] as const;
 
 export default createConfig({
-  networks: {
+  chains: {
     mainnet: {
-      chainId: 1,
-      transport: http(process.env.PONDER_RPC_URL_1),
+      id: 1,
+      rpc: process.env.PONDER_RPC_URL_1,
     },
   },
   contracts: {
     ERC20MultiDelegate: {
-      network: "mainnet",
+      chain: "mainnet",
       abi: erc20MultiDelegateAbi,
       address: "0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446",
       startBlock: 18564837,
     },
     HedgeyVesting: {
-      network: "mainnet",
+      chain: "mainnet",
       abi: hedgeyVestingAbi,
       address: "0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C",
       startBlock: 18506969,

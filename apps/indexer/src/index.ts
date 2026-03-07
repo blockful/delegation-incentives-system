@@ -1,12 +1,5 @@
-import { ponder } from "@/generated";
-import {
-  multiDelegateProxy,
-  multiDelegatePosition,
-  multiDelegateTransfer,
-  vestingPlan,
-  vestingRedemption,
-  protocolMapping,
-} from "../ponder.schema";
+import { ponder } from "ponder:registry";
+import schema from "ponder:schema";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ENS_TOKEN = "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72".toLowerCase();
@@ -27,7 +20,7 @@ ponder.on("ERC20MultiDelegate:ProxyDeployed", async ({ event, context }) => {
   const { db } = context;
 
   await db
-    .insert(multiDelegateProxy)
+    .insert(schema.multiDelegateProxy)
     .values({
       id: proxyAddress.toLowerCase(),
       delegate: delegate.toLowerCase(),
@@ -40,7 +33,6 @@ ponder.on("ERC20MultiDelegate:ProxyDeployed", async ({ event, context }) => {
 ponder.on("ERC20MultiDelegate:DelegationProcessed", async ({ event, context }) => {
   // DelegationProcessed events provide additional context about delegation flows.
   // The primary position tracking is handled by TransferSingle/TransferBatch events.
-  // This handler is available for supplementary tracking if needed.
 });
 
 ponder.on("ERC20MultiDelegate:TransferSingle", async ({ event, context }) => {
@@ -50,7 +42,7 @@ ponder.on("ERC20MultiDelegate:TransferSingle", async ({ event, context }) => {
   const delegateAddress = tokenIdToAddress(id);
 
   // Record the transfer
-  await db.insert(multiDelegateTransfer).values({
+  await db.insert(schema.multiDelegateTransfer).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
     from: from.toLowerCase(),
     to: to.toLowerCase(),
@@ -64,18 +56,18 @@ ponder.on("ERC20MultiDelegate:TransferSingle", async ({ event, context }) => {
   // Update positions — decrease sender's position
   if (from !== ZERO_ADDRESS) {
     const fromPositionId = `${from.toLowerCase()}-${delegateAddress}`;
-    const existing = await db.find(multiDelegatePosition, { id: fromPositionId });
+    const existing = await db.find(schema.multiDelegatePosition, { id: fromPositionId });
     if (existing) {
       const newAmount = existing.amount - value;
       if (newAmount > 0n) {
         await db
-          .update(multiDelegatePosition, { id: fromPositionId })
+          .update(schema.multiDelegatePosition, { id: fromPositionId })
           .set({
             amount: newAmount,
             lastUpdatedBlock: BigInt(event.block.number),
           });
       } else {
-        await db.delete(multiDelegatePosition, { id: fromPositionId });
+        await db.delete(schema.multiDelegatePosition, { id: fromPositionId });
       }
     }
   }
@@ -84,7 +76,7 @@ ponder.on("ERC20MultiDelegate:TransferSingle", async ({ event, context }) => {
   if (to !== ZERO_ADDRESS) {
     const toPositionId = `${to.toLowerCase()}-${delegateAddress}`;
     await db
-      .insert(multiDelegatePosition)
+      .insert(schema.multiDelegatePosition)
       .values({
         id: toPositionId,
         owner: to.toLowerCase(),
@@ -98,12 +90,11 @@ ponder.on("ERC20MultiDelegate:TransferSingle", async ({ event, context }) => {
       }));
 
     // Insert protocol mapping: the proxy for this delegate maps to the depositor
-    // Look up the proxy address for this delegate
-    const proxy = await db.find(multiDelegateProxy, { id: delegateAddress });
+    const proxy = await db.find(schema.multiDelegateProxy, { id: delegateAddress });
     const childAddress = proxy ? proxy.id : delegateAddress;
 
     await db
-      .insert(protocolMapping)
+      .insert(schema.protocolMapping)
       .values({
         id: `multi_delegate-${to.toLowerCase()}-${delegateAddress}`,
         childAddress,
@@ -126,7 +117,7 @@ ponder.on("ERC20MultiDelegate:TransferBatch", async ({ event, context }) => {
     const delegateAddress = tokenIdToAddress(id);
 
     // Record the transfer
-    await db.insert(multiDelegateTransfer).values({
+    await db.insert(schema.multiDelegateTransfer).values({
       id: `${event.transaction.hash}-${event.log.logIndex}-${i}`,
       from: from.toLowerCase(),
       to: to.toLowerCase(),
@@ -140,18 +131,18 @@ ponder.on("ERC20MultiDelegate:TransferBatch", async ({ event, context }) => {
     // Update positions — decrease sender's position
     if (from !== ZERO_ADDRESS) {
       const fromPositionId = `${from.toLowerCase()}-${delegateAddress}`;
-      const existing = await db.find(multiDelegatePosition, { id: fromPositionId });
+      const existing = await db.find(schema.multiDelegatePosition, { id: fromPositionId });
       if (existing) {
         const newAmount = existing.amount - value;
         if (newAmount > 0n) {
           await db
-            .update(multiDelegatePosition, { id: fromPositionId })
+            .update(schema.multiDelegatePosition, { id: fromPositionId })
             .set({
               amount: newAmount,
               lastUpdatedBlock: BigInt(event.block.number),
             });
         } else {
-          await db.delete(multiDelegatePosition, { id: fromPositionId });
+          await db.delete(schema.multiDelegatePosition, { id: fromPositionId });
         }
       }
     }
@@ -160,7 +151,7 @@ ponder.on("ERC20MultiDelegate:TransferBatch", async ({ event, context }) => {
     if (to !== ZERO_ADDRESS) {
       const toPositionId = `${to.toLowerCase()}-${delegateAddress}`;
       await db
-        .insert(multiDelegatePosition)
+        .insert(schema.multiDelegatePosition)
         .values({
           id: toPositionId,
           owner: to.toLowerCase(),
@@ -174,11 +165,11 @@ ponder.on("ERC20MultiDelegate:TransferBatch", async ({ event, context }) => {
         }));
 
       // Insert protocol mapping
-      const proxy = await db.find(multiDelegateProxy, { id: delegateAddress });
+      const proxy = await db.find(schema.multiDelegateProxy, { id: delegateAddress });
       const childAddress = proxy ? proxy.id : delegateAddress;
 
       await db
-        .insert(protocolMapping)
+        .insert(schema.protocolMapping)
         .values({
           id: `multi_delegate-${to.toLowerCase()}-${delegateAddress}`,
           childAddress,
@@ -201,7 +192,7 @@ ponder.on("HedgeyVesting:PlanCreated", async ({ event, context }) => {
   // Only index plans for the ENS token
   if (token.toLowerCase() !== ENS_TOKEN) return;
 
-  await db.insert(vestingPlan).values({
+  await db.insert(schema.vestingPlan).values({
     id,
     recipient: recipient.toLowerCase(),
     token: token.toLowerCase(),
@@ -216,7 +207,7 @@ ponder.on("HedgeyVesting:PlanCreated", async ({ event, context }) => {
 
   // Map the vesting contract address to the recipient
   await db
-    .insert(protocolMapping)
+    .insert(schema.protocolMapping)
     .values({
       id: `hedgey_vesting-${id.toString()}`,
       childAddress: HEDGEY_VESTING_ADDRESS,
@@ -231,18 +222,18 @@ ponder.on("HedgeyVesting:PlanRedeemed", async ({ event, context }) => {
   const { db } = context;
 
   // Check if this plan exists (i.e., it's an ENS token plan we're tracking)
-  const plan = await db.find(vestingPlan, { id });
+  const plan = await db.find(schema.vestingPlan, { id });
   if (!plan) return;
 
   // Update the plan's redeemed amount
   await db
-    .update(vestingPlan, { id })
+    .update(schema.vestingPlan, { id })
     .set({
       amountRedeemed: plan.amountRedeemed + amountRedeemed,
     });
 
   // Record the redemption event
-  await db.insert(vestingRedemption).values({
+  await db.insert(schema.vestingRedemption).values({
     id: `${id.toString()}-${event.block.number}`,
     planId: id,
     amountRedeemed,
@@ -260,12 +251,12 @@ ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {
   if (from === ZERO_ADDRESS) return;
 
   // Check if this plan exists (i.e., it's an ENS token plan we're tracking)
-  const plan = await db.find(vestingPlan, { id: tokenId });
+  const plan = await db.find(schema.vestingPlan, { id: tokenId });
   if (!plan) return;
 
   // Update the recipient on the vesting plan
   await db
-    .update(vestingPlan, { id: tokenId })
+    .update(schema.vestingPlan, { id: tokenId })
     .set({
       recipient: to.toLowerCase(),
     });
@@ -273,7 +264,7 @@ ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {
   // Update the protocol mapping to reflect the new owner
   const mappingId = `hedgey_vesting-${tokenId.toString()}`;
   await db
-    .update(protocolMapping, { id: mappingId })
+    .update(schema.protocolMapping, { id: mappingId })
     .set({
       operatorAddress: to.toLowerCase(),
     });
