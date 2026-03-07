@@ -24,3 +24,9 @@ export function previousMonth(monthStr: string): string {
   if (month === 1) return `${year - 1}-12`;
   return `${year}-${String(month - 1).padStart(2, "0")}`;
 }
+
+/** Get the current UTC month as "YYYY-MM" */
+export function currentMonth(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}

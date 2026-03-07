@@ -122,31 +122,23 @@ class InMemoryVotingPowerRepository implements VotingPowerRepository {
       }
     }
     return wei(
-      sum(
-        Array.from(latestByAccount.values()).map(
-          (s) => s.votingPower as bigint,
-        ),
-      ),
+      sum(Array.from(latestByAccount.values()).map((s) => s.votingPower)),
     );
   }
 
   async getVotingPower(accountIds: string[]): Promise<Map<string, Wei>> {
-    const result = new Map<string, Wei>();
     const ids = new Set(accountIds);
+    const latestByAccount = new Map<string, VotingPowerSnapshot>();
     for (const s of this.data) {
       if (!ids.has(s.accountId)) continue;
-      const existing = result.get(s.accountId);
-      if (
-        !existing ||
-        s.timestamp >
-          (this.data.find(
-            (d) =>
-              d.accountId === s.accountId &&
-              (d.votingPower as bigint) === (existing as bigint),
-          )?.timestamp ?? 0n)
-      ) {
-        result.set(s.accountId, s.votingPower);
+      const existing = latestByAccount.get(s.accountId);
+      if (!existing || s.timestamp > existing.timestamp) {
+        latestByAccount.set(s.accountId, s);
       }
+    }
+    const result = new Map<string, Wei>();
+    for (const [id, snapshot] of latestByAccount) {
+      result.set(id, snapshot.votingPower);
     }
     return result;
   }

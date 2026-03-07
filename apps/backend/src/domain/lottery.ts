@@ -24,9 +24,9 @@ export function runLottery(
   const lotteryEntries: LotteryEntry[] = [];
 
   for (const alloc of allocations) {
-    if ((alloc.amount as bigint) >= minThreshold) {
+    if (alloc.amount >= minThreshold) {
       directPayouts.push(alloc);
-    } else if ((alloc.amount as bigint) > 0n) {
+    } else if (alloc.amount > 0n) {
       lotteryEntries.push({
         address: alloc.address,
         originalAmount: alloc.amount,
@@ -41,7 +41,7 @@ export function runLottery(
 
   // Sort entries by amount descending, then address for determinism
   lotteryEntries.sort((a, b) => {
-    const diff = (b.originalAmount as bigint) - (a.originalAmount as bigint);
+    const diff = b.originalAmount - a.originalAmount;
     if (diff !== 0n) return diff > 0n ? 1 : -1;
     return a.address.localeCompare(b.address);
   });
@@ -52,7 +52,7 @@ export function runLottery(
   let currentSum = 0n;
 
   for (const entry of lotteryEntries) {
-    const entryAmount = entry.originalAmount as bigint;
+    const entryAmount = entry.originalAmount;
     if (
       currentPool.length > 0 &&
       currentSum + entryAmount > targetPoolSize
@@ -72,7 +72,7 @@ export function runLottery(
   // For each pool, draw a weighted random winner
   const lotteryPools: LotteryPool[] = pools.map((entries, poolIndex) => {
     const totalPrize = wei(
-      sum(entries.map((e) => e.originalAmount as bigint)),
+      sum(entries.map((e) => e.originalAmount)),
     );
     const winner = drawWeightedWinner(entries, randaoSeed, poolIndex);
     return { entries, totalPrize, winner };
@@ -92,7 +92,7 @@ function drawWeightedWinner(
 ): string {
   if (entries.length === 1) return entries[0].address;
 
-  const totalWeight = sum(entries.map((e) => e.originalAmount as bigint));
+  const totalWeight = sum(entries.map((e) => e.originalAmount));
   if (totalWeight === 0n) return entries[0].address;
 
   // Generate deterministic random number
@@ -107,7 +107,7 @@ function drawWeightedWinner(
   // Weighted selection via cumulative sum
   let cumulative = 0n;
   for (const entry of entries) {
-    cumulative += entry.originalAmount as bigint;
+    cumulative += entry.originalAmount;
     if (randomValue < cumulative) {
       return entry.address;
     }

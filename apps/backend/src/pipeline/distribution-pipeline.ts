@@ -48,9 +48,7 @@ export async function runDistributionPipeline(
   const { year, month: monthNum } = parseMonth(month);
   const monthStart = monthStartTimestamp(year, monthNum);
   const monthEnd = monthEndTimestamp(year, monthNum);
-  const twbWindowStart = seconds(
-    (monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint),
-  );
+  const twbWindowStart = seconds(monthEnd - TWB_WINDOW_SECONDS);
 
   const prevMonthStr = previousMonth(month);
   const { year: prevYear, month: prevMonthNum } = parseMonth(prevMonthStr);
@@ -82,10 +80,7 @@ export async function runDistributionPipeline(
     prevMonthEnd,
   );
 
-  const momGrowthBps = percentageGrowthBps(
-    currentAVP as bigint,
-    previousAVP as bigint,
-  );
+  const momGrowthBps = percentageGrowthBps(currentAVP, previousAVP);
   const poolTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
   const monthlyPool = poolTier.poolSize;
 
@@ -139,8 +134,8 @@ export async function runDistributionPipeline(
   // Step 6: Compute delegate rewards
   const delegateResults = computeDelegateRewards(
     delegateScores,
-    monthlyPool as bigint,
-    poolTier.delegateCap as bigint,
+    monthlyPool,
+    poolTier.delegateCap,
   );
 
   // Step 7: Fetch active delegations at month-end
@@ -195,11 +190,11 @@ export async function runDistributionPipeline(
     walletAliases,
   );
 
-  // Step 10: Compute delegator rewards
+  // Step 11: Compute delegator rewards
   const delegatorResults = computeDelegatorRewards(
     dedupedScores,
-    monthlyPool as bigint,
-    poolTier.delegatorCap as bigint,
+    monthlyPool,
+    poolTier.delegatorCap,
   );
 
   // Combine into RewardAllocations
@@ -216,7 +211,7 @@ export async function runDistributionPipeline(
     })),
   ];
 
-  // Step 11: Apply lottery
+  // Step 12: Apply lottery
   const randaoDate = `${year}-${String(monthNum).padStart(2, "0")}-${new Date(
     Number(monthEnd) * 1000,
   )
@@ -227,26 +222,26 @@ export async function runDistributionPipeline(
 
   const { directPayouts, lotteryPools } = runLottery(
     allAllocations,
-    MIN_PAYOUT_THRESHOLD as bigint,
-    LOTTERY_TARGET_POOL_SIZE as bigint,
+    MIN_PAYOUT_THRESHOLD,
+    LOTTERY_TARGET_POOL_SIZE,
     randaoSeed,
   );
 
-  // Step 12: Post-computation validation
-  const totalDirect = sum(directPayouts.map((p) => p.amount as bigint));
-  const totalLottery = sum(lotteryPools.map((p) => p.totalPrize as bigint));
+  // Step 13: Post-computation validation
+  const totalDirect = sum(directPayouts.map((p) => p.amount));
+  const totalLottery = sum(lotteryPools.map((p) => p.totalPrize));
   const totalDistributed = totalDirect + totalLottery;
 
   // Total distributed should not exceed monthly pool
   invariant(
-    totalDistributed <= (monthlyPool as bigint),
+    totalDistributed <= monthlyPool,
     `Total distributed (${totalDistributed}) exceeds monthly pool (${monthlyPool})`,
   );
 
   // No delegate exceeds delegate cap
   for (const payout of directPayouts.filter((p) => p.role === "delegate")) {
     invariant(
-      (payout.amount as bigint) <= (poolTier.delegateCap as bigint),
+      payout.amount <= poolTier.delegateCap,
       `Delegate ${payout.address} exceeds cap: ${payout.amount} > ${poolTier.delegateCap}`,
     );
   }
@@ -254,7 +249,7 @@ export async function runDistributionPipeline(
   // No delegator exceeds delegator cap
   for (const payout of directPayouts.filter((p) => p.role === "delegator")) {
     invariant(
-      (payout.amount as bigint) <= (poolTier.delegatorCap as bigint),
+      payout.amount <= poolTier.delegatorCap,
       `Delegator ${payout.address} exceeds cap: ${payout.amount} > ${poolTier.delegatorCap}`,
     );
   }
