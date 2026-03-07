@@ -17,7 +17,7 @@ export function allocateWithCap(
 ): AllocationResult[] {
   if (inputs.length === 0) return [];
 
-  const totalWeight = sum(inputs.map((i) => i.weight as bigint));
+  const totalWeight = sum(inputs.map((i) => i.weight));
   if (totalWeight === 0n)
     return inputs.map((i) => ({ id: i.id, amount: wei(0n) }));
 
@@ -30,13 +30,13 @@ export function allocateWithCap(
   for (let iteration = 0; iteration <= inputs.length; iteration++) {
     if (activeInputs.length === 0) break;
 
-    const activeWeight = sum(activeInputs.map((i) => i.weight as bigint));
+    const activeWeight = sum(activeInputs.map((i) => i.weight));
     if (activeWeight === 0n) break;
 
     // Compute raw allocation for each active recipient
     const rawAllocations = new Map<string, bigint>();
     for (const input of activeInputs) {
-      const raw = ((input.weight as bigint) * remainingPool) / activeWeight;
+      const raw = (input.weight * remainingPool) / activeWeight;
       rawAllocations.set(input.id, raw);
     }
 
@@ -75,15 +75,15 @@ export function allocateWithCap(
   }));
 
   // Dust handling: assign rounding remainder to largest under-cap allocation
-  const distributed = sum(allocations.map((a) => a.amount as bigint));
+  const distributed = sum(allocations.map((a) => a.amount));
   const dust = totalPool - distributed;
 
   if (dust > 0n && allocations.length > 0) {
     // Find recipients that still have room under cap, sorted by amount desc then id asc
     const eligible = allocations
-      .filter((a) => (a.amount as bigint) < perRecipientCap)
+      .filter((a) => a.amount < perRecipientCap)
       .sort((a, b) => {
-        const diff = (b.amount as bigint) - (a.amount as bigint);
+        const diff = b.amount - a.amount;
         if (diff !== 0n) return diff > 0n ? 1 : -1;
         return a.id.localeCompare(b.id);
       });
@@ -91,10 +91,7 @@ export function allocateWithCap(
     if (eligible.length > 0) {
       const recipient = eligible[0];
       const idx = allocations.findIndex((a) => a.id === recipient.id);
-      const newAmount = bigMin(
-        (recipient.amount as bigint) + dust,
-        perRecipientCap,
-      );
+      const newAmount = bigMin(recipient.amount + dust, perRecipientCap);
       allocations[idx] = { id: recipient.id, amount: wei(newAmount) };
     }
     // If everyone is at cap, dust is simply unallocated (returned to treasury)
