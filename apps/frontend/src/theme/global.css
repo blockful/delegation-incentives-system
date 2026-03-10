@@ -1,0 +1,55 @@
+/**
+ * Global styles — ENS / Thorin-inspired foundation.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.25rem;
+  color: rgb(18, 18, 24);
+  background: rgb(246, 246, 248);
+}
+
+a {
+  color: rgb(56, 137, 255);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: "iAWriter Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
