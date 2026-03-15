@@ -14,7 +14,7 @@ export const appKit = createAppKit({
   networks: [mainnet],
   projectId,
   themeMode: 'light',
-  themeVariables: { '--w3m-accent': '#3889FF' },
+  themeVariables: { '--w3m-accent': '#0080BC' },
 })
 
 export function AppKitProvider({ children }: { children: ReactNode }) {

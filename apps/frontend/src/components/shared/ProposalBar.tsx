@@ -20,7 +20,7 @@ const Segment = styled.div<{ $voted: boolean }>`
   height: 6px;
   flex: 1;
   border-radius: 3px;
-  background: ${({ $voted }) => ($voted ? '#22C55E' : '#E8E8ED')};
+  background: ${({ $voted }) => ($voted ? '#22C55E' : '#E5E5E5')};
 `
 
 const Score = styled.span`

@@ -7,7 +7,7 @@ const RouterLink = styled(Link)`
 `
 
 const Section = styled.section`
-  background: #121218;
+  background: #011A25;
   padding: 64px 20px;
   text-align: center;
 
@@ -75,7 +75,7 @@ const Check = styled.span`
 `
 
 const CheckMark = styled.span`
-  color: #1a9a5c;
+  color: #007C23;
   font-size: 16px;
 `
 

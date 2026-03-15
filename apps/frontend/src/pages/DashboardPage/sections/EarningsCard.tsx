@@ -36,7 +36,7 @@ const Label = styled.span`
 const EarnedAmount = styled.span`
   font-size: 36px;
   font-weight: 800;
-  color: #49b365;
+  color: #007C23;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';

@@ -18,7 +18,7 @@ const Label = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #3889ff;
+  color: #0080BC;
 `
 
 const Description = styled.p`
@@ -41,9 +41,9 @@ const TierRow = styled.div<{ $active: boolean }>`
   padding: 12px 16px;
   border-radius: 12px;
   background: ${({ $active }) =>
-    $active ? 'rgba(73, 179, 101, 0.12)' : 'rgba(0, 0, 0, 0.02)'};
+    $active ? 'rgba(0, 124, 35, 0.12)' : 'rgba(0, 0, 0, 0.02)'};
   border: 1px solid
-    ${({ $active }) => ($active ? 'rgba(73, 179, 101, 0.3)' : 'transparent')};
+    ${({ $active }) => ($active ? 'rgba(0, 124, 35, 0.3)' : 'transparent')};
 `
 
 const TierInfo = styled.div`

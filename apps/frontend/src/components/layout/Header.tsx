@@ -11,7 +11,7 @@ const StyledHeader = styled.header`
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid #E5E5E5;
   background: #fff;
 `
 
@@ -33,7 +33,7 @@ const Logo = styled.div`
 const BrandText = styled.span`
   font-weight: 600;
   font-size: 16px;
-  color: #1a1a2e;
+  color: #011A25;
 `
 
 const Nav = styled.nav`
@@ -49,15 +49,15 @@ const StyledNavLink = styled(NavLink)`
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: #4A5C63;
   transition: color 0.15s;
 
   &:hover {
-    color: #1a1a2e;
+    color: #011A25;
   }
 
   &.active {
-    color: #3889ff;
+    color: #0080BC;
   }
 `
 

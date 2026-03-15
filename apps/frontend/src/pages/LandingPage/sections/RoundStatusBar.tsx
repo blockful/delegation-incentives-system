@@ -30,18 +30,18 @@ const Pills = styled.div`
 const Pill = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: #1a9a5c;
+  color: #007C23;
 `
 
 const PillDot = styled.span`
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 2px;
 `
 
 const InfoBar = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  border: 1px solid #e8e8ed;
+  border: 1px solid #E5E5E5;
   border-radius: 12px;
   overflow: hidden;
   width: 100%;
@@ -53,7 +53,7 @@ const InfoCell = styled.div`
   text-align: center;
 
   &:not(:last-child) {
-    border-right: 1px solid #e8e8ed;
+    border-right: 1px solid #E5E5E5;
   }
 `
 
@@ -71,18 +71,18 @@ const LiveDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #3889ff;
+  background: #0080BC;
   display: inline-block;
 `
 
 const GrowthValue = styled.span<{ $negative?: boolean }>`
-  color: ${({ $negative }) => ($negative ? '#C6301B' : '#1a9a5c')};
+  color: ${({ $negative }) => ($negative ? '#C6301B' : '#007C23')};
   font-weight: 700;
 `
 
 const InfoLabel = styled.div`
   font-size: 12px;
-  color: #7a7a85;
+  color: #4A5C63;
   margin-top: 2px;
 `
 

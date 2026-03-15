@@ -8,7 +8,7 @@ const RouterLink = styled(Link)`
 
 const Section = styled.section`
   padding: 48px 20px;
-  background: #f7f9fc;
+  background: #f6f6f6;
 
   @media (min-width: 768px) {
     padding: 80px 40px;
@@ -25,7 +25,7 @@ const Eyebrow = styled.p`
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 0 12px;
 `
 
@@ -44,7 +44,7 @@ const Heading = styled.h2`
 const Subtitle = styled.p`
   font-size: 15px;
   line-height: 1.6;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 0 36px;
   max-width: 520px;
 `
@@ -63,7 +63,7 @@ const Cards = styled.div`
 
 const Card = styled.div`
   background: #fff;
-  border: 1px solid #e8e8ed;
+  border: 1px solid #E5E5E5;
   border-radius: 16px;
   padding: 24px;
   position: relative;
@@ -87,7 +87,7 @@ const StepNumber = styled.span`
   right: 24px;
   font-size: 28px;
   font-weight: 700;
-  color: #e8e8ed;
+  color: #E5E5E5;
 `
 
 const CardTitle = styled.h3`
@@ -100,7 +100,7 @@ const CardTitle = styled.h3`
 const CardDesc = styled.p`
   font-size: 13px;
   line-height: 1.5;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 0 16px;
 `
 

@@ -28,7 +28,7 @@ const Eyebrow = styled.p`
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 0 12px;
 `
 
@@ -47,7 +47,7 @@ const Heading = styled.h2`
 const Description = styled.p`
   font-size: 15px;
   line-height: 1.6;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 0 28px;
 `
 
@@ -70,9 +70,9 @@ const TierRow = styled.div<{ $isCurrent: boolean }>`
   align-items: center;
   padding: 14px 16px;
   gap: 12px;
-  border-bottom: 1px solid #e8e8ed;
+  border-bottom: 1px solid #E5E5E5;
   background: ${({ $isCurrent }) =>
-    $isCurrent ? 'rgba(26, 154, 92, 0.08)' : 'transparent'};
+    $isCurrent ? 'rgba(0, 124, 35, 0.08)' : 'transparent'};
   border-radius: ${({ $isCurrent }) => ($isCurrent ? '10px' : '0')};
   opacity: ${({ $isCurrent }) => ($isCurrent ? 1 : 0.85)};
 `
@@ -95,7 +95,7 @@ const ApyInfo = styled.div`
 
 const StatusIcon = styled.span<{ $unlocked: boolean }>`
   font-size: 14px;
-  color: ${({ $unlocked }) => ($unlocked ? '#1a9a5c' : '#7a7a85')};
+  color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#4A5C63')};
 `
 
 export function TierTableSection({ tiers }: TierTableSectionProps) {

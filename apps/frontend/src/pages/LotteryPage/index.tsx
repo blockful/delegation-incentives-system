@@ -14,7 +14,7 @@ const Page = styled.div`
 `
 
 const Hero = styled.div`
-  background: linear-gradient(135deg, #e8f0fe 0%, #dce8f9 100%);
+  background: linear-gradient(135deg, #CEE1E8 0%, #dce8f9 100%);
   border-radius: 20px;
   padding: 32px 24px;
   text-align: center;
@@ -25,7 +25,7 @@ const HeroLabel = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #3889ff;
+  color: #0080BC;
 `
 
 const HeroHeading = styled.h1`
@@ -87,7 +87,7 @@ const PrizeLabel = styled.span`
 const PrizeAmount = styled.span`
   font-size: 36px;
   font-weight: 800;
-  color: #49b365;
+  color: #007C23;
 `
 
 const PrizeStat = styled.span`
@@ -124,7 +124,7 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #3889ff;
+  background: #0080BC;
   color: white;
   font-weight: 700;
   font-size: 14px;
@@ -176,7 +176,7 @@ const WinnerAddress = styled.span`
 const WinnerPrize = styled.span`
   font-size: 18px;
   font-weight: 700;
-  color: #49b365;
+  color: #007C23;
 `
 
 const LoadingWrapper = styled.div`

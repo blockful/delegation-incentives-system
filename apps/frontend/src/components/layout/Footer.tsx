@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 const StyledFooter = styled.footer`
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid #E5E5E5;
   padding: 32px 24px;
   background: #fafafa;
 `
@@ -26,7 +26,7 @@ const Top = styled.div`
 const Title = styled.div`
   font-weight: 600;
   font-size: 14px;
-  color: #1a1a2e;
+  color: #011A25;
 `
 
 const Subtitle = styled.div`
@@ -43,21 +43,21 @@ const Nav = styled.nav`
 
 const FooterLink = styled(Link)`
   font-size: 13px;
-  color: #666;
+  color: #4A5C63;
   text-decoration: none;
 
   &:hover {
-    color: #3889ff;
+    color: #0080BC;
   }
 `
 
 const ExternalLink = styled.a`
   font-size: 13px;
-  color: #666;
+  color: #4A5C63;
   text-decoration: none;
 
   &:hover {
-    color: #3889ff;
+    color: #0080BC;
   }
 `
 

@@ -15,7 +15,7 @@ const Dot = styled.div<{ $filled: boolean }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $filled }) => ($filled ? '#121218' : '#E8E8ED')};
+  background: ${({ $filled }) => ($filled ? '#011A25' : '#E5E5E5')};
 `
 
 export function TierDots({ tierIndex, totalTiers = 7 }: TierDotsProps) {

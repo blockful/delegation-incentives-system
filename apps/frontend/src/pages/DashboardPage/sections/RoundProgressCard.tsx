@@ -46,7 +46,7 @@ const ProgressTrack = styled.div`
 const ProgressFill = styled.div<{ $pct: number }>`
   height: 100%;
   border-radius: 3px;
-  background: #49b365;
+  background: #007C23;
   width: ${({ $pct }) => Math.min($pct, 100)}%;
   transition: width 0.3s ease;
 `

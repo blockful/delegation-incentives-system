@@ -54,7 +54,7 @@ const SectionLabel = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #3889ff;
+  color: #0080BC;
 `
 
 const SectionTitle = styled.h2`
@@ -129,7 +129,7 @@ const ContractAddress = styled.span`
 
 const ExternalLink = styled.a`
   font-size: 14px;
-  color: #3889ff;
+  color: #0080BC;
   text-decoration: none;
   flex-shrink: 0;
 
@@ -183,7 +183,7 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #3889ff;
+  background: #0080BC;
   color: white;
   font-weight: 700;
   font-size: 14px;

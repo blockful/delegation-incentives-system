@@ -25,7 +25,7 @@ const Label = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #3889ff;
+  color: #0080BC;
 `
 
 const HeadingRow = styled.div`

@@ -11,7 +11,7 @@ interface HeroSectionProps {
 }
 
 const Section = styled.section`
-  background: linear-gradient(180deg, #e8f0fe 0%, #f7f9fc 100%);
+  background: linear-gradient(180deg, #CEE1E8 0%, #f6f6f6 100%);
   padding: 48px 20px 40px;
   text-align: center;
 
@@ -25,7 +25,7 @@ const Label = styled.p`
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 0 16px;
 `
 
@@ -43,7 +43,7 @@ const Heading = styled.h1`
 
 const ApyHighlight = styled.span`
   display: inline-block;
-  background: #3889ff;
+  background: #0080BC;
   color: #fff;
   padding: 2px 12px;
   border-radius: 8px;
@@ -53,7 +53,7 @@ const ApyHighlight = styled.span`
 const Subtitle = styled.p`
   font-size: 16px;
   line-height: 1.5;
-  color: #7a7a85;
+  color: #4A5C63;
   margin: 0 auto 32px;
   max-width: 480px;
 
