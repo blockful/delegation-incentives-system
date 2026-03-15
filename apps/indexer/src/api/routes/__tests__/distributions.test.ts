@@ -172,6 +172,18 @@ describe("GET /distributions/{month}", () => {
     expect(Array.isArray(body.directPayouts)).toBe(true)
     expect(Array.isArray(body.lotteryPools)).toBe(true)
   })
+
+  it("returns 500 when load() throws", async () => {
+    vi.mocked(mockDataSource.distributions.load).mockRejectedValueOnce(
+      new Error("Database connection failed"),
+    )
+    const req = new Request("http://localhost/distributions/2025-03")
+    const res = await distributionsRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
+    expect(typeof body.error).toBe("string")
+  })
 })
 
 describe("GET /distributions/{month}/csv", () => {
@@ -191,5 +203,17 @@ describe("GET /distributions/{month}/csv", () => {
     expect(res.headers.get("Content-Disposition")).toContain("distribution-2025-03.csv")
     const text = await res.text()
     expect(text).toContain("address")
+  })
+
+  it("returns 500 when load() throws", async () => {
+    vi.mocked(mockDataSource.distributions.load).mockRejectedValueOnce(
+      new Error("Database connection failed"),
+    )
+    const req = new Request("http://localhost/distributions/2025-03/csv")
+    const res = await distributionsRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
+    expect(typeof body.error).toBe("string")
   })
 })

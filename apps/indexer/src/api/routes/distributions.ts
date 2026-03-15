@@ -140,26 +140,34 @@ distributionsRouter.openapi(computeRoute, async (c) => {
 
 distributionsRouter.openapi(getDistributionRoute, async (c) => {
   const { month } = c.req.valid("param")
-  const dataSource = buildDataSource()
-  const result = await dataSource.distributions.load(month)
-  if (!result) {
-    return c.json(
-      { error: "Distribution not computed yet. POST to /distributions/:month/compute first" },
-      404,
-    )
+  try {
+    const dataSource = buildDataSource()
+    const result = await dataSource.distributions.load(month)
+    if (!result) {
+      return c.json(
+        { error: "Distribution not computed yet. POST to /distributions/:month/compute first" },
+        404,
+      )
+    }
+    return c.json(JSON.parse(distributionToJson(result)), 200)
+  } catch (error) {
+    return c.json({ error: errorMessage(error) }, 500)
   }
-  return c.json(JSON.parse(distributionToJson(result)), 200)
 })
 
 distributionsRouter.openapi(getCsvRoute, async (c) => {
   const { month } = c.req.valid("param")
-  const dataSource = buildDataSource()
-  const result = await dataSource.distributions.load(month)
-  if (!result) {
-    return c.json({ error: "Distribution not computed yet" }, 404)
+  try {
+    const dataSource = buildDataSource()
+    const result = await dataSource.distributions.load(month)
+    if (!result) {
+      return c.json({ error: "Distribution not computed yet" }, 404)
+    }
+    return c.text(distributionToCsv(result), 200, {
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
+    })
+  } catch (error) {
+    return c.json({ error: errorMessage(error) }, 500)
   }
-  return c.text(distributionToCsv(result), 200, {
-    "Content-Type": "text/csv",
-    "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
-  })
 })
