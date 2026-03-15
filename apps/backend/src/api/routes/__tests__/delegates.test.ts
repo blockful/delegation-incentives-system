@@ -99,7 +99,7 @@ describe("GET /delegates/active", () => {
     expect(delegateA).toBeDefined()
     expect(typeof delegateA.votingPower).toBe("string")
     expect(delegateA.ensName).toBeNull()
-    expect(delegateA.activeSince).toBeNull()
+    expect(typeof delegateA.activeSince).toBe("string")
   })
 
   it("votingPower is populated even when addresses are mixed-case", async () => {

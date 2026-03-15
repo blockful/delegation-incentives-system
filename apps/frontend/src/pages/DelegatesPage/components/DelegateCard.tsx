@@ -138,18 +138,12 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
         <ProposalBar votes={delegate.last10ProposalsVoted} />
       )}
 
-      {(delegate.votingPower || delegate.delegatorCount != null || delegate.activeSince) && (
+      {(delegate.votingPower || delegate.activeSince) && (
         <StatsRow>
           {delegate.votingPower && (
             <Stat>
               <StatLabel>Voting Power</StatLabel>
               <StatValue>{formatVotingPower(delegate.votingPower)}</StatValue>
-            </Stat>
-          )}
-          {delegate.delegatorCount != null && (
-            <Stat>
-              <StatLabel>Delegators</StatLabel>
-              <StatValue>{delegate.delegatorCount}</StatValue>
             </Stat>
           )}
           {delegate.activeSince && (

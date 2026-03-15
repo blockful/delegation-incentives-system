@@ -43,11 +43,18 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
     }
 
     // Build vote lookup: voterAccountId -> Set<proposalId>
+    // Also track earliest vote timestamp per voter for activeSince
     const votesByVoter = new Map<string, Set<string>>()
+    const earliestVote = new Map<string, bigint>()
     for (const vote of votes) {
       const set = votesByVoter.get(vote.voterAccountId) ?? new Set<string>()
       set.add(vote.proposalId)
       votesByVoter.set(vote.voterAccountId, set)
+
+      const prev = earliestVote.get(vote.voterAccountId)
+      if (prev === undefined || vote.timestamp < prev) {
+        earliestVote.set(vote.voterAccountId, vote.timestamp)
+      }
     }
 
     // Take last 10 proposals (already ordered by fetchActiveDelegates)
@@ -64,7 +71,9 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
         ensName: null,
         votingPower: vp != null ? vp.toString() : null,
         delegatorCount: delegatorCountMap.get(lc) ?? 0,
-        activeSince: null,
+        activeSince: earliestVote.has(address)
+          ? new Date(Number(earliestVote.get(address)!) * 1000).toISOString()
+          : null,
         last10ProposalsVoted: last10.map((p) => voterSet?.has(p.id) ?? false),
       }
     })
