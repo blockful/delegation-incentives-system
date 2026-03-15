@@ -1,7 +1,10 @@
 import { NavLink, Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { useWalletState } from '@/features/wallet/useWalletState'
-import { AppKitButton, AppKitAccountButton } from '@reown/appkit/react'
+import { Button } from '@ensdomains/thorin'
+import { useAccount, useEnsName, useDisconnect } from 'wagmi'
+import { appKit } from '@/app/providers/AppKitProvider'
+import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { truncateAddress } from '@/utils/format'
 
 const StyledHeader = styled.header`
   display: flex;
@@ -63,6 +66,25 @@ const WalletArea = styled.div`
   align-items: center;
 `
 
+const AccountPill = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 24px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text};
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+`
+
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/delegates', label: 'Active Delegates' },
@@ -71,9 +93,21 @@ const navItems = [
   { to: '/transparency', label: 'Transparency' },
 ] as const
 
+function ConnectedAccount({ address }: { address: `0x${string}` }) {
+  const { data: ensName } = useEnsName({ address })
+  const { disconnect } = useDisconnect()
+  const displayName = ensName ?? truncateAddress(address)
+
+  return (
+    <AccountPill onClick={() => disconnect()}>
+      <EnsAvatar address={address} name={ensName ?? undefined} size={24} />
+      {displayName}
+    </AccountPill>
+  )
+}
+
 export function Header() {
-  const wallet = useWalletState()
-  const isConnected = wallet.status !== 'disconnected'
+  const { address, isConnected } = useAccount()
 
   return (
     <StyledHeader>
@@ -91,7 +125,17 @@ export function Header() {
       </Nav>
 
       <WalletArea>
-        {isConnected ? <AppKitAccountButton /> : <AppKitButton />}
+        {isConnected && address ? (
+          <ConnectedAccount address={address} />
+        ) : (
+          <Button
+            size="small"
+            colorStyle="bluePrimary"
+            onClick={() => appKit.open()}
+          >
+            Connect Wallet
+          </Button>
+        )}
       </WalletArea>
     </StyledHeader>
   )

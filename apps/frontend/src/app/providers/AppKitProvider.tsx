@@ -9,7 +9,7 @@ const projectId = import.meta.env.VITE_REOWN_PROJECT_ID ?? ''
 const queryClient = new QueryClient()
 const wagmiAdapter = new WagmiAdapter({ networks: [mainnet], projectId })
 
-createAppKit({
+export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   networks: [mainnet],
   projectId,
