@@ -6,6 +6,7 @@ import { eligibilityRouter } from "./routes/eligibility.js"
 import { distributionsRouter } from "./routes/distributions.js"
 import { tiersRouter } from "./routes/tiers.js"
 import { apyRouter } from "./routes/apy.js"
+import { roundsRouter } from "./routes/rounds.js"
 
 const app = new OpenAPIHono()
 
@@ -15,6 +16,7 @@ app.route("/", eligibilityRouter)
 app.route("/", distributionsRouter)
 app.route("/", tiersRouter)
 app.route("/", apyRouter)
+app.route("/", roundsRouter)
 
 app.doc("/docs/json", {
   openapi: "3.1.0",
@@ -33,6 +35,7 @@ app.doc("/docs/json", {
     { name: "Eligibility", description: "Reward eligibility checking" },
     { name: "Tiers", description: "Pool tier progression and VP requirements" },
     { name: "APY", description: "Estimated APY for addresses" },
+    { name: "Rounds", description: "Current round info, dates, and progress" },
   ],
 })
 

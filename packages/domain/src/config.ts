@@ -52,3 +52,11 @@ export const MIN_PAYOUT_THRESHOLD: Wei = ONE_ENS;
 
 /** Target lottery pool size (~10 ENS) */
 export const LOTTERY_TARGET_POOL_SIZE: Wei = wei(10n * ONE_ENS);
+
+// --- Round constants ---
+
+/** Start date of Round 1 (program launch date) */
+export const ROUND_1_START: Date = new Date("2025-01-15T00:00:00Z");
+
+/** Duration of each round in days */
+export const ROUND_DURATION_DAYS = 30;
