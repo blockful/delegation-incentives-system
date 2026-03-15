@@ -448,7 +448,7 @@ export function renderApp(
   )
 }
 
-export { userEvent } from '@testing-library/user-event'
+export { default as userEvent } from '@testing-library/user-event'
 ```
 
 > **Note:** `renderApp` will be updated in Task 12 to wrap with `ThorinProvider` and `WalletStateContext.Provider`. This initial version lets tests compile before providers exist.
@@ -690,6 +690,8 @@ export function WalletStateProvider({ children }: { children: ReactNode }) {
         : Promise.reject(new Error('no address')),
     [address],
   )
+  // useAsync's 2nd arg is a boolean guard — check src/hooks/useAsync.ts
+  // to confirm it supports conditional execution. If not, wrap in useEffect instead.
   const eligibility = useAsync(eligibilityFn, isConnected && !!address)
   const { data: ensName } = useEnsName({
     address: eligibility.data?.delegatedTo as `0x${string}` | undefined,
@@ -1547,8 +1549,9 @@ export function RoundStatusBar({ currentGrowthPct, currentTierIndex, poolSizeEns
         <span>Rewards auto-sent</span>
       </Pills>
       <InfoBar>
+        {/* Round number hardcoded — backend does not provide round metadata yet */}
         <InfoCell $highlighted>
-          <CellLabel>• Round {currentTierIndex + 1}</CellLabel>
+          <CellLabel>• Round 2</CellLabel>
           <CellValue>ends 18d 14h</CellValue>
         </InfoCell>
         <InfoCell>
@@ -1591,7 +1594,6 @@ import styled from 'styled-components'
 
 interface TierTableSectionProps {
   tiers: TierEntry[]
-  currentTierIndex: number
 }
 
 const Section = styled.section`
@@ -1663,7 +1665,7 @@ const Icon = styled.span`
   margin-left: 4px;
 `
 
-export function TierTableSection({ tiers, currentTierIndex }: TierTableSectionProps) {
+export function TierTableSection({ tiers }: TierTableSectionProps) {
   return (
     <Section>
       <Grid>
@@ -1965,7 +1967,7 @@ export function DisconnectedLanding({ tiers }: Props) {
         currentTierIndex={tiers.currentTierIndex}
         poolSizeEns={currentTier?.poolSizeEns ?? '0'}
       />
-      <TierTableSection tiers={tiers.tiers} currentTierIndex={tiers.currentTierIndex} />
+      <TierTableSection tiers={tiers.tiers} />
       <HowItWorksSection />
       <CtaSection />
     </>
@@ -1985,7 +1987,9 @@ import type { TierProgressionResponse } from '@/api/types'
 interface Props { tiers: TierProgressionResponse }
 
 export function ConnectedLanding({ tiers }: Props) {
-  // Same as disconnected for now — wallet address shows in Header automatically
+  // DEFERRED: Per spec §2.1, the connected state is visually identical
+  // to disconnected except wallet address appears in Header (handled by Header component).
+  // No CTA changes needed for connected-but-not-delegated state.
   return <DisconnectedLanding tiers={tiers} />
 }
 ```
@@ -1998,8 +2002,11 @@ import type { TierProgressionResponse } from '@/api/types'
 interface Props { tiers: TierProgressionResponse }
 
 export function DelegatedLanding({ tiers }: Props) {
-  // Same as disconnected for now — differentiated CTAs per spec will be added
-  // when wallet state is fully integrated
+  // DEFERRED: Per spec §2.1, delegated state should change:
+  // - Hero sub-headline → "You're earning X.XX% APY" with tier tag
+  // - "Delegate Now" CTA → "View your dashboard →"
+  // - Dark CTA buttons → "Go to Dashboard" + "View Active Delegates"
+  // These require passing APY data as props. Add after DashboardPage is wired.
   return <DisconnectedLanding tiers={tiers} />
 }
 ```
@@ -2116,6 +2123,31 @@ describe('LandingPage', () => {
     await waitFor(() => {
       // Fixture currentTierIndex=1, tiers[1].momGrowthMaxPct='5.75'
       expect(screen.getByText(/5\.75% APY/)).toBeInTheDocument()
+    })
+  })
+
+  it('renders landing when wallet is connected', async () => {
+    renderApp(<LandingPage />, {
+      walletState: { status: 'connected', address: '0x1234567890abcdef1234567890abcdef12345678' },
+    })
+    await waitFor(() => {
+      expect(screen.getByText(/Your ENS is sitting idle/)).toBeInTheDocument()
+    })
+  })
+
+  it('renders landing when wallet is delegated', async () => {
+    renderApp(<LandingPage />, {
+      walletState: {
+        status: 'delegated',
+        address: '0x1234567890abcdef1234567890abcdef12345678',
+        delegatedTo: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+        ensName: 'nick.eth',
+      },
+    })
+    await waitFor(() => {
+      // DEFERRED: when DelegatedLanding is differentiated,
+      // update this test to check for "You're earning" instead
+      expect(screen.getByText(/Your ENS is sitting idle/)).toBeInTheDocument()
     })
   })
 })
