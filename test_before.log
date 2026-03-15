@@ -1,0 +1,130 @@
+
+> @ens-dis/indexer@1.0.0 test /home/nodeful/delegation-incentives-system/.worktrees/api-on-ponder/apps/indexer
+> vitest run
+
+
+ RUN  v3.2.4 /home/nodeful/delegation-incentives-system/.worktrees/api-on-ponder/apps/indexer
+
+ ✓ src/api/adapters/__tests__/BlockAdapter.test.ts (2 tests) 5ms
+ ✓ src/api/adapters/__tests__/ProtocolMappingAdapter.test.ts (2 tests) 3ms
+ ✓ src/api/adapters/__tests__/WalletAliasAdapter.test.ts (2 tests) 6ms
+ ✓ src/handlers/__tests__/ensGovernor.test.ts (10 tests) 9ms
+ ✓ src/api/adapters/__tests__/ProposalAdapter.test.ts (4 tests) 5ms
+ ❯ src/api/adapters/__tests__/BalanceAdapter.test.ts (10 tests | 1 failed) 11ms
+   ✓ BalanceAdapter.getBalanceHistory > returns events for given accounts in time range 2ms
+   ✓ BalanceAdapter.getBalanceHistory > excludes events outside time range 0ms
+   ✓ BalanceAdapter.getBalanceHistory > returns empty for unknown account 0ms
+   ✓ BalanceAdapter.getBalanceAt > returns latest balance event at or before timestamp 0ms
+   ✓ BalanceAdapter.getBalanceAt > returns event exactly at timestamp boundary 0ms
+   ✓ BalanceAdapter.getBalanceAt > fallbacks to ens_balance table when no events before timestamp 0ms
+   ✓ BalanceAdapter.getBalanceAt > fallbacks to ens_balance for account with no events at all 0ms
+   ✓ BalanceAdapter.getBalanceAt > returns wei(0n) for completely unknown account 0ms
+   × BalanceAdapter with checksummed addresses > handles checksummed addresses in getBalanceHistory 6ms
+     → expected [] to have a length of 2 but got +0
+   ✓ BalanceAdapter with checksummed addresses > handles checksummed address in getBalanceAt 0ms
+ ✓ src/api/adapters/__tests__/VoteAdapter.test.ts (5 tests) 9ms
+ ✓ src/api/adapters/__tests__/DistributionAdapter.test.ts (4 tests) 4ms
+ ❯ src/api/adapters/__tests__/VotingPowerAdapter.test.ts (11 tests | 3 failed) 12ms
+   ✓ VotingPowerAdapter.getVotingPowerHistory > filters by accountIds and time range 2ms
+   ✓ VotingPowerAdapter.getVotingPowerHistory > includes both endpoints of the range 0ms
+   ✓ VotingPowerAdapter.getVotingPowerHistory > returns empty array for accounts with no history in range 0ms
+   ✓ VotingPowerAdapter.getAggregateDelegatedPower > sums latest snapshots for provided delegates at timestamp 0ms
+   ✓ VotingPowerAdapter.getAggregateDelegatedPower > only sums provided active delegates (not all) 0ms
+   ✓ VotingPowerAdapter.getAggregateDelegatedPower > returns 0n for empty delegate list 0ms
+   ✓ VotingPowerAdapter.getVotingPower > returns map with latest voting power per account 0ms
+   ✓ VotingPowerAdapter.getVotingPower > returns empty map for empty account list 0ms
+   × VotingPowerAdapter with checksummed addresses > handles checksummed addresses in getVotingPowerHistory 6ms
+     → expected [] to have a length of 1 but got +0
+   × VotingPowerAdapter with checksummed addresses > handles checksummed addresses in getAggregateDelegatedPower 1ms
+     → expected 0n to be 2300n // Object.is equality
+   × VotingPowerAdapter with checksummed addresses > handles checksummed addresses in getVotingPower 1ms
+     → expected undefined to be 1500n // Object.is equality
+ ✓ src/api/adapters/__tests__/DelegationAdapter.test.ts (6 tests) 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/api/adapters/__tests__/BalanceAdapter.test.ts > BalanceAdapter with checksummed addresses > handles checksummed addresses in getBalanceHistory
+AssertionError: expected [] to have a length of 2 but got +0
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 2[39m
+[31m+ 0[39m
+
+ ❯ src/api/adapters/__tests__/BalanceAdapter.test.ts:122:21
+    120|       seconds(200n),
+    121|     )
+    122|     expect(results).toHaveLength(2)
+       |                     ^
+    123|     for (const r of results) {
+    124|       expect(r.accountId).toBe("0xaaa")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/api/adapters/__tests__/VotingPowerAdapter.test.ts > VotingPowerAdapter with checksummed addresses > handles checksummed addresses in getVotingPowerHistory
+AssertionError: expected [] to have a length of 1 but got +0
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ src/api/adapters/__tests__/VotingPowerAdapter.test.ts:124:21
+    122|       seconds(150n),
+    123|     )
+    124|     expect(results).toHaveLength(1)
+       |                     ^
+    125|     expect(results[0].accountId).toBe("0xaaa")
+    126|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/api/adapters/__tests__/VotingPowerAdapter.test.ts > VotingPowerAdapter with checksummed addresses > handles checksummed addresses in getAggregateDelegatedPower
+AssertionError: expected 0n to be 2300n // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 2300n[39m
+[31m+ 0n[39m
+
+ ❯ src/api/adapters/__tests__/VotingPowerAdapter.test.ts:135:20
+    133|       seconds(200n),
+    134|     )
+    135|     expect(result).toBe(2300n)
+       |                    ^
+    136|   })
+    137| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/api/adapters/__tests__/VotingPowerAdapter.test.ts > VotingPowerAdapter with checksummed addresses > handles checksummed addresses in getVotingPower
+AssertionError: expected undefined to be 1500n // Object.is equality
+
+[32m- Expected:[39m 
+1500n
+
+[31m+ Received:[39m 
+undefined
+
+ ❯ src/api/adapters/__tests__/VotingPowerAdapter.test.ts:142:33
+    140|     // DB has lowercase addresses, but we pass uppercase
+    141|     const result = await adapter.getVotingPower(["0xAAA", "0xBBB"])
+    142|     expect(result.get("0xaaa")).toBe(1500n)
+       |                                 ^
+    143|     expect(result.get("0xbbb")).toBe(800n)
+    144|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 8 passed (10)
+      Tests  4 failed | 52 passed (56)
+   Start at  03:18:00
+   Duration  831ms (transform 514ms, setup 0ms, collect 3.50s, tests 73ms, environment 2ms, prepare 849ms)
+
+/home/nodeful/delegation-incentives-system/.worktrees/api-on-ponder/apps/indexer:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @ens-dis/indexer@1.0.0 test: `vitest run`
+Exit status 1

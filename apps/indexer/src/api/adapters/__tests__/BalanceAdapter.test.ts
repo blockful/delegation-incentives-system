@@ -100,3 +100,35 @@ describe("BalanceAdapter.getBalanceAt", () => {
     expect(result).toBe(0n)
   })
 })
+
+describe("BalanceAdapter with checksummed addresses", () => {
+  let db: FakePonderDb
+
+  beforeEach(() => {
+    db = new FakePonderDb({
+      ens_balance_event: BALANCE_EVENTS,
+      ens_balance: ENS_BALANCES,
+    })
+  })
+
+  it("handles checksummed addresses in getBalanceHistory", async () => {
+    const adapter = new BalanceAdapter(db)
+    // DB has lowercase "0xaaa", but we pass uppercase
+    const results = await adapter.getBalanceHistory(
+      ["0xAAA"],
+      seconds(100n),
+      seconds(200n),
+    )
+    expect(results).toHaveLength(2)
+    for (const r of results) {
+      expect(r.accountId).toBe("0xaaa")
+    }
+  })
+
+  it("handles checksummed address in getBalanceAt", async () => {
+    const adapter = new BalanceAdapter(db)
+    // DB has lowercase "0xaaa", but we pass uppercase
+    const result = await adapter.getBalanceAt("0xAAA", seconds(200n))
+    expect(result).toBe(1500n)
+  })
+})

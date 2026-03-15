@@ -105,3 +105,41 @@ describe("VotingPowerAdapter.getVotingPower", () => {
     expect(result.size).toBe(0)
   })
 })
+
+describe("VotingPowerAdapter with checksummed addresses", () => {
+  let db: FakePonderDb
+
+  beforeEach(() => {
+    db = new FakePonderDb({ ens_voting_power_snapshot: SNAPSHOTS })
+  })
+
+  it("handles checksummed addresses in getVotingPowerHistory", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    // DB has lowercase "0xaaa", but we pass uppercase
+    const results = await adapter.getVotingPowerHistory(
+      ["0xAAA"],
+      seconds(100n),
+      seconds(150n),
+    )
+    expect(results).toHaveLength(1)
+    expect(results[0].accountId).toBe("0xaaa")
+  })
+
+  it("handles checksummed addresses in getAggregateDelegatedPower", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    // DB has lowercase addresses, but we pass uppercase
+    const result = await adapter.getAggregateDelegatedPower(
+      ["0xAAA", "0xBBB"],
+      seconds(200n),
+    )
+    expect(result).toBe(2300n)
+  })
+
+  it("handles checksummed addresses in getVotingPower", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    // DB has lowercase addresses, but we pass uppercase
+    const result = await adapter.getVotingPower(["0xAAA", "0xBBB"])
+    expect(result.get("0xaaa")).toBe(1500n)
+    expect(result.get("0xbbb")).toBe(800n)
+  })
+})

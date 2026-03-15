@@ -13,12 +13,14 @@ export class VotingPowerAdapter implements VotingPowerRepository {
   ): Promise<VotingPowerSnapshot[]> {
     if (accountIds.length === 0) return []
 
+    const normalizedIds = accountIds.map(id => id.toLowerCase())
+
     const rows = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
       .where(
         and(
-          inArray(ensVotingPowerSnapshot.accountId, accountIds),
+          inArray(ensVotingPowerSnapshot.accountId, normalizedIds),
           gte(ensVotingPowerSnapshot.timestamp, BigInt(from)),
           lte(ensVotingPowerSnapshot.timestamp, BigInt(to)),
         ),
@@ -38,12 +40,14 @@ export class VotingPowerAdapter implements VotingPowerRepository {
   ): Promise<Wei> {
     if (activeDelegateIds.length === 0) return wei(0n)
 
+    const normalizedIds = activeDelegateIds.map(id => id.toLowerCase())
+
     const rows = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
       .where(
         and(
-          inArray(ensVotingPowerSnapshot.accountId, activeDelegateIds),
+          inArray(ensVotingPowerSnapshot.accountId, normalizedIds),
           lte(ensVotingPowerSnapshot.timestamp, BigInt(at)),
         ),
       )
@@ -70,10 +74,12 @@ export class VotingPowerAdapter implements VotingPowerRepository {
   async getVotingPower(accountIds: string[]): Promise<Map<string, Wei>> {
     if (accountIds.length === 0) return new Map()
 
+    const normalizedIds = accountIds.map(id => id.toLowerCase())
+
     const rows = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
-      .where(inArray(ensVotingPowerSnapshot.accountId, accountIds))
+      .where(inArray(ensVotingPowerSnapshot.accountId, normalizedIds))
 
     // For each account, keep the latest snapshot (no time filter)
     const latestByAccount = new Map<string, { votingPower: bigint; timestamp: bigint }>()

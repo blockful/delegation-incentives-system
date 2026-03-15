@@ -13,12 +13,14 @@ export class BalanceAdapter implements BalanceRepository {
   ): Promise<BalanceEvent[]> {
     if (accountIds.length === 0) return []
 
+    const normalizedIds = accountIds.map(id => id.toLowerCase())
+
     const rows = await this.db
       .select()
       .from(ensBalanceEvent)
       .where(
         and(
-          inArray(ensBalanceEvent.accountId, accountIds),
+          inArray(ensBalanceEvent.accountId, normalizedIds),
           gte(ensBalanceEvent.timestamp, BigInt(from)),
           lte(ensBalanceEvent.timestamp, BigInt(to)),
         ),
