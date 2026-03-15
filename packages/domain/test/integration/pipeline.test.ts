@@ -260,6 +260,49 @@ describe("Distribution Pipeline Integration", () => {
     );
   });
 
+  it("selects tier 0 when previous AVP is zero (first program month)", async () => {
+    const proposals = makeProposals(10)
+    const votes = makeVotes("delegate-A", proposals.map((p) => p.id))
+
+    // VP snapshots: current month has VP, previous month has 0 (first month)
+    const vpSnapshots: VotingPowerSnapshot[] = [
+      makeVPSnapshot("delegate-A", 5000n, (MONTH_START as bigint) + 1n),
+      // No previous-month snapshot → aggregate will be 0
+    ]
+
+    const delegations: Delegation[] = [
+      {
+        delegatorId: "delegator-1",
+        delegateId: "delegate-A",
+        delegatedValue: wei(100n * ONE_ENS),
+        timestamp: seconds((MONTH_START as bigint) - 86400n),
+      },
+    ]
+
+    const balanceEvents: BalanceEvent[] = [
+      {
+        accountId: "delegator-1",
+        balance: wei(100n * ONE_ENS),
+        delta: wei(100n * ONE_ENS),
+        timestamp: seconds((TWB_WINDOW_START as bigint) - 1000n),
+      },
+    ]
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes,
+      votingPowerSnapshots: vpSnapshots,
+      balanceEvents,
+      delegations,
+      randaoValues: new Map([["2025-03-31", RANDAO_SEED]]),
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    // Bootstrap guard: when previousAVP=0, use tier 0 (5000 ENS pool)
+    expect(result.metadata.poolTier.poolSize).toBe(wei(5_000n * ONE_ENS))
+  })
+
   it("returns empty result when no active delegates", async () => {
     const proposals = makeProposals(10);
     // No one voted enough

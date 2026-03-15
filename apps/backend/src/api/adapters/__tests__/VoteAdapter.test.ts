@@ -52,6 +52,12 @@ describe("VoteAdapter.getVotesForProposals", () => {
     expect(results).toHaveLength(0)
   })
 
+  it("returns empty array immediately for empty proposal IDs input", async () => {
+    const adapter = new VoteAdapter(db)
+    const results = await adapter.getVotesForProposals([])
+    expect(results).toHaveLength(0)
+  })
+
   it("normalizes voter address to lowercase", async () => {
     const adapter = new VoteAdapter(db)
     const [vote] = await adapter.getVotesForProposals(["p1"])

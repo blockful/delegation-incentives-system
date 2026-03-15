@@ -38,9 +38,8 @@ describe("computeDelegatorRewards", () => {
     );
     // a gets 70% of 9000 = 6300 ENS → capped at 500
     // b gets 30% of 9000 = 2700 ENS → capped at 500
-    expect(result.find((r) => r.id === "a")!.amount).toBeLessThanOrEqual(
-      delegatorCap,
-    );
+    expect(result.find((r) => r.id === "a")!.amount).toBe(delegatorCap);
+    expect(result.find((r) => r.id === "b")!.amount).toBe(delegatorCap);
   });
 
   it("handles empty delegator list", () => {

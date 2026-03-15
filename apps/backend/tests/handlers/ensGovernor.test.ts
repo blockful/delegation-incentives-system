@@ -309,3 +309,10 @@ describe("ENSGovernor:ProposalCanceled", () => {
     expect(store.proposals.get("44").status).toBe("canceled")
   })
 })
+
+describe("handler registration smoke tests", () => {
+  it("registerEnsGovernorHandlers does not throw (ponder.on wiring)", async () => {
+    const { registerEnsGovernorHandlers } = await import("../../src/handlers/ensGovernor.js")
+    expect(() => registerEnsGovernorHandlers()).not.toThrow()
+  })
+})

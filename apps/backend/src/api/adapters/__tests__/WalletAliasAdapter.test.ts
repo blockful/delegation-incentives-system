@@ -25,4 +25,16 @@ describe("WalletAliasAdapter.getAliases", () => {
     const results = await adapter.getAliases()
     expect(results).toHaveLength(0)
   })
+
+  it("falls back to 'manual' when source is null (covers ?? fallback branch)", async () => {
+    // Per spec: source is optional; null means manually entered
+    const db = new FakePonderDb({
+      wallet_alias: [
+        { secondaryAddress: "0xSEC3", primaryAddress: "0xPRI3", source: null },
+      ],
+    })
+    const adapter = new WalletAliasAdapter(db)
+    const results = await adapter.getAliases()
+    expect(results[0].source).toBe("manual")
+  })
 })

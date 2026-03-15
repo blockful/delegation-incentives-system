@@ -89,4 +89,30 @@ describe("GET /eligibility/{address}", () => {
     expect(body.isDelegatorToActiveDelegate).toBe(false)
     expect(body.delegatedTo).toBeNull()
   })
+
+  it("returns 500 when data source throws", async () => {
+    vi.mocked(mockDataSource.proposals.getRecentProposals).mockRejectedValueOnce(
+      new Error("DB connection failed"),
+    )
+    const req = new Request(`http://localhost/eligibility/${DELEGATE_A}`)
+    const res = await eligibilityRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(typeof body.error).toBe("string")
+  })
+
+  it("per spec: address delegated to inactive delegate is not eligible", async () => {
+    // Spec: delegators earn only when delegated to an *active* delegate
+    // An inactive delegate is one who hasn't voted 7/10 recent proposals
+    const INACTIVE_DELEGATE = "0xDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+    vi.mocked(mockDataSource.delegations.getAccountBalances).mockResolvedValue([
+      { accountId: DELEGATOR_B, balance: wei(500n), delegate: INACTIVE_DELEGATE },
+    ])
+    const req = new Request(`http://localhost/eligibility/${DELEGATOR_B}`)
+    const res = await eligibilityRouter.fetch(req)
+    const body = await res.json()
+    expect(body.eligible).toBe(false)
+    expect(body.isDelegatorToActiveDelegate).toBe(false)
+    expect(body.delegatedTo).toBe(INACTIVE_DELEGATE)
+  })
 })

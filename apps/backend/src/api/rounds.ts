@@ -7,7 +7,7 @@
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
 
-function parseRoundMonths(raw: string | undefined): Set<string> | null {
+export function parseRoundMonths(raw: string | undefined): Set<string> | null {
   if (!raw || raw.trim() === "") return null
   const months = raw.split(",").map((s) => s.trim())
   for (const m of months) {

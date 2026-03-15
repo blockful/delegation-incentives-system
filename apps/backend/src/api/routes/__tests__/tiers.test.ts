@@ -135,4 +135,58 @@ describe("GET /tiers/progression", () => {
       expect(typeof tier.estimatedApyPct).toBe("string")
     }
   })
+
+  it("returns tier 0 with zero AVP when there are no active delegates", async () => {
+    // No votes → no active delegates → activeDelegateArray.length === 0
+    // fetchMonthContext short-circuits to [wei(0n), wei(0n)] → bootstrap guard → tier 0
+    vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValueOnce([])
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.currentTierIndex).toBe(0)
+    expect(body.currentAVP).toBe("0")
+    expect(body.previousAVP).toBe("0")
+    expect(body.activeDelegateCount).toBe(0)
+  })
+
+  it("returns 500 when data source throws", async () => {
+    vi.mocked(mockDataSource.proposals.getRecentProposals).mockRejectedValueOnce(
+      new Error("DB connection failed"),
+    )
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(typeof body.error).toBe("string")
+  })
+
+  it("selects tier 0 when previousAVP is zero (bootstrap guard per spec: first program month)", async () => {
+    // Per spec: first month has no previous month to compare; implementation uses tier 0 as guard
+    vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower)
+      .mockResolvedValueOnce(wei(5000n * 10n ** 18n)) // currentAVP
+      .mockResolvedValueOnce(wei(0n))                  // previousAVP = 0 → bootstrap guard
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    const body = await res.json()
+    expect(body.currentTierIndex).toBe(0)
+    expect(body.tiers[0].isCurrent).toBe(true)
+  })
+
+  it("per spec: delegate cap is 1% of monthly pool size", async () => {
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    const body = await res.json()
+    // Tier 0: pool = 5000 ENS, delegate cap = 1% = 50 ENS
+    expect(body.tiers[0].poolSizeEns).toBe("5000")
+    expect(body.tiers[0].delegateCapEns).toBe("50")
+  })
+
+  it("per spec: delegator cap is 5% of monthly pool size", async () => {
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    const body = await res.json()
+    // Tier 0: pool = 5000 ENS, delegator cap = 5% = 250 ENS
+    expect(body.tiers[0].delegatorCapEns).toBe("250")
+  })
 })

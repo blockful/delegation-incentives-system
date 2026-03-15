@@ -48,6 +48,12 @@ describe("VotingPowerAdapter.getVotingPowerHistory", () => {
     )
     expect(results).toHaveLength(0)
   })
+
+  it("returns empty array immediately for empty accountIds input", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    const results = await adapter.getVotingPowerHistory([], seconds(100n), seconds(200n))
+    expect(results).toHaveLength(0)
+  })
 })
 
 describe("VotingPowerAdapter.getAggregateDelegatedPower", () => {

@@ -70,4 +70,15 @@ describe("GET /status", () => {
     const body = await res.json()
     expect(body.cachedDistributions).toEqual(["2025-01", "2025-02"])
   })
+
+  it("returns 500 when data source throws", async () => {
+    vi.mocked(mockDataSource.proposals.getRecentProposals).mockRejectedValueOnce(
+      new Error("DB connection failed"),
+    )
+    const req = new Request("http://localhost/api/status")
+    const res = await healthRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(typeof body.error).toBe("string")
+  })
 })

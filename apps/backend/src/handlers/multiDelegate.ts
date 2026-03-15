@@ -21,7 +21,9 @@ interface MultiDelegateTransferParams {
  * Shared between TransferSingle and TransferBatch so position tracking
  * stays consistent for both ERC1155 event shapes.
  */
-async function processMultiDelegateTransfer(params: MultiDelegateTransferParams) {
+export async function processMultiDelegateTransfer(
+  params: MultiDelegateTransferParams,
+) {
   const {
     db,
     transferId,
@@ -87,12 +89,14 @@ async function processMultiDelegateTransfer(params: MultiDelegateTransferParams)
         amount: value,
         lastUpdatedBlock: blockNumber,
       })
-      .onConflictDoUpdate((row) => ({
+      .onConflictDoUpdate((row: any) => ({
         amount: row.amount + value,
         lastUpdatedBlock: blockNumber,
       }));
 
-    const proxy = await db.find(schema.multiDelegateProxy, { id: delegateAddress });
+    const proxy = await db.find(schema.multiDelegateProxy, {
+      id: delegateAddress,
+    });
     const childAddress = proxy ? proxy.id : delegateAddress;
 
     await db
@@ -109,28 +113,97 @@ async function processMultiDelegateTransfer(params: MultiDelegateTransferParams)
   }
 }
 
+export async function handleProxyDeployed(
+  event: {
+    args: { delegate: string; proxyAddress: string };
+    block: { number: bigint; timestamp: bigint };
+    transaction: { from: string; hash: string };
+    log: { logIndex: number };
+  },
+  context: { db: any },
+): Promise<void> {
+  const { delegate, proxyAddress } = event.args;
+  const { blockNumber } = eventMeta(event);
+
+  await context.db
+    .insert(schema.multiDelegateProxy)
+    .values({
+      id: normalizeAddress(proxyAddress),
+      delegate: normalizeAddress(delegate),
+      deployer: normalizeAddress(event.transaction.from),
+      createdAtBlock: blockNumber,
+    })
+    .onConflictDoNothing();
+}
+
+export async function handleTransferSingle(
+  event: {
+    args: { from: string; to: string; id: bigint; value: bigint };
+    block: { number: bigint; timestamp: bigint };
+    transaction: { hash: string };
+    log: { logIndex: number };
+  },
+  context: { db: any },
+): Promise<void> {
+  const { from, to, id, value } = event.args;
+  const meta = eventMeta(event);
+
+  await processMultiDelegateTransfer({
+    db: context.db,
+    transferId: meta.logId,
+    from,
+    to,
+    tokenId: id,
+    value,
+    blockNumber: meta.blockNumber,
+    timestamp: meta.timestamp,
+    transactionHash: meta.transactionHash,
+  });
+}
+
+export async function handleTransferBatch(
+  event: {
+    args: { from: string; to: string; ids: bigint[]; values: bigint[] };
+    block: { number: bigint; timestamp: bigint };
+    transaction: { hash: string };
+    log: { logIndex: number };
+  },
+  context: { db: any },
+): Promise<void> {
+  const { from, to, ids, values } = event.args;
+  const meta = eventMeta(event);
+
+  for (let index = 0; index < ids.length; index++) {
+    await processMultiDelegateTransfer({
+      db: context.db,
+      transferId: `${meta.logId}-${index}`,
+      from,
+      to,
+      tokenId: ids[index]!,
+      value: values[index]!,
+      blockNumber: meta.blockNumber,
+      timestamp: meta.timestamp,
+      transactionHash: meta.transactionHash,
+    });
+  }
+}
+
 export function registerMultiDelegateHandlers() {
   ponder.on(
     "ERC20MultiDelegate:ProxyDeployed",
-    async ({ event, context }: IndexingFunctionArgs<"ERC20MultiDelegate:ProxyDeployed">) => {
-      const { delegate, proxyAddress } = event.args;
-      const { blockNumber } = eventMeta(event);
-
-      await context.db
-        .insert(schema.multiDelegateProxy)
-        .values({
-          id: normalizeAddress(proxyAddress),
-          delegate: normalizeAddress(delegate),
-          deployer: normalizeAddress(event.transaction.from),
-          createdAtBlock: blockNumber,
-        })
-        .onConflictDoNothing();
+    async ({
+      event,
+      context,
+    }: IndexingFunctionArgs<"ERC20MultiDelegate:ProxyDeployed">) => {
+      await handleProxyDeployed(event as any, context);
     },
   );
 
   ponder.on(
     "ERC20MultiDelegate:DelegationProcessed",
-    async (_args: IndexingFunctionArgs<"ERC20MultiDelegate:DelegationProcessed">) => {
+    async (
+      _args: IndexingFunctionArgs<"ERC20MultiDelegate:DelegationProcessed">,
+    ) => {
       // DelegationProcessed is supplementary only. Position accounting is derived
       // from TransferSingle and TransferBatch.
     },
@@ -138,43 +211,21 @@ export function registerMultiDelegateHandlers() {
 
   ponder.on(
     "ERC20MultiDelegate:TransferSingle",
-    async ({ event, context }: IndexingFunctionArgs<"ERC20MultiDelegate:TransferSingle">) => {
-      const { from, to, id, value } = event.args;
-      const meta = eventMeta(event);
-
-      await processMultiDelegateTransfer({
-        db: context.db,
-        transferId: meta.logId,
-        from,
-        to,
-        tokenId: id,
-        value,
-        blockNumber: meta.blockNumber,
-        timestamp: meta.timestamp,
-        transactionHash: meta.transactionHash,
-      });
+    async ({
+      event,
+      context,
+    }: IndexingFunctionArgs<"ERC20MultiDelegate:TransferSingle">) => {
+      await handleTransferSingle(event as any, context);
     },
   );
 
   ponder.on(
     "ERC20MultiDelegate:TransferBatch",
-    async ({ event, context }: IndexingFunctionArgs<"ERC20MultiDelegate:TransferBatch">) => {
-      const { from, to, ids, values } = event.args;
-      const meta = eventMeta(event);
-
-      for (let index = 0; index < ids.length; index++) {
-        await processMultiDelegateTransfer({
-          db: context.db,
-          transferId: `${meta.logId}-${index}`,
-          from,
-          to,
-          tokenId: ids[index]!,
-          value: values[index]!,
-          blockNumber: meta.blockNumber,
-          timestamp: meta.timestamp,
-          transactionHash: meta.transactionHash,
-        });
-      }
+    async ({
+      event,
+      context,
+    }: IndexingFunctionArgs<"ERC20MultiDelegate:TransferBatch">) => {
+      await handleTransferBatch(event as any, context);
     },
   );
 }

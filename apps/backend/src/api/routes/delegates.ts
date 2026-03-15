@@ -2,6 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
 import { ActiveDelegatesDetailSchema, ErrorSchema } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
 import { fetchActiveDelegates, internalError } from "../helpers.js"
+import { getCachedEnsName, prefetchEnsNames } from "../ens-cache.js"
 
 const activeDelegatesRoute = createRoute({
   method: "get",
@@ -27,6 +28,9 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
     const dataSource = buildDataSource()
     const { proposals, votes, activeDelegates } = await fetchActiveDelegates(dataSource)
     const delegateAddresses = Array.from(activeDelegates)
+
+    // Fire-and-forget: populate ENS cache for next request without blocking this one
+    prefetchEnsNames(delegateAddresses).catch(() => {})
 
     // Fetch voting power, delegations, and earliest vote timestamps in parallel
     const now = Math.floor(Date.now() / 1000)
@@ -63,7 +67,7 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
       const firstVoteTs = earliestVoteMap.get(lc)
       return {
         address,
-        ensName: null,
+        ensName: getCachedEnsName(address),
         votingPower: vp != null ? vp.toString() : null,
         delegatorCount: delegatorCountMap.get(lc) ?? 0,
         activeSince: firstVoteTs != null

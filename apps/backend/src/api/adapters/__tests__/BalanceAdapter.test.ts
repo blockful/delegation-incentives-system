@@ -57,6 +57,12 @@ describe("BalanceAdapter.getBalanceHistory", () => {
     )
     expect(results).toHaveLength(0)
   })
+
+  it("returns empty array immediately for empty accountIds input", async () => {
+    const adapter = new BalanceAdapter(db)
+    const results = await adapter.getBalanceHistory([], seconds(0n), seconds(9999n))
+    expect(results).toHaveLength(0)
+  })
 })
 
 describe("BalanceAdapter.getBalanceAt", () => {

@@ -46,6 +46,23 @@ describe("BlockAdapter.getRandaoForDate", () => {
     expect(result).toBe(BigInt("0x0000000000000000000000000000000000000000000000000000000000000003"))
   })
 
+  it("handles null block number in latest block (uses 0n as hi fallback)", async () => {
+    // Edge case: latestBlock.number is null → hi = 0n → loop doesn't execute → returns lo=1n
+    const mixHash = "0x0000000000000000000000000000000000000000000000000000000000000042"
+    const client = {
+      getBlock: vi.fn(async (params: any) => {
+        if (params.blockTag === "latest") {
+          return { number: null, timestamp: 1705363199n, mixHash }
+        }
+        // Block 1 covers the fallback path (lo=1n returned when hi=0n)
+        return { number: 1n, timestamp: 1705363199n, mixHash }
+      }),
+    } as unknown as PublicClient
+    const adapter = new BlockAdapter(client)
+    const result = await adapter.getRandaoForDate("2024-01-15")
+    expect(typeof result).toBe("bigint")
+  })
+
   it("returns the mixHash as bigint for a month date", async () => {
     // Last block of 2024-01 UTC (end = 2024-02-01T00:00:00 - 1 = 1706745599)
     const targetTs = 1706745599n

@@ -98,6 +98,17 @@ describe("GET /distributions", () => {
     const body = await res.json()
     expect(body).toEqual(["2025-03"])
   })
+
+  it("returns 500 when list() throws", async () => {
+    vi.mocked(mockDataSource.distributions.list).mockRejectedValueOnce(
+      new Error("DB connection failed"),
+    )
+    const req = new Request("http://localhost/distributions")
+    const res = await distributionsRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(typeof body.error).toBe("string")
+  })
 })
 
 describe("POST /distributions/{month}/compute", () => {
@@ -165,6 +176,18 @@ describe("POST /distributions/{month}/compute", () => {
     expect(res.status).toBe(403)
     const body = await res.json()
     expect(body.error).toContain("2025-03")
+  })
+
+  it("returns 500 when pipeline throws", async () => {
+    vi.mocked(isConfiguredRound).mockReturnValue(true)
+    vi.mocked(runDistributionPipeline).mockRejectedValueOnce(new Error("pipeline failed"))
+    const req = new Request("http://localhost/distributions/2025-03/compute", {
+      method: "POST",
+    })
+    const res = await distributionsRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(typeof body.error).toBe("string")
   })
 })
 

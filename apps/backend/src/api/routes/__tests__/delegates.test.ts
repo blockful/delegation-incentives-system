@@ -6,7 +6,13 @@ vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
 }))
 
+vi.mock("../../ens-cache.js", () => ({
+  getCachedEnsName: vi.fn(() => null),
+  prefetchEnsNames: vi.fn(() => Promise.resolve()),
+}))
+
 import { buildDataSource } from "../../data-source.js"
+import { getCachedEnsName, prefetchEnsNames } from "../../ens-cache.js"
 
 const makeProposals = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
@@ -210,6 +216,47 @@ describe("GET /delegates/active", () => {
     expect(delegateA.last10ProposalsVoted).toHaveLength(10)
     const votedCount = delegateA.last10ProposalsVoted.filter(Boolean).length
     expect(votedCount).toBe(7)
+  })
+
+  it("returns ensName from cache when available", async () => {
+    vi.mocked(getCachedEnsName).mockImplementation((addr) =>
+      addr === DELEGATE_A ? "alice.eth" : null,
+    )
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(delegateA.ensName).toBe("alice.eth")
+  })
+
+  it("returns ensName as null when address is not cached", async () => {
+    vi.mocked(getCachedEnsName).mockReturnValue(null)
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(delegateA.ensName).toBeNull()
+  })
+
+  it("triggers ENS prefetch fire-and-forget for active delegate addresses", async () => {
+    const req = new Request("http://localhost/delegates/active")
+    await delegatesRouter.fetch(req)
+    expect(vi.mocked(prefetchEnsNames)).toHaveBeenCalledWith(
+      expect.arrayContaining([DELEGATE_A, DELEGATE_B]),
+    )
+  })
+
+  it("returns votingPower as null when delegate has no entry in voting power map", async () => {
+    // DELEGATE_A not in VP map → vp != null check returns null
+    vi.mocked(mockDataSource.votingPower.getVotingPower).mockResolvedValueOnce(
+      new Map([[DELEGATE_B_LC, wei(300n * 10n ** 18n)]]),
+    )
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(delegateA).toBeDefined()
+    expect(delegateA.votingPower).toBeNull()
   })
 
   it("returns 500 on error", async () => {

@@ -218,6 +218,15 @@ describe("GET /rounds/current", () => {
     const res = await roundsRouter.fetch(req)
     expect(res.status).toBe(500)
   })
+
+  it("returns 404 when configuredMonths is an empty array (no rounds defined)", async () => {
+    // getConfiguredRounds() returns [] if ROUND_MONTHS is somehow an empty Set —
+    // getCurrentRound(now, []) returns null → 404
+    vi.spyOn(roundsModule, "getConfiguredRounds").mockReturnValue([])
+    const req = new Request("http://localhost/rounds/current")
+    const res = await roundsRouter.fetch(req)
+    expect(res.status).toBe(404)
+  })
 })
 
 // ── HTTP route tests — GET /rounds ────────────────────────────────────────────
@@ -254,5 +263,17 @@ describe("GET /rounds", () => {
     const apr = body.rounds.find((r: { month: string }) => r.month === "2026-04")
     expect(mar.status).toBe("computed")
     expect(apr.status).toBe("pending")
+  })
+
+  it("returns 500 when data source throws", async () => {
+    vi.spyOn(roundsModule, "getConfiguredRounds").mockReturnValue(["2026-03"])
+    vi.mocked(mockDataSource.distributions.list).mockRejectedValueOnce(
+      new Error("DB connection failed"),
+    )
+    const req = new Request("http://localhost/rounds")
+    const res = await roundsRouter.fetch(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(typeof body.error).toBe("string")
   })
 })
