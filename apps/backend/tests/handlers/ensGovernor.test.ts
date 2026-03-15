@@ -5,7 +5,7 @@ import {
   handleProposalExecuted,
   handleProposalDefeated,
   handleProposalCanceled,
-} from "../ensGovernor.js"
+} from "../../src/handlers/ensGovernor.js"
 
 // ─── Fake DB ─────────────────────────────────────────────────────────────────
 //

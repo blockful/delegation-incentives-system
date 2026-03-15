@@ -6,7 +6,7 @@ import { fetchActiveDelegates, errorMessage } from "../helpers.js"
 
 const healthRoute = createRoute({
   method: "get",
-  path: "/health",
+  path: "/api/health",
   tags: ["System"],
   summary: "Health check",
   responses: {
@@ -19,7 +19,7 @@ const healthRoute = createRoute({
 
 const statusRoute = createRoute({
   method: "get",
-  path: "/status",
+  path: "/api/status",
   tags: ["System"],
   summary: "Get system status",
   responses: {

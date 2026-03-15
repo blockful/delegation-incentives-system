@@ -42,7 +42,8 @@ export interface Proposal {
   id: string;
   status: string;
   timestamp: Seconds;
-  endTimestamp: Seconds;
+  /** The block number at which voting ends (stored as-is from the contract event). */
+  endBlock: bigint;
   daoId: string;
 }
 

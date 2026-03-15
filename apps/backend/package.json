@@ -1,11 +1,11 @@
 {
-  "name": "@ens-dis/indexer",
+  "name": "@ens-dis/backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "ponder dev",
-    "start": "ponder start",
+    "dev": "sh -c 'set -a; . ../../.env 2>/dev/null; set +a; PORT=${BACKEND_PORT:-42069} ponder dev'",
+    "start": "sh -c 'set -a; . ../../.env 2>/dev/null; set +a; PORT=${BACKEND_PORT:-42069} ponder start'",
     "codegen": "ponder codegen",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

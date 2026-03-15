@@ -1,6 +1,6 @@
 import type { DelegationRepository, Delegation, AccountBalance } from "@ens-dis/domain"
 import { wei, seconds, type Seconds } from "@ens-dis/domain"
-import { lte } from "drizzle-orm"
+import { and, asc, desc, lte } from "drizzle-orm"
 import { ensDelegationEvent, ensDelegation, ensBalance } from "ponder:schema"
 
 export class DelegationAdapter implements DelegationRepository {
@@ -15,22 +15,30 @@ export class DelegationAdapter implements DelegationRepository {
     const idSet = new Set(delegateIds.map((id) => id.toLowerCase()))
     const atBig = BigInt(at)
 
-    // Get all delegation events at or before `at`
+    // Fetch all delegation events up to `at`, ordered so that for each
+    // delegator the most-recent event comes first. This lets the JS loop
+    // below use a Set for O(1) dedup instead of timestamp comparisons,
+    // and correctly handles delegators who switched away from an active
+    // delegate (their latest event points elsewhere and is excluded).
+    //
+    // A SQL `DISTINCT ON (delegatorId) ORDER BY delegatorId, timestamp DESC`
+    // would avoid loading all historical rows, but Drizzle does not expose
+    // DISTINCT ON. The current approach is correct; add a DB index on
+    // (delegatorId, timestamp DESC) to keep the query fast as history grows.
     const rows = await this.db
       .select()
       .from(ensDelegationEvent)
       .where(lte(ensDelegationEvent.timestamp, atBig))
+      .orderBy(asc(ensDelegationEvent.delegatorId), desc(ensDelegationEvent.timestamp))
 
-    // For each delegator, keep only the latest event
+    // For each delegator, keep only the latest event (first row per delegator
+    // since results are sorted desc by timestamp within each delegatorId group)
+    const seen = new Set<string>()
     const latestByDelegator = new Map<string, any>()
     for (const row of rows) {
       const delegatorId = (row.delegatorId as string).toLowerCase()
-      const ts = BigInt(row.timestamp as string | number | bigint)
-      const existing = latestByDelegator.get(delegatorId)
-      const existingTs = existing
-        ? BigInt(existing.timestamp as string | number | bigint)
-        : -1n
-      if (ts > existingTs) {
+      if (!seen.has(delegatorId)) {
+        seen.add(delegatorId)
         latestByDelegator.set(delegatorId, row)
       }
     }

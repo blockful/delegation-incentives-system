@@ -1,7 +1,7 @@
 import type { BalanceRepository, BalanceEvent, Wei } from "@ens-dis/domain"
 import { wei, seconds, type Seconds } from "@ens-dis/domain"
 import { and, inArray, lte, gte, eq, desc } from "drizzle-orm"
-import { ensBalanceEvent, ensBalance } from "ponder:schema"
+import { ensBalanceEvent } from "ponder:schema"
 
 export class BalanceAdapter implements BalanceRepository {
   constructor(private db: any) {}
@@ -54,17 +54,10 @@ export class BalanceAdapter implements BalanceRepository {
       return wei(BigInt(eventRows[0].balance as string | number | bigint))
     }
 
-    // Fallback: current balance from ens_balance table
-    const balanceRows = await this.db
-      .select()
-      .from(ensBalance)
-      .where(eq(ensBalance.id, normalizedId))
-      .limit(1)
-
-    if (balanceRows.length > 0) {
-      return wei(BigInt(balanceRows[0].balance as string | number | bigint))
-    }
-
+    // No event at or before `at` means the account had no balance yet — return 0.
+    // Do NOT fall back to the current ens_balance table: that reflects present state,
+    // not the historical state at `at`, which would inflate TWB for accounts that
+    // acquired tokens after the query timestamp.
     return wei(0n)
   }
 }

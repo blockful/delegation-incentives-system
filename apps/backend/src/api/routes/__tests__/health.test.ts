@@ -11,8 +11,8 @@ import { buildDataSource } from "../../data-source.js"
 const mockDataSource = {
   proposals: {
     getRecentProposals: vi.fn().mockResolvedValue([
-      { id: "1", status: "executed", timestamp: 1000n, endTimestamp: 2000n, daoId: "ens" },
-      { id: "2", status: "defeated", timestamp: 900n, endTimestamp: 1800n, daoId: "ens" },
+      { id: "1", status: "executed", timestamp: 1000n, endBlock: 2000n, daoId: "ens" },
+      { id: "2", status: "defeated", timestamp: 900n, endBlock: 1800n, daoId: "ens" },
     ]),
   },
   votes: {
@@ -26,8 +26,8 @@ const mockDataSource = {
 beforeEach(() => {
   vi.mocked(buildDataSource).mockReturnValue(mockDataSource as any)
   vi.mocked(mockDataSource.proposals.getRecentProposals).mockResolvedValue([
-    { id: "1", status: "executed", timestamp: 1000n, endTimestamp: 2000n, daoId: "ens" },
-    { id: "2", status: "defeated", timestamp: 900n, endTimestamp: 1800n, daoId: "ens" },
+    { id: "1", status: "executed", timestamp: 1000n, endBlock: 2000n, daoId: "ens" },
+    { id: "2", status: "defeated", timestamp: 900n, endBlock: 1800n, daoId: "ens" },
   ])
   vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValue([])
   vi.mocked(mockDataSource.distributions.list).mockResolvedValue([])
@@ -35,7 +35,7 @@ beforeEach(() => {
 
 describe("GET /health", () => {
   it("returns 200 { status: 'ok' }", async () => {
-    const req = new Request("http://localhost/health")
+    const req = new Request("http://localhost/api/health")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -45,7 +45,7 @@ describe("GET /health", () => {
 
 describe("GET /status", () => {
   it("returns 200 with non-negative counts", async () => {
-    const req = new Request("http://localhost/status")
+    const req = new Request("http://localhost/api/status")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -55,7 +55,7 @@ describe("GET /status", () => {
   })
 
   it("includes proposalCount matching proposal list", async () => {
-    const req = new Request("http://localhost/status")
+    const req = new Request("http://localhost/api/status")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -64,7 +64,7 @@ describe("GET /status", () => {
 
   it("includes cachedDistributions from distributions.list()", async () => {
     vi.mocked(mockDataSource.distributions.list).mockResolvedValue(["2025-01", "2025-02"])
-    const req = new Request("http://localhost/status")
+    const req = new Request("http://localhost/api/status")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()

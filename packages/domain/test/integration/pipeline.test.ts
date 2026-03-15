@@ -30,7 +30,7 @@ function makeProposals(count: number): Proposal[] {
     id: `prop-${i}`,
     status: "executed",
     timestamp: seconds(BigInt(1704067200 + i * 604800)), // weekly
-    endTimestamp: seconds(BigInt(1704067200 + i * 604800 + 604800)),
+    endBlock: BigInt(1704067200 + i * 604800 + 604800),
     daoId: "ens",
   }));
 }

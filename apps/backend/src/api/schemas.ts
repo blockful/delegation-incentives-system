@@ -114,13 +114,23 @@ export const TierProgressionSchema = z.object({
 
 export const ApyEstimateSchema = z.object({
   address: z.string(),
+  /** "delegate" | "delegator" | "ineligible". Self-delegates who are active get "delegate". */
   role: z.enum(["delegate", "delegator", "ineligible"]),
   delegatedTo: z.string().nullable(),
-  currentTierIndex: z.number(),
   poolSizeEns: z.string(),
   estimatedMonthlyRewardEns: z.string(),
   estimatedApyPct: z.string(),
-  userWeight: z.string(),
-  totalPoolWeight: z.string(),
+  /**
+   * The address's weight in its sub-pool, in wei.
+   * Delegates: current voting power (VP).
+   * Delegators: 180-day time-weighted ENS balance.
+   */
+  userShareWei: z.string(),
+  /**
+   * Sum of all participants' weights in the same sub-pool, in wei.
+   * Delegates: sum of all active delegates' VP.
+   * Delegators: sum of all eligible delegators' TWB.
+   */
+  totalShareWei: z.string(),
   currentBalanceEns: z.string(),
 }).openapi("ApyEstimate")

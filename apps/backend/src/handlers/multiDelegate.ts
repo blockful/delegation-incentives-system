@@ -64,6 +64,13 @@ async function processMultiDelegateTransfer(params: MultiDelegateTransferParams)
           .set({ amount: newAmount, lastUpdatedBlock: blockNumber });
       } else {
         await db.delete(schema.multiDelegatePosition, { id: fromPositionId });
+        // Remove the protocol mapping for this (from, delegate) pair.
+        // Without this, a stale mapping would persist after a position transfer,
+        // causing the deduplication step to incorrectly map fromAddress → proxy
+        // even though fromAddress no longer holds any position.
+        await db.delete(schema.protocolMapping, {
+          id: `multi_delegate-${fromAddress}-${delegateAddress}`,
+        });
       }
     }
   }

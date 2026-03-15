@@ -17,7 +17,7 @@ const makeProposals = (n: number) =>
     id: `${i + 1}`,
     status: "executed",
     timestamp: seconds(BigInt(1000 + i)),
-    endTimestamp: seconds(BigInt(2000 + i)),
+    endBlock: BigInt(2000 + i),
     daoId: "ens",
   }))
 
@@ -87,7 +87,6 @@ describe("GET /apy/{address}", () => {
     expect(body.delegatedTo).toBeNull()
     expect(typeof body.estimatedMonthlyRewardEns).toBe("string")
     expect(typeof body.estimatedApyPct).toBe("string")
-    expect(typeof body.currentTierIndex).toBe("number")
     expect(typeof body.poolSizeEns).toBe("string")
   })
 
@@ -108,12 +107,11 @@ describe("GET /apy/{address}", () => {
     expect(body).toHaveProperty("address")
     expect(body).toHaveProperty("role")
     expect(body).toHaveProperty("delegatedTo")
-    expect(body).toHaveProperty("currentTierIndex")
     expect(body).toHaveProperty("poolSizeEns")
     expect(body).toHaveProperty("estimatedMonthlyRewardEns")
     expect(body).toHaveProperty("estimatedApyPct")
-    expect(body).toHaveProperty("userWeight")
-    expect(body).toHaveProperty("totalPoolWeight")
+    expect(body).toHaveProperty("userShareWei")
+    expect(body).toHaveProperty("totalShareWei")
     expect(body).toHaveProperty("currentBalanceEns")
   })
 })

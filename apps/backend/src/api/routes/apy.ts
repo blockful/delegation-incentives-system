@@ -49,7 +49,7 @@ apyRouter.openapi(apyRoute, async (c) => {
     const { activeDelegates } = await fetchActiveDelegates(dataSource)
     const activeLower = toLowerSet(activeDelegates)
     const activeDelegateArray = Array.from(activeDelegates)
-    const { monthEnd, poolTier, currentTierIndex } = await fetchMonthContext(
+    const { monthEnd, poolTier } = await fetchMonthContext(
       dataSource,
       activeDelegateArray,
     )
@@ -69,12 +69,11 @@ apyRouter.openapi(apyRoute, async (c) => {
           address,
           role: "ineligible" as const,
           delegatedTo: accountBalance?.delegate ?? null,
-          currentTierIndex,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: "0",
           estimatedApyPct: "0",
-          userWeight: "0",
-          totalPoolWeight: "0",
+          userShareWei: "0",
+          totalShareWei: "0",
           currentBalanceEns: "0",
         },
         200,
@@ -99,12 +98,11 @@ apyRouter.openapi(apyRoute, async (c) => {
           address,
           role: "delegate" as const,
           delegatedTo: null,
-          currentTierIndex,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: formatEns(cappedReward),
           estimatedApyPct: computeApyPct(cappedReward, userVP),
-          userWeight: userVP.toString(),
-          totalPoolWeight: totalVP.toString(),
+          userShareWei: userVP.toString(),
+          totalShareWei: totalVP.toString(),
           currentBalanceEns: formatEns(userVP),
         },
         200,
@@ -153,12 +151,11 @@ apyRouter.openapi(apyRoute, async (c) => {
         address,
         role: "delegator" as const,
         delegatedTo: accountBalance?.delegate ?? null,
-        currentTierIndex,
         poolSizeEns: formatWholeEns(monthlyPool),
         estimatedMonthlyRewardEns: formatEns(cappedReward),
         estimatedApyPct: computeApyPct(cappedReward, currentBalance),
-        userWeight: userTWB.toString(),
-        totalPoolWeight: totalTWB.toString(),
+        userShareWei: userTWB.toString(),
+        totalShareWei: totalTWB.toString(),
         currentBalanceEns: formatEns(currentBalance),
       },
       200,

@@ -17,7 +17,7 @@ packages/
 
 ## Apps
 
-### [Indexer](./apps/indexer/)
+### [Backend](./apps/backend/)
 
 Ponder-based event indexer tracking two Ethereum mainnet contracts, with integrated REST API (Hono + Zod OpenAPI) for computing monthly reward distributions.
 
@@ -43,10 +43,10 @@ pnpm install
 pnpm --filter @ens-dis/domain test
 
 # Run indexer tests
-pnpm --filter @ens-dis/indexer test
+pnpm --filter @ens-dis/backend test
 
-# Start the indexer (requires PONDER_RPC_URL_1, serves API on BACKEND_PORT)
-pnpm --filter @ens-dis/indexer dev
+# Start the indexer (requires RPC_URL, serves API on BACKEND_PORT)
+pnpm --filter @ens-dis/backend dev
 ```
 
 ## Environment Variables
@@ -57,7 +57,7 @@ Copy `.env.example` to `.env` at the project root.
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string (required) |
 | `BACKEND_PORT` | API server port (indexer listens here) |
-| `PONDER_RPC_URL_1` | Ethereum mainnet RPC URL (required) |
+| `RPC_URL` | Ethereum mainnet RPC URL (required) |
 
 ## Tech Stack
 
@@ -141,12 +141,11 @@ curl http://localhost:42069/apy/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
   "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "role": "delegator",
   "delegatedTo": "0x...",
-  "currentTierIndex": 1,
   "poolSizeEns": "8000",
   "estimatedMonthlyRewardEns": "12.5000",
   "estimatedApyPct": "4.28",
-  "userWeight": "350000000000000000000000",
-  "totalPoolWeight": "2100000000000000000000000",
+  "userShareWei": "350000000000000000000000",
+  "totalShareWei": "2100000000000000000000000",
   "currentBalanceEns": "3500.0000"
 }
 ```
@@ -362,7 +361,7 @@ All monetary values use **BigInt** with branded types to prevent unit mixing at 
 
 ```bash
 pnpm --filter @ens-dis/domain test             # domain logic tests
-pnpm --filter @ens-dis/indexer test            # indexer tests
+pnpm --filter @ens-dis/backend test            # indexer tests
 pnpm test:watch                                 # watch mode (all)
 pnpm test:coverage                              # with coverage (all)
 ```
@@ -372,4 +371,4 @@ Tests are organized by package:
 | Package | Tests |
 |---------|-------|
 | `packages/domain` | Unit + property-based tests for distribution logic (active delegates, cap redistribution, TWB, lottery, etc.) |
-| `apps/indexer` | Integration tests for API routes and data layer |
+| `apps/backend` | Integration tests for API routes and data layer |

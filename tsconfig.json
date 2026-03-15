@@ -2,7 +2,6 @@
   "files": [],
   "references": [
     { "path": "./apps/backend" },
-    { "path": "./apps/indexer" },
     { "path": "./apps/frontend" }
   ]
 }
