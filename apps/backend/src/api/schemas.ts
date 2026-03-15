@@ -120,6 +120,10 @@ export const TierProgressionEntrySchema = z.object({
   isUnlocked: z.boolean(),
   additionalVPNeeded: z.string(),
   requiredAVP: z.string(),
+  estimatedApyPct: z.string().openapi({
+    description: 'Estimated delegator APY for this tier, accounting for proportional balance growth',
+    example: '8.50',
+  }),
 }).openapi("TierProgressionEntry")
 
 export const TierProgressionSchema = z.object({

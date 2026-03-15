@@ -61,12 +61,33 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
       totalDelegatorBalanceEns,
     )
 
+    // Current growth ratio for scaling delegator balance to hypothetical tiers
+    const currentGrowthRatio = 1 + Number(growthBps) / 10000
+    const delegatorPoolBps = Number(DELEGATOR_POOL_BPS)
+
     const tiers = POOL_TIERS.map((tier, index) => {
       const requiredAVP =
         previousAVP === 0n
           ? 0n
           : previousAVP + mulDiv(previousAVP, tier.momGrowthMinBps, 10000n)
       const additionalVPNeeded = requiredAVP > currentAVP ? requiredAVP - currentAVP : 0n
+
+      // Estimate APY for this tier:
+      // - Pool size increases per tier definition
+      // - Delegator balance scales proportionally with the VP growth needed
+      let estimatedApyPct = "0.00"
+      if (totalDelegatorBalanceEns > 0) {
+        const tierPoolEns = Number(tier.poolSize) / Number(ONE_ENS)
+        const tierGrowthRatio = 1 + Number(tier.momGrowthMinBps) / 10000
+
+        // For current/unlocked tiers, use actual balance
+        // For higher tiers, scale balance by growth ratio
+        const scaledBalance = index <= currentTierIndex
+          ? totalDelegatorBalanceEns
+          : totalDelegatorBalanceEns * (tierGrowthRatio / currentGrowthRatio)
+
+        estimatedApyPct = computeMaxDelegatorApyPct(tierPoolEns, delegatorPoolBps, scaledBalance)
+      }
 
       return {
         index,
@@ -79,6 +100,7 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
         isUnlocked: growthBps >= tier.momGrowthMinBps,
         additionalVPNeeded: additionalVPNeeded.toString(),
         requiredAVP: requiredAVP.toString(),
+        estimatedApyPct,
       }
     })
 

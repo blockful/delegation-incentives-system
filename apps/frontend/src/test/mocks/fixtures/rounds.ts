@@ -20,6 +20,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: true,
       additionalVPNeeded: '0',
       requiredAVP: '0',
+      estimatedApyPct: '4.80',
     },
     {
       index: 1,
@@ -32,6 +33,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: true,
       additionalVPNeeded: '0',
       requiredAVP: '1168600000000000000000000',
+      estimatedApyPct: '8.64',
     },
     {
       index: 2,
@@ -44,6 +46,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '38000000000000000000000',
       requiredAVP: '1288000000000000000000000',
+      estimatedApyPct: '15.65',
     },
     {
       index: 3,
@@ -56,6 +59,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '160000000000000000000000',
       requiredAVP: '1410000000000000000000000',
+      estimatedApyPct: '27.00',
     },
     {
       index: 4,
@@ -68,6 +72,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '318000000000000000000000',
       requiredAVP: '1568000000000000000000000',
+      estimatedApyPct: '46.29',
     },
     {
       index: 5,
@@ -80,6 +85,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '530000000000000000000000',
       requiredAVP: '1780000000000000000000000',
+      estimatedApyPct: '80.00',
     },
     {
       index: 6,
@@ -92,6 +98,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '750000000000000000000000',
       requiredAVP: '2000000000000000000000000',
+      estimatedApyPct: '120.00',
     },
   ],
 }

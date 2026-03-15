@@ -34,6 +34,7 @@ export interface TierEntry {
   isUnlocked: boolean;
   additionalVPNeeded: string;
   requiredAVP: string;
+  estimatedApyPct: string;
 }
 
 export interface TierProgressionResponse {

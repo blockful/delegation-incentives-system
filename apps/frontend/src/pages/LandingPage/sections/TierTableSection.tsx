@@ -124,7 +124,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             </TierLabel>
             <TierDots tierIndex={tier.index} totalTiers={tiers.length} />
             <ApyInfo>
-              ~{tier.momGrowthMaxPct}% APY
+              ~{tier.estimatedApyPct}% APY
               <StatusIcon $unlocked={tier.isUnlocked}>
                 {tier.isUnlocked ? '\u2705' : '\uD83D\uDD12'}
               </StatusIcon>
