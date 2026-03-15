@@ -56,78 +56,52 @@ describe("VotingPowerAdapter.getVotingPowerHistory", () => {
   })
 })
 
-describe("VotingPowerAdapter.getAggregateDelegatedPower (TWAP)", () => {
+describe("VotingPowerAdapter.getAggregateVotingPowerAt (point-in-time)", () => {
   let db: FakePonderDb
 
   beforeEach(() => {
     db = new FakePonderDb({ ens_voting_power_snapshot: SNAPSHOTS })
   })
 
-  it("computes TWAP for a single delegate over the window", async () => {
+  it("returns latest snapshot VP for a single delegate at given timestamp", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // 0xaaa: VP=0 at t=50..100, VP=1000 at t=100..200
-    // window [50, 200] = 150s
-    // TWAP = (0*50 + 1000*100) / 150 = 666n
-    const result = await adapter.getAggregateDelegatedPower(
-      ["0xaaa"],
-      seconds(50n),
-      seconds(200n),
-    )
-    expect(result).toBe(666n)
+    // 0xaaa has snapshots at t=100 (vp=1000) and t=200 (vp=1500)
+    // at t=200: latest is vp=1500
+    const result = await adapter.getAggregateVotingPowerAt(["0xaaa"], seconds(200n))
+    expect(result).toBe(1500n)
   })
 
-  it("uses base VP from snapshot before window start", async () => {
+  it("picks snapshot at or before at (not after)", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // 0xaaa: VP=1000 (set at t=100) at window start t=150, then VP=1500 at t=200
-    // window [150, 200] = 50s
-    // TWAP = (1000*50 + 1500*0) / 50 = 1000n
-    const result = await adapter.getAggregateDelegatedPower(
-      ["0xaaa"],
-      seconds(150n),
-      seconds(200n),
-    )
+    // at t=150: latest snapshot of 0xaaa with timestamp ≤ 150 is t=100 (vp=1000)
+    const result = await adapter.getAggregateVotingPowerAt(["0xaaa"], seconds(150n))
     expect(result).toBe(1000n)
   })
 
-  it("sums TWAP across multiple delegates", async () => {
+  it("sums point-in-time VP across multiple delegates", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // window [50, 200] = 150s
-    // 0xaaa TWAP = 666n
-    // 0xbbb: VP=0 at t=50..150, VP=800 at t=150..200 → (0*100 + 800*50)/150 = 266n
-    // total = 932n
-    const result = await adapter.getAggregateDelegatedPower(
-      ["0xaaa", "0xbbb"],
-      seconds(50n),
-      seconds(200n),
-    )
-    expect(result).toBe(932n)
+    // at t=200: 0xaaa latest=1500, 0xbbb latest (t=150)=800 → total=2300
+    const result = await adapter.getAggregateVotingPowerAt(["0xaaa", "0xbbb"], seconds(200n))
+    expect(result).toBe(2300n)
   })
 
-  it("only sums provided active delegates (not all)", async () => {
+  it("only sums provided delegates (not all)", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // Only 0xaaa in window [150, 200]: base VP=1000 → TWAP = 1000n
-    const result = await adapter.getAggregateDelegatedPower(
-      ["0xaaa"],
-      seconds(150n),
-      seconds(200n),
-    )
-    expect(result).toBe(1000n)
+    // at t=200: only 0xaaa → vp=1500
+    const result = await adapter.getAggregateVotingPowerAt(["0xaaa"], seconds(200n))
+    expect(result).toBe(1500n)
   })
 
   it("returns 0n for empty delegate list", async () => {
     const adapter = new VotingPowerAdapter(db)
-    const result = await adapter.getAggregateDelegatedPower([], seconds(50n), seconds(200n))
+    const result = await adapter.getAggregateVotingPowerAt([], seconds(200n))
     expect(result).toBe(0n)
   })
 
-  it("returns 0n for delegate with no snapshots in or before the window", async () => {
+  it("returns 0n for delegate with no snapshot at or before at", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // 0xccc has its first snapshot at t=300, window ends at t=200
-    const result = await adapter.getAggregateDelegatedPower(
-      ["0xccc"],
-      seconds(50n),
-      seconds(200n),
-    )
+    // 0xccc has its first snapshot at t=300; at t=200 → no snapshot ≤ 200 → 0
+    const result = await adapter.getAggregateVotingPowerAt(["0xccc"], seconds(200n))
     expect(result).toBe(0n)
   })
 })
@@ -172,15 +146,14 @@ describe("VotingPowerAdapter with checksummed addresses", () => {
     expect(results[0].accountId).toBe("0xaaa")
   })
 
-  it("handles checksummed addresses in getAggregateDelegatedPower", async () => {
+  it("handles checksummed addresses in getAggregateVotingPowerAt", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // window [50, 200] → 0xaaa TWAP=666, 0xbbb TWAP=266, total=932
-    const result = await adapter.getAggregateDelegatedPower(
+    // at t=200: 0xaaa=1500, 0xbbb=800 → total=2300
+    const result = await adapter.getAggregateVotingPowerAt(
       ["0xAAA", "0xBBB"],
-      seconds(50n),
       seconds(200n),
     )
-    expect(result).toBe(932n)
+    expect(result).toBe(2300n)
   })
 
   it("handles checksummed addresses in getVotingPower", async () => {

@@ -49,7 +49,7 @@ const mockDataSource = {
     getActiveDelegations: vi.fn().mockResolvedValue([]),
   },
   votingPower: {
-    getAggregateDelegatedPower: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
+    getAggregateVotingPowerAt: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
     getVotingPower: vi.fn(),
   },
   balances: {

@@ -1,5 +1,5 @@
 import type { VotingPowerRepository, VotingPowerSnapshot, Wei } from "@ens-dis/domain"
-import { wei, seconds, computeTWAP, type Seconds } from "@ens-dis/domain"
+import { wei, seconds, type Seconds } from "@ens-dis/domain"
 import { and, inArray, lte, gte } from "drizzle-orm"
 import { ensVotingPowerSnapshot } from "ponder:schema"
 
@@ -36,47 +36,37 @@ export class VotingPowerAdapter implements VotingPowerRepository {
     }))
   }
 
-  async getAggregateDelegatedPower(
-    activeDelegateIds: string[],
-    from: Seconds,
-    to: Seconds,
+  async getAggregateVotingPowerAt(
+    delegateIds: string[],
+    at: Seconds,
   ): Promise<Wei> {
-    if (activeDelegateIds.length === 0) return wei(0n)
+    if (delegateIds.length === 0) return wei(0n)
 
-    const fromBig = BigInt(from)
-    const toBig = BigInt(to)
-    const window = toBig - fromBig
-    if (window === 0n) return wei(0n)
+    const normalizedIds = delegateIds.map(id => id.toLowerCase())
 
-    const normalizedIds = activeDelegateIds.map(id => id.toLowerCase())
-
-    // Fetch all snapshots up to `to` (includes base VP before window start)
     const rows: VPSnapshotRow[] = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
       .where(
         and(
           inArray(ensVotingPowerSnapshot.accountId, normalizedIds),
-          lte(ensVotingPowerSnapshot.timestamp, toBig),
+          lte(ensVotingPowerSnapshot.timestamp, BigInt(at)),
         ),
       )
 
-    // Group by delegate and sort ascending by timestamp
-    const byDelegate = new Map<string, { timestamp: bigint; votingPower: bigint }[]>()
+    // For each delegate, keep the latest snapshot ≤ at
+    const latestByDelegate = new Map<string, { votingPower: bigint; timestamp: bigint }>()
     for (const row of rows) {
-      const accountId = row.accountId.toLowerCase()
-      const entry = { timestamp: BigInt(row.timestamp), votingPower: BigInt(row.votingPower) }
-      const list = byDelegate.get(accountId) ?? []
-      list.push(entry)
-      byDelegate.set(accountId, list)
+      const id = row.accountId.toLowerCase()
+      const existing = latestByDelegate.get(id)
+      if (!existing || row.timestamp > existing.timestamp) {
+        latestByDelegate.set(id, { votingPower: row.votingPower, timestamp: row.timestamp })
+      }
     }
 
     let total = 0n
-    for (const id of normalizedIds) {
-      const snapshots = (byDelegate.get(id) ?? []).sort((a, b) =>
-        a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0,
-      )
-      total += computeTWAP(snapshots, fromBig, toBig, window)
+    for (const entry of latestByDelegate.values()) {
+      total += entry.votingPower
     }
     return wei(total)
   }

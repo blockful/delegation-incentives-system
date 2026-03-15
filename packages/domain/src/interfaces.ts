@@ -34,14 +34,13 @@ export interface VotingPowerRepository {
   ): Promise<VotingPowerSnapshot[]>;
 
   /**
-   * Get the aggregate time-weighted average voting power for the given delegates
-   * over the window [from, to]. Each delegate's TWAP is computed independently
-   * then summed.
+   * Get the aggregate point-in-time voting power for the given delegates at `at`.
+   * For each delegate, takes the latest snapshot with timestamp <= at, then sums.
+   * Used for tier/MoM-growth determination (not TWAP — that is only for reward shares).
    */
-  getAggregateDelegatedPower(
-    activeDelegateIds: string[],
-    from: Seconds,
-    to: Seconds,
+  getAggregateVotingPowerAt(
+    delegateIds: string[],
+    at: Seconds,
   ): Promise<Wei>;
 
   /** Get the current voting power for specific accounts */

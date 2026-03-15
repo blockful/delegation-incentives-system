@@ -33,7 +33,7 @@ const mockDataSource = {
   votes: { getVotesForProposals: vi.fn() },
   votingPower: {
     // Both current and previous AVP return the same value (0% growth → tier 0)
-    getAggregateDelegatedPower: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
+    getAggregateVotingPowerAt: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
   },
 }
 
@@ -43,7 +43,7 @@ beforeEach(() => {
   vi.mocked(buildDataSource).mockReturnValue(mockDataSource as any)
   vi.mocked(mockDataSource.proposals.getRecentProposals).mockResolvedValue(proposals)
   vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValue(votes)
-  vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower).mockResolvedValue(
+  vi.mocked(mockDataSource.votingPower.getAggregateVotingPowerAt).mockResolvedValue(
     wei(1000n * 10n ** 18n),
   )
 })
@@ -90,7 +90,7 @@ describe("GET /tiers/progression", () => {
   })
 
   it("returns maxDelegatorApyPct of 0.00 when AVP is zero", async () => {
-    vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower).mockResolvedValue(
+    vi.mocked(mockDataSource.votingPower.getAggregateVotingPowerAt).mockResolvedValue(
       wei(0n),
     )
     const req = new Request("http://localhost/tiers/progression")
@@ -163,7 +163,7 @@ describe("GET /tiers/progression", () => {
 
   it("selects tier 0 when previousAVP is zero (bootstrap guard per spec: first program month)", async () => {
     // Per spec: first month has no previous month to compare; implementation uses tier 0 as guard
-    vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower)
+    vi.mocked(mockDataSource.votingPower.getAggregateVotingPowerAt)
       .mockResolvedValueOnce(wei(5000n * 10n ** 18n)) // currentAVP
       .mockResolvedValueOnce(wei(0n))                  // previousAVP = 0 → bootstrap guard
     const req = new Request("http://localhost/tiers/progression")

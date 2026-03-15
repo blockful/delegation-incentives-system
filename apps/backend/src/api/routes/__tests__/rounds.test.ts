@@ -40,7 +40,7 @@ const mockDataSource = {
   proposals: { getRecentProposals: vi.fn() },
   votes: { getVotesForProposals: vi.fn() },
   votingPower: {
-    getAggregateDelegatedPower: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
+    getAggregateVotingPowerAt: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
   },
   distributions: {
     list: vi.fn(async () => [] as string[]),
@@ -54,7 +54,7 @@ beforeEach(() => {
   vi.mocked(buildDataSource).mockReturnValue(mockDataSource as any)
   vi.mocked(mockDataSource.proposals.getRecentProposals).mockResolvedValue(proposals)
   vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValue(votes)
-  vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower).mockResolvedValue(
+  vi.mocked(mockDataSource.votingPower.getAggregateVotingPowerAt).mockResolvedValue(
     wei(1000n * 10n ** 18n),
   )
   vi.mocked(mockDataSource.distributions.list).mockResolvedValue([])
