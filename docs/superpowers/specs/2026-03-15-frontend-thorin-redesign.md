@@ -22,7 +22,7 @@ Three wallet-state variants rendered on the same route, driven by `AppWalletStat
 
 **Disconnected:**
 - Header: "ENS GOVERNANCE · 90-DAY PILOT" label
-- Hero headline: "Your ENS is sitting idle. It could be earning [APY]%" — APY value from `/status`, tier from `/tiers/progression`
+- Hero headline: "Your ENS is sitting idle. It could be earning [APY]%" — APY value is the current tier's `momGrowthMaxPct` from `TierProgressionResponse.tiers[currentTierIndex].momGrowthMaxPct`
 - Subtext: "Help secure ENS governance by delegating to an active voter. Rewards are automatic, gas is sponsored."
 - CTAs: "Delegate Now → Free" (primary blue), "Share this initiative" (secondary)
 - Round status bar: "No tokens locked · Gas sponsored · Rewards auto-sent" · Round # with live dot · +X.X% active VP growth · Tier N pool size
@@ -35,7 +35,14 @@ Three wallet-state variants rendered on the same route, driven by `AppWalletStat
 - Same page as disconnected with wallet address shown in header instead of "Connect"
 
 **Connected + Delegated:**
-- Same page, delegation status reflected in CTAs and header
+- Header shows wallet avatar + truncated address; "Connect" button is gone
+- Hero sub-headline changes to "You're earning X.XX% APY" with current tier tag
+- "Delegate Now" CTA becomes "View your dashboard →" (links to `/dashboard`)
+- Second CTA "Share this initiative" remains
+- Round status bar unchanged
+- Tier table highlights the user's current tier (same as disconnected)
+- "HOW IT WORKS" steps show personalised tags: step 3a shows user's current APY; step 3b shows lottery pool if qualifying
+- Dark CTA section buttons: "Go to Dashboard →" (blue) + "View Active Delegates" (outline)
 
 ---
 
@@ -57,6 +64,8 @@ Only meaningful when wallet is connected (shows earnings for connected address).
 **Desktop layout (two columns):**
 - Left col: YOUR EARNINGS card (earnings number, APY, pills, share buttons)
 - Right col: ROUND DETAILS header + 3 stat cards + SHARE YOUR EARNINGS header + ROUND PROGRESS card + LOTTERY card
+
+**ENS name resolution:** The "Delegating to nick.eth" pill resolves the `delegatedTo` address (raw `0x…` from `EligibilityResponse`) via wagmi's `useEnsName({ address, chainId: mainnet.id })`. If resolution returns null, display truncated address (`0x1234…abcd`) instead. Resolution is done client-side; no backend change required.
 
 **API:** `/eligibility/:address`, `/apy/:address`, `/status`, `/tiers/progression`, `/distributions/:month`
 
@@ -83,7 +92,26 @@ Only meaningful when wallet is connected (shows earnings for connected address).
 
 **Mobile:** single column. **Desktop:** 3-column grid.
 
-**API:** `/delegates/active`
+**Known data gap — backend extension required:** `GET /delegates/active` currently returns only `{ count: number; delegates: string[] }` — raw addresses with no metadata. The delegate cards require VP, delegator count, active-since date, and last-10-proposal vote history. These fields must be added to the backend response before the Delegates page can be fully implemented. The backend should return an extended type:
+
+```typescript
+interface DelegateDetail {
+  address: string;
+  ensName: string | null;          // resolved server-side or null
+  votingPower: string;             // e.g. "42000" (raw), displayed as "42K VP"
+  delegatorCount: number;
+  activeSince: string;             // ISO date string, displayed as "Jan '24"
+  last10ProposalsVoted: boolean[]; // array of 10 booleans, true = voted
+}
+interface ActiveDelegatesResponse {
+  count: number;
+  delegates: DelegateDetail[];
+}
+```
+
+Until the backend is extended, the Delegates page renders address-only cards (avatar + truncated address, no VP/delegators/proposal bar). The frontend component API must accept the extended type from day one so no page refactor is needed when the backend ships.
+
+**API:** `/delegates/active` (extended — see above)
 
 ---
 
@@ -98,7 +126,7 @@ Only meaningful when wallet is connected (shows earnings for connected address).
 - "Round N" + "In progress" badge (blue) + "X% complete" right-aligned
 - Progress bar (blue fill)
 - Start date left · "Xd Xh left · Mar XX" right
-- 3 stat cards: POOL NK ENS · YOUR TIER Tier N (if connected) · CURRENT APY X.XX%
+- 3 stat cards: POOL NK ENS · YOUR TIER Tier N (shows current tier if connected; shows "—" if disconnected) · CURRENT APY X.XX%
 
 **APY TIERS section:**
 - "APY TIERS" label + subtext
@@ -139,6 +167,10 @@ Only meaningful when wallet is connected (shows earnings for connected address).
 **LAST WINNER · ROUND N:**
 - ENS avatar + name · Pool #N · date · "10 ENS won" (orange/amber)
 - "View all past winners →" link
+
+**In-progress lottery data gap:** The current API's `DistributionResponse.lotteryPools` represents completed distributions with settled winners. There is no endpoint for in-progress pool accumulation data ("8.4/10 ENS accumulated", "~3.2% odds"). Until such an endpoint exists, the "You qualify for the lottery" card is shown only when a completed distribution exists for the current month and the connected address appears in a lottery pool. The pool accumulation and odds values are derived from the most recent available distribution. The "Last winner" section always uses the previous month's distribution.
+
+`month` is computed as `YYYY-MM` from `new Date()` for the current round. If no distribution exists for the current month, the qualifying card is hidden and a "Round in progress — results available at round end" message is shown instead.
 
 **API:** `/distributions/:month` (lottery pools data)
 
@@ -220,7 +252,6 @@ apps/frontend/src/
 │   ├── Router.tsx
 │   └── providers/
 │       ├── AppKitProvider.tsx       # Reown AppKit + wagmi config
-│       ├── WalletStateProvider.tsx  # derives AppWalletState from wagmi + API
 │       └── ThorinProvider.tsx       # Thorin theme wrapper
 │
 ├── pages/
@@ -429,6 +460,9 @@ wagmi
 viem
 msw
 @playwright/test
+@testing-library/react
+@testing-library/user-event
+@testing-library/jest-dom
 ```
 
 Remove:
