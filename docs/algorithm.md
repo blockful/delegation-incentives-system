@@ -15,19 +15,18 @@ The pool size is determined by month-over-month growth in aggregate delegated vo
 
 ## Pipeline Steps
 
-The pipeline is implemented in `packages/domain/src/pipeline.ts` and called via `POST /distributions/{month}/compute`.
+The pipeline is implemented in `packages/domain/src/pipeline.ts` and triggered automatically on the first `GET /distributions/{month}` request after the month ends.
 
 ### Step 1 — Time boundaries
 
 ```
-monthStart  = first second of the calendar month (UTC)
-monthEnd    = last second of the calendar month (UTC)
-prevMonthEnd = last second of the previous calendar month
+monthStart     = first second of the calendar month (UTC)
+monthEnd       = last second of the calendar month (UTC)
+prevMonthEnd   = last second of the previous calendar month
 twbWindowStart = monthEnd − 180 days   (delegator TWB window)
-avpWindowStart = monthEnd − 30 days    (delegate AVP window)
 ```
 
-The 180-day TWB window prevents last-minute delegation farming. The 30-day AVP window makes delegate VP estimates stable throughout the month rather than depending on a single end-of-month snapshot.
+The 180-day TWB window prevents last-minute delegation farming.
 
 ### Step 2 — Fetch proposals and votes
 
@@ -45,16 +44,18 @@ Implemented in `active-delegates.ts`. If no delegates are active, an empty distr
 
 ### Step 4 — Compute MoM VP growth and select pool tier
 
-The aggregate delegated voting power (AVP) is computed as a 30-day TWAP for the active delegate set, evaluated at the current and previous month boundaries.
+The aggregate delegated voting power (AVP) is the sum of each active delegate's latest voting power snapshot at or before each month boundary — a point-in-time measurement, not a time average.
 
 ```
-currentAVP  = TWAP of (sum of active delegates' VP) over [monthEnd − 30d, monthEnd]
-previousAVP = TWAP of (sum of active delegates' VP) over [prevMonthEnd − 30d, prevMonthEnd]
+currentAVP  = sum of (latest VP snapshot ≤ monthEnd) for each active delegate
+previousAVP = sum of (latest VP snapshot ≤ prevMonthEnd) for each active delegate
 
 momGrowthBps = (currentAVP − previousAVP) × 10,000 / previousAVP
 ```
 
 `momGrowthBps` is a signed value — negative when VP declined. `percentageGrowthBps` in `util/bigint-math.ts` returns a signed bigint.
+
+Point-in-time snapshots are used here (not TWAP) because tier selection should reflect actual VP at the boundary, not a smoothed average. TWAP is reserved for individual delegate reward weighting (Step 5), where smoothing prevents a delegate from being over- or under-rewarded due to VP spikes.
 
 **First-month bootstrap guard**: when `previousAVP === 0` (no prior history), `momGrowthBps` defaults to `0` and tier 0 (lowest) is selected. This prevents a cold-start triggering the top-tier pool.
 
@@ -76,13 +77,13 @@ Pool split: **10% to delegates**, **90% to delegators**.
 
 ### Step 5 — Delegate average voting power (AVP)
 
-For each active delegate, their individual average voting power over the month is computed using the same TWAP algorithm:
+For each active delegate, their individual average voting power over the calendar month is computed using TWAP:
 
 ```
 delegateAVP = TWAP of delegate VP over [monthStart, monthEnd]
 ```
 
-This is implemented via `getVotingPowerHistory` + TWAP integration in the pipeline, using the calendar month window (not the 30-day AVP window). The distinction: the 30-day window is used for MoM tier selection (aggregate); the full month window is used for individual delegate reward weighting.
+This is implemented via `getVotingPowerHistory` + TWAP integration in the pipeline. The TWAP smooths out VP spikes, preventing a delegate from being over- or under-rewarded if their VP changed sharply during the month. This is distinct from Step 4, which uses point-in-time VP snapshots at month boundaries for tier selection.
 
 The `DelegateScore` for each delegate records `averageVotingPower`, `proposalsVoted`, and `isActive`.
 
@@ -231,8 +232,7 @@ Key constants:
 
 ```typescript
 ONE_ENS = 10n ** 18n              // 1 ENS in wei
-TWB_WINDOW_SECONDS = 180 * 86400  // 180 days
-AVP_WINDOW_SECONDS = 30 * 86400   // 30 days
+TWB_WINDOW_SECONDS = 180 * 86400  // 180 days (delegator TWB window)
 ACTIVE_VOTE_THRESHOLD = 7
 PROPOSAL_WINDOW_SIZE = 10
 MIN_PAYOUT_THRESHOLD = 1 ENS

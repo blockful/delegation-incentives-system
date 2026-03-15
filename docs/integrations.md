@@ -43,9 +43,9 @@ Records a change in a delegate's total voting power (triggered by transfers or d
 - `timestamp`
 
 **Why this matters**: `ens_voting_power_snapshot` is the source for:
-- Individual delegate AVP over the calendar month (pipeline Step 5)
-- Aggregate AVP TWAP for MoM tier selection (pipeline Step 4, 30-day window)
-- Live APY estimates via `VotingPowerAdapter.getAggregateDelegatedPower`
+- Individual delegate AVP over the calendar month via TWAP (pipeline Step 5)
+- Point-in-time aggregate VP at month boundaries for MoM tier selection (pipeline Step 4) via `VotingPowerAdapter.getAggregateVotingPowerAt`
+- Live APY estimates and tier progression via the same point-in-time query
 
 ---
 
@@ -170,7 +170,7 @@ PostgreSQL tables (via ponder:schema)
       │
       ├─ ens_balance_event        ──► BalanceAdapter       ──► Delegator TWB (Step 9)
       ├─ ens_delegation_event     ──► DelegationAdapter    ──► Active delegations (Step 7)
-      ├─ ens_voting_power_snapshot──► VotingPowerAdapter   ──► AVP TWAP (Steps 4, 5)
+      ├─ ens_voting_power_snapshot──► VotingPowerAdapter   ──► point-in-time AVP (Step 4), TWAP AVP (Step 5)
       ├─ governance_proposal      ──► ProposalAdapter      ──► Recent proposals (Step 2)
       ├─ governance_vote          ──► VoteAdapter          ──► Votes (Step 2)
       └─ protocol_mapping         ──► ProtocolMappingAdapter──► Consolidation (Step 10)
