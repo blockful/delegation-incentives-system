@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import { Header } from './Header'
 import { Footer } from './Footer'
+import { tokens } from '@/styles/tokens'
 
 const Main = styled.main<{ $fullWidth?: boolean }>`
   flex: 1;
@@ -12,7 +13,11 @@ const Main = styled.main<{ $fullWidth?: boolean }>`
       : `
     max-width: 1200px;
     margin: 0 auto;
-    padding: 24px;
+    padding: ${tokens.spacing.lg};
+
+    @media (min-width: 768px) {
+      padding: ${tokens.spacing['2xl']};
+    }
   `}
 `
 

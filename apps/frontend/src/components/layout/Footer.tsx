@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { EnsSVG } from '@ensdomains/thorin'
+import { tokens } from '@/styles/tokens'
 
 const StyledFooter = styled.footer`
-  border-top: 1px solid #E5E5E5;
-  padding: 32px 24px;
-  background: #f6f6f6;
+  border-top: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']};
+  background: ${tokens.color.surfaceAlt};
 
   @media (min-width: 768px) {
-    padding: 40px 40px;
+    padding: ${tokens.spacing['4xl']} ${tokens.spacing['4xl']};
   }
 `
 
@@ -17,7 +18,7 @@ const Inner = styled.div`
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: ${tokens.spacing['2xl']};
 `
 
 const Top = styled.div`
@@ -25,7 +26,7 @@ const Top = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const BrandBlock = styled.div`
@@ -37,50 +38,52 @@ const BrandBlock = styled.div`
 const BrandRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const BrandText = styled.span`
-  font-size: 14px;
-  font-weight: 700;
-  color: #011A25;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
 `
 
 const BrandSub = styled.span`
-  font-family: 'EB Garamond', 'Georgia', serif;
-  font-size: 14px;
-  color: #4A5C63;
+  font-family: ${tokens.font.serif};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.textMuted};
 `
 
 const Nav = styled.nav`
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const FooterLink = styled(Link)`
-  font-size: 13px;
-  color: #4A5C63;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.textMuted};
   text-decoration: none;
+  transition: color ${tokens.transition.fast};
 
   &:hover {
-    color: #011A25;
+    color: ${tokens.color.text};
   }
 `
 
 const ExternalLink = styled.a`
-  font-size: 13px;
-  color: #4A5C63;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.textMuted};
   text-decoration: none;
+  transition: color ${tokens.transition.fast};
 
   &:hover {
-    color: #011A25;
+    color: ${tokens.color.text};
   }
 `
 
 const BottomLine = styled.span`
-  font-size: 12px;
-  color: #C4C7C8;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
   text-align: center;
 `
 
