@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button, CheckSVG, LockSVG } from '@ensdomains/thorin'
+import { Button, CheckSVG, LockSVG, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { TierDots } from '@/components/shared/TierDots'
 import type { TierEntry } from '@/api/types'
 
@@ -22,34 +22,6 @@ const Section = styled.section`
 `
 
 const CopyBlock = styled.div``
-
-const Eyebrow = styled.p`
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #4A5C63;
-  margin: 0 0 12px;
-`
-
-const Heading = styled.h2`
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0 0 16px;
-
-  @media (min-width: 768px) {
-    font-size: 36px;
-  }
-`
-
-const Description = styled.p`
-  font-size: 15px;
-  line-height: 1.6;
-  color: #4A5C63;
-  margin: 0 0 32px;
-`
 
 const ShareButton = styled(Button)`
   margin-bottom: 32px;
@@ -108,15 +80,28 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
   return (
     <Section>
       <CopyBlock>
-        <Eyebrow>The more people join, the more you earn</Eyebrow>
-        <Heading>
-          Your APY grows when others delegate too
-        </Heading>
-        <Description>
-          This isn&rsquo;t a fixed yield. The reward pool unlocks higher tiers as
-          more ENS gets delegated to active voters &mdash; so every person you
-          bring in increases everyone&rsquo;s earnings.
-        </Description>
+        <div style={{ margin: '0 0 12px' }}>
+          <Typography
+            fontVariant="label"
+            color="grey"
+            weight="bold"
+            style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
+          >
+            The more people join, the more you earn
+          </Typography>
+        </div>
+        <div style={{ margin: '0 0 16px' }}>
+          <ThorinHeading level="2" responsive>
+            Your APY grows when others delegate too
+          </ThorinHeading>
+        </div>
+        <div style={{ margin: '0 0 32px' }}>
+          <Typography fontVariant="body" color="textSecondary">
+            This isn&rsquo;t a fixed yield. The reward pool unlocks higher tiers as
+            more ENS gets delegated to active voters &mdash; so every person you
+            bring in increases everyone&rsquo;s earnings.
+          </Typography>
+        </div>
         <ShareButton colorStyle="bluePrimary" width="max">
           Share &amp; Grow the Pool
         </ShareButton>

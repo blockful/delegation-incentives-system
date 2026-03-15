@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button, PersonPlusSVG, FlameSVG, EthSVG, HeartSVG } from '@ensdomains/thorin'
+import { Button, PersonPlusSVG, FlameSVG, EthSVG, HeartSVG, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -18,35 +18,6 @@ const Section = styled.section`
 const Inner = styled.div`
   max-width: 1200px;
   margin: 0 auto;
-`
-
-const Eyebrow = styled.p`
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #4A5C63;
-  margin: 0 0 12px;
-`
-
-const Heading = styled.h2`
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0 0 12px;
-
-  @media (min-width: 768px) {
-    font-size: 36px;
-  }
-`
-
-const Subtitle = styled.p`
-  font-size: 15px;
-  line-height: 1.6;
-  color: #4A5C63;
-  margin: 0 0 36px;
-  max-width: 520px;
 `
 
 const Cards = styled.div`
@@ -181,14 +152,27 @@ export function HowItWorksSection() {
   return (
     <Section>
       <Inner>
-        <Eyebrow>How It Works</Eyebrow>
-        <Heading>
-          Simple to join. Better when more people do.
-        </Heading>
-        <Subtitle>
-          ENS governance is only as strong as its participation. This program
-          makes it worth your while.
-        </Subtitle>
+        <div style={{ margin: '0 0 12px' }}>
+          <Typography
+            fontVariant="label"
+            color="grey"
+            weight="bold"
+            style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
+          >
+            How It Works
+          </Typography>
+        </div>
+        <div style={{ margin: '0 0 12px' }}>
+          <ThorinHeading level="2" responsive>
+            Simple to join. Better when more people do.
+          </ThorinHeading>
+        </div>
+        <div style={{ margin: '0 0 36px', maxWidth: '520px' }}>
+          <Typography fontVariant="body" color="textSecondary">
+            ENS governance is only as strong as its participation. This program
+            makes it worth your while.
+          </Typography>
+        </div>
 
         <Cards>
           {steps.map((step) => (

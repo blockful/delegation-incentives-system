@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button, CheckSVG } from '@ensdomains/thorin'
+import { Button, CheckSVG, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -14,26 +14,6 @@ const Section = styled.section`
   @media (min-width: 768px) {
     padding: 96px 40px;
   }
-`
-
-const Heading = styled.h2`
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: #fff;
-  margin: 0 0 16px;
-
-  @media (min-width: 768px) {
-    font-size: 40px;
-  }
-`
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  line-height: 1.5;
-  color: #a0a0ab;
-  margin: 0 auto 32px;
-  max-width: 420px;
 `
 
 const Actions = styled.div`
@@ -94,14 +74,18 @@ const checkItems = [
 export function CtaSection() {
   return (
     <Section data-testid="cta-section">
-      <Heading>
-        Earn ENS rewards.
-        <br />
-        Strengthen governance.
-      </Heading>
-      <Subtitle>
-        Delegate in under a minute. Gas is sponsored. Rewards are automatic.
-      </Subtitle>
+      <div style={{ margin: '0 0 16px' }}>
+        <ThorinHeading level="2" responsive style={{ color: '#fff' }}>
+          Earn ENS rewards.
+          <br />
+          Strengthen governance.
+        </ThorinHeading>
+      </div>
+      <div style={{ margin: '0 auto 32px', maxWidth: '420px' }}>
+        <Typography fontVariant="body" style={{ color: '#a0a0ab' }}>
+          Delegate in under a minute. Gas is sponsored. Rewards are automatic.
+        </Typography>
+      </div>
       <Actions>
         <RouterLink to="/delegates">
           <Button colorStyle="bluePrimary">
