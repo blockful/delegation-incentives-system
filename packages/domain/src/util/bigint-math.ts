@@ -24,7 +24,16 @@ export function applyBasisPoints(value: bigint, bps: bigint): bigint {
   return mulDiv(value, bps, 10000n);
 }
 
-/** ((current - previous) * 10000) / previous — returns basis points */
+/**
+ * Compute month-over-month growth as basis points: ((current - previous) * 10000) / previous.
+ *
+ * Returns a **signed** value — negative when current < previous (VP declined).
+ * `determinePoolTier` treats negative values as lowest-tier (tier 0).
+ *
+ * Special case: returns 10000 bps (100%) when previous is 0 and current > 0;
+ * returns 0 when both are 0. Callers should guard against the previous === 0
+ * case before using this for tier selection (see pipeline.ts bootstrap guard).
+ */
 export function percentageGrowthBps(
   current: bigint,
   previous: bigint,

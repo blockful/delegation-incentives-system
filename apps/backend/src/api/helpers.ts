@@ -49,7 +49,9 @@ export async function fetchMonthContext(
       : [wei(0n), wei(0n)]
 
   const poolTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS)
-  const currentTierIndex = POOL_TIERS.indexOf(poolTier)
+  const currentTierIndex = POOL_TIERS.findIndex(
+    (t) => t.momGrowthMinBps === poolTier.momGrowthMinBps && t.momGrowthMaxBps === poolTier.momGrowthMaxBps,
+  )
 
   return { monthEnd, currentAVP, previousAVP, poolTier, currentTierIndex }
 }
