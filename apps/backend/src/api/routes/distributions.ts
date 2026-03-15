@@ -9,7 +9,7 @@ import {
 import { buildDataSource } from "../data-source.js"
 import { distributionToCsv } from "../output/csv-writer.js"
 import { distributionToJson } from "../output/json-writer.js"
-import { errorMessage } from "../helpers.js"
+import { internalError } from "../helpers.js"
 import { runDistributionPipeline } from "@ens-dis/domain"
 
 const listDistributionsRoute = createRoute({
@@ -95,7 +95,7 @@ distributionsRouter.openapi(listDistributionsRoute, async (c) => {
     const months = await dataSource.distributions.list()
     return c.json(months, 200)
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
 
@@ -134,7 +134,7 @@ distributionsRouter.openapi(computeRoute, async (c) => {
       200,
     )
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
 
@@ -151,7 +151,7 @@ distributionsRouter.openapi(getDistributionRoute, async (c) => {
     }
     return c.json(JSON.parse(distributionToJson(result)), 200)
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
 
@@ -168,6 +168,6 @@ distributionsRouter.openapi(getCsvRoute, async (c) => {
       "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
     })
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })

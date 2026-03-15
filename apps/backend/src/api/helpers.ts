@@ -93,7 +93,8 @@ export function computeMaxDelegatorApyPct(
   return apyPct.toFixed(2)
 }
 
-/** Extract error message from unknown catch value. */
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unknown error"
+/** Log the full error internally; return a safe message for clients. */
+export function internalError(error: unknown): string {
+  console.error("[API error]", error)
+  return "Internal server error"
 }

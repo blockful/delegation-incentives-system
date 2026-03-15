@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
 import { z } from "zod"
 import { EligibilitySchema, ErrorSchema, AddressParam } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, toLowerSet, errorMessage } from "../helpers.js"
+import { fetchActiveDelegates, toLowerSet, internalError } from "../helpers.js"
 
 const eligibilityRoute = createRoute({
   method: "get",
@@ -50,6 +50,6 @@ eligibilityRouter.openapi(eligibilityRoute, async (c) => {
       200,
     )
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })

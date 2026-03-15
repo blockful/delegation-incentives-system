@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
 import { ActiveDelegatesDetailSchema, ErrorSchema } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, errorMessage } from "../helpers.js"
+import { fetchActiveDelegates, internalError } from "../helpers.js"
 
 const activeDelegatesRoute = createRoute({
   method: "get",
@@ -67,6 +67,6 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
 
     return c.json({ count: delegates.length, delegates }, 200)
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
