@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button, CheckSVG, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
+import { Button, CheckSVG } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -8,25 +8,46 @@ const RouterLink = styled(Link)`
 
 const Section = styled.section`
   background: #011A25;
-  padding: 64px 20px;
+  padding: 80px 20px;
   text-align: center;
 
   @media (min-width: 768px) {
-    padding: 96px 40px;
+    padding: 120px 40px;
   }
+`
+
+const Heading = styled.h2`
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin: 0 auto 16px;
+  max-width: 500px;
+
+  @media (min-width: 768px) {
+    font-size: 44px;
+  }
+`
+
+const Subtitle = styled.p`
+  font-size: 16px;
+  color: #CEE1E8;
+  opacity: 0.7;
+  margin: 0 auto 40px;
+  max-width: 400px;
+  line-height: 1.6;
 `
 
 const Actions = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 400px;
-  margin: 0 auto 40px;
+  max-width: 420px;
+  margin: 0 auto 48px;
 
   @media (min-width: 768px) {
     flex-direction: row;
     justify-content: center;
-    max-width: 500px;
   }
 `
 
@@ -34,24 +55,22 @@ const Checks = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: flex-start;
-  max-width: 400px;
-  margin: 0 auto;
+  align-items: center;
 
   @media (min-width: 768px) {
     flex-direction: row;
     gap: 24px;
-    max-width: none;
     justify-content: center;
   }
 `
 
 const Check = styled.span`
-  font-size: 14px;
-  color: #a0a0ab;
+  font-size: 13px;
+  color: #CEE1E8;
+  opacity: 0.6;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 `
 
 const CheckMark = styled.span`
@@ -60,41 +79,36 @@ const CheckMark = styled.span`
   color: #007C23;
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 `
 
 const checkItems = [
-  'Gas sponsored via delegateBySig',
-  'No tokens locked \u2014 delegate anytime',
-  'Rewards sent automatically',
+  'Gas sponsored',
+  'No tokens locked',
+  'Rewards auto-sent',
 ]
 
 export function CtaSection() {
   return (
     <Section data-testid="cta-section">
-      <div style={{ margin: '0 0 16px' }}>
-        <ThorinHeading level="2" responsive style={{ color: '#fff' }}>
-          Earn ENS rewards.
-          <br />
-          Strengthen governance.
-        </ThorinHeading>
-      </div>
-      <div style={{ margin: '0 auto 32px', maxWidth: '420px' }}>
-        <Typography fontVariant="body" style={{ color: '#a0a0ab' }}>
-          Delegate in under a minute. Gas is sponsored. Rewards are automatic.
-        </Typography>
-      </div>
+      <Heading>
+        Earn ENS rewards.<br />
+        Strengthen governance.
+      </Heading>
+      <Subtitle>
+        Delegate in under a minute. Gas is sponsored. Rewards are automatic.
+      </Subtitle>
       <Actions>
         <RouterLink to="/delegates">
           <Button colorStyle="bluePrimary">
-            Delegate to an Active Delegate &rarr;
+            Delegate Now &rarr;
           </Button>
         </RouterLink>
         <RouterLink to="/rounds">
           <Button colorStyle="blueSecondary">
-            View Live Round Progress
+            View Round Progress
           </Button>
         </RouterLink>
       </Actions>

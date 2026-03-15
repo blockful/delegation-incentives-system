@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
+import { Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { useLottery } from '@/features/lottery/useLottery'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
@@ -14,34 +14,15 @@ const Page = styled.div`
 `
 
 const Hero = styled.div`
-  background: linear-gradient(135deg, #CEE1E8 0%, #dce8f9 100%);
+  background: linear-gradient(135deg, #CEE1E8 0%, #C5DDCC 100%);
   border-radius: 20px;
   padding: 32px 24px;
   text-align: center;
 `
 
-const HeroLabel = styled.span`
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #0080BC;
-`
-
-const HeroHeading = styled.h1`
-  font-size: 28px;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 12px 0 0;
-  line-height: 1.2;
-
-  @media (min-width: 768px) {
-    font-size: 36px;
-  }
-`
 
 const QualifyCard = styled.div`
-  background: #e8f5e9;
+  background: #C5DDCC;
   border-radius: 16px;
   padding: 20px 24px;
   display: flex;
@@ -52,12 +33,12 @@ const QualifyCard = styled.div`
 const QualifyTitle = styled.span`
   font-size: 15px;
   font-weight: 700;
-  color: #2e7d32;
+  color: #007C23;
 `
 
 const QualifyDetail = styled.span`
   font-size: 13px;
-  color: #4a7c4e;
+  color: #093C52;
 `
 
 const PrizeCard = styled.div`
@@ -73,7 +54,14 @@ const PrizeCard = styled.div`
 `
 
 const TrophyIcon = styled.span`
-  font-size: 40px;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #F8F6D6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
 `
 
 const PrizeLabel = styled.span`
@@ -101,12 +89,6 @@ const Section = styled.div`
   gap: 16px;
 `
 
-const SectionTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-`
 
 const StepList = styled.div`
   display: flex;
@@ -124,7 +106,7 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #0080BC;
+  background: #093C52;
   color: white;
   font-weight: 700;
   font-size: 14px;
@@ -189,7 +171,7 @@ const LoadingWrapper = styled.div`
 const ErrorMessage = styled.p`
   text-align: center;
   padding: 64px 20px;
-  color: #c62828;
+  color: #F53293;
   font-size: 16px;
 `
 
@@ -227,8 +209,19 @@ export function LotteryPage() {
   return (
     <Page>
       <Hero>
-        <HeroLabel>Lottery</HeroLabel>
-        <HeroHeading>Small balance? You still have a shot.</HeroHeading>
+        <Typography
+          fontVariant="label"
+          color="blue"
+          weight="bold"
+          style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
+        >
+          Lottery
+        </Typography>
+        <div style={{ marginTop: 12 }}>
+          <ThorinHeading level="1" responsive>
+            Small balance? You still have a shot.
+          </ThorinHeading>
+        </div>
       </Hero>
 
       {pool && (
@@ -252,7 +245,7 @@ export function LotteryPage() {
       </PrizeCard>
 
       <Section>
-        <SectionTitle>How the draw works</SectionTitle>
+        <ThorinHeading level="2">How the draw works</ThorinHeading>
         <StepList>
           {HOW_IT_WORKS_STEPS.map((text, i) => (
             <Step key={i}>
@@ -265,7 +258,7 @@ export function LotteryPage() {
 
       {pool?.winner && (
         <Section>
-          <SectionTitle>Last Winner</SectionTitle>
+          <ThorinHeading level="2">Last Winner</ThorinHeading>
           <WinnerCard>
             <EnsAvatar address={pool.winner} size={40} />
             <WinnerInfo>

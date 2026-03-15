@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner, Tag } from '@ensdomains/thorin'
+import { Spinner, Tag, Heading as ThorinHeading } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
@@ -15,17 +15,6 @@ const Page = styled.div`
   gap: 32px;
 `
 
-const Heading = styled.h1`
-  font-size: 32px;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  line-height: 1.2;
-
-  @media (min-width: 768px) {
-    font-size: 40px;
-  }
-`
 
 const Grid = styled.div`
   display: grid;
@@ -82,7 +71,14 @@ const LinkCard = styled.a`
 `
 
 const LinkIcon = styled.span`
-  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #CEE1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
   flex-shrink: 0;
 `
 
@@ -183,7 +179,7 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #0080BC;
+  background: #093C52;
   color: white;
   font-weight: 700;
   font-size: 14px;
@@ -250,7 +246,7 @@ export function TransparencyPage() {
 
   return (
     <Page>
-      <Heading>Verify everything on-chain</Heading>
+      <ThorinHeading level="1" responsive>Verify everything on-chain</ThorinHeading>
 
       <Grid>
         <LeftColumn>

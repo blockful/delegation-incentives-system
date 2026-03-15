@@ -1,15 +1,19 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { EnsSVG, Typography } from '@ensdomains/thorin'
+import { EnsSVG } from '@ensdomains/thorin'
 
 const StyledFooter = styled.footer`
   border-top: 1px solid #E5E5E5;
   padding: 32px 24px;
-  background: #fafafa;
+  background: #f6f6f6;
+
+  @media (min-width: 768px) {
+    padding: 40px 40px;
+  }
 `
 
 const Inner = styled.div`
-  max-width: 1200px;
+  max-width: 1120px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -24,6 +28,29 @@ const Top = styled.div`
   gap: 16px;
 `
 
+const BrandBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`
+
+const BrandRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const BrandText = styled.span`
+  font-size: 14px;
+  font-weight: 700;
+  color: #011A25;
+`
+
+const BrandSub = styled.span`
+  font-size: 12px;
+  color: #4A5C63;
+`
+
 const Nav = styled.nav`
   display: flex;
   flex-wrap: wrap;
@@ -36,7 +63,7 @@ const FooterLink = styled(Link)`
   text-decoration: none;
 
   &:hover {
-    color: #0080BC;
+    color: #011A25;
   }
 `
 
@@ -46,8 +73,14 @@ const ExternalLink = styled.a`
   text-decoration: none;
 
   &:hover {
-    color: #0080BC;
+    color: #011A25;
   }
+`
+
+const BottomLine = styled.span`
+  font-size: 12px;
+  color: #C4C7C8;
+  text-align: center;
 `
 
 export function Footer() {
@@ -55,25 +88,25 @@ export function Footer() {
     <StyledFooter>
       <Inner>
         <Top>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <EnsSVG style={{ width: 24, height: 24 }} />
-              <Typography fontVariant="body" weight="bold">Incentives Program</Typography>
-            </div>
-            <Typography fontVariant="small" color="textTertiary">A security campaign for safer ENS governance</Typography>
-          </div>
+          <BrandBlock>
+            <BrandRow>
+              <EnsSVG style={{ width: 20, height: 20 }} />
+              <BrandText>Incentives Program</BrandText>
+            </BrandRow>
+            <BrandSub>A security campaign for safer ENS governance</BrandSub>
+          </BrandBlock>
           <Nav>
             <FooterLink to="/">How It Works</FooterLink>
-            <FooterLink to="/delegates">Active Delegates</FooterLink>
+            <FooterLink to="/delegates">Delegates</FooterLink>
             <FooterLink to="/rounds">Rounds</FooterLink>
             <FooterLink to="/lottery">Lottery</FooterLink>
-            <FooterLink to="/transparency">Verify Data</FooterLink>
+            <FooterLink to="/transparency">Verify</FooterLink>
             <ExternalLink
               href="https://discuss.ens.domains"
               target="_blank"
               rel="noopener noreferrer"
             >
-              ENS Forum &#8599;
+              Forum &#8599;
             </ExternalLink>
             <ExternalLink
               href="https://github.com/blockful-io"
@@ -84,9 +117,9 @@ export function Footer() {
             </ExternalLink>
           </Nav>
         </Top>
-        <Typography fontVariant="small" color="textTertiary" style={{ textAlign: 'center' }}>
+        <BottomLine>
           Built by Blockful &middot; Powered by Anticapture
-        </Typography>
+        </BottomLine>
       </Inner>
     </StyledFooter>
   )

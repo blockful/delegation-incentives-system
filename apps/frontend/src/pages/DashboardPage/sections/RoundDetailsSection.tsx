@@ -1,5 +1,4 @@
 import styled from 'styled-components'
-import { Card } from '@ensdomains/thorin'
 
 interface RoundDetailsSectionProps {
   balanceEns: string
@@ -11,32 +10,38 @@ interface RoundDetailsSectionProps {
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 1px;
+  background: #E5E5E5;
+  border: 1px solid #E5E5E5;
+  border-radius: 16px;
+  overflow: hidden;
 `
 
-const StatCard = styled(Card)`
+const StatCell = styled.div`
+  background: #fff;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 `
 
 const StatLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  letter-spacing: 0.1em;
+  color: #4A5C63;
 `
 
 const StatValue = styled.span`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
+  color: #011A25;
 `
 
 const StatHint = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: #C4C7C8;
 `
 
 export function RoundDetailsSection({
@@ -47,20 +52,20 @@ export function RoundDetailsSection({
 }: RoundDetailsSectionProps) {
   return (
     <Grid>
-      <StatCard>
+      <StatCell>
         <StatLabel>Balance</StatLabel>
         <StatValue>{balanceEns} ENS</StatValue>
         <StatHint>180-day avg</StatHint>
-      </StatCard>
-      <StatCard>
+      </StatCell>
+      <StatCell>
         <StatLabel>Round Ends</StatLabel>
         <StatValue>{roundEnds}</StatValue>
         <StatHint>{roundEndDate}</StatHint>
-      </StatCard>
-      <StatCard>
+      </StatCell>
+      <StatCell>
         <StatLabel>Pool</StatLabel>
         <StatValue>{poolSizeEns} ENS</StatValue>
-      </StatCard>
+      </StatCell>
     </Grid>
   )
 }

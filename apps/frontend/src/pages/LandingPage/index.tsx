@@ -18,7 +18,7 @@ const LoadingWrapper = styled.div`
 const ErrorMessage = styled.p`
   text-align: center;
   padding: 64px 20px;
-  color: #c62828;
+  color: #F53293;
   font-size: 16px;
 `
 
