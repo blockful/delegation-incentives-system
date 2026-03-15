@@ -5,7 +5,16 @@ import { Spinner, Button } from '@ensdomains/thorin'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { InfoTooltip } from '@/components/shared/InfoTooltip'
 import { truncateAddress } from '@/utils/format'
+import {
+  formatBalance,
+  formatPayout,
+  formatPool,
+  formatVpNeeded,
+  formatShortDate,
+  computeVpProgress,
+} from '@/utils/dashboard'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { useDashboardData } from '../useDashboardData'
@@ -193,53 +202,7 @@ const BalanceUnit = styled.span`
   color: ${tokens.color.textMuted};
 `
 
-const InfoIcon = styled.span`
-  position: relative;
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textFaint};
-  cursor: help;
-
-  &:hover > span {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-`
-
-const Tooltip = styled.span`
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  width: 260px;
-  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
-  background: ${tokens.color.darkBlue};
-  color: ${tokens.color.white};
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.normal};
-  line-height: 1.45;
-  border-radius: ${tokens.radius.sm};
-  box-shadow: ${tokens.shadow.lg};
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity ${tokens.transition.fast},
-    transform ${tokens.transition.fast},
-    visibility ${tokens.transition.fast};
-  pointer-events: none;
-  z-index: 10;
-  text-align: left;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: ${tokens.color.darkBlue};
-  }
-`
+/* InfoTooltip component imported from @/components/shared/InfoTooltip */
 
 const PayoutBadge = styled.span`
   font-size: ${tokens.font.size.sm};
@@ -443,54 +406,8 @@ const LotteryArrow = styled.span`
 `
 
 /* ═══════════════════════════════════════════════════════════
-   Helpers
+   Helpers — uses shared formatters from @/utils/dashboard
    ═══════════════════════════════════════════════════════════ */
-
-function formatBalance(ens: string): string {
-  const num = parseFloat(ens)
-  if (isNaN(num)) return '0'
-  return Math.round(num).toLocaleString('en-US')
-}
-
-function formatPayout(ens: string): string {
-  const num = parseFloat(ens)
-  if (isNaN(num) || num === 0) return '0'
-  if (num < 0.01) return '<0.01'
-  if (num >= 10) return num.toFixed(1)
-  return num.toFixed(2)
-}
-
-function formatPool(ens: string): string {
-  const num = parseFloat(ens)
-  if (num >= 1000) return `${Math.round(num / 1000)}K`
-  return Math.round(num).toString()
-}
-
-function formatVpNeeded(vpWei: string): string {
-  const num = Number(vpWei) / 1e18
-  if (num <= 0) return ''
-  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
-  if (num >= 1_000) return `${Math.round(num / 1_000)}K`
-  return Math.round(num).toString()
-}
-
-function formatShortDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function computeVpProgress(
-  currentRequired: string,
-  nextRequired: string,
-  nextAdditional: string,
-): number {
-  const cur = Number(currentRequired) / 1e18
-  const nxt = Number(nextRequired) / 1e18
-  const add = Number(nextAdditional) / 1e18
-  const span = nxt - cur
-  if (span <= 0) return 100
-  return Math.max(0, Math.min(100, ((span - add) / span) * 100))
-}
 
 /* ═══════════════════════════════════════════════════════════
    Component
@@ -678,15 +595,10 @@ function BalanceStrip({
   return (
     <BalanceRow>
       <BalanceLeft>
-        <BalanceValue>{formatBalance(balanceEns)}</BalanceValue>
-        <BalanceUnit>ENS</BalanceUnit>
-        <InfoIcon>
-          &#9432;
-          <Tooltip>
-            Time-Weighted Average Balance over 180 days. Longer holding = bigger
-            share of rewards.
-          </Tooltip>
-        </InfoIcon>
+        <InfoTooltip text="Your average ENS balance over the last 6 months. The longer you hold, the bigger your share of the reward pool.">
+          <BalanceValue>{formatBalance(balanceEns)}</BalanceValue>
+          <BalanceUnit>ENS</BalanceUnit>
+        </InfoTooltip>
       </BalanceLeft>
       <PayoutBadge>+{formatPayout(expectedPayout)} ENS this round</PayoutBadge>
     </BalanceRow>
@@ -734,7 +646,7 @@ function TierProgression({
           <Th>Pool</Th>
           <Th $align="right">APY</Th>
           <Th $align="right">Payout</Th>
-          <Th $align="right">Status</Th>
+          <Th $align="right">To unlock</Th>
         </TierHead>
 
         {tierList.map((tier) => {
@@ -752,12 +664,12 @@ function TierProgression({
 
           let status: string
           if (isCurrent) {
-            status = 'Current'
+            status = 'You'
           } else if (tier.isUnlocked) {
-            status = 'Unlocked'
+            status = 'Reached'
           } else {
             const vpStr = formatVpNeeded(tier.additionalVPNeeded)
-            status = vpStr ? `Need +${vpStr} VP` : 'Locked'
+            status = vpStr ? `${vpStr} ENS to go` : 'Locked'
           }
 
           return (
@@ -784,9 +696,9 @@ function TierProgression({
         <TierFooter>
           <TierFooterInfo>
             <TierFooterText>
-              <strong>{formatVpNeeded(nextTier.additionalVPNeeded)} VP</strong>{' '}
-              needed for Tier {nextTier.index + 1} at {nextTier.estimatedApyPct}%
-              APY
+              <strong>{formatVpNeeded(nextTier.additionalVPNeeded)} more ENS</strong>{' '}
+              needs to be delegated to unlock Tier {nextTier.index + 1} at{' '}
+              {nextTier.estimatedApyPct}% APY
             </TierFooterText>
             <ProgressTrack>
               <ProgressFill $pct={vpProgress} />
@@ -794,7 +706,7 @@ function TierProgression({
           </TierFooterInfo>
           <ShareLink to="/delegates">
             <Button size="small" colorStyle="bluePrimary" width="auto">
-              Share &amp; grow
+              Share &amp; earn more
             </Button>
           </ShareLink>
         </TierFooter>

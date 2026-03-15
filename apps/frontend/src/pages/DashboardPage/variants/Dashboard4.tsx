@@ -1,58 +1,42 @@
-/**
- * Dashboard variant 4 — "Goals dashboard"
- *
- * Gamified, progress-driven, motivational. Like a sales/goals dashboard
- * or fitness app. Progress rings, tier ladders, and strong CTAs to
- * encourage sharing and growing the delegation pool.
- */
-import styled, { keyframes } from 'styled-components'
+import { useState } from 'react'
 import { Navigate, Link } from 'react-router-dom'
-import { Spinner, Button, Tag } from '@ensdomains/thorin'
+import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
-
+import { Spinner, Button } from '@ensdomains/thorin'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
+import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { InfoTooltip } from '@/components/shared/InfoTooltip'
+import { truncateAddress } from '@/utils/format'
+import {
+  formatBalance,
+  formatPayout,
+  formatPool,
+  formatVpNeeded,
+  formatShortDate,
+  computeVpProgress,
+  projectPayout,
+} from '@/utils/dashboard'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { EnsAvatar } from '@/components/shared/EnsAvatar'
-import { truncateAddress } from '@/utils/format'
 import { useDashboardData } from '../useDashboardData'
 
-/* ═══════════════════════════════════════════
-   Animations
-   ═══════════════════════════════════════════ */
-
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-`
-
-const bounceArrow = keyframes`
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(4px); }
-`
-
-const ringFill = keyframes`
-  from { stroke-dashoffset: var(--circumference); }
-  to { stroke-dashoffset: var(--offset); }
-`
-
-/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    Layout
-   ═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════ */
 
 const Page = styled.div`
-  max-width: 600px;
+  max-width: 720px;
   margin: 0 auto;
   padding: ${tokens.spacing.xl} ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.xl};
-  animation: ${fadeInUp} 0.4s ease both;
+  gap: ${tokens.spacing.md};
+  animation: ${fadeInUp} 0.35s ease both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
-    gap: ${tokens.spacing['2xl']};
+    padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
+    gap: ${tokens.spacing.lg};
   }
 `
 
@@ -61,447 +45,403 @@ const LoadingWrapper = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 300px;
-  animation: ${fadeInUp} 0.3s ease both;
 `
 
 const ErrorMsg = styled.p`
   text-align: center;
-  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   color: ${tokens.color.negative};
   font-size: ${tokens.font.size.lg};
 `
 
-/* ═══════════════════════════════════════════
-   Section 1 — Goal hero
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   1. Compact earnings strip
+   ═══════════════════════════════════════════════════════════ */
 
-const HeroSection = styled.div`
-  background: ${tokens.color.surface};
+const Strip = styled.div`
+  background: ${tokens.color.surfaceAlt};
   border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.lg};
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
-  text-align: center;
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
 `
 
-const HeroStreaming = styled.span`
-  display: block;
-  font-size: ${tokens.font.size['4xl']};
+const StripTopRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.sm};
+`
+
+const EarnedValue = styled.span`
+  font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.extrabold};
   color: ${tokens.color.positive};
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
-  line-height: 1.1;
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
-  }
+  line-height: 1.2;
 `
 
-const HeroLabel = styled.span`
-  display: block;
+const StripMeta = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textMuted};
-  margin-top: ${tokens.spacing.xs};
+  white-space: nowrap;
 `
 
-const HeroApyRow = styled.div`
+const DelegateInfo = styled.div`
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: ${tokens.spacing.sm};
-  margin-top: ${tokens.spacing.md};
-  flex-wrap: wrap;
-`
-
-const CurrentApy = styled.span`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
-`
-
-const NextApyArrow = styled.span`
-  color: ${tokens.color.accent};
-  font-weight: ${tokens.font.weight.bold};
-  font-size: ${tokens.font.size.lg};
-  display: inline-flex;
-  align-items: center;
-  animation: ${bounceArrow} 1.2s ease infinite;
-`
-
-const NextApyText = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.accent};
-  animation: ${pulse} 2.5s ease infinite;
-`
-
-const DelegateRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${tokens.spacing.sm};
-  margin-top: ${tokens.spacing.lg};
+  gap: ${tokens.spacing.xs};
+  font-size: ${tokens.font.size.xs};
+  color: ${tokens.color.textMuted};
 `
 
 const DelegateName = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  font-weight: ${tokens.font.weight.medium};
-  max-width: 200px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `
 
-/* ═══════════════════════════════════════════
-   Section 2 — Progress ring
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   2. Round timeline
+   ═══════════════════════════════════════════════════════════ */
 
-const RingSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${tokens.spacing.lg};
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
+const TimelineSection = styled.div`
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.lg};
-`
-
-const RingContainer = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
-
-const RingLabel = styled.div`
-  position: absolute;
-  text-align: center;
-`
-
-const RingTierText = styled.span`
-  display: block;
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.extrabold};
-  color: ${tokens.color.text};
-`
-
-const RingTierSub = styled.span`
-  display: block;
-  font-size: ${tokens.font.size.xs};
-  color: ${tokens.color.textMuted};
-  font-weight: ${tokens.font.weight.medium};
-`
-
-const RingProgressText = styled.span`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.accent};
-`
-
-const RingVPNeeded = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  text-align: center;
-  line-height: 1.5;
-`
-
-const ShareButton = styled(Button)`
-  width: 100%;
-`
-
-/* ═══════════════════════════════════════════
-   Section 3 — Tier ladder
-   ═══════════════════════════════════════════ */
-
-const LadderSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
-`
-
-const LadderTitle = styled.h3`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: ${tokens.color.textMuted};
-  margin: 0;
-`
-
-const LadderList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  position: relative;
-`
-
-const LadderItem = styled.div<{ $isCurrent: boolean; $isUnlocked: boolean }>`
-  display: flex;
-  align-items: flex-start;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
-  position: relative;
-  background: ${({ $isCurrent }) =>
-    $isCurrent ? tokens.color.surfaceAlt : 'transparent'};
   border-radius: ${tokens.radius.md};
-  opacity: ${({ $isUnlocked, $isCurrent }) =>
-    $isUnlocked || $isCurrent ? 1 : 0.7};
-`
-
-const LadderLine = styled.div`
-  position: absolute;
-  left: 28px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: ${tokens.color.border};
-  z-index: 0;
-`
-
-const LadderMarker = styled.div<{ $isCurrent: boolean; $isUnlocked: boolean }>`
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 2px;
-  z-index: 1;
-  background: ${({ $isCurrent, $isUnlocked }) =>
-    $isCurrent
-      ? tokens.color.accent
-      : $isUnlocked
-        ? tokens.color.positive
-        : tokens.color.border};
-  border: 2px solid ${({ $isCurrent }) =>
-    $isCurrent ? tokens.color.accent : tokens.color.surface};
-  box-shadow: ${({ $isCurrent }) =>
-    $isCurrent ? `0 0 0 3px ${tokens.color.lightBlue}` : 'none'};
-`
-
-const LadderContent = styled.div`
-  flex: 1;
-  min-width: 0;
-`
-
-const LadderTierRow = styled.div`
+  padding: ${tokens.spacing.lg};
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
   gap: ${tokens.spacing.sm};
 `
 
-const LadderTierName = styled.span<{ $isCurrent: boolean }>`
+const TimelineHeader = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+`
+
+const TimelineTitle = styled.span`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
-  color: ${({ $isCurrent }) =>
-    $isCurrent ? tokens.color.accent : tokens.color.text};
+  color: ${tokens.color.text};
 `
 
-const LadderPayout = styled.span<{ $isCurrent: boolean }>`
+const TimelineDays = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
-  color: ${({ $isCurrent }) =>
-    $isCurrent ? tokens.color.positive : tokens.color.textMuted};
-  white-space: nowrap;
+  color: ${tokens.color.accent};
 `
 
-const LadderIncrease = styled.span`
+const TimelineTrack = styled.div`
+  height: 8px;
+  border-radius: 4px;
+  background: ${tokens.color.border};
+  overflow: hidden;
+  position: relative;
+`
+
+const TimelineFill = styled.div<{ $pct: number }>`
+  height: 100%;
+  border-radius: 4px;
+  background: ${tokens.color.accent};
+  width: ${({ $pct }) => Math.min(Math.max($pct, 1), 100)}%;
+  transition: width 0.6s ease;
+`
+
+const TimelineDates = styled.div`
+  display: flex;
+  justify-content: space-between;
   font-size: ${tokens.font.size.xs};
+  color: ${tokens.color.textMuted};
+`
+
+const TimelinePct = styled.span`
+  font-size: ${tokens.font.size.xs};
+  color: ${tokens.color.textMuted};
+  text-align: center;
+`
+
+/* ═══════════════════════════════════════════════════════════
+   3. Balance with TWAB tooltip
+   ═══════════════════════════════════════════════════════════ */
+
+const BalanceRow = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.sm};
+`
+
+const BalanceLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  position: relative;
+`
+
+const BalanceValue = styled.span`
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
+  font-variant-numeric: tabular-nums;
+`
+
+const BalanceUnit = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textMuted};
+`
+
+const PayoutBadge = styled.span`
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.positive};
   white-space: nowrap;
 `
 
-const LadderApyLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
-  color: ${tokens.color.textMuted};
-  font-weight: ${tokens.font.weight.medium};
-`
+/* ═══════════════════════════════════════════════════════════
+   4. Now vs Next comparison cards
+   ═══════════════════════════════════════════════════════════ */
 
-const LadderLock = styled.span`
-  font-size: ${tokens.font.size.xs};
-  color: ${tokens.color.textFaint};
-  margin-left: ${tokens.spacing.xs};
-`
-
-/* ═══════════════════════════════════════════
-   Section 4 — Round countdown
-   ═══════════════════════════════════════════ */
-
-const RoundSection = styled.div`
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.lg};
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+const ComparisonWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.md};
 `
 
-const RoundHeader = styled.div`
+const ComparisonCard = styled.div<{ $variant: 'now' | 'next' }>`
+  background: ${({ $variant }) =>
+    $variant === 'now' ? tokens.color.surface : tokens.color.surface};
+  border: 1px solid
+    ${({ $variant }) =>
+      $variant === 'next' ? tokens.color.accent : tokens.color.border};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.lg};
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  ${({ $variant }) =>
+    $variant === 'next'
+      ? `box-shadow: ${tokens.shadow.sm};`
+      : ''}
 `
 
-const RoundLabel = styled.span`
-  font-size: ${tokens.font.size.base};
+const CardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.xs};
+`
+
+const CardLabel = styled.span<{ $variant: 'now' | 'next' }>`
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: ${({ $variant }) =>
+    $variant === 'now' ? tokens.color.textMuted : tokens.color.accent};
+`
+
+const PercentBadge = styled.span`
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positive};
+  background: rgba(0, 124, 35, 0.08);
+  padding: ${tokens.spacing.xs} ${tokens.spacing.sm};
+  border-radius: ${tokens.radius.pill};
+  white-space: nowrap;
+`
+
+const CardStatRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+`
+
+const CardStatLine = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.text};
+  line-height: 1.4;
+`
+
+const CardStatValue = styled.span`
+  font-weight: ${tokens.font.weight.bold};
+  font-variant-numeric: tabular-nums;
+`
+
+const CardStatMuted = styled.span`
+  font-size: ${tokens.font.size.xs};
+  color: ${tokens.color.textMuted};
+`
+
+const ProgressSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+  padding-top: ${tokens.spacing.xs};
+`
+
+const ProgressTrack = styled.div`
+  height: 6px;
+  border-radius: 3px;
+  background: ${tokens.color.border};
+  overflow: hidden;
+`
+
+const ProgressFill = styled.div<{ $pct: number }>`
+  height: 100%;
+  border-radius: 3px;
+  background: ${tokens.color.accent};
+  width: ${({ $pct }) => Math.min(Math.max($pct, 2), 100)}%;
+  transition: width 0.5s ease;
+`
+
+const ProgressLabel = styled.span`
+  font-size: ${tokens.font.size.xs};
+  color: ${tokens.color.textMuted};
+  font-variant-numeric: tabular-nums;
+`
+
+const NeededLabel = styled.span`
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.text};
 `
 
-const RoundDays = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.accent};
+const ShareLink = styled(Link)`
+  text-decoration: none;
+  align-self: flex-start;
 `
 
-const ProgressBarTrack = styled.div`
+/* ═══════════════════════════════════════════════════════════
+   5. Collapsed tier list toggle
+   ═══════════════════════════════════════════════════════════ */
+
+const ToggleButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.xs};
   width: 100%;
-  height: 8px;
-  background: ${tokens.color.surfaceAlt};
-  border-radius: ${tokens.radius.pill};
-  overflow: hidden;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
   border: 1px solid ${tokens.color.border};
-`
-
-const ProgressBarFill = styled.div<{ $percent: number }>`
-  height: 100%;
-  width: ${({ $percent }) => Math.min(100, Math.max(0, $percent))}%;
-  background: linear-gradient(90deg, ${tokens.color.blue}, #44B4E0);
-  border-radius: ${tokens.radius.pill};
-  transition: width 0.6s ease;
-`
-
-const RoundDates = styled.div`
-  display: flex;
-  justify-content: space-between;
-  font-size: ${tokens.font.size.xs};
+  border-radius: ${tokens.radius.md};
+  background: ${tokens.color.surfaceAlt};
   color: ${tokens.color.textMuted};
-  font-weight: ${tokens.font.weight.medium};
-`
-
-const RoundStatsRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  flex-wrap: wrap;
-`
-
-const RoundStat = styled.div`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  font-weight: ${tokens.font.weight.medium};
-
-  strong {
-    color: ${tokens.color.text};
-    font-weight: ${tokens.font.weight.semibold};
-  }
-`
-
-const PayoutValue = styled.strong`
-  color: ${tokens.color.positive} !important;
-`
-
-const TooltipWrapper = styled.span`
-  position: relative;
-  cursor: help;
-  border-bottom: 1px dotted ${tokens.color.textFaint};
-
-  &::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 8px);
-    transform: translateX(-50%);
-    width: 240px;
-    padding: ${tokens.spacing.sm} ${tokens.spacing.md};
-    background: ${tokens.color.darkBlue};
-    color: ${tokens.color.white};
-    font-size: ${tokens.font.size.xs};
-    font-weight: ${tokens.font.weight.normal};
-    line-height: 1.5;
-    border-radius: ${tokens.radius.sm};
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity ${tokens.transition.fast};
-    z-index: 10;
-    white-space: normal;
-  }
-
-  &:hover::after {
-    opacity: 1;
-  }
-`
-
-/* ═══════════════════════════════════════════
-   Section 5 — Share CTA footer
-   ═══════════════════════════════════════════ */
-
-const ShareFooter = styled.div`
-  background: ${tokens.color.accent};
-  border-radius: ${tokens.radius.lg};
-  padding: ${tokens.spacing.xl};
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const ShareMessage = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.surface};
-  line-height: 1.5;
-`
-
-const ShareActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const ShareActionButton = styled(Button)`
-  && {
-    background: ${tokens.color.surface};
-    color: ${tokens.color.accent};
-
-    &:hover {
-      background: ${tokens.color.surfaceAlt};
-    }
-  }
-`
-
-const ShareLink = styled.a`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.surface};
-  text-decoration: underline;
-  opacity: 0.85;
-  transition: opacity ${tokens.transition.fast};
+  cursor: pointer;
+  transition:
+    color ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
 
   &:hover {
-    opacity: 1;
+    color: ${tokens.color.accent};
+    border-color: ${tokens.color.accent};
   }
 `
 
-/* ═══════════════════════════════════════════
-   Section 6 — Lottery
-   ═══════════════════════════════════════════ */
+const ToggleChevron = styled.span<{ $open: boolean }>`
+  display: inline-flex;
+  font-size: ${tokens.font.size.sm};
+  transition: transform ${tokens.transition.fast};
+  transform: rotate(${({ $open }) => ($open ? '180deg' : '0deg')});
+`
+
+const TierList = styled.div`
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.md};
+  overflow: hidden;
+  background: ${tokens.color.surface};
+`
+
+const TierListItem = styled.div<{ $isCurrent: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  background: ${({ $isCurrent }) =>
+    $isCurrent ? 'rgba(0, 128, 188, 0.05)' : 'transparent'};
+  border-left: 3px solid
+    ${({ $isCurrent }) =>
+      $isCurrent ? tokens.color.accent : 'transparent'};
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.border};
+  }
+`
+
+const TierItemLeft = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.text};
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  font-variant-numeric: tabular-nums;
+`
+
+const TierItemRight = styled.span<{ $locked: boolean }>`
+  font-size: ${tokens.font.size.xs};
+  color: ${({ $locked }) =>
+    $locked ? tokens.color.textFaint : tokens.color.positive};
+  font-weight: ${tokens.font.weight.medium};
+`
+
+/* ═══════════════════════════════════════════════════════════
+   6. Share section
+   ═══════════════════════════════════════════════════════════ */
+
+const ShareSection = styled.div`
+  background: ${tokens.color.surfaceAlt};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  align-items: center;
+  text-align: center;
+`
+
+const ShareText = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
+  line-height: 1.4;
+`
+
+const ShareButtonLink = styled(Link)`
+  text-decoration: none;
+`
+
+/* ═══════════════════════════════════════════════════════════
+   7. Lottery banner
+   ═══════════════════════════════════════════════════════════ */
 
 const LotteryBanner = styled(Link)`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
   border: 1px solid ${tokens.color.lightYellow};
-  border-radius: ${tokens.radius.lg};
+  border-radius: ${tokens.radius.md};
   background: linear-gradient(
     135deg,
-    rgba(255, 247, 47, 0.08) 0%,
+    rgba(255, 247, 47, 0.05) 0%,
     ${tokens.color.surface} 100%
   );
   text-decoration: none;
@@ -517,13 +457,13 @@ const LotteryBanner = styled(Link)`
 `
 
 const LotteryIcon = styled.span`
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 `
 
 const LotteryText = styled.span`
   flex: 1;
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.xs};
   color: ${tokens.color.text};
   line-height: 1.4;
 
@@ -537,48 +477,9 @@ const LotteryArrow = styled.span`
   color: ${tokens.color.textFaint};
 `
 
-/* ═══════════════════════════════════════════
-   Helpers
-   ═══════════════════════════════════════════ */
-
-function formatEns(value: string, decimals = 2): string {
-  const num = parseFloat(value)
-  if (isNaN(num)) return '0'
-  return num.toLocaleString('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function formatVP(value: string): string {
-  const num = Number(value) / 1e18
-  if (isNaN(num) || num <= 0) return '0'
-  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
-  if (num >= 1_000) return `${Math.round(num / 1_000)}K`
-  return Math.round(num).toString()
-}
-
-function formatPayout(ens: string): string {
-  const num = parseFloat(ens)
-  if (isNaN(num) || num === 0) return '0'
-  return num.toFixed(4)
-}
-
-function pctIncrease(current: number, target: number): number {
-  if (current <= 0) return 0
-  return Math.round(((target - current) / current) * 100)
-}
-
-/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    Component
-   ═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════ */
 
 export default function Dashboard4() {
   const wallet = useWalletState()
@@ -615,67 +516,45 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
   const { apy, tiers, round } = data
   const delegatedTo = (apy.delegatedTo ?? address) as `0x${string}`
-  const currentTierIndex = tiers.currentTierIndex
-  const currentTier = tiers.tiers[currentTierIndex]
-  const nextTier = tiers.tiers.find((t) => t.index === currentTierIndex + 1)
-  const currentPool = parseFloat(currentTier?.poolSizeEns ?? '0')
-  const userReward = parseFloat(apy.estimatedMonthlyRewardEns)
-
-  // Progress toward next tier (based on additional VP needed)
-  const nextVPNeeded = nextTier ? parseFloat(nextTier.additionalVPNeeded) : 0
-  const nextRequired = nextTier ? parseFloat(nextTier.requiredAVP) : 0
-  const currentAVP = parseFloat(tiers.currentAVP)
-  const progressToNext =
-    nextRequired > 0
-      ? Math.min(100, Math.max(0, (currentAVP / nextRequired) * 100))
-      : 100
 
   return (
     <Page>
-      <GoalHero
+      <EarningsStrip
         earnedEns={apy.estimatedMonthlyRewardEns}
         apyPct={apy.estimatedApyPct}
+        tierIndex={tiers.currentTierIndex}
         delegatedTo={delegatedTo}
         delegateEnsName={apy.delegatedToEnsName}
         delegateAvatarUrl={apy.delegatedToAvatarUrl}
-        nextTierApyPct={nextTier?.estimatedApyPct ?? null}
         roundStartDate={round.startDate}
         roundEndDate={round.endDate}
       />
 
-      <ProgressRing
-        progress={progressToNext}
-        currentTierIndex={currentTierIndex}
-        nextTierIndex={nextTier ? nextTier.index : null}
-        vpNeeded={nextVPNeeded}
-      />
-
-      <TierLadder
-        tiers={tiers.tiers}
-        currentTierIndex={currentTierIndex}
-        currentPool={currentPool}
-        userReward={userReward}
-      />
-
-      <RoundCountdown
+      <RoundTimeline
         roundNumber={round.roundNumber}
         startDate={round.startDate}
         endDate={round.endDate}
         daysRemaining={round.daysRemaining}
         percentComplete={round.percentComplete}
-        balanceEns={apy.currentBalanceEns}
-        payoutEns={apy.estimatedMonthlyRewardEns}
       />
 
-      <ShareCTAFooter />
+      <BalanceStrip
+        balanceEns={apy.currentBalanceEns}
+        expectedPayout={apy.estimatedMonthlyRewardEns}
+      />
+
+      <NowVsNextComparison
+        tiers={tiers.tiers}
+        currentTierIndex={tiers.currentTierIndex}
+        userEstimatedReward={apy.estimatedMonthlyRewardEns}
+      />
 
       {apy.qualifiesForLottery && (
         <LotteryBanner to="/lottery">
           <LotteryIcon aria-hidden>🎟️</LotteryIcon>
           <LotteryText>
-            Your <strong>{formatPayout(apy.estimatedMonthlyRewardEns)} ENS</strong>{' '}
-            payout is below the 1 ENS minimum. It enters a{' '}
-            <strong>10 ENS lottery pool</strong> drawn at round end.
+            Your <strong>{formatPayout(apy.estimatedMonthlyRewardEns)} ENS</strong> payout is below
+            the 1 ENS minimum. It enters a <strong>10 ENS lottery pool</strong> drawn at round end.
           </LotteryText>
           <LotteryArrow aria-hidden>&rsaquo;</LotteryArrow>
         </LotteryBanner>
@@ -684,163 +563,122 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   )
 }
 
-/* ─── Goal hero ─── */
+/* ─── 1. Earnings strip ─── */
 
-interface GoalHeroProps {
-  earnedEns: string
-  apyPct: string
-  delegatedTo: `0x${string}`
-  delegateEnsName: string | null
-  delegateAvatarUrl: string | null
-  nextTierApyPct: string | null
-  roundStartDate: string
-  roundEndDate: string
-}
-
-function GoalHero({
+function EarningsStrip({
   earnedEns,
   apyPct,
+  tierIndex,
   delegatedTo,
   delegateEnsName,
   delegateAvatarUrl,
-  nextTierApyPct,
   roundStartDate,
   roundEndDate,
-}: GoalHeroProps) {
-  const { data: resolvedName } = useEnsName({
-    address: delegatedTo,
+}: {
+  earnedEns: string
+  apyPct: string
+  tierIndex: number
+  delegatedTo: string
+  delegateEnsName: string | null
+  delegateAvatarUrl: string | null
+  roundStartDate: string
+  roundEndDate: string
+}) {
+  const { data: resolvedEnsName } = useEnsName({
+    address: delegatedTo as `0x${string}`,
     query: { enabled: !delegateEnsName },
   })
+
   const displayName =
-    delegateEnsName ?? resolvedName ?? truncateAddress(delegatedTo)
-  const streaming = useStreamingCounter(
+    delegateEnsName ?? resolvedEnsName ?? truncateAddress(delegatedTo)
+  const streamingEarnings = useStreamingCounter(
     earnedEns,
     roundStartDate,
     roundEndDate,
   )
 
-  const currentApyNum = parseFloat(apyPct)
-  const nextApyNum = nextTierApyPct ? parseFloat(nextTierApyPct) : null
-  const apyBump =
-    nextApyNum !== null && currentApyNum > 0
-      ? Math.round(((nextApyNum - currentApyNum) / currentApyNum) * 100)
-      : null
-
   return (
-    <HeroSection>
-      <HeroStreaming>+{streaming} ENS</HeroStreaming>
-      <HeroLabel>You're earning</HeroLabel>
-
-      <HeroApyRow>
-        <CurrentApy>{apyPct}% APY</CurrentApy>
-        {nextTierApyPct && (
-          <>
-            <NextApyArrow>&rarr;</NextApyArrow>
-            <NextApyText>
-              Next tier: {nextTierApyPct}% APY
-              {apyBump !== null && ` (+${apyBump}% more)`}
-            </NextApyText>
-          </>
-        )}
-      </HeroApyRow>
-
-      <DelegateRow>
+    <Strip>
+      <StripTopRow>
+        <EarnedValue>+{streamingEarnings} ENS</EarnedValue>
+        <StripMeta>
+          {apyPct}% APY &middot; Level {tierIndex + 1}
+        </StripMeta>
+      </StripTopRow>
+      <DelegateInfo>
         <EnsAvatar
           address={delegatedTo}
-          name={delegateEnsName ?? resolvedName ?? undefined}
+          name={delegateEnsName ?? resolvedEnsName ?? undefined}
           avatarUrl={delegateAvatarUrl ?? undefined}
-          size={24}
+          size={16}
         />
         <DelegateName>Delegating to {displayName}</DelegateName>
-      </DelegateRow>
-    </HeroSection>
+      </DelegateInfo>
+    </Strip>
   )
 }
 
-/* ─── Progress ring ─── */
+/* ─── 2. Round timeline ─── */
 
-interface ProgressRingProps {
-  progress: number
-  currentTierIndex: number
-  nextTierIndex: number | null
-  vpNeeded: number
-}
-
-function ProgressRing({
-  progress,
-  currentTierIndex,
-  nextTierIndex,
-  vpNeeded,
-}: ProgressRingProps) {
-  const size = 120
-  const strokeWidth = 8
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference * (1 - progress / 100)
-
-  const isMaxTier = nextTierIndex === null
-
+function RoundTimeline({
+  roundNumber,
+  startDate,
+  endDate,
+  daysRemaining,
+  percentComplete,
+}: {
+  roundNumber: number
+  startDate: string
+  endDate: string
+  daysRemaining: number
+  percentComplete: number
+}) {
   return (
-    <RingSection>
-      <RingContainer>
-        <svg width={size} height={size}>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={tokens.color.border}
-            strokeWidth={strokeWidth}
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={tokens.color.accent}
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            style={{ transition: 'stroke-dashoffset 0.8s ease' }}
-          />
-        </svg>
-        <RingLabel>
-          <RingTierText>Tier {currentTierIndex + 1}</RingTierText>
-          <RingTierSub>Current</RingTierSub>
-        </RingLabel>
-      </RingContainer>
-
-      {isMaxTier ? (
-        <RingProgressText>Max tier reached!</RingProgressText>
-      ) : (
-        <>
-          <RingProgressText>
-            {Math.round(progress)}% to Tier {nextTierIndex! + 1}
-          </RingProgressText>
-          {vpNeeded > 0 && (
-            <RingVPNeeded>
-              Need +{formatVP(vpNeeded.toString())} more voting power
-            </RingVPNeeded>
-          )}
-          <ShareButton
-            as={Link}
-            to="/delegates"
-            colorStyle="bluePrimary"
-            size="small"
-          >
-            🚀 Share &amp; Unlock Tier {nextTierIndex! + 1}
-          </ShareButton>
-        </>
-      )}
-    </RingSection>
+    <TimelineSection>
+      <TimelineHeader>
+        <TimelineTitle>Round {roundNumber}</TimelineTitle>
+        <TimelineDays>{daysRemaining}d left</TimelineDays>
+      </TimelineHeader>
+      <TimelineTrack>
+        <TimelineFill $pct={percentComplete} />
+      </TimelineTrack>
+      <TimelineDates>
+        <span>{formatShortDate(startDate)}</span>
+        <TimelinePct>{percentComplete}% complete</TimelinePct>
+        <span>{formatShortDate(endDate)}</span>
+      </TimelineDates>
+    </TimelineSection>
   )
 }
 
-/* ─── Tier ladder ─── */
+/* ─── 3. Balance with TWAB tooltip ─── */
 
-interface TierLadderProps {
+function BalanceStrip({
+  balanceEns,
+  expectedPayout,
+}: {
+  balanceEns: string
+  expectedPayout: string
+}) {
+  return (
+    <BalanceRow>
+      <BalanceLeft>
+        <BalanceValue>{formatBalance(balanceEns)}</BalanceValue>
+        <BalanceUnit>ENS</BalanceUnit>
+        <InfoTooltip text="Average of your ENS balance over 6 months. Hold longer, earn more." />
+      </BalanceLeft>
+      <PayoutBadge>+{formatPayout(expectedPayout)} ENS this round</PayoutBadge>
+    </BalanceRow>
+  )
+}
+
+/* ─── 4. Now vs Next comparison ─── */
+
+function NowVsNextComparison({
+  tiers: tierList,
+  currentTierIndex,
+  userEstimatedReward,
+}: {
   tiers: {
     index: number
     poolSizeEns: string
@@ -851,169 +689,146 @@ interface TierLadderProps {
     isUnlocked: boolean
   }[]
   currentTierIndex: number
-  currentPool: number
-  userReward: number
-}
+  userEstimatedReward: string
+}) {
+  const [showAllLevels, setShowAllLevels] = useState(false)
 
-function TierLadder({
-  tiers,
-  currentTierIndex,
-  currentPool,
-  userReward,
-}: TierLadderProps) {
-  return (
-    <LadderSection>
-      <LadderTitle>What you could earn</LadderTitle>
-      <LadderList>
-        {tiers.map((tier, idx) => {
-          const poolSize = parseFloat(tier.poolSizeEns)
-          const projectedPayout =
-            currentPool > 0 ? userReward * (poolSize / currentPool) : 0
-          const increase = pctIncrease(userReward, projectedPayout)
-          const isCurrent = tier.isCurrent
-          const isLocked = !tier.isUnlocked && !tier.isCurrent
+  const currentTier = tierList[currentTierIndex]
+  const nextTier = tierList[currentTierIndex + 1]
+  const isMaxLevel = currentTierIndex >= tierList.length - 1
 
-          return (
-            <LadderItem
-              key={tier.index}
-              $isCurrent={isCurrent}
-              $isUnlocked={tier.isUnlocked}
-            >
-              {idx < tiers.length - 1 && <LadderLine />}
-              <LadderMarker
-                $isCurrent={isCurrent}
-                $isUnlocked={tier.isUnlocked}
-              />
-              <LadderContent>
-                <LadderTierRow>
-                  <LadderTierName $isCurrent={isCurrent}>
-                    Tier {tier.index + 1}
-                    {isCurrent && (
-                      <Tag
-                        size="small"
-                        colorStyle="bluePrimary"
-                        style={{ marginLeft: 8 }}
-                      >
-                        You
-                      </Tag>
-                    )}
-                    {isLocked && <LadderLock>🔒</LadderLock>}
-                  </LadderTierName>
-                  <LadderPayout $isCurrent={isCurrent}>
-                    ~{formatEns(projectedPayout.toString())} ENS/mo
-                    {!isCurrent && increase > 0 && (
-                      <LadderIncrease> (+{increase}%)</LadderIncrease>
-                    )}
-                  </LadderPayout>
-                </LadderTierRow>
-                <LadderApyLabel>{tier.estimatedApyPct}% APY</LadderApyLabel>
-              </LadderContent>
-            </LadderItem>
-          )
-        })}
-      </LadderList>
-    </LadderSection>
-  )
-}
+  const currentPayout = formatPayout(userEstimatedReward)
+  const currentPool = formatPool(currentTier.poolSizeEns)
 
-/* ─── Round countdown ─── */
+  const nextPayout = nextTier
+    ? formatPayout(projectPayout(userEstimatedReward, currentTier.poolSizeEns, nextTier.poolSizeEns))
+    : null
+  const nextPool = nextTier ? formatPool(nextTier.poolSizeEns) : null
 
-interface RoundCountdownProps {
-  roundNumber: number
-  startDate: string
-  endDate: string
-  daysRemaining: number
-  percentComplete: number
-  balanceEns: string
-  payoutEns: string
-}
+  const vpProgress = nextTier
+    ? computeVpProgress(
+        currentTier.requiredAVP,
+        nextTier.requiredAVP,
+        nextTier.additionalVPNeeded,
+      )
+    : 100
 
-function RoundCountdown({
-  roundNumber,
-  startDate,
-  endDate,
-  daysRemaining,
-  percentComplete,
-  balanceEns,
-  payoutEns,
-}: RoundCountdownProps) {
-  return (
-    <RoundSection>
-      <RoundHeader>
-        <RoundLabel>Round {roundNumber}</RoundLabel>
-        <RoundDays>{daysRemaining}d left</RoundDays>
-      </RoundHeader>
+  const vpNeededStr = nextTier ? formatVpNeeded(nextTier.additionalVPNeeded) : ''
 
-      <ProgressBarTrack>
-        <ProgressBarFill $percent={percentComplete} />
-      </ProgressBarTrack>
-
-      <RoundDates>
-        <span>{formatDate(startDate)}</span>
-        <span>{formatDate(endDate)}</span>
-      </RoundDates>
-
-      <RoundStatsRow>
-        <RoundStat>
-          Balance:{' '}
-          <strong>{formatEns(balanceEns, 0)} ENS</strong>{' '}
-          <TooltipWrapper data-tooltip="Time-weighted average balance over 180 days. Hold longer, earn more.">
-            &#9432;
-          </TooltipWrapper>
-        </RoundStat>
-        <RoundStat>
-          Expected: <PayoutValue>+{formatEns(payoutEns)} ENS</PayoutValue>
-        </RoundStat>
-      </RoundStatsRow>
-    </RoundSection>
-  )
-}
-
-/* ─── Share CTA footer ─── */
-
-function ShareCTAFooter() {
-  const shareUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    'I\'m earning ENS rewards by delegating! Join the campaign and grow the pool for everyone.',
-  )}&url=${encodeURIComponent(shareUrl)}`
-  const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(
-    shareUrl,
-  )}&text=${encodeURIComponent(
-    'I\'m earning ENS rewards by delegating! Join the campaign.',
-  )}`
+  // Calculate percentage increase from current to next level payout
+  const currentPayoutNum = parseFloat(userEstimatedReward) || 0
+  const nextPayoutNum = nextTier
+    ? parseFloat(projectPayout(userEstimatedReward, currentTier.poolSizeEns, nextTier.poolSizeEns)) || 0
+    : 0
+  const pctIncrease =
+    currentPayoutNum > 0 && nextPayoutNum > 0
+      ? Math.round(((nextPayoutNum - currentPayoutNum) / currentPayoutNum) * 100)
+      : 0
 
   return (
-    <ShareFooter>
-      <ShareMessage>
-        Every new delegation grows the pool for everyone
-      </ShareMessage>
-      <ShareActions>
-        <ShareActionButton
-          as="a"
-          href={twitterUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          size="small"
-        >
-          Share this campaign
-        </ShareActionButton>
-      </ShareActions>
-      <ShareActions>
-        <ShareLink
-          href={twitterUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Twitter
-        </ShareLink>
-        <ShareLink
-          href={telegramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Telegram
-        </ShareLink>
-      </ShareActions>
-    </ShareFooter>
+    <ComparisonWrapper>
+      {/* NOW card */}
+      <ComparisonCard $variant="now">
+        <CardHeader>
+          <CardLabel $variant="now">
+            Now — Level {currentTierIndex + 1}
+          </CardLabel>
+        </CardHeader>
+        <CardStatRow>
+          <CardStatLine>
+            You're earning <CardStatValue>{currentTier.estimatedApyPct}% APY</CardStatValue>
+          </CardStatLine>
+          <CardStatLine>
+            Expected payout: <CardStatValue>+{currentPayout} ENS</CardStatValue>
+          </CardStatLine>
+          <CardStatMuted>Pool: {currentPool} ENS</CardStatMuted>
+        </CardStatRow>
+      </ComparisonCard>
+
+      {/* NEXT card */}
+      {!isMaxLevel && nextTier && (
+        <ComparisonCard $variant="next">
+          <CardHeader>
+            <CardLabel $variant="next">
+              Next — Level {nextTier.index + 1}
+            </CardLabel>
+            {pctIncrease > 0 && (
+              <PercentBadge>+{pctIncrease}% ↑</PercentBadge>
+            )}
+          </CardHeader>
+          <CardStatRow>
+            <CardStatLine>
+              You'd earn <CardStatValue>{nextTier.estimatedApyPct}% APY</CardStatValue>
+            </CardStatLine>
+            <CardStatLine>
+              Expected payout: <CardStatValue>~{nextPayout} ENS</CardStatValue>
+            </CardStatLine>
+            <CardStatMuted>Pool: {nextPool} ENS</CardStatMuted>
+          </CardStatRow>
+          <ProgressSection>
+            <ProgressTrack>
+              <ProgressFill $pct={vpProgress} />
+            </ProgressTrack>
+            <ProgressLabel>{Math.round(vpProgress)}% of the way</ProgressLabel>
+            {vpNeededStr && (
+              <NeededLabel>{vpNeededStr} more ENS delegation needed</NeededLabel>
+            )}
+          </ProgressSection>
+          <ShareLink to="/delegates">
+            <Button size="small" colorStyle="bluePrimary" width="auto">
+              Spread the word →
+            </Button>
+          </ShareLink>
+        </ComparisonCard>
+      )}
+
+      {/* Collapsed tier list */}
+      <ToggleButton
+        type="button"
+        onClick={() => setShowAllLevels((v) => !v)}
+        aria-expanded={showAllLevels}
+      >
+        {showAllLevels ? 'Hide all 7 levels' : 'See all 7 levels'}
+        <ToggleChevron $open={showAllLevels} aria-hidden>
+          ▾
+        </ToggleChevron>
+      </ToggleButton>
+
+      {showAllLevels && (
+        <TierList>
+          {tierList.map((tier) => {
+            const isCurrent = tier.index === currentTierIndex
+            const locked = !tier.isUnlocked && !isCurrent
+            const projected = formatPayout(
+              projectPayout(userEstimatedReward, currentTier.poolSizeEns, tier.poolSizeEns),
+            )
+
+            return (
+              <TierListItem key={tier.index} $isCurrent={isCurrent}>
+                <TierItemLeft>
+                  Level {tier.index + 1} &middot; {tier.estimatedApyPct}% APY &middot;{' '}
+                  {isCurrent ? `+${projected}` : `~${projected}`} ENS
+                </TierItemLeft>
+                <TierItemRight $locked={locked}>
+                  {isCurrent ? 'You' : tier.isUnlocked ? '✓' : '🔒'}
+                </TierItemRight>
+              </TierListItem>
+            )
+          })}
+        </TierList>
+      )}
+
+      {/* Share section */}
+      <ShareSection>
+        <ShareText>
+          Every new delegation helps everyone earn more
+        </ShareText>
+        <ShareButtonLink to="/delegates">
+          <Button size="small" colorStyle="bluePrimary" width="auto">
+            Spread the word
+          </Button>
+        </ShareButtonLink>
+      </ShareSection>
+    </ComparisonWrapper>
   )
 }
