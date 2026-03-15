@@ -106,7 +106,7 @@ export function EarningsCard({
 }: EarningsCardProps) {
   const displayName = delegateEnsName ?? truncateAddress(delegatedTo)
   const tierLabel = `Tier ${tierIndex + 1}`
-  const streamingEarnings = useStreamingCounter(earnedEns)
+  const streamingEarnings = useStreamingCounter(earnedEns, 5)
 
   return (
     <Card>
