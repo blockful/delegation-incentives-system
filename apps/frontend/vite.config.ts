@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   const backendPort = parseInt(env.BACKEND_PORT) || 3000;
 
   return {
+    envDir: rootDir,
     plugins: [react()],
     resolve: {
       alias: {
