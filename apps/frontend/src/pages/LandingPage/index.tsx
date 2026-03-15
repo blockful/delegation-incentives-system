@@ -24,10 +24,12 @@ const ErrorMessage = styled.p`
 
 export function LandingPage() {
   const fetchTiers = useCallback(() => api.tierProgression(), [])
-  const { data, loading, error } = useAsync(fetchTiers)
+  const fetchRound = useCallback(() => api.currentRound(), [])
+  const tiers = useAsync(fetchTiers)
+  const round = useAsync(fetchRound)
   const walletState = useWalletState()
 
-  if (loading) {
+  if (tiers.loading || round.loading) {
     return (
       <LoadingWrapper>
         <Spinner />
@@ -35,16 +37,18 @@ export function LandingPage() {
     )
   }
 
-  if (error || !data) {
-    return <ErrorMessage>Failed to load tier data: {error}</ErrorMessage>
+  if (tiers.error || !tiers.data) {
+    return <ErrorMessage>Failed to load tier data: {tiers.error}</ErrorMessage>
   }
+
+  const roundData = round.data ?? undefined
 
   switch (walletState.status) {
     case 'connected':
-      return <ConnectedLanding tierData={data} />
+      return <ConnectedLanding tierData={tiers.data} roundData={roundData} />
     case 'delegated':
-      return <DelegatedLanding tierData={data} />
+      return <DelegatedLanding tierData={tiers.data} roundData={roundData} />
     default:
-      return <DisconnectedLanding tierData={data} />
+      return <DisconnectedLanding tierData={tiers.data} roundData={roundData} />
   }
 }

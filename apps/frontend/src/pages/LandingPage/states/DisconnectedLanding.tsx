@@ -1,4 +1,4 @@
-import type { TierProgressionResponse } from '@/api/types'
+import type { TierProgressionResponse, RoundInfoResponse } from '@/api/types'
 import { HeroSection } from '../sections/HeroSection'
 import { RoundStatusBar } from '../sections/RoundStatusBar'
 import { TierTableSection } from '../sections/TierTableSection'
@@ -7,9 +7,10 @@ import { CtaSection } from '../sections/CtaSection'
 
 interface DisconnectedLandingProps {
   tierData: TierProgressionResponse
+  roundData?: RoundInfoResponse
 }
 
-export function DisconnectedLanding({ tierData }: DisconnectedLandingProps) {
+export function DisconnectedLanding({ tierData, roundData }: DisconnectedLandingProps) {
   const currentTier = tierData.tiers[tierData.currentTierIndex]
   const currentApyPct = tierData.maxDelegatorApyPct
   const poolSizeEns = currentTier?.poolSizeEns ?? '0'
@@ -21,6 +22,8 @@ export function DisconnectedLanding({ tierData }: DisconnectedLandingProps) {
         currentGrowthPct={tierData.currentGrowthPct}
         currentTierIndex={tierData.currentTierIndex}
         poolSizeEns={poolSizeEns}
+        roundNumber={roundData?.roundNumber}
+        roundTimeLeft={roundData ? `${roundData.daysRemaining}d left` : undefined}
       />
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection />

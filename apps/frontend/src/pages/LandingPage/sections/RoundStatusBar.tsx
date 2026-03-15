@@ -1,5 +1,4 @@
 import styled from 'styled-components'
-import { CURRENT_ROUND, ROUND_TIME_LEFT } from '@/config/round'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
@@ -97,8 +96,8 @@ export function RoundStatusBar({
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
   const growthPrefix = isNegative ? '' : '+'
-  const displayRound = roundNumber ?? CURRENT_ROUND
-  const displayTimeLeft = roundTimeLeft ?? ROUND_TIME_LEFT
+  const displayRound = roundNumber ?? 1
+  const displayTimeLeft = roundTimeLeft ?? ''
 
   return (
     <Wrapper>
