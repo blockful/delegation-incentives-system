@@ -5,24 +5,29 @@ import { Spinner } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { tokens, Eyebrow, LoadingWrapper, ErrorMessage } from '@/styles'
 import { EarningsCard } from './sections/EarningsCard'
 import { RoundDetailsSection } from './sections/RoundDetailsSection'
 import { RoundProgressCard } from './sections/RoundProgressCard'
 import { LotteryStatusCard } from './sections/LotteryStatusCard'
 
 const Page = styled.div`
-  max-width: 1120px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: ${tokens.spacing.xl};
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
+  }
 `
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: ${tokens.spacing.xl};
 
   @media (min-width: 768px) {
     grid-template-columns: 1fr 1fr;
@@ -32,23 +37,8 @@ const Grid = styled.div`
 const RightColumn = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.md};
 `
-
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-`
-
-const ErrorMessage = styled.p`
-  text-align: center;
-  padding: 64px 20px;
-  color: #c62828;
-  font-size: 16px;
-`
-
 
 // Hardcoded — lottery data requires distribution endpoint wiring.
 const LOTTERY_POOL_NUMBER = 1
@@ -97,10 +87,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
   const currentTier = tiers.data.tiers[tiers.data.currentTierIndex]
   const poolSizeEns = currentTier?.poolSizeEns ?? '0'
-
-  // delegatedTo: use apy response or fallback to self
   const delegatedTo = (apy.data.delegatedTo ?? address) as `0x${string}`
-
   const roundNumber = round.data.roundNumber
   const daysRemaining = round.data.daysRemaining
   const timeLeft = `${daysRemaining}d left`
@@ -109,6 +96,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
   return (
     <Page>
+      <Eyebrow>Dashboard</Eyebrow>
       <Grid>
         <EarningsCard
           earnedEns={apy.data.estimatedMonthlyRewardEns}

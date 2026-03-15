@@ -1,6 +1,5 @@
 import styled from 'styled-components'
-import { Button, CheckSVG, LockSVG, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
-import { TierDots } from '@/components/shared/TierDots'
+import { CheckSVG, LockSVG } from '@ensdomains/thorin'
 import type { TierEntry } from '@/api/types'
 
 interface TierTableSectionProps {
@@ -8,71 +7,123 @@ interface TierTableSectionProps {
 }
 
 const Section = styled.section`
-  padding: 48px 20px;
+  padding: 64px 20px;
+  border-bottom: 1px solid #E5E5E5;
 
   @media (min-width: 768px) {
-    padding: 80px 40px;
+    padding: 96px 40px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 64px;
-    align-items: start;
-    max-width: 1200px;
+    gap: 80px;
+    align-items: center;
+    max-width: 1120px;
     margin: 0 auto;
   }
 `
 
-const CopyBlock = styled.div``
-
-const ShareButton = styled(Button)`
-  margin-bottom: 32px;
+const CopyBlock = styled.div`
+  margin-bottom: 40px;
 
   @media (min-width: 768px) {
     margin-bottom: 0;
   }
 `
 
+const Eyebrow = styled.span`
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #0080BC;
+  margin-bottom: 16px;
+`
+
+const Heading = styled.h2`
+  font-size: 28px;
+  font-weight: 800;
+  color: #011A25;
+  line-height: 1.2;
+  margin: 0 0 16px;
+
+  @media (min-width: 768px) {
+    font-size: 36px;
+  }
+`
+
+const Description = styled.p`
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: #4A5C63;
+  margin: 0;
+`
+
 const Table = styled.div`
   display: flex;
   flex-direction: column;
+  gap: 4px;
 `
 
 const TierRow = styled.div<{ $isCurrent: boolean }>`
-  display: grid;
-  grid-template-columns: 80px 1fr auto;
+  display: flex;
   align-items: center;
-  padding: 16px;
-  gap: 12px;
-  border-bottom: 1px solid #E5E5E5;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
   background: ${({ $isCurrent }) =>
-    $isCurrent ? 'rgba(0, 124, 35, 0.08)' : 'transparent'};
-  border-radius: ${({ $isCurrent }) => ($isCurrent ? '12px' : '0')};
-  opacity: ${({ $isCurrent }) => ($isCurrent ? 1 : 0.85)};
+    $isCurrent ? '#C5DDCC' : '#f6f6f6'};
+  transition: background 0.15s;
+`
+
+const TierLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
 `
 
 const TierLabel = styled.span<{ $isCurrent: boolean }>`
   font-size: 14px;
   font-weight: ${({ $isCurrent }) => ($isCurrent ? 700 : 500)};
-  color: ${({ theme }) => theme.colors.text};
+  color: #011A25;
+  min-width: 52px;
 `
 
-const ApyInfo = styled.div`
+const TierBar = styled.div`
+  display: flex;
+  gap: 3px;
+  align-items: center;
+`
+
+const BarSegment = styled.div<{ $filled: boolean }>`
+  width: 16px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: ${({ $filled }) => ($filled ? '#011A25' : '#E5E5E5')};
+  transition: background 0.2s ease;
+`
+
+const TierRight = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+`
+
+const ApyText = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
-  white-space: nowrap;
+  color: #011A25;
+  font-variant-numeric: tabular-nums;
 `
 
 const StatusIcon = styled.span<{ $unlocked: boolean }>`
   display: flex;
   align-items: center;
-  color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#4A5C63')};
+  color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#C4C7C8')};
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 `
 
@@ -80,46 +131,38 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
   return (
     <Section>
       <CopyBlock>
-        <div style={{ margin: '0 0 12px' }}>
-          <Typography
-            fontVariant="label"
-            color="grey"
-            weight="bold"
-            style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
-          >
-            The more people join, the more you earn
-          </Typography>
-        </div>
-        <div style={{ margin: '0 0 16px' }}>
-          <ThorinHeading level="2" responsive>
-            Your APY grows when others delegate too
-          </ThorinHeading>
-        </div>
-        <div style={{ margin: '0 0 32px' }}>
-          <Typography fontVariant="body" color="textSecondary">
-            This isn&rsquo;t a fixed yield. The reward pool unlocks higher tiers as
-            more ENS gets delegated to active voters &mdash; so every person you
-            bring in increases everyone&rsquo;s earnings.
-          </Typography>
-        </div>
-        <ShareButton colorStyle="bluePrimary" width="max">
-          Share &amp; Grow the Pool
-        </ShareButton>
+        <Eyebrow>Reward Tiers</Eyebrow>
+        <Heading>
+          Your APY grows when others delegate too
+        </Heading>
+        <Description>
+          The reward pool unlocks higher tiers as more ENS gets delegated
+          to active voters — every person you bring in increases
+          everyone's earnings.
+        </Description>
       </CopyBlock>
 
       <Table data-testid="tier-table">
         {tiers.map((tier) => (
           <TierRow key={tier.index} $isCurrent={tier.isCurrent}>
-            <TierLabel $isCurrent={tier.isCurrent}>
-              Tier #{tier.index + 1}
-            </TierLabel>
-            <TierDots tierIndex={tier.index} totalTiers={tiers.length} />
-            <ApyInfo>
-              ~{tier.estimatedApyPct ?? '—'}% APY
+            <TierLeft>
+              <TierLabel $isCurrent={tier.isCurrent}>
+                Tier {tier.index + 1}
+              </TierLabel>
+              <TierBar>
+                {Array.from({ length: tiers.length }, (_, i) => (
+                  <BarSegment key={i} $filled={i <= tier.index} />
+                ))}
+              </TierBar>
+            </TierLeft>
+            <TierRight>
+              <ApyText>
+                {tier.estimatedApyPct ?? '—'}%
+              </ApyText>
               <StatusIcon $unlocked={tier.isUnlocked}>
                 {tier.isUnlocked ? <CheckSVG /> : <LockSVG />}
               </StatusIcon>
-            </ApyInfo>
+            </TierRight>
           </TierRow>
         ))}
       </Table>

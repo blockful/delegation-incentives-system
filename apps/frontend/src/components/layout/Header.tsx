@@ -11,25 +11,30 @@ const StyledHeader = styled.header`
   padding: 16px 24px;
   border-bottom: 1px solid #E5E5E5;
   background: #fff;
+
+  @media (min-width: 768px) {
+    padding: 16px 40px;
+  }
 `
 
 const Brand = styled(Link)`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
   color: inherit;
 `
 
 const BrandText = styled.span`
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 700;
+  font-size: 15px;
   color: #011A25;
+  letter-spacing: -0.01em;
 `
 
 const Nav = styled.nav`
   display: flex;
-  gap: 24px;
+  gap: 28px;
 
   @media (max-width: 768px) {
     display: none;
@@ -38,17 +43,19 @@ const Nav = styled.nav`
 
 const StyledNavLink = styled(NavLink)`
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #4A5C63;
   transition: color 0.15s;
+  letter-spacing: 0.01em;
 
   &:hover {
     color: #011A25;
   }
 
   &.active {
-    color: #0080BC;
+    color: #011A25;
+    font-weight: 600;
   }
 `
 
@@ -59,7 +66,7 @@ const WalletArea = styled.div`
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/delegates', label: 'Active Delegates' },
+  { to: '/delegates', label: 'Delegates' },
   { to: '/rounds', label: 'Rounds' },
   { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },
@@ -90,7 +97,7 @@ export function Header() {
   return (
     <StyledHeader>
       <Brand to="/">
-        <EnsSVG style={{ width: 32, height: 32 }} />
+        <EnsSVG style={{ width: 28, height: 28 }} />
         <BrandText>Incentives Program</BrandText>
       </Brand>
 

@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
+import { Spinner } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
+import { tokens, Eyebrow, PageTitle, SectionSubheading, LoadingWrapper, ErrorMessage } from '@/styles'
 import { DelegateCard } from './components/DelegateCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
@@ -10,34 +11,26 @@ import type { DelegateDetail } from '@/api/types'
 const Page = styled.div`
   max-width: 960px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(3, 1fr);
   }
 `
 
-const LoadingWrapper = styled.div`
+const HeaderBlock = styled.div`
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-`
-
-const ErrorMessage = styled.p`
-  text-align: center;
-  padding: 40px 20px;
-  color: #c62828;
-  font-size: 16px;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
 `
 
 function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
@@ -91,25 +84,14 @@ export function DelegatesPage() {
 
   return (
     <Page>
-      <div>
-        <Typography
-          fontVariant="label"
-          color="blue"
-          weight="bold"
-          style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
-        >
-          Delegate Your Tokens
-        </Typography>
-        <div style={{ margin: '4px 0' }}>
-          <ThorinHeading level="1" responsive style={{ margin: 0 }}>
-            Delegate to someone who shows up
-          </ThorinHeading>
-        </div>
-        <Typography fontVariant="body" color="textTertiary">
+      <HeaderBlock>
+        <Eyebrow>Delegate Your Tokens</Eyebrow>
+        <PageTitle>Delegate to someone who shows up</PageTitle>
+        <SectionSubheading>
           Choose a delegate who votes on at least 7 out of 10 proposals to
           maximize your rewards.
-        </Typography>
-      </div>
+        </SectionSubheading>
+      </HeaderBlock>
 
       <StatsBar activeDelegates={count} />
 

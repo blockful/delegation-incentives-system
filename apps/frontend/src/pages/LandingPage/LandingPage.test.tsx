@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS is sitting idle/),
+        screen.getByText(/Your ENS could be earning/),
       ).toBeInTheDocument()
     })
   })
@@ -15,21 +15,18 @@ describe('LandingPage', () => {
   it('renders tier table with 7 tiers', async () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
-      expect(screen.getByText('Tier #1')).toBeInTheDocument()
+      expect(screen.getByTestId('tier-table')).toBeInTheDocument()
     })
-    expect(screen.getByText('Tier #2')).toBeInTheDocument()
-    expect(screen.getByText('Tier #3')).toBeInTheDocument()
-    expect(screen.getByText('Tier #4')).toBeInTheDocument()
-    expect(screen.getByText('Tier #5')).toBeInTheDocument()
-    expect(screen.getByText('Tier #6')).toBeInTheDocument()
-    expect(screen.getByText('Tier #7')).toBeInTheDocument()
+    for (let i = 1; i <= 7; i++) {
+      expect(screen.getAllByText(`Tier ${i}`).length).toBeGreaterThanOrEqual(1)
+    }
   })
 
   it('renders how it works section', async () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/Simple to join\. Better when more people do\./),
+        screen.getByText(/Three steps to earn/),
       ).toBeInTheDocument()
     })
   })
@@ -57,7 +54,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS is sitting idle/),
+        screen.getByText(/Your ENS could be earning/),
       ).toBeInTheDocument()
     })
   })
@@ -72,7 +69,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS is sitting idle/),
+        screen.getByText(/Your ENS could be earning/),
       ).toBeInTheDocument()
     })
   })

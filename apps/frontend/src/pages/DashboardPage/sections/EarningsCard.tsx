@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button, Card, Tag } from '@ensdomains/thorin'
+import { Button, Tag } from '@ensdomains/thorin'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
@@ -16,77 +16,84 @@ interface EarningsCardProps {
   roundEndDate: string
 }
 
-const StyledCard = styled(Card)`
-  background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f0 100%);
+const Card = styled.div`
+  background: #011A25;
+  border-radius: 20px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+
+  @media (min-width: 768px) {
+    padding: 40px;
+  }
 `
 
 const Label = styled.span`
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  letter-spacing: 0.15em;
+  color: #0080BC;
 `
 
 const EarnedAmount = styled.span`
-  font-size: 36px;
+  font-size: 40px;
   font-weight: 800;
-  color: #007C23;
-  line-height: 1.1;
+  color: #fff;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
 
   @media (min-width: 768px) {
-    font-size: 48px;
+    font-size: 56px;
   }
 `
 
-const Subtitle = styled.span`
+const Unit = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: #CEE1E8;
+  opacity: 0.6;
 `
 
 const ApyRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 `
 
 const ApyText = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  color: #CEE1E8;
 `
 
-const Pills = styled.div`
+const InfoRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 `
 
-const Pill = styled.div`
+const InfoPill = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 8px 12px 8px 8px;
+  padding: 6px 12px 6px 6px;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.text};
+  color: #CEE1E8;
 `
 
 const TextPill = styled.div`
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.text};
+  color: #CEE1E8;
 `
 
 const ButtonRow = styled.div`
@@ -111,33 +118,32 @@ export function EarningsCard({
   const streamingEarnings = useStreamingCounter(earnedEns, roundStartDate, roundEndDate)
 
   return (
-    <StyledCard>
+    <Card>
       <Label>Your Earnings</Label>
-      <EarnedAmount>+{streamingEarnings}</EarnedAmount>
-      <Subtitle>ENS earned so far</Subtitle>
+      <div>
+        <EarnedAmount>+{streamingEarnings}</EarnedAmount>
+        <Unit> ENS earned</Unit>
+      </div>
 
       <ApyRow>
         <ApyText>Earning at {apyPct}% APY</ApyText>
         <Tag colorStyle="bluePrimary">{tierLabel}</Tag>
       </ApyRow>
 
-      <Pills>
-        <Pill>
-          <EnsAvatar address={delegatedTo} name={delegateEnsName} size={22} />
-          Delegating to {displayName}
-        </Pill>
+      <InfoRow>
+        <InfoPill>
+          <EnsAvatar address={delegatedTo} name={delegateEnsName} size={20} />
+          {displayName}
+        </InfoPill>
         <TextPill>Round {roundNumber}</TextPill>
-        <TextPill>{timeLeft} left</TextPill>
-      </Pills>
+        <TextPill>{timeLeft}</TextPill>
+      </InfoRow>
 
       <ButtonRow>
-        <Button size="small" width="auto">
+        <Button size="small" colorStyle="bluePrimary" width="auto">
           Share your earnings
         </Button>
-        <Button size="small" colorStyle="greySecondary" width="auto">
-          Share on Telegram
-        </Button>
       </ButtonRow>
-    </StyledCard>
+    </Card>
   )
 }

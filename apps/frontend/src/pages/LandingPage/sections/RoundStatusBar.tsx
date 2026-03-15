@@ -9,81 +9,71 @@ interface RoundStatusBarProps {
 }
 
 const Wrapper = styled.div`
-  padding: 0 20px 32px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  max-width: 680px;
+  margin: -32px auto 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1;
 
   @media (min-width: 768px) {
-    padding: 0 40px 48px;
+    margin-top: -36px;
   }
 `
 
-const Pills = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-`
-
-const Pill = styled.span`
-  font-size: 13px;
-  font-weight: 600;
-  color: #007C23;
-`
-
-const PillDot = styled.span`
-  color: #4A5C63;
-  margin: 0 2px;
-`
-
-const InfoBar = styled.div`
+const Bar = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  border: 1px solid #E5E5E5;
-  border-radius: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(1, 26, 37, 0.08);
   overflow: hidden;
-  width: 100%;
-  max-width: 560px;
 `
 
-const InfoCell = styled.div`
-  padding: 16px;
+const Cell = styled.div`
+  padding: 20px 16px;
   text-align: center;
 
   &:not(:last-child) {
     border-right: 1px solid #E5E5E5;
   }
+
+  @media (min-width: 768px) {
+    padding: 24px 20px;
+  }
 `
 
-const InfoValue = styled.div`
-  font-size: 15px;
+const CellValue = styled.div`
+  font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
+  color: #011A25;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+
+  @media (min-width: 768px) {
+    font-size: 18px;
+  }
 `
 
 const LiveDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #0080BC;
-  display: inline-block;
+  background: #007C23;
+  flex-shrink: 0;
 `
 
 const GrowthValue = styled.span<{ $negative?: boolean }>`
-  color: ${({ $negative }) => ($negative ? '#C6301B' : '#007C23')};
+  color: ${({ $negative }) => ($negative ? '#F53293' : '#007C23')};
   font-weight: 700;
 `
 
-const InfoLabel = styled.div`
+const CellLabel = styled.div`
   font-size: 12px;
   color: #4A5C63;
-  margin-top: 2px;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
 `
 
 export function RoundStatusBar({
@@ -101,34 +91,27 @@ export function RoundStatusBar({
 
   return (
     <Wrapper>
-      <Pills>
-        <Pill>No tokens locked</Pill>
-        <PillDot>&middot;</PillDot>
-        <Pill>Gas sponsored</Pill>
-        <PillDot>&middot;</PillDot>
-        <Pill>Rewards auto-sent</Pill>
-      </Pills>
-      <InfoBar>
-        <InfoCell>
-          <InfoValue>
+      <Bar>
+        <Cell>
+          <CellValue>
             <LiveDot />
             Round {displayRound}
-          </InfoValue>
-          <InfoLabel>ends {displayTimeLeft}</InfoLabel>
-        </InfoCell>
-        <InfoCell>
-          <InfoValue>
+          </CellValue>
+          <CellLabel>{displayTimeLeft}</CellLabel>
+        </Cell>
+        <Cell>
+          <CellValue>
             <GrowthValue $negative={isNegative}>
-                {growthPrefix}{currentGrowthPct}%
+              {growthPrefix}{currentGrowthPct}%
             </GrowthValue>
-          </InfoValue>
-          <InfoLabel>active VP growth</InfoLabel>
-        </InfoCell>
-        <InfoCell>
-          <InfoValue>Tier {currentTierIndex + 1}</InfoValue>
-          <InfoLabel>{poolSizeEns} ENS pool</InfoLabel>
-        </InfoCell>
-      </InfoBar>
+          </CellValue>
+          <CellLabel>VP growth</CellLabel>
+        </Cell>
+        <Cell>
+          <CellValue>Tier {currentTierIndex + 1}</CellValue>
+          <CellLabel>{poolSizeEns} ENS pool</CellLabel>
+        </Cell>
+      </Bar>
     </Wrapper>
   )
 }
