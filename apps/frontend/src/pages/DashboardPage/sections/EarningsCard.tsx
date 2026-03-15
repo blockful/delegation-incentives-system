@@ -12,6 +12,8 @@ interface EarningsCardProps {
   delegateEnsName?: string
   roundNumber: number
   timeLeft: string
+  roundStartDate: string
+  roundEndDate: string
 }
 
 const Card = styled.div`
@@ -103,10 +105,12 @@ export function EarningsCard({
   delegateEnsName,
   roundNumber,
   timeLeft,
+  roundStartDate,
+  roundEndDate,
 }: EarningsCardProps) {
   const displayName = delegateEnsName ?? truncateAddress(delegatedTo)
   const tierLabel = `Tier ${tierIndex + 1}`
-  const streamingEarnings = useStreamingCounter(earnedEns, 5)
+  const streamingEarnings = useStreamingCounter(earnedEns, roundStartDate, roundEndDate)
 
   return (
     <Card>

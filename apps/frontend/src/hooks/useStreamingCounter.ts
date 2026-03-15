@@ -1,41 +1,51 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 /**
- * Animates a number incrementing in real-time based on a per-second rate.
- * Like Superfluid's streaming counter — shows earnings growing live.
+ * Shows real-time accumulated earnings based on round progress.
  *
- * @param monthlyAmount - Monthly reward in ENS (string, e.g. "12.3456")
- * @param decimals - Number of decimal places to display (default 8 for visible ticking)
- * @returns The current animated value as a string
+ * The value represents how much has been earned from roundStart until now,
+ * assuming linear distribution: earnedSoFar = totalReward × elapsed / duration.
+ * This is deterministic — refreshing or opening on another device shows the
+ * same value because it's anchored to the round start time, not page load.
+ *
+ * @param totalReward - Total estimated reward for the round (string ENS amount)
+ * @param roundStartDate - ISO string of round start (e.g. "2026-03-01T00:00:00.000Z")
+ * @param roundEndDate - ISO string of round end (e.g. "2026-04-01T00:00:00.000Z")
+ * @param decimals - Decimal places to display (default 5)
  */
-export function useStreamingCounter(monthlyAmount: string, decimals = 8): string {
-  const perSecond = parseFloat(monthlyAmount) / (30 * 24 * 3600)
-  const startTimeRef = useRef(Date.now())
-  const startValueRef = useRef(parseFloat(monthlyAmount))
-  const [display, setDisplay] = useState(
-    parseFloat(monthlyAmount).toFixed(decimals),
-  )
+export function useStreamingCounter(
+  totalReward: string,
+  roundStartDate: string,
+  roundEndDate: string,
+  decimals = 5,
+): string {
+  const reward = parseFloat(totalReward)
+  const startMs = new Date(roundStartDate).getTime()
+  const endMs = new Date(roundEndDate).getTime()
+  const durationMs = endMs - startMs
+
+  const [display, setDisplay] = useState(() => {
+    if (reward <= 0 || durationMs <= 0) return (0).toFixed(decimals)
+    const elapsed = Math.max(0, Math.min(Date.now() - startMs, durationMs))
+    return (reward * elapsed / durationMs).toFixed(decimals)
+  })
 
   useEffect(() => {
-    startTimeRef.current = Date.now()
-    startValueRef.current = parseFloat(monthlyAmount)
-  }, [monthlyAmount])
-
-  useEffect(() => {
-    if (perSecond <= 0) return
+    if (reward <= 0 || durationMs <= 0) return
 
     let raf: number
 
     function tick() {
-      const elapsed = (Date.now() - startTimeRef.current) / 1000
-      const current = startValueRef.current + elapsed * perSecond
-      setDisplay(current.toFixed(decimals))
+      const now = Date.now()
+      const elapsed = Math.max(0, Math.min(now - startMs, durationMs))
+      const earned = reward * elapsed / durationMs
+      setDisplay(earned.toFixed(decimals))
       raf = requestAnimationFrame(tick)
     }
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [perSecond, decimals])
+  }, [reward, startMs, durationMs, decimals])
 
   return display
 }

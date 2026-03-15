@@ -117,6 +117,8 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           delegatedTo={delegatedTo}
           roundNumber={roundNumber}
           timeLeft={timeLeft}
+          roundStartDate={round.data.startDate}
+          roundEndDate={round.data.endDate}
         />
         <RightColumn>
           <RoundDetailsSection
