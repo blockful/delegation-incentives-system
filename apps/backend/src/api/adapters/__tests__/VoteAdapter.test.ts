@@ -9,6 +9,14 @@ const VOTES = [
   { id: "p3-0xddd", proposalId: "p3", voter: "0xDDD", support: 1, weight: "4000", timestamp: 400n },
 ]
 
+// Voters stored lowercase as they are in the real ponder DB (indexer lowercases on write)
+const VOTES_LOWERCASE = [
+  { id: "p1-0xaaa", proposalId: "p1", voter: "0xaaa", support: 1, weight: "1000", timestamp: 500n },
+  { id: "p2-0xaaa", proposalId: "p2", voter: "0xaaa", support: 1, weight: "1000", timestamp: 100n },
+  { id: "p3-0xaaa", proposalId: "p3", voter: "0xaaa", support: 1, weight: "1000", timestamp: 300n },
+  { id: "p1-0xbbb", proposalId: "p1", voter: "0xbbb", support: 0, weight: "2000", timestamp: 200n },
+]
+
 describe("VoteAdapter.getVotesForProposals", () => {
   let db: FakePonderDb
 
@@ -54,5 +62,46 @@ describe("VoteAdapter.getVotesForProposals", () => {
     const adapter = new VoteAdapter(db)
     const [vote] = await adapter.getVotesForProposals(["p2"])
     expect(vote.votingPower).toBe(3000n)
+  })
+})
+
+describe("VoteAdapter.getEarliestVoteTimestamps", () => {
+  let db: FakePonderDb
+
+  beforeEach(() => {
+    db = new FakePonderDb({ governance_vote: VOTES_LOWERCASE })
+  })
+
+  it("returns empty map for empty input", async () => {
+    const adapter = new VoteAdapter(db)
+    const result = await adapter.getEarliestVoteTimestamps([])
+    expect(result.size).toBe(0)
+  })
+
+  it("returns the earliest timestamp across all proposals for a voter", async () => {
+    const adapter = new VoteAdapter(db)
+    // 0xaaa voted at t=500, t=100, t=300 — earliest is 100
+    const result = await adapter.getEarliestVoteTimestamps(["0xaaa"])
+    expect(result.get("0xaaa")).toBe(100n)
+  })
+
+  it("returns results for multiple voters", async () => {
+    const adapter = new VoteAdapter(db)
+    const result = await adapter.getEarliestVoteTimestamps(["0xaaa", "0xbbb"])
+    expect(result.get("0xaaa")).toBe(100n)
+    expect(result.get("0xbbb")).toBe(200n)
+  })
+
+  it("returns empty map when voter has no votes", async () => {
+    const adapter = new VoteAdapter(db)
+    const result = await adapter.getEarliestVoteTimestamps(["0xunknown"])
+    expect(result.size).toBe(0)
+  })
+
+  it("lowercases voter IDs before querying", async () => {
+    const adapter = new VoteAdapter(db)
+    // Pass mixed-case — should still match lowercase DB rows
+    const result = await adapter.getEarliestVoteTimestamps(["0xAAA"])
+    expect(result.get("0xaaa")).toBe(100n)
   })
 })

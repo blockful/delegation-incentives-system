@@ -20,6 +20,9 @@ export interface ProposalRepository {
 export interface VoteRepository {
   /** Get all votes for the given proposal IDs */
   getVotesForProposals(proposalIds: string[]): Promise<Vote[]>;
+
+  /** Get the earliest vote timestamp per voter (keyed by lowercase voter ID) */
+  getEarliestVoteTimestamps(voterIds: string[]): Promise<Map<string, Seconds>>;
 }
 
 export interface VotingPowerRepository {
