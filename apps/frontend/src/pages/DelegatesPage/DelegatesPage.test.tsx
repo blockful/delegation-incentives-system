@@ -31,6 +31,6 @@ describe('DelegatesPage', () => {
     renderApp(<DelegatesPage />)
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
     expect(screen.getByText('Activity')).toBeInTheDocument()
-    expect(screen.getByText('Random')).toBeInTheDocument()
+    expect(screen.getByText(/Random/)).toBeInTheDocument()
   })
 })

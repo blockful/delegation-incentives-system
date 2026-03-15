@@ -43,35 +43,22 @@ const Pill = styled.button<{ $active: boolean }>`
   }
 `
 
-const ShuffleButton = styled.button`
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: transparent;
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all 0.15s ease;
-
-  &:hover {
-    opacity: 0.8;
-  }
-`
-
-function directionArrow(dir: SortDirection): string {
+function directionIndicator(field: SortField, dir: SortDirection): string {
+  if (field === 'random') return ' ↻'
   return dir === 'desc' ? ' ↓' : ' ↑'
 }
 
 export function SortControls({ value, onChange, onShuffle }: SortControlsProps) {
   function handleClick(field: SortField) {
     if (field === 'random') {
-      onChange({ field: 'random', direction: 'desc' })
+      if (value.field === 'random') {
+        onShuffle()
+      } else {
+        onChange({ field: 'random', direction: 'desc' })
+      }
       return
     }
     if (value.field === field) {
-      // Toggle direction
       onChange({ field, direction: value.direction === 'desc' ? 'asc' : 'desc' })
     } else {
       onChange({ field, direction: 'desc' })
@@ -88,14 +75,9 @@ export function SortControls({ value, onChange, onShuffle }: SortControlsProps) 
           aria-pressed={value.field === opt.value}
         >
           {opt.label}
-          {value.field === opt.value && opt.value !== 'random' && directionArrow(value.direction)}
+          {value.field === opt.value && directionIndicator(opt.value, value.direction)}
         </Pill>
       ))}
-      {value.field === 'random' && (
-        <ShuffleButton onClick={onShuffle} title="Shuffle">
-          ↻
-        </ShuffleButton>
-      )}
     </Wrapper>
   )
 }
