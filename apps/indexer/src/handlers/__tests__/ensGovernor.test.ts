@@ -111,6 +111,37 @@ describe("ENSGovernor:ProposalCreated", () => {
     expect(row.description).toBe("Proposal to do something")
     expect(row.status).toBe("active")
   })
+
+  it("ProposalCreated replay after ProposalExecuted does not reset status to active", async () => {
+    const proposalId = 99999n
+    const createEvent = {
+      args: {
+        proposalId,
+        proposer: "0x1111111111111111111111111111111111111111",
+        targets: [],
+        values: [],
+        signatures: [],
+        calldatas: [],
+        voteStart: 14000000n,
+        voteEnd: 14050000n,
+        description: "Test proposal",
+      },
+      block: { timestamp: 1680000000n },
+    }
+    const executeEvent = { args: { proposalId }, block: { timestamp: 1680010000n } }
+
+    // Insert ProposalCreated → status = "active"
+    await handleProposalCreated(createEvent as any, makeContext(store.db))
+    expect(store.proposals.get(proposalId.toString()).status).toBe("active")
+
+    // Insert ProposalExecuted → status = "executed"
+    await handleProposalExecuted(executeEvent as any, makeContext(store.db))
+    expect(store.proposals.get(proposalId.toString()).status).toBe("executed")
+
+    // Insert ProposalCreated again (replay) → status must still be "executed"
+    await handleProposalCreated(createEvent as any, makeContext(store.db))
+    expect(store.proposals.get(proposalId.toString()).status).toBe("executed")
+  })
 })
 
 // ─── VoteCast ────────────────────────────────────────────────────────────────

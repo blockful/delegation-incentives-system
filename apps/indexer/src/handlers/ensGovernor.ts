@@ -38,7 +38,7 @@ export async function handleProposalCreated(
       description,
       status: "active",
     })
-    .onConflictDoUpdate(() => ({ status: "active" }))
+    .onConflictDoNothing()
 }
 
 export async function handleVoteCast(

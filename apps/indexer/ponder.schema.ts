@@ -144,6 +144,9 @@ export const governanceProposal = onchainTable("governance_proposal", (t) => ({
   timestamp: t.bigint().notNull(),
   description: t.text().notNull(),
   status: t.text().notNull(),           // "active" | "executed" | "defeated" | "canceled"
+}), (table) => ({
+  statusIdx: index().on(table.status),
+  timestampIdx: index().on(table.timestamp),
 }));
 
 export const governanceVote = onchainTable(
