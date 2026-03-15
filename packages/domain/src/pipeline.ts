@@ -115,9 +115,16 @@ export async function runDistributionPipeline(
     votesByDelegate.set(v.voterAccountId, set);
   }
 
+  // Group VP history by accountId once (O(H)) to avoid a per-delegate filter inside the map.
+  const vpByDelegate = new Map<string, typeof vpHistory>();
+  for (const s of vpHistory) {
+    const bucket = vpByDelegate.get(s.accountId);
+    if (bucket) bucket.push(s);
+    else vpByDelegate.set(s.accountId, [s]);
+  }
+
   const delegateScores: DelegateScore[] = activeDelegateArray.map((delegateId) => {
-    const delegateEvents = vpHistory
-      .filter((s) => s.accountId === delegateId)
+    const delegateEvents = (vpByDelegate.get(delegateId) ?? [])
       .map((s) => ({ accountId: s.accountId, balance: s.votingPower, delta: s.delta, timestamp: s.timestamp }));
 
     const initialVP = preMonthByDelegate.get(delegateId)?.votingPower ?? wei(0n);
@@ -159,14 +166,21 @@ export async function runDistributionPipeline(
 
   const delegationByDelegator = new Map(delegations.map((d) => [d.delegatorId, d]));
 
+  // Group balance events by accountId once (O(E)) to avoid a per-delegator filter inside the loop.
+  const balanceEventsByAccount = new Map<string, typeof allBalanceEvents>();
+  for (const e of allBalanceEvents) {
+    const bucket = balanceEventsByAccount.get(e.accountId);
+    if (bucket) bucket.push(e);
+    else balanceEventsByAccount.set(e.accountId, [e]);
+  }
+
   const rawDelegatorScores: DelegatorScore[] = [];
   for (let i = 0; i < delegatorIds.length; i++) {
     const delegatorId = delegatorIds[i];
     const delegation = delegationByDelegator.get(delegatorId);
     if (!delegation) continue;
 
-    const events = allBalanceEvents.filter((e) => e.accountId === delegatorId);
-    const twb = computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initialBalances[i]);
+    const twb = computeTimeWeightedBalance(balanceEventsByAccount.get(delegatorId) ?? [], twbWindowStart, monthEnd, initialBalances[i]);
     rawDelegatorScores.push({ delegatorId, delegateId: delegation.delegateId, timeWeightedBalance: twb });
   }
 
