@@ -12,6 +12,7 @@ import { TransparencyPage } from '@/pages/TransparencyPage'
 const Dashboard1 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard1'))
 const Dashboard2 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard2'))
 const Dashboard3 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard3'))
+const Dashboard4 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard4'))
 
 function LazyFallback() {
   return <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}><Spinner /></div>
@@ -26,6 +27,7 @@ export function Router() {
         <Route path="dashboard-1" element={<Suspense fallback={<LazyFallback />}><Dashboard1 /></Suspense>} />
         <Route path="dashboard-2" element={<Suspense fallback={<LazyFallback />}><Dashboard2 /></Suspense>} />
         <Route path="dashboard-3" element={<Suspense fallback={<LazyFallback />}><Dashboard3 /></Suspense>} />
+        <Route path="dashboard-4" element={<Suspense fallback={<LazyFallback />}><Dashboard4 /></Suspense>} />
         <Route path="delegates" element={<DelegatesPage />} />
         <Route path="rounds" element={<RoundsPage />} />
         <Route path="lottery" element={<LotteryPage />} />
