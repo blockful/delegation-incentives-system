@@ -112,6 +112,15 @@ export interface ComputeResultResponse {
   lotteryPoolCount: number;
 }
 
+export interface DelegateDetail {
+  address: string;
+  ensName: string | null;
+  votingPower: string | null;
+  delegatorCount: number | null;
+  activeSince: string | null;
+  last10ProposalsVoted: boolean[] | null;
+}
+
 export interface ApiError {
   error: string;
 }
