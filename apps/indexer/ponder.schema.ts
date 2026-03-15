@@ -134,6 +134,34 @@ export const ensVotingPowerSnapshot = onchainTable("ens_voting_power_snapshot", 
   accountTimestampIdx: index().on(table.accountId, table.timestamp),
 }));
 
+// ─── ENS Governor tables ─────────────────────────────────────────────────────
+
+export const governanceProposal = onchainTable("governance_proposal", (t) => ({
+  id: t.text().primaryKey(),            // BigInt(proposalId).toString()
+  proposer: t.text().notNull(),         // lowercase 0x address
+  startBlock: t.bigint().notNull(),
+  endBlock: t.bigint().notNull(),
+  timestamp: t.bigint().notNull(),
+  description: t.text().notNull(),
+  status: t.text().notNull(),           // "active" | "executed" | "defeated" | "canceled"
+}));
+
+export const governanceVote = onchainTable(
+  "governance_vote",
+  (t) => ({
+    id: t.text().primaryKey(),          // "${proposalId}-${voter}"
+    proposalId: t.text().notNull(),     // decimal string
+    voter: t.text().notNull(),          // lowercase 0x address
+    support: t.integer().notNull(),     // 0=Against, 1=For, 2=Abstain
+    weight: t.numeric({ precision: 78, scale: 0 }).notNull(),
+    timestamp: t.bigint().notNull(),
+  }),
+  (table) => ({
+    proposalIdIdx: index().on(table.proposalId),
+    voterIdx: index().on(table.voter),
+  }),
+);
+
 // ─── Protocol mapping (output for backend deduplication) ────────────────────
 
 export const protocolMapping = onchainTable("protocol_mapping", (t) => ({
