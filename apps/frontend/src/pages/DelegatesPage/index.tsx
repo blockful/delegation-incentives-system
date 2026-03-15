@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
 import { DelegateCard } from './components/DelegateCard'
-import { SortControls, type SortOption } from './components/SortControls'
+import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
 import type { DelegateDetail } from '@/api/types'
 
@@ -72,15 +72,39 @@ function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
   return copy
 }
 
+function activityScore(d: DelegateDetail): number {
+  if (!d.last10ProposalsVoted) return 0
+  return d.last10ProposalsVoted.filter(Boolean).length
+}
+
 export function DelegatesPage() {
   const { data, loading, error, count } = useDelegates()
-  const [sort, setSort] = useState<SortOption>('votingPower')
+  const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
+  const [shuffleSeed, setShuffleSeed] = useState(0)
+
+  const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
 
   const delegates = useMemo(() => {
     if (!data) return null
-    if (sort === 'random') return shuffled(data)
-    return data
-  }, [data, sort])
+
+    if (sort.field === 'random') return shuffled(data)
+
+    const sorted = [...data]
+    const dir = sort.direction === 'desc' ? -1 : 1
+
+    if (sort.field === 'votingPower') {
+      sorted.sort((a, b) => {
+        const aVp = Number(a.votingPower ?? '0')
+        const bVp = Number(b.votingPower ?? '0')
+        return (aVp - bVp) * dir
+      })
+    } else if (sort.field === 'activity') {
+      sorted.sort((a, b) => (activityScore(a) - activityScore(b)) * dir)
+    }
+
+    return sorted
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, sort, shuffleSeed])
 
   return (
     <Page>
@@ -95,7 +119,7 @@ export function DelegatesPage() {
 
       <StatsBar activeDelegates={count} />
 
-      <SortControls value={sort} onChange={setSort} />
+      <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
 
       {loading && (
         <LoadingWrapper>
