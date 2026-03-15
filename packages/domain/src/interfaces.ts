@@ -33,10 +33,15 @@ export interface VotingPowerRepository {
     to: Seconds,
   ): Promise<VotingPowerSnapshot[]>;
 
-  /** Get the total active delegated voting power at a point in time */
+  /**
+   * Get the aggregate time-weighted average voting power for the given delegates
+   * over the window [from, to]. Each delegate's TWAP is computed independently
+   * then summed.
+   */
   getAggregateDelegatedPower(
     activeDelegateIds: string[],
-    at: Seconds,
+    from: Seconds,
+    to: Seconds,
   ): Promise<Wei>;
 
   /** Get the current voting power for specific accounts */

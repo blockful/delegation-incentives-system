@@ -24,4 +24,5 @@ export * from "./pipeline.js";
 export * from "./util/bigint-math.js";
 export * from "./util/invariant.js";
 export * from "./util/time.js";
+export * from "./util/twap.js";
 

@@ -83,14 +83,19 @@ describe("Distribution Pipeline Integration", () => {
       ), // 5/10 - inactive
     ];
 
-    // VP snapshots for both months (20% growth)
+    // VP snapshots placed so each is the base VP for its 30-day AVP window.
+    // AVP windows: [monthEnd - 30d, monthEnd] and [prevMonthEnd - 30d, prevMonthEnd].
+    //
+    // "prev" snapshots: 31 days before prevMonthEnd → just outside the prev window,
+    //   becomes base VP for the entire prev window → TWAP = 5000.
+    // "current" snapshots: 1 second after prevMonthEnd → after the prev window closes,
+    //   and also before the current window start (monthEnd - 30d ≈ March 1 end vs Feb 28 end + 1s)
+    //   → TWAP = 6000 for the entire current window → 20% MoM growth.
     const vpSnapshots: VotingPowerSnapshot[] = [
-      // Previous month values
-      makeVPSnapshot("delegate-A", 5000n, (PREV_MONTH_END as bigint) - 86400n),
-      makeVPSnapshot("delegate-B", 5000n, (PREV_MONTH_END as bigint) - 86400n),
-      // Current month values (20% growth: 12000 from 10000)
-      makeVPSnapshot("delegate-A", 6000n, (MONTH_START as bigint) + 1n),
-      makeVPSnapshot("delegate-B", 6000n, (MONTH_START as bigint) + 1n),
+      makeVPSnapshot("delegate-A", 5000n, (PREV_MONTH_END as bigint) - 31n * 86400n),
+      makeVPSnapshot("delegate-B", 5000n, (PREV_MONTH_END as bigint) - 31n * 86400n),
+      makeVPSnapshot("delegate-A", 6000n, (PREV_MONTH_END as bigint) + 1n),
+      makeVPSnapshot("delegate-B", 6000n, (PREV_MONTH_END as bigint) + 1n),
     ];
 
     // 4 delegators with varying balances
@@ -218,8 +223,8 @@ describe("Distribution Pipeline Integration", () => {
       proposals.slice(0, 7).map((p) => p.id),
     );
     const vpSnapshots = [
-      makeVPSnapshot("delegate-A", 5000n, (PREV_MONTH_END as bigint) - 86400n),
-      makeVPSnapshot("delegate-A", 6000n, (MONTH_START as bigint) + 1n),
+      makeVPSnapshot("delegate-A", 5000n, (PREV_MONTH_END as bigint) - 31n * 86400n),
+      makeVPSnapshot("delegate-A", 6000n, (PREV_MONTH_END as bigint) + 1n),
     ];
     const delegations: Delegation[] = [
       {
