@@ -75,6 +75,22 @@ export const ActiveDelegatesSchema = z.object({
   delegates: z.array(z.string()),
 }).openapi("ActiveDelegates")
 
+export const DelegateDetailSchema = z.object({
+  address: z.string(),
+  ensName: z.string().nullable(),
+  votingPower: z.string().nullable().openapi({ description: "Voting power in wei" }),
+  delegatorCount: z.number().nullable(),
+  activeSince: z.string().nullable().openapi({ description: "ISO date of first delegation received" }),
+  last10ProposalsVoted: z.array(z.boolean()).nullable().openapi({
+    description: "Array of 10 booleans, true = delegate voted on that proposal",
+  }),
+}).openapi("DelegateDetail")
+
+export const ActiveDelegatesDetailSchema = z.object({
+  count: z.number(),
+  delegates: z.array(DelegateDetailSchema),
+}).openapi("ActiveDelegatesDetail")
+
 export const EligibilitySchema = z.object({
   address: z.string(),
   isActiveDelegate: z.boolean(),

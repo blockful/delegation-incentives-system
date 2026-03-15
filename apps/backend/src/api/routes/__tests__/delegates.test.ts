@@ -8,8 +8,6 @@ vi.mock("../../data-source.js", () => ({
 
 import { buildDataSource } from "../../data-source.js"
 
-// Minimal proposals/votes that produce two active delegates
-// (voted on at least 7 out of 10 proposals)
 const makeProposals = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
     id: `${i + 1}`,
@@ -40,6 +38,21 @@ const mockDataSource = {
   votes: {
     getVotesForProposals: vi.fn(),
   },
+  votingPower: {
+    getVotingPower: vi.fn().mockResolvedValue(
+      new Map([
+        [DELEGATE_A, wei(500n * 10n ** 18n)],
+        [DELEGATE_B, wei(300n * 10n ** 18n)],
+      ]),
+    ),
+  },
+  delegations: {
+    getActiveDelegations: vi.fn().mockResolvedValue([
+      { delegatorId: "0x1111", delegate: DELEGATE_A },
+      { delegatorId: "0x2222", delegate: DELEGATE_A },
+      { delegatorId: "0x3333", delegate: DELEGATE_B },
+    ]),
+  },
 }
 
 beforeEach(() => {
@@ -66,8 +79,39 @@ describe("GET /delegates/active", () => {
     const res = await delegatesRouter.fetch(req)
     const body = await res.json()
     expect(body.count).toBe(2)
-    expect(body.delegates).toContain(DELEGATE_A)
-    expect(body.delegates).toContain(DELEGATE_B)
+    expect(body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)).toBeDefined()
+    expect(body.delegates.find((d: { address: string }) => d.address === DELEGATE_B)).toBeDefined()
+  })
+
+  it("returns delegate objects with address and votingPower", async () => {
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(delegateA).toBeDefined()
+    expect(typeof delegateA.votingPower).toBe("string")
+    expect(delegateA.ensName).toBeNull()
+    expect(delegateA.activeSince).toBeNull()
+  })
+
+  it("returns delegatorCount per delegate", async () => {
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    const delegateB = body.delegates.find((d: { address: string }) => d.address === DELEGATE_B)
+    expect(delegateA.delegatorCount).toBe(2)
+    expect(delegateB.delegatorCount).toBe(1)
+  })
+
+  it("returns last10ProposalsVoted as array of booleans", async () => {
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(Array.isArray(delegateA.last10ProposalsVoted)).toBe(true)
+    expect(delegateA.last10ProposalsVoted).toHaveLength(10)
+    expect(delegateA.last10ProposalsVoted.every((v: boolean) => v === true)).toBe(true)
   })
 
   it("returns 500 on error", async () => {
