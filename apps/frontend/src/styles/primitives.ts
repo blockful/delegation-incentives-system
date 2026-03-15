@@ -41,8 +41,9 @@ export const SectionHeading = styled.h2`
 `
 
 export const SectionSubheading = styled.p`
-  font-size: ${tokens.font.size.md};
-  line-height: 1.7;
+  font-family: ${tokens.font.serif};
+  font-size: ${tokens.font.size.lg};
+  line-height: 1.6;
   color: ${tokens.color.textMuted};
   margin: 0;
 `

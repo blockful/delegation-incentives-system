@@ -51,8 +51,9 @@ const Heading = styled.h2`
 `
 
 const Description = styled.p`
-  font-size: 15px;
-  line-height: 1.7;
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-size: 17px;
+  line-height: 1.6;
   color: #4A5C63;
   margin: 0;
 `

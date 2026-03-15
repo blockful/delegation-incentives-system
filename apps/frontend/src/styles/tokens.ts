@@ -51,6 +51,8 @@ export const tokens = {
 
   font: {
     family: "'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    serif: "'EB Garamond', 'Georgia', serif",
+    mono: "'Satoshi', monospace",
     size: {
       xs: '11px',
       sm: '12px',

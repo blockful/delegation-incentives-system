@@ -1,4 +1,5 @@
 export { tokens } from './tokens'
+export { GlobalStyles } from './GlobalStyles'
 export {
   Eyebrow,
   PageTitle,

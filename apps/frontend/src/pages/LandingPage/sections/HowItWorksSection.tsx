@@ -77,8 +77,9 @@ const StepTitle = styled.h3`
 `
 
 const StepDesc = styled.p`
-  font-size: 14px;
-  line-height: 1.7;
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-size: 16px;
+  line-height: 1.55;
   color: #4A5C63;
   margin: 0;
 `

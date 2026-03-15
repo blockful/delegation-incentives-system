@@ -57,7 +57,8 @@ const ApyValue = styled.span`
 `
 
 const Subtitle = styled.p`
-  font-size: 16px;
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-size: 18px;
   line-height: 1.6;
   color: #CEE1E8;
   max-width: 440px;
@@ -65,7 +66,7 @@ const Subtitle = styled.p`
   opacity: 0.8;
 
   @media (min-width: 768px) {
-    font-size: 17px;
+    font-size: 20px;
   }
 `
 

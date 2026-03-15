@@ -30,12 +30,13 @@ const Heading = styled.h2`
 `
 
 const Subtitle = styled.p`
-  font-size: 16px;
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-size: 19px;
   color: #CEE1E8;
   opacity: 0.7;
   margin: 0 auto 40px;
   max-width: 400px;
-  line-height: 1.6;
+  line-height: 1.5;
 `
 
 const Actions = styled.div`
