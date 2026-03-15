@@ -74,8 +74,8 @@ const LiveDot = styled.span`
   display: inline-block;
 `
 
-const GrowthValue = styled.span`
-  color: #1a9a5c;
+const GrowthValue = styled.span<{ $negative?: boolean }>`
+  color: ${({ $negative }) => ($negative ? '#C6301B' : '#1a9a5c')};
   font-weight: 700;
 `
 
@@ -90,6 +90,10 @@ export function RoundStatusBar({
   currentTierIndex,
   poolSizeEns,
 }: RoundStatusBarProps) {
+  const growthNum = parseFloat(currentGrowthPct)
+  const isNegative = growthNum < 0
+  const growthPrefix = isNegative ? '' : '+'
+
   return (
     <Wrapper>
       <Pills>
@@ -109,7 +113,9 @@ export function RoundStatusBar({
         </InfoCell>
         <InfoCell>
           <InfoValue>
-            <GrowthValue>+{currentGrowthPct}%</GrowthValue>
+            <GrowthValue $negative={isNegative}>
+                {growthPrefix}{currentGrowthPct}%
+            </GrowthValue>
           </InfoValue>
           <InfoLabel>active VP growth</InfoLabel>
         </InfoCell>
