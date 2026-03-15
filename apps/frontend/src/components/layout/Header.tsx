@@ -1,7 +1,7 @@
 import { NavLink, Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
-import { useAccount, useEnsName, useDisconnect } from 'wagmi'
+import { useAccount, useEnsName } from 'wagmi'
 import { appKit } from '@/app/providers/AppKitProvider'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
@@ -95,11 +95,10 @@ const navItems = [
 
 function ConnectedAccount({ address }: { address: `0x${string}` }) {
   const { data: ensName } = useEnsName({ address })
-  const { disconnect } = useDisconnect()
   const displayName = ensName ?? truncateAddress(address)
 
   return (
-    <AccountPill onClick={() => disconnect()}>
+    <AccountPill onClick={() => appKit.open()}>
       <EnsAvatar address={address} name={ensName ?? undefined} size={24} />
       {displayName}
     </AccountPill>
