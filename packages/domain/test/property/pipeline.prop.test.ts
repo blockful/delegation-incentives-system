@@ -427,6 +427,24 @@ describe("pipeline property tests", () => {
     );
   });
 
+  it("no address appears more than once per role in directPayouts", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        const delegateAddresses = result.directPayouts
+          .filter((p) => p.role === "delegate")
+          .map((p) => p.address);
+        const delegatorAddresses = result.directPayouts
+          .filter((p) => p.role === "delegator")
+          .map((p) => p.address);
+        // Each address should appear at most once per role
+        expect(delegateAddresses.length).toBe(new Set(delegateAddresses).size);
+        expect(delegatorAddresses.length).toBe(new Set(delegatorAddresses).size);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
   it("metadata counts match actual payout sets", async () => {
     await fc.assert(
       fc.asyncProperty(scenarioArb, async (scenario) => {
