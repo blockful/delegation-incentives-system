@@ -1,0 +1,112 @@
+import styled from 'styled-components'
+import { Button } from '@ensdomains/thorin'
+
+const Section = styled.section`
+  background: #121218;
+  padding: 64px 20px;
+  text-align: center;
+
+  @media (min-width: 768px) {
+    padding: 96px 40px;
+  }
+`
+
+const Heading = styled.h2`
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+  margin: 0 0 16px;
+
+  @media (min-width: 768px) {
+    font-size: 40px;
+  }
+`
+
+const Subtitle = styled.p`
+  font-size: 16px;
+  line-height: 1.5;
+  color: #a0a0ab;
+  margin: 0 auto 32px;
+  max-width: 420px;
+`
+
+const Actions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+  margin: 0 auto 40px;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: center;
+    max-width: 500px;
+  }
+`
+
+const Checks = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 400px;
+  margin: 0 auto;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    gap: 24px;
+    max-width: none;
+    justify-content: center;
+  }
+`
+
+const Check = styled.span`
+  font-size: 14px;
+  color: #a0a0ab;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const CheckMark = styled.span`
+  color: #1a9a5c;
+  font-size: 16px;
+`
+
+const checkItems = [
+  'Gas sponsored via delegateBySig',
+  'No tokens locked \u2014 delegate anytime',
+  'Rewards sent automatically',
+]
+
+export function CtaSection() {
+  return (
+    <Section data-testid="cta-section">
+      <Heading>
+        Earn ENS rewards.
+        <br />
+        Strengthen governance.
+      </Heading>
+      <Subtitle>
+        Delegate in under a minute. Gas is sponsored. Rewards are automatic.
+      </Subtitle>
+      <Actions>
+        <Button as="a" href="/delegates" colorStyle="bluePrimary">
+          Delegate to an Active Delegate &rarr;
+        </Button>
+        <Button as="a" href="/rounds" colorStyle="blueSecondary">
+          View Live Round Progress
+        </Button>
+      </Actions>
+      <Checks>
+        {checkItems.map((item) => (
+          <Check key={item}>
+            <CheckMark>&#x2714;</CheckMark>
+            {item}
+          </Check>
+        ))}
+      </Checks>
+    </Section>
+  )
+}

@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { LandingPage } from '@/pages/LandingPage'
 
 function Placeholder({ name }: { name: string }) {
   return <h1>{name}</h1>
@@ -9,7 +10,7 @@ export function Router() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<Placeholder name="Landing" />} />
+        <Route index element={<LandingPage />} />
         <Route path="dashboard" element={<Placeholder name="Dashboard" />} />
         <Route path="delegates" element={<Placeholder name="Active Delegates" />} />
         <Route path="rounds" element={<Placeholder name="Rounds" />} />
