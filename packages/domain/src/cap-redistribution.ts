@@ -17,17 +17,21 @@ export function allocateWithCap(
 ): AllocationResult[] {
   if (inputs.length === 0) return [];
 
-  const totalWeight = sum(inputs.map((i) => i.weight));
-  if (totalWeight === 0n)
+  // Zero-weight recipients can never earn a reward — exclude them from all
+  // redistribution rounds and from dust assignment. They get 0 unconditionally.
+  const nonZeroInputs = inputs.filter((i) => i.weight > 0n);
+  if (nonZeroInputs.length === 0)
     return inputs.map((i) => ({ id: i.id, amount: wei(0n) }));
 
   // Track final amounts for capped recipients
   const capped = new Map<string, bigint>();
   let remainingPool = totalPool;
-  let activeInputs = [...inputs];
+  let activeInputs = [...nonZeroInputs];
+
+  const nonZeroIds = new Set(nonZeroInputs.map((i) => i.id));
 
   // Iterative redistribution
-  for (let iteration = 0; iteration <= inputs.length; iteration++) {
+  for (let iteration = 0; iteration <= nonZeroInputs.length; iteration++) {
     if (activeInputs.length === 0) break;
 
     const activeWeight = sum(activeInputs.map((i) => i.weight));
@@ -79,9 +83,9 @@ export function allocateWithCap(
   const dust = totalPool - distributed;
 
   if (dust > 0n && allocations.length > 0) {
-    // Find recipients that still have room under cap, sorted by amount desc then id asc
+    // Find non-zero-weight recipients that still have room under cap, sorted by amount desc then id asc
     const eligible = allocations
-      .filter((a) => a.amount < perRecipientCap)
+      .filter((a) => nonZeroIds.has(a.id) && a.amount < perRecipientCap)
       .sort((a, b) => {
         const diff = b.amount - a.amount;
         if (diff !== 0n) return diff > 0n ? 1 : -1;
