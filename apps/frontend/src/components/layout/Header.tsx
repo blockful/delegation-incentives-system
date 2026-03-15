@@ -18,7 +18,7 @@ const StyledHeader = styled.header`
 const Brand = styled(Link)`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
   color: inherit;
 `
@@ -70,8 +70,8 @@ const AccountPill = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px 6px 6px;
-  border-radius: 24px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 20px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: transparent;
   cursor: pointer;

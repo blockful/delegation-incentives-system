@@ -19,7 +19,7 @@ interface EarningsCardProps {
 const Card = styled.div`
   border-radius: 20px;
   background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f0 100%);
-  padding: 28px 24px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -76,7 +76,7 @@ const Pill = styled.div`
   gap: 6px;
   background: rgba(0, 0, 0, 0.05);
   border-radius: 20px;
-  padding: 6px 12px 6px 6px;
+  padding: 8px 12px 8px 8px;
   font-size: 13px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text};

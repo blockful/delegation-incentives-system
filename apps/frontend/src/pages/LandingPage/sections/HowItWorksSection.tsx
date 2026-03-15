@@ -72,7 +72,7 @@ const Card = styled.div`
 const CardIcon = styled.div<{ $bg: string }>`
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: ${({ $bg }) => $bg};
   display: flex;
   align-items: center;
@@ -111,7 +111,7 @@ const CardTag = styled.span<{ $color: string; $bg: string }>`
   color: ${({ $color }) => $color};
   background: ${({ $bg }) => $bg};
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
 `
 
 const Actions = styled.div`

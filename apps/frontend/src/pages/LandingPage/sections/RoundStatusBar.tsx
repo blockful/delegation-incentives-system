@@ -49,7 +49,7 @@ const InfoBar = styled.div`
 `
 
 const InfoCell = styled.div`
-  padding: 14px 16px;
+  padding: 16px;
   text-align: center;
 
   &:not(:last-child) {

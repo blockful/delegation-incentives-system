@@ -16,7 +16,7 @@ const Section = styled.section`
   text-align: center;
 
   @media (min-width: 768px) {
-    padding: 80px 40px 60px;
+    padding: 80px 40px 64px;
   }
 `
 

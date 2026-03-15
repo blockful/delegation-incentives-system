@@ -81,7 +81,7 @@ const Stat = styled.div`
 `
 
 const StatLabel = styled.span`
-  font-size: 11px;
+  font-size: 12px;
   color: ${({ theme }) => theme.colors.textTertiary};
   text-transform: uppercase;
 `

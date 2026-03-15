@@ -14,7 +14,7 @@ const Section = styled.section`
     padding: 80px 40px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 60px;
+    gap: 64px;
     align-items: start;
     max-width: 1200px;
     margin: 0 auto;
@@ -48,7 +48,7 @@ const Description = styled.p`
   font-size: 15px;
   line-height: 1.6;
   color: #4A5C63;
-  margin: 0 0 28px;
+  margin: 0 0 32px;
 `
 
 const ShareButton = styled(Button)`
@@ -68,12 +68,12 @@ const TierRow = styled.div<{ $isCurrent: boolean }>`
   display: grid;
   grid-template-columns: 80px 1fr auto;
   align-items: center;
-  padding: 14px 16px;
+  padding: 16px;
   gap: 12px;
   border-bottom: 1px solid #E5E5E5;
   background: ${({ $isCurrent }) =>
     $isCurrent ? 'rgba(0, 124, 35, 0.08)' : 'transparent'};
-  border-radius: ${({ $isCurrent }) => ($isCurrent ? '10px' : '0')};
+  border-radius: ${({ $isCurrent }) => ($isCurrent ? '12px' : '0')};
   opacity: ${({ $isCurrent }) => ($isCurrent ? 1 : 0.85)};
 `
 

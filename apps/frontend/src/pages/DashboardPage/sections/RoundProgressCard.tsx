@@ -38,14 +38,14 @@ const Title = styled.span`
 
 const ProgressTrack = styled.div`
   height: 6px;
-  border-radius: 3px;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.06);
   overflow: hidden;
 `
 
 const ProgressFill = styled.div<{ $pct: number }>`
   height: 100%;
-  border-radius: 3px;
+  border-radius: 4px;
   background: #007C23;
   width: ${({ $pct }) => Math.min($pct, 100)}%;
   transition: width 0.3s ease;
