@@ -10,6 +10,7 @@ import {
   monthEndTimestamp,
   previousMonth,
   currentMonth,
+  basisPoints,
 } from "@ens-dis/domain"
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -48,7 +49,11 @@ export async function fetchMonthContext(
         ])
       : [wei(0n), wei(0n)]
 
-  const poolTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS)
+  // Bootstrap guard: same logic as pipeline.ts — if previousAVP is 0 (first program
+  // month), percentageGrowthBps returns 100% which would select tier 6. Force tier 0
+  // so the dashboard matches what the actual distribution will produce.
+  const poolTier =
+    previousAVP === 0n ? POOL_TIERS[0] : determinePoolTier(currentAVP, previousAVP, POOL_TIERS)
   const currentTierIndex = POOL_TIERS.findIndex(
     (t) => t.momGrowthMinBps === poolTier.momGrowthMinBps && t.momGrowthMaxBps === poolTier.momGrowthMaxBps,
   )
