@@ -10,6 +10,8 @@ import { EarningsCard } from './sections/EarningsCard'
 import { RoundDetailsSection } from './sections/RoundDetailsSection'
 import { RoundProgressCard } from './sections/RoundProgressCard'
 import { LotteryStatusCard } from './sections/LotteryStatusCard'
+import { TierProgressionCard } from './sections/TierProgressionCard'
+import type { TierEntry } from '@/api/types'
 
 const Page = styled.div`
   max-width: 1040px;
@@ -88,8 +90,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   if (!apy.data || !tiers.data || !round.data) return null
 
   const currentTierIndex = tiers.data.currentTierIndex
-  const currentTier = tiers.data.tiers[currentTierIndex]
-  const nextTier = tiers.data.tiers[currentTierIndex + 1]
+  const allTiers = tiers.data.tiers
   const delegatedTo = (apy.data.delegatedTo ?? address) as `0x${string}`
   const delegateEnsName = apy.data.delegatedToEnsName ?? undefined
   const roundNumber = round.data.roundNumber
@@ -98,7 +99,6 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   const roundEndDate = new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const percentComplete = round.data.percentComplete
 
-  // Determine if user qualifies for lottery (reward < 1 ENS)
   const estimatedReward = parseFloat(apy.data.estimatedMonthlyRewardEns)
   const qualifiesForLottery = estimatedReward > 0 && estimatedReward < 1
 
@@ -123,18 +123,23 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
             balanceEns={formatBalanceWhole(apy.data.currentBalanceEns)}
             roundEnds={timeLeft}
             roundEndDate={roundEndDate}
-            nextTierApyPct={nextTier?.estimatedApyPct}
-            nextTierVpNeeded={nextTier?.additionalVPNeeded}
-            currentTierIndex={currentTierIndex}
-            totalTiers={tiers.data.tiers.length}
+            expectedPayout={apy.data.estimatedMonthlyRewardEns}
           />
           <RoundProgressCard
             roundNumber={roundNumber}
             percentComplete={percentComplete}
           />
-          <LotteryStatusCard qualifies={qualifiesForLottery} />
+          {qualifiesForLottery && (
+            <LotteryStatusCard
+              expectedPayout={apy.data.estimatedMonthlyRewardEns}
+            />
+          )}
         </RightColumn>
       </Grid>
+      <TierProgressionCard
+        tiers={allTiers}
+        currentTierIndex={currentTierIndex}
+      />
     </Page>
   )
 }

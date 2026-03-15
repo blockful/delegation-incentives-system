@@ -5,10 +5,7 @@ interface RoundDetailsSectionProps {
   balanceEns: string
   roundEnds: string
   roundEndDate: string
-  nextTierApyPct?: string
-  nextTierVpNeeded?: string
-  currentTierIndex: number
-  totalTiers: number
+  expectedPayout: string
 }
 
 const Grid = styled.div`
@@ -43,40 +40,31 @@ const StatValue = styled.span`
   color: ${tokens.color.text};
 `
 
+const PayoutValue = styled.span`
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positive};
+`
+
 const StatHint = styled.span`
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.textFaint};
 `
 
-const AccentHint = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.accent};
-  font-weight: ${tokens.font.weight.medium};
-`
-
-function formatVpNeeded(vpWei: string): string {
-  const num = Number(vpWei) / 1e18
-  if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`
-  }
-  if (num >= 1_000) {
-    return `${Math.round(num / 1_000)}K`
-  }
-  return Math.round(num).toString()
+function formatPayout(ens: string): string {
+  const num = parseFloat(ens)
+  if (isNaN(num) || num === 0) return '0'
+  if (num < 0.01) return '<0.01'
+  if (num < 1) return num.toFixed(2)
+  return num.toFixed(2)
 }
 
 export function RoundDetailsSection({
   balanceEns,
   roundEnds,
   roundEndDate,
-  nextTierApyPct,
-  nextTierVpNeeded,
-  currentTierIndex,
-  totalTiers,
+  expectedPayout,
 }: RoundDetailsSectionProps) {
-  const isMaxTier = currentTierIndex >= totalTiers - 1
-  const hasNextTierData = nextTierApyPct && nextTierVpNeeded
-
   return (
     <Grid>
       <StatCell>
@@ -90,23 +78,9 @@ export function RoundDetailsSection({
         <StatHint>{roundEndDate}</StatHint>
       </StatCell>
       <StatCell>
-        <StatLabel>Next Tier</StatLabel>
-        {isMaxTier ? (
-          <>
-            <StatValue>Max</StatValue>
-            <AccentHint>Tier {totalTiers} reached</AccentHint>
-          </>
-        ) : hasNextTierData ? (
-          <>
-            <StatValue>{nextTierApyPct}%</StatValue>
-            <AccentHint>+{formatVpNeeded(nextTierVpNeeded)} VP needed</AccentHint>
-          </>
-        ) : (
-          <>
-            <StatValue>Tier {currentTierIndex + 2}</StatValue>
-            <StatHint>Delegate more to unlock</StatHint>
-          </>
-        )}
+        <StatLabel>Payout</StatLabel>
+        <PayoutValue>+{formatPayout(expectedPayout)}</PayoutValue>
+        <StatHint>ENS this round</StatHint>
       </StatCell>
     </Grid>
   )

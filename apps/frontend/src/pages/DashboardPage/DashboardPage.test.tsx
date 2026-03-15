@@ -19,7 +19,7 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Your Earnings')).toBeInTheDocument()
     })
-    expect(screen.getByText(/\+16\.35/)).toBeInTheDocument()
+    expect(screen.getAllByText(/\+16\.35/).length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows APY data', async () => {

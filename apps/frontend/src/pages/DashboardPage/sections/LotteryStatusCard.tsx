@@ -3,36 +3,34 @@ import styled from 'styled-components'
 import { tokens } from '@/styles/tokens'
 
 interface LotteryStatusCardProps {
-  qualifies: boolean
+  expectedPayout: string
 }
 
 const CardLink = styled(Link)`
   display: flex;
-  align-items: center;
   gap: ${tokens.spacing.lg};
   padding: ${tokens.spacing.xl};
-  border: 1px solid ${tokens.color.border};
+  border: 1px solid ${tokens.color.lightYellow};
   border-radius: ${tokens.radius.lg};
   text-decoration: none;
   color: inherit;
+  background: linear-gradient(135deg, rgba(255, 247, 47, 0.04) 0%, ${tokens.color.surface} 100%);
   transition:
     border-color ${tokens.transition.fast},
     box-shadow ${tokens.transition.base},
     transform ${tokens.transition.base};
-  background: ${tokens.color.surface};
 
   &:hover {
-    border-color: ${tokens.color.gray3};
     box-shadow: ${tokens.shadow.md};
     transform: translateY(-1px);
   }
 `
 
-const IconCircle = styled.div<{ $active: boolean }>`
+const IconCircle = styled.div`
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: ${({ $active }) => ($active ? tokens.color.lightYellow : tokens.color.surfaceAlt)};
+  background: ${tokens.color.lightYellow};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,39 +57,29 @@ const Detail = styled.span`
   line-height: 1.4;
 `
 
-const StatusBadge = styled.span<{ $active: boolean }>`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${({ $active }) => ($active ? tokens.color.positive : tokens.color.textMuted)};
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-`
-
 const Chevron = styled.span`
   font-size: ${tokens.font.size.xl};
   color: ${tokens.color.textFaint};
+  align-self: center;
   transition: transform ${tokens.transition.fast};
 `
 
-export function LotteryStatusCard({ qualifies }: LotteryStatusCardProps) {
+function formatPayout(ens: string): string {
+  const num = parseFloat(ens)
+  if (isNaN(num) || num === 0) return '0'
+  return num.toFixed(4)
+}
+
+export function LotteryStatusCard({ expectedPayout }: LotteryStatusCardProps) {
   return (
     <CardLink to="/lottery">
-      <IconCircle $active={qualifies}>
-        {qualifies ? '🎟️' : '🎲'}
-      </IconCircle>
+      <IconCircle aria-hidden>🎟️</IconCircle>
       <Content>
-        <Title>
-          {qualifies ? 'You\'re in the lottery' : 'Lottery'}
-        </Title>
+        <Title>Your {formatPayout(expectedPayout)} ENS enters the lottery</Title>
         <Detail>
-          {qualifies
-            ? 'Your payout is below 1 ENS, so it enters a 10 ENS prize pool drawn at round end.'
-            : 'Payouts below 1 ENS are pooled into a 10 ENS lottery prize. Learn how it works.'
-          }
+          Payouts below 1 ENS are pooled into a 10 ENS prize, drawn at round end. Learn more &rarr;
         </Detail>
       </Content>
-      {qualifies && <StatusBadge $active>Eligible</StatusBadge>}
       <Chevron aria-hidden>&rsaquo;</Chevron>
     </CardLink>
   )
