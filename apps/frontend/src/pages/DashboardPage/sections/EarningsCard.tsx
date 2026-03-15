@@ -2,6 +2,7 @@ import styled from 'styled-components'
 import { Button, Tag } from '@ensdomains/thorin'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
+import { useStreamingCounter } from '@/hooks/useStreamingCounter'
 
 interface EarningsCardProps {
   earnedEns: string
@@ -31,13 +32,15 @@ const Label = styled.span`
 `
 
 const EarnedAmount = styled.span`
-  font-size: 48px;
+  font-size: 36px;
   font-weight: 800;
   color: #49b365;
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 
   @media (min-width: 768px) {
-    font-size: 64px;
+    font-size: 48px;
   }
 `
 
@@ -103,11 +106,12 @@ export function EarningsCard({
 }: EarningsCardProps) {
   const displayName = delegateEnsName ?? truncateAddress(delegatedTo)
   const tierLabel = `Tier ${tierIndex + 1}`
+  const streamingEarnings = useStreamingCounter(earnedEns)
 
   return (
     <Card>
       <Label>Your Earnings</Label>
-      <EarnedAmount>+{earnedEns}</EarnedAmount>
+      <EarnedAmount>+{streamingEarnings}</EarnedAmount>
       <Subtitle>ENS earned so far</Subtitle>
 
       <ApyRow>
