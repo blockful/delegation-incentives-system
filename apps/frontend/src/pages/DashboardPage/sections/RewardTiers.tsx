@@ -2,43 +2,41 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { tokens } from '@/styles/tokens'
+import { fadeInUp } from '@/styles/primitives'
+import { formatPool, formatPayout, formatVpNeeded, computeVpProgress, projectPayout } from '@/utils/dashboard'
 import type { TierEntry } from '@/api/types'
 
-interface TierTableProps {
+interface RewardTiersProps {
   tiers: TierEntry[]
   currentTierIndex: number
   userEstimatedReward: string
 }
 
-const Wrapper = styled.div`
+const Section = styled.section`
   border: 1px solid ${tokens.color.border};
   border-radius: ${tokens.radius.lg};
   overflow: hidden;
   background: ${tokens.color.surface};
+  animation: ${fadeInUp} 0.35s ease 0.1s both;
 `
 
 const Header = styled.div`
-  padding: ${tokens.spacing.xl} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   border-bottom: 1px solid ${tokens.color.border};
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']};
-  }
 `
 
-const HeaderTitle = styled.div`
-  font-size: ${tokens.font.size.lg};
+const Title = styled.h2`
+  font-size: ${tokens.font.size.md};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.text};
-  margin-bottom: 2px;
+  margin: 0 0 2px;
 `
 
-const HeaderSub = styled.div`
+const Subtitle = styled.p`
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.textMuted};
+  margin: 0;
 `
-
-/* ─── Table ─── */
 
 const Table = styled.div`
   width: 100%;
@@ -46,33 +44,32 @@ const Table = styled.div`
 
 const TableHead = styled.div`
   display: grid;
-  grid-template-columns: 72px 1fr 80px 80px;
+  grid-template-columns: 56px 1fr 56px 72px;
   padding: ${tokens.spacing.sm} ${tokens.spacing.xl};
-  border-bottom: 1px solid ${tokens.color.border};
   background: ${tokens.color.surfaceAlt};
+  border-bottom: 1px solid ${tokens.color.border};
 
   @media (min-width: 768px) {
-    grid-template-columns: 90px 1fr 100px 100px;
-    padding: ${tokens.spacing.sm} ${tokens.spacing['2xl']};
+    grid-template-columns: 72px 1fr 72px 90px;
   }
 `
 
 const Th = styled.span<{ $align?: 'right' }>`
-  font-size: ${tokens.font.size.xs};
+  font-size: 10px;
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${tokens.color.textMuted};
+  letter-spacing: 0.1em;
+  color: ${tokens.color.textFaint};
   text-align: ${({ $align }) => $align ?? 'left'};
 `
 
 const Row = styled.div<{ $isCurrent: boolean }>`
   display: grid;
-  grid-template-columns: 72px 1fr 80px 80px;
+  grid-template-columns: 56px 1fr 56px 72px;
   align-items: center;
   padding: ${tokens.spacing.md} ${tokens.spacing.xl};
   background: ${({ $isCurrent }) =>
-    $isCurrent ? 'rgba(0, 128, 188, 0.05)' : 'transparent'};
+    $isCurrent ? 'rgba(0, 128, 188, 0.04)' : 'transparent'};
   border-left: 3px solid ${({ $isCurrent }) =>
     $isCurrent ? tokens.color.accent : 'transparent'};
   transition: background ${tokens.transition.fast};
@@ -82,13 +79,12 @@ const Row = styled.div<{ $isCurrent: boolean }>`
   }
 
   @media (min-width: 768px) {
-    grid-template-columns: 90px 1fr 100px 100px;
-    padding: ${tokens.spacing.md} ${tokens.spacing['2xl']};
+    grid-template-columns: 72px 1fr 72px 90px;
   }
 `
 
 const TierCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${({ $isCurrent }) =>
     $isCurrent ? tokens.font.weight.bold : tokens.font.weight.medium};
   color: ${({ $isCurrent, $locked }) =>
@@ -98,10 +94,19 @@ const TierCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
 const PoolCell = styled.span<{ $locked: boolean }>`
   font-size: ${tokens.font.size.sm};
   color: ${({ $locked }) => ($locked ? tokens.color.textFaint : tokens.color.textMuted)};
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+`
+
+const VpHint = styled.span`
+  font-size: 10px;
+  color: ${tokens.color.accent};
+  font-weight: ${tokens.font.weight.medium};
 `
 
 const NumCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -109,9 +114,17 @@ const NumCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
     $isCurrent ? tokens.color.accent : $locked ? tokens.color.textFaint : tokens.color.text};
 `
 
-/* ─── Next tier CTA ─── */
+const PayoutCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: ${({ $isCurrent }) =>
+    $isCurrent ? tokens.color.positive : tokens.color.textMuted};
+  opacity: ${({ $locked }) => ($locked ? 0.5 : 1)};
+`
 
-const NextTierBar = styled.div`
+const Footer = styled.div`
   padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   border-top: 1px solid ${tokens.color.border};
   display: flex;
@@ -122,20 +135,24 @@ const NextTierBar = styled.div`
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
   }
 `
 
-const NextTierInfo = styled.div`
+const ProgressInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xs};
 `
 
-const NextTierText = styled.span`
+const ProgressText = styled.span`
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.textMuted};
   line-height: 1.4;
+
+  strong {
+    color: ${tokens.color.text};
+    font-weight: ${tokens.font.weight.semibold};
+  }
 `
 
 const ProgressTrack = styled.div`
@@ -156,56 +173,34 @@ const ProgressFill = styled.div<{ $pct: number }>`
 
 const ShareLink = styled(Link)`
   text-decoration: none;
+  flex-shrink: 0;
 `
 
-/* ─── Helpers ─── */
-
-function formatPool(ens: string): string {
-  const num = parseFloat(ens)
-  if (num >= 1000) return `${Math.round(num / 1000)}K`
-  return Math.round(num).toString()
-}
-
-function formatVpNeeded(vpWei: string): string {
-  const num = Number(vpWei) / 1e18
-  if (num <= 0) return ''
-  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
-  if (num >= 1_000) return `${Math.round(num / 1_000)}K`
-  return Math.round(num).toString()
-}
-
-function computeVpProgress(currentTier: TierEntry, nextTier: TierEntry | undefined): number {
-  if (!nextTier) return 100
-  const currentRequired = Number(currentTier.requiredAVP) / 1e18
-  const nextRequired = Number(nextTier.requiredAVP) / 1e18
-  const additional = Number(nextTier.additionalVPNeeded) / 1e18
-  const span = nextRequired - currentRequired
-  if (span <= 0) return 100
-  const progress = ((span - additional) / span) * 100
-  return Math.max(0, Math.min(100, progress))
-}
-
-export function TierTable({
+export function RewardTiers({
   tiers,
   currentTierIndex,
   userEstimatedReward,
-}: TierTableProps) {
-  const nextTier = tiers[currentTierIndex + 1]
+}: RewardTiersProps) {
   const currentTier = tiers[currentTierIndex]
+  const nextTier = tiers[currentTierIndex + 1]
   const isMaxTier = currentTierIndex >= tiers.length - 1
-  const vpProgress = computeVpProgress(currentTier, nextTier)
+  const vpProgress = computeVpProgress(
+    currentTier.requiredAVP,
+    nextTier?.requiredAVP,
+    nextTier?.additionalVPNeeded,
+  )
 
   return (
-    <Wrapper>
+    <Section aria-label="Reward tiers">
       <Header>
-        <HeaderTitle>Reward Tiers</HeaderTitle>
-        <HeaderSub>
-          Share the campaign to grow delegated VP and unlock higher tiers for everyone.
-        </HeaderSub>
+        <Title>Reward Tiers</Title>
+        <Subtitle>
+          Share the campaign to grow voting power — higher tiers mean more for everyone.
+        </Subtitle>
       </Header>
 
-      <Table>
-        <TableHead>
+      <Table role="table" aria-label="Tier comparison">
+        <TableHead role="row">
           <Th>Tier</Th>
           <Th>Pool</Th>
           <Th $align="right">APY</Th>
@@ -215,59 +210,52 @@ export function TierTable({
         {tiers.map((tier) => {
           const isCurrent = tier.index === currentTierIndex
           const locked = !tier.isUnlocked && !isCurrent
-
-          // Estimate what the user would earn at this tier
-          // Simple ratio: userReward × (tierPool / currentPool)
-          const currentPool = parseFloat(currentTier.poolSizeEns) || 1
-          const tierPool = parseFloat(tier.poolSizeEns) || 0
-          const baseReward = parseFloat(userEstimatedReward) || 0
-          const projectedReward = baseReward * (tierPool / currentPool)
-          const payoutDisplay = projectedReward < 0.01
-            ? '<0.01'
-            : projectedReward >= 10
-              ? projectedReward.toFixed(1)
-              : projectedReward.toFixed(2)
+          const isNext = tier.index === currentTierIndex + 1
+          const projected = projectPayout(
+            userEstimatedReward,
+            currentTier.poolSizeEns,
+            tier.poolSizeEns,
+          )
 
           return (
-            <Row key={tier.index} $isCurrent={isCurrent}>
+            <Row key={tier.index} $isCurrent={isCurrent} role="row">
               <TierCell $isCurrent={isCurrent} $locked={locked}>
-                {isCurrent ? `→ Tier ${tier.index + 1}` : `Tier ${tier.index + 1}`}
+                {isCurrent ? '→ ' : ''}Tier {tier.index + 1}
               </TierCell>
               <PoolCell $locked={locked}>
-                {formatPool(tier.poolSizeEns)} ENS
-                {locked && nextTier && tier.index === currentTierIndex + 1
-                  ? ` · ${formatVpNeeded(tier.additionalVPNeeded)} VP to go`
-                  : ''
-                }
+                <span>{formatPool(tier.poolSizeEns)} ENS</span>
+                {isNext && !locked && (
+                  <VpHint>{formatVpNeeded(tier.additionalVPNeeded)} VP to go</VpHint>
+                )}
               </PoolCell>
               <NumCell $isCurrent={isCurrent} $locked={locked}>
                 {tier.estimatedApyPct}%
               </NumCell>
-              <NumCell $isCurrent={isCurrent} $locked={locked}>
-                {isCurrent ? `+${payoutDisplay}` : `~${payoutDisplay}`}
-              </NumCell>
+              <PayoutCell $isCurrent={isCurrent} $locked={locked}>
+                {isCurrent ? '+' : '~'}{formatPayout(projected)}
+              </PayoutCell>
             </Row>
           )
         })}
       </Table>
 
       {!isMaxTier && nextTier && (
-        <NextTierBar>
-          <NextTierInfo>
-            <NextTierText>
-              <strong>{formatVpNeeded(nextTier.additionalVPNeeded)} VP</strong> needed for Tier {nextTier.index + 1} at {nextTier.estimatedApyPct}% APY
-            </NextTierText>
+        <Footer>
+          <ProgressInfo>
+            <ProgressText>
+              <strong>{formatVpNeeded(nextTier.additionalVPNeeded)} VP</strong> to Tier {nextTier.index + 1} at {nextTier.estimatedApyPct}% APY
+            </ProgressText>
             <ProgressTrack>
               <ProgressFill $pct={vpProgress} />
             </ProgressTrack>
-          </NextTierInfo>
+          </ProgressInfo>
           <ShareLink to="/delegates">
             <Button size="small" colorStyle="bluePrimary" width="auto">
               Share &amp; grow the pool
             </Button>
           </ShareLink>
-        </NextTierBar>
+        </Footer>
       )}
-    </Wrapper>
+    </Section>
   )
 }

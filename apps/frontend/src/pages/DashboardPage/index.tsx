@@ -1,20 +1,18 @@
-import { useCallback } from 'react'
 import { Navigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
-import { api } from '@/api'
-import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, LoadingWrapper, ErrorMessage } from '@/styles'
-import { EarningsHero } from './sections/EarningsHero'
-import { StatsRow } from './sections/StatsRow'
-import { TierTable } from './sections/TierTable'
+import { useDashboardData } from './useDashboardData'
+import { EarningsStrip } from './sections/EarningsStrip'
+import { RoundTimeline } from './sections/RoundTimeline'
+import { RewardTiers } from './sections/RewardTiers'
 import { LotteryBanner } from './sections/LotteryBanner'
 
 const Page = styled.div`
   max-width: 720px;
   margin: 0 auto;
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['2xl']} ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
@@ -28,71 +26,53 @@ const Page = styled.div`
 
 export function DashboardPage() {
   const wallet = useWalletState()
-
-  if (wallet.status === 'disconnected') {
-    return <Navigate to="/" replace />
-  }
-
+  if (wallet.status === 'disconnected') return <Navigate to="/" replace />
   return <DashboardContent address={wallet.address} />
 }
 
 function DashboardContent({ address }: { address: `0x${string}` }) {
-  const fetchApy = useCallback(() => api.apy(address), [address])
-  const fetchTiers = useCallback(() => api.tierProgression(), [])
-  const fetchRound = useCallback(() => api.currentRound(), [])
-  const apy = useAsync(fetchApy)
-  const tiers = useAsync(fetchTiers)
-  const round = useAsync(fetchRound)
+  const { data, loading, error } = useDashboardData(address)
 
-  if (apy.loading || tiers.loading || round.loading) {
-    return (
-      <Page>
-        <LoadingWrapper><Spinner /></LoadingWrapper>
-      </Page>
-    )
+  if (loading) {
+    return <Page><LoadingWrapper><Spinner /></LoadingWrapper></Page>
   }
-
-  if (apy.error || tiers.error || round.error) {
-    return (
-      <Page>
-        <ErrorMessage>
-          Failed to load dashboard data: {apy.error ?? tiers.error ?? round.error}
-        </ErrorMessage>
-      </Page>
-    )
+  if (error) {
+    return <Page><ErrorMessage>Failed to load dashboard: {error}</ErrorMessage></Page>
   }
+  if (!data) return null
 
-  if (!apy.data || !tiers.data || !round.data) return null
-
-  const currentTierIndex = tiers.data.currentTierIndex
-  const delegatedTo = (apy.data.delegatedTo ?? address) as `0x${string}`
+  const { apy, tiers, round } = data
+  const currentTierIndex = tiers.currentTierIndex
+  const delegatedTo = (apy.delegatedTo ?? address) as `0x${string}`
 
   return (
     <Page>
-      <EarningsHero
-        earnedEns={apy.data.estimatedMonthlyRewardEns}
-        apyPct={apy.data.estimatedApyPct}
+      <EarningsStrip
+        earnedEns={apy.estimatedMonthlyRewardEns}
+        apyPct={apy.estimatedApyPct}
         tierIndex={currentTierIndex}
         delegatedTo={delegatedTo}
-        delegateEnsName={apy.data.delegatedToEnsName ?? undefined}
-        delegateAvatarUrl={apy.data.delegatedToAvatarUrl ?? undefined}
-        roundStartDate={round.data.startDate}
-        roundEndDate={round.data.endDate}
+        delegateEnsName={apy.delegatedToEnsName ?? undefined}
+        delegateAvatarUrl={apy.delegatedToAvatarUrl ?? undefined}
+        balanceEns={apy.currentBalanceEns}
+        roundStartDate={round.startDate}
+        roundEndDate={round.endDate}
       />
-      <StatsRow
-        balanceEns={apy.data.currentBalanceEns}
-        expectedPayout={apy.data.estimatedMonthlyRewardEns}
-        roundNumber={round.data.roundNumber}
-        daysRemaining={round.data.daysRemaining}
-        percentComplete={round.data.percentComplete}
+      <RoundTimeline
+        roundNumber={round.roundNumber}
+        startDate={round.startDate}
+        endDate={round.endDate}
+        daysRemaining={round.daysRemaining}
+        percentComplete={round.percentComplete}
+        expectedPayout={apy.estimatedMonthlyRewardEns}
       />
-      <TierTable
-        tiers={tiers.data.tiers}
+      <RewardTiers
+        tiers={tiers.tiers}
         currentTierIndex={currentTierIndex}
-        userEstimatedReward={apy.data.estimatedMonthlyRewardEns}
+        userEstimatedReward={apy.estimatedMonthlyRewardEns}
       />
-      {apy.data.qualifiesForLottery && (
-        <LotteryBanner expectedPayout={apy.data.estimatedMonthlyRewardEns} />
+      {apy.qualifiesForLottery && (
+        <LotteryBanner expectedPayout={apy.estimatedMonthlyRewardEns} />
       )}
     </Page>
   )
