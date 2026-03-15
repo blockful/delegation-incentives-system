@@ -44,10 +44,10 @@ describe('LandingPage', () => {
   })
 
   it('shows current APY in hero from tier data', async () => {
-    // Fixture: currentTierIndex=1, tiers[1].momGrowthMaxPct='15.00'
+    // Fixture: maxDelegatorApyPct='5400.00'
     renderApp(<LandingPage />)
     await waitFor(() => {
-      expect(screen.getByText('15.00% APY')).toBeInTheDocument()
+      expect(screen.getByText('5400.00% APY')).toBeInTheDocument()
     })
   })
 

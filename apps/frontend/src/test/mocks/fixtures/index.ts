@@ -8,3 +8,4 @@ export {
 } from './eligibility'
 export { apyFixture } from './apy'
 export { distributionFixture } from './lottery'
+export { roundInfoFixture } from './roundInfo'

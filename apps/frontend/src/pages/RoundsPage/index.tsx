@@ -1,5 +1,8 @@
+import { useCallback } from 'react'
 import styled from 'styled-components'
 import { Spinner, Tag } from '@ensdomains/thorin'
+import { api } from '@/api'
+import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
 import { TierTable } from './components/TierTable'
 import { RoundCard } from './components/RoundCard'
@@ -76,14 +79,6 @@ const ErrorMessage = styled.p`
   font-size: 16px;
 `
 
-import {
-  CURRENT_ROUND,
-  ROUND_START_DATE as ROUND_START,
-  ROUND_END_DATE as ROUND_END,
-  ROUND_PERCENT_COMPLETE as PERCENT_COMPLETE,
-  ROUND_TIME_LEFT as TIME_LEFT,
-} from '@/config/round'
-
 // Hardcoded mock data — needs API wiring when round history endpoint is available.
 const ROUND_HISTORY: RoundHistoryEntry[] = [
   { round: 4, dates: 'Mar 1 – Mar 31', earned: '0.0000', status: 'live' },
@@ -94,6 +89,8 @@ const ROUND_HISTORY: RoundHistoryEntry[] = [
 
 export function RoundsPage() {
   const { data, loading, error } = useRounds()
+  const fetchRound = useCallback(() => api.currentRound(), [])
+  const round = useAsync(fetchRound)
 
   if (loading) {
     return (
@@ -119,12 +116,23 @@ export function RoundsPage() {
   const poolSizeEns = currentTier?.poolSizeEns ?? '0'
   const tierLabel = `Tier #${data.currentTierIndex + 1}`
 
+  const roundNumber = round.data?.roundNumber ?? 1
+  const percentComplete = round.data?.percentComplete ?? 0
+  const startDate = round.data?.startDate
+    ? new Date(round.data.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : ''
+  const endDate = round.data?.endDate
+    ? new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : ''
+  const daysRemaining = round.data?.daysRemaining ?? 0
+  const timeLeft = `${daysRemaining}d left`
+
   return (
     <Page>
       <div>
         <Label>Rounds</Label>
         <HeadingRow>
-          <Heading>Round {CURRENT_ROUND} is</Heading>
+          <Heading>Round {roundNumber} is</Heading>
           <Tag colorStyle="greenPrimary">live</Tag>
         </HeadingRow>
         <Subtitle>
@@ -136,11 +144,11 @@ export function RoundsPage() {
       <Grid>
         <LeftColumn>
           <RoundCard
-            roundNumber={CURRENT_ROUND}
-            percentComplete={PERCENT_COMPLETE}
-            startDate={ROUND_START}
-            endDate={ROUND_END}
-            timeLeft={TIME_LEFT}
+            roundNumber={roundNumber}
+            percentComplete={percentComplete}
+            startDate={startDate}
+            endDate={endDate}
+            timeLeft={timeLeft}
             poolSizeEns={poolSizeEns}
             currentTier={tierLabel}
             currentApyPct={data.currentGrowthPct}

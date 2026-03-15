@@ -7,6 +7,7 @@ import type {
   ApyEstimateResponse,
   DistributionResponse,
   ComputeResultResponse,
+  RoundInfoResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -51,6 +52,8 @@ export const api = {
     request<ComputeResultResponse>(`/distributions/${month}/compute`, {
       method: "POST",
     }),
+
+  currentRound: () => request<RoundInfoResponse>("/rounds/current"),
 } as const;
 
 export { ApiClientError };
