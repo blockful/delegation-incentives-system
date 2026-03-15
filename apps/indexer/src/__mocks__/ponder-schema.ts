@@ -17,6 +17,8 @@ export const ensDelegation = "ens_delegation" as const
 export const ensDelegationEvent = "ens_delegation_event" as const
 export const ensVotingPowerSnapshot = "ens_voting_power_snapshot" as const
 export const protocolMapping = "protocol_mapping" as const
+export const walletAlias = "wallet_alias" as const
+export const distributionResult = "distribution_result" as const
 
 // Default export used by some handlers: import schema from "ponder:schema"
 const schema = {
@@ -33,6 +35,8 @@ const schema = {
   ensDelegationEvent,
   ensVotingPowerSnapshot,
   protocolMapping,
+  walletAlias,
+  distributionResult,
 }
 
 export default schema
