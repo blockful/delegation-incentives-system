@@ -1,6 +1,7 @@
 import type { DistributionRepository, DistributionResult } from "@ens-dis/domain"
 import { wei, basisPoints } from "@ens-dis/domain"
-import type { PonderDb, Row } from "./types.js"
+import { eq, asc } from "drizzle-orm"
+import { distributionResult } from "ponder:schema"
 
 // ─── BigInt JSON serialization ───────────────────────────────────────────────
 
@@ -65,36 +66,36 @@ export function distributionResultFromJson(json: string): DistributionResult {
 // ─── DistributionAdapter ─────────────────────────────────────────────────────
 
 export class DistributionAdapter implements DistributionRepository {
-  constructor(private db: PonderDb) {}
+  constructor(private db: any) {}
 
   async save(month: string, result: DistributionResult): Promise<void> {
     const resultJson = distributionResultToJson(result)
     const computedAt = BigInt(Math.floor(Date.now() / 1000))
 
     await this.db
-      .insert("distribution_result")
-      .values({ month, resultJson, computedAt } as Row)
-      .onConflictDoUpdate({ resultJson, computedAt } as Partial<Row>)
+      .insert(distributionResult)
+      .values({ month, resultJson, computedAt })
+      .onConflictDoUpdate({ target: distributionResult.month, set: { resultJson, computedAt } })
   }
 
   async load(month: string): Promise<DistributionResult | null> {
     const rows = await this.db
       .select()
-      .from("distribution_result")
-      .where((r: Row) => r["month"] === month)
+      .from(distributionResult)
+      .where(eq(distributionResult.month, month))
       .limit(1)
 
     if (rows.length === 0) return null
 
-    return distributionResultFromJson(rows[0]["resultJson"] as string)
+    return distributionResultFromJson(rows[0].resultJson as string)
   }
 
   async list(): Promise<string[]> {
     const rows = await this.db
       .select()
-      .from("distribution_result")
-      .orderBy({ field: "month", dir: "asc" })
+      .from(distributionResult)
+      .orderBy(asc(distributionResult.month))
 
-    return rows.map((r: Row) => r["month"] as string)
+    return rows.map((r: any) => r.month as string)
   }
 }

@@ -1,23 +1,24 @@
 import type { ProposalRepository, Proposal } from "@ens-dis/domain"
 import { seconds } from "@ens-dis/domain"
-import type { PonderDb, Row } from "./types.js"
+import { ne, desc } from "drizzle-orm"
+import { governanceProposal } from "ponder:schema"
 
 export class ProposalAdapter implements ProposalRepository {
-  constructor(private db: PonderDb) {}
+  constructor(private db: any) {}
 
   async getRecentProposals(count: number): Promise<Proposal[]> {
     const rows = await this.db
       .select()
-      .from("governance_proposal")
-      .where((r: Row) => r["status"] !== "active")
-      .orderBy({ field: "timestamp", dir: "desc" })
+      .from(governanceProposal)
+      .where(ne(governanceProposal.status, "active"))
+      .orderBy(desc(governanceProposal.timestamp))
       .limit(count)
 
-    return rows.map((row: Row) => ({
-      id: row["id"] as string,
-      status: row["status"] as string,
-      timestamp: seconds(BigInt(row["timestamp"] as string | number | bigint)),
-      endTimestamp: seconds(BigInt(row["endBlock"] as string | number | bigint)),
+    return rows.map((row: any) => ({
+      id: row.id as string,
+      status: row.status as string,
+      timestamp: seconds(BigInt(row.timestamp as string | number | bigint)),
+      endTimestamp: seconds(BigInt(row.endBlock as string | number | bigint)),
       daoId: "ens",
     }))
   }

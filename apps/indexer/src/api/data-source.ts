@@ -1,6 +1,5 @@
 import type { IncentivesDataSource } from "@ens-dis/domain"
-import type { PublicClient } from "viem"
-import type { PonderDb } from "./adapters/types.js"
+import { db, publicClients } from "ponder:api"
 import { ProposalAdapter } from "./adapters/ProposalAdapter.js"
 import { VoteAdapter } from "./adapters/VoteAdapter.js"
 import { VotingPowerAdapter } from "./adapters/VotingPowerAdapter.js"
@@ -13,13 +12,9 @@ import { DistributionAdapter } from "./adapters/DistributionAdapter.js"
 
 /**
  * Construct an IncentivesDataSource backed by Ponder's Drizzle db and a viem PublicClient.
- *
- * Pass db as a PonderDb-compatible object (e.g., wrapping db.sql from Ponder's context).
+ * Imports db and publicClient directly from ponder:api.
  */
-export function buildDataSource(
-  db: PonderDb,
-  publicClient: PublicClient,
-): IncentivesDataSource {
+export function buildDataSource(): IncentivesDataSource {
   return {
     proposals: new ProposalAdapter(db),
     votes: new VoteAdapter(db),
@@ -28,7 +23,7 @@ export function buildDataSource(
     delegations: new DelegationAdapter(db),
     protocolMappings: new ProtocolMappingAdapter(db),
     walletAliases: new WalletAliasAdapter(db),
-    blocks: new BlockAdapter(publicClient),
+    blocks: new BlockAdapter(publicClients.mainnet as any),
     distributions: new DistributionAdapter(db),
   }
 }

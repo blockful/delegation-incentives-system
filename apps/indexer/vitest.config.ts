@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       "ponder:registry": new URL("./src/__mocks__/ponder-registry.ts", import.meta.url).pathname,
       "ponder:schema": new URL("./src/__mocks__/ponder-schema.ts", import.meta.url).pathname,
+      "ponder:api": new URL("./src/__mocks__/ponder-api.ts", import.meta.url).pathname,
     },
   },
 })

@@ -1,9 +1,10 @@
 import type { DelegationRepository, Delegation, AccountBalance } from "@ens-dis/domain"
 import { wei, seconds, type Seconds } from "@ens-dis/domain"
-import type { PonderDb, Row } from "./types.js"
+import { lte } from "drizzle-orm"
+import { ensDelegationEvent, ensDelegation, ensBalance } from "ponder:schema"
 
 export class DelegationAdapter implements DelegationRepository {
-  constructor(private db: PonderDb) {}
+  constructor(private db: any) {}
 
   async getActiveDelegations(
     delegateIds: string[],
@@ -17,20 +18,17 @@ export class DelegationAdapter implements DelegationRepository {
     // Get all delegation events at or before `at`
     const rows = await this.db
       .select()
-      .from("ens_delegation_event")
-      .where((r: Row) => {
-        const ts = BigInt(r["timestamp"] as string | number | bigint)
-        return ts <= atBig
-      })
+      .from(ensDelegationEvent)
+      .where(lte(ensDelegationEvent.timestamp, atBig))
 
     // For each delegator, keep only the latest event
-    const latestByDelegator = new Map<string, Row>()
+    const latestByDelegator = new Map<string, any>()
     for (const row of rows) {
-      const delegatorId = (row["delegatorId"] as string).toLowerCase()
-      const ts = BigInt(row["timestamp"] as string | number | bigint)
+      const delegatorId = (row.delegatorId as string).toLowerCase()
+      const ts = BigInt(row.timestamp as string | number | bigint)
       const existing = latestByDelegator.get(delegatorId)
       const existingTs = existing
-        ? BigInt(existing["timestamp"] as string | number | bigint)
+        ? BigInt(existing.timestamp as string | number | bigint)
         : -1n
       if (ts > existingTs) {
         latestByDelegator.set(delegatorId, row)
@@ -40,13 +38,13 @@ export class DelegationAdapter implements DelegationRepository {
     // Keep only those whose latest toDelegate is in delegateIds
     const result: Delegation[] = []
     for (const [delegatorId, row] of latestByDelegator) {
-      const toDelegateId = (row["toDelegateId"] as string).toLowerCase()
+      const toDelegateId = (row.toDelegateId as string).toLowerCase()
       if (idSet.has(toDelegateId)) {
         result.push({
           delegatorId,
           delegateId: toDelegateId,
-          delegatedValue: wei(BigInt(row["delegatedValue"] as string | number | bigint)),
-          timestamp: seconds(BigInt(row["timestamp"] as string | number | bigint)),
+          delegatedValue: wei(BigInt(row.delegatedValue as string | number | bigint)),
+          timestamp: seconds(BigInt(row.timestamp as string | number | bigint)),
         })
       }
     }
@@ -58,22 +56,22 @@ export class DelegationAdapter implements DelegationRepository {
     // JOIN ens_delegation (current) with ens_balance (current)
     const delegationRows = await this.db
       .select()
-      .from("ens_delegation")
+      .from(ensDelegation)
 
     const balanceRows = await this.db
       .select()
-      .from("ens_balance")
+      .from(ensBalance)
 
     const balanceMap = new Map<string, bigint>()
     for (const row of balanceRows) {
-      const id = (row["id"] as string).toLowerCase()
-      balanceMap.set(id, BigInt(row["balance"] as string | number | bigint))
+      const id = (row.id as string).toLowerCase()
+      balanceMap.set(id, BigInt(row.balance as string | number | bigint))
     }
 
     const result: AccountBalance[] = []
     for (const row of delegationRows) {
-      const accountId = (row["id"] as string).toLowerCase()
-      const delegateId = (row["delegateId"] as string).toLowerCase()
+      const accountId = (row.id as string).toLowerCase()
+      const delegateId = (row.delegateId as string).toLowerCase()
       const balance = balanceMap.get(accountId) ?? 0n
       result.push({
         accountId,

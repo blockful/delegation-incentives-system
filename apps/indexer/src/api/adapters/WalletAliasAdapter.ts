@@ -1,18 +1,18 @@
 import type { WalletAliasRepository, WalletAlias } from "@ens-dis/domain"
-import type { PonderDb, Row } from "./types.js"
+import { walletAlias } from "ponder:schema"
 
 export class WalletAliasAdapter implements WalletAliasRepository {
-  constructor(private db: PonderDb) {}
+  constructor(private db: any) {}
 
   async getAliases(): Promise<WalletAlias[]> {
     const rows = await this.db
       .select()
-      .from("wallet_alias")
+      .from(walletAlias)
 
-    return rows.map((row: Row) => ({
-      secondaryAddress: (row["secondaryAddress"] as string).toLowerCase(),
-      primaryAddress: (row["primaryAddress"] as string).toLowerCase(),
-      source: (row["source"] as string) ?? "manual",
+    return rows.map((row: any) => ({
+      secondaryAddress: (row.secondaryAddress as string).toLowerCase(),
+      primaryAddress: (row.primaryAddress as string).toLowerCase(),
+      source: (row.source as string) ?? "manual",
     }))
   }
 }

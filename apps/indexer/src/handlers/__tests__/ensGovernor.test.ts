@@ -19,18 +19,27 @@ import {
 //   db.insert(table).values(row).onConflictDoUpdate(fn)  — upsert via callback
 //   db.update(table, { id }).set(data)                   — positional update
 
+function resolveTableName(table: unknown): string {
+  if (typeof table === "string") return table
+  if (typeof table === "object" && table !== null && "_tableName" in table) {
+    return (table as { _tableName: string })._tableName
+  }
+  return String(table)
+}
+
 function makeFakeDb() {
   const proposals = new Map<string, any>()
   const votes = new Map<string, any>()
 
-  function storeFor(table: string) {
-    if (table === "governance_proposal") return proposals
-    if (table === "governance_vote") return votes
-    throw new Error(`Unknown table in fake db: ${table}`)
+  function storeFor(table: unknown) {
+    const name = resolveTableName(table)
+    if (name === "governance_proposal") return proposals
+    if (name === "governance_vote") return votes
+    throw new Error(`Unknown table in fake db: ${name}`)
   }
 
   const db = {
-    insert(table: string) {
+    insert(table: unknown) {
       return {
         values(row: any) {
           return {
@@ -52,7 +61,7 @@ function makeFakeDb() {
         },
       }
     },
-    update(table: string, where: { id: string }) {
+    update(table: unknown, where: { id: string }) {
       return {
         set(data: any) {
           const store = storeFor(table)
