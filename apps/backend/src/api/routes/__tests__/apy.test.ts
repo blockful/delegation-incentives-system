@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { apyRouter } from "../apy.js"
 import { seconds, wei } from "@ens-dis/domain"
+import { makeProposals, makeVotes } from "./test-utils.js"
 
 vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
@@ -20,26 +21,6 @@ import { buildDataSource } from "../../data-source.js"
 const DELEGATE_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 const DELEGATOR_B = "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 const INELIGIBLE = "0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
-
-const makeProposals = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({
-    id: `${i + 1}`,
-    status: "executed",
-    timestamp: seconds(BigInt(1000 + i)),
-    endBlock: BigInt(2000 + i),
-    daoId: "ens",
-  }))
-
-const makeVotes = (voterIds: string[], proposalIds: string[]) =>
-  voterIds.flatMap((voter) =>
-    proposalIds.map((proposalId) => ({
-      voterAccountId: voter,
-      proposalId,
-      support: 1,
-      votingPower: wei(1000n * 10n ** 18n),
-      timestamp: seconds(1000n),
-    })),
-  )
 
 const mockDataSource = {
   proposals: { getRecentProposals: vi.fn() },

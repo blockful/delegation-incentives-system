@@ -141,12 +141,19 @@ apyRouter.openapi(apyRoute, async (c) => {
       Promise.all(allDelegatorIds.map((id) => dataSource.balances.getBalanceAt(id, twbWindowStart))),
     ])
 
+    // Group events by accountId once (O(n)) to avoid a per-delegator filter inside the loop.
+    const eventsByAccount = new Map<string, typeof allEvents>()
+    for (const e of allEvents) {
+      const bucket = eventsByAccount.get(e.accountId)
+      if (bucket) bucket.push(e)
+      else eventsByAccount.set(e.accountId, [e])
+    }
+
     let userTWB = 0n
     let totalTWB = 0n
     for (let i = 0; i < allDelegatorIds.length; i++) {
       const id = allDelegatorIds[i]
-      const events = allEvents.filter((e) => e.accountId === id)
-      const twb = computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initialBalances[i])
+      const twb = computeTimeWeightedBalance(eventsByAccount.get(id) ?? [], twbWindowStart, monthEnd, initialBalances[i])
       totalTWB += twb
       if (id.toLowerCase() === addrLower) userTWB = twb
     }
