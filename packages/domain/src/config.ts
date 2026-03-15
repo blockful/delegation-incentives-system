@@ -1,4 +1,3 @@
-import { z } from "zod/v4";
 import {
   type PoolTier,
   type Wei,
@@ -7,15 +6,6 @@ import {
   basisPoints,
   ONE_ENS,
 } from "./types.js";
-
-// --- Environment config ---
-
-export const envSchema = z.object({
-  DATABASE_URL: z.string(),
-  BACKEND_PORT: z.coerce.number().default(3000),
-});
-
-export type EnvConfig = z.infer<typeof envSchema>;
 
 // --- Pool tier table ---
 

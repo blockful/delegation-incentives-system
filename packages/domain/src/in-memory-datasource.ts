@@ -184,18 +184,22 @@ class InMemoryDelegationRepository implements DelegationRepository {
 
   async getActiveDelegations(
     delegateIds: string[],
-    _at: Seconds,
+    at: Seconds,
   ): Promise<Delegation[]> {
     const ids = new Set(delegateIds);
+    // Find the latest delegation per delegator as of `at`
     const latestByDelegator = new Map<string, Delegation>();
     for (const d of this.delegationData) {
-      if (!ids.has(d.delegateId)) continue;
+      if (d.timestamp > at) continue;
       const existing = latestByDelegator.get(d.delegatorId);
       if (!existing || d.timestamp > existing.timestamp) {
         latestByDelegator.set(d.delegatorId, d);
       }
     }
-    return Array.from(latestByDelegator.values());
+    // Only return delegations where the latest-as-of-at delegate is an active delegate
+    return Array.from(latestByDelegator.values()).filter((d) =>
+      ids.has(d.delegateId),
+    );
   }
 
   async getAccountBalances(): Promise<AccountBalance[]> {
