@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, CheckSVG } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -75,8 +75,14 @@ const Check = styled.span`
 `
 
 const CheckMark = styled.span`
+  display: flex;
+  align-items: center;
   color: #007C23;
-  font-size: 16px;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `
 
 const checkItems = [
@@ -111,7 +117,7 @@ export function CtaSection() {
       <Checks>
         {checkItems.map((item) => (
           <Check key={item}>
-            <CheckMark>&#x2714;</CheckMark>
+            <CheckMark><CheckSVG /></CheckMark>
             {item}
           </Check>
         ))}

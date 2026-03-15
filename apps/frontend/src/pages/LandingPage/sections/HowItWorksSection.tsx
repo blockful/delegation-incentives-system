@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, PersonPlusSVG, FlameSVG, EthSVG, HeartSVG } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -69,7 +69,7 @@ const Card = styled.div`
   position: relative;
 `
 
-const CardIcon = styled.div<{ $bg: string }>`
+const CardIcon = styled.div<{ $bg: string; $color: string }>`
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -77,8 +77,13 @@ const CardIcon = styled.div<{ $bg: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   margin-bottom: 16px;
+  color: ${({ $color }) => $color};
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `
 
 const StepNumber = styled.span`
@@ -127,8 +132,9 @@ const Actions = styled.div`
 
 const steps = [
   {
-    icon: '\u270D\uFE0F',
+    Icon: PersonPlusSVG,
     bg: '#e8f5e9',
+    iconColor: '#1a6b3c',
     number: '1',
     title: 'Delegate to an active voter',
     desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens.',
@@ -137,8 +143,9 @@ const steps = [
     tagBg: '#e8f5e9',
   },
   {
-    icon: '\uD83D\uDCC8',
+    Icon: FlameSVG,
     bg: '#fff3e0',
+    iconColor: '#c77700',
     number: '2',
     title: 'Your share grows with time',
     desc: 'Rewards are based on your average ENS balance over the last 180 days \u2014 not just your current balance. Longer holding means a bigger share.',
@@ -147,8 +154,9 @@ const steps = [
     tagBg: '#fff3e0',
   },
   {
-    icon: '\uD83D\uDCB0',
+    Icon: EthSVG,
     bg: '#fff3e0',
+    iconColor: '#c77700',
     number: '3a',
     title: 'Receive ENS at round end',
     desc: "If your share is 1 ENS or more, it's sent directly to your wallet at the end of each monthly round.",
@@ -157,8 +165,9 @@ const steps = [
     tagBg: '#fff3e0',
   },
   {
-    icon: '\uD83C\uDFC6',
+    Icon: HeartSVG,
     bg: '#fce4ec',
+    iconColor: '#c62828',
     number: '3b',
     title: 'Small balance? Enter the lottery',
     desc: 'Payouts under 1 ENS pool together until they reach 10 ENS \u2014 one winner takes the full prize.',
@@ -184,7 +193,7 @@ export function HowItWorksSection() {
         <Cards>
           {steps.map((step) => (
             <Card key={step.number}>
-              <CardIcon $bg={step.bg}>{step.icon}</CardIcon>
+              <CardIcon $bg={step.bg} $color={step.iconColor}><step.Icon /></CardIcon>
               <StepNumber>{step.number}</StepNumber>
               <CardTitle>{step.title}</CardTitle>
               <CardDesc>{step.desc}</CardDesc>

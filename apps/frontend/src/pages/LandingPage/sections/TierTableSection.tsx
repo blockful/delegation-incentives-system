@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, CheckSVG, LockSVG } from '@ensdomains/thorin'
 import { TierDots } from '@/components/shared/TierDots'
 import type { TierEntry } from '@/api/types'
 
@@ -94,8 +94,14 @@ const ApyInfo = styled.div`
 `
 
 const StatusIcon = styled.span<{ $unlocked: boolean }>`
-  font-size: 14px;
+  display: flex;
+  align-items: center;
   color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#4A5C63')};
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `
 
 export function TierTableSection({ tiers }: TierTableSectionProps) {
@@ -126,7 +132,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             <ApyInfo>
               ~{tier.estimatedApyPct ?? '—'}% APY
               <StatusIcon $unlocked={tier.isUnlocked}>
-                {tier.isUnlocked ? '\u2705' : '\uD83D\uDD12'}
+                {tier.isUnlocked ? <CheckSVG /> : <LockSVG />}
               </StatusIcon>
             </ApyInfo>
           </TierRow>

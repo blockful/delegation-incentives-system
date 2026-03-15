@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { CheckSVG, LockSVG } from '@ensdomains/thorin'
 import { TierDots } from '@/components/shared/TierDots'
 import type { TierEntry } from '@/api/types'
 
@@ -66,8 +67,15 @@ const PoolSize = styled.span`
 `
 
 const StatusIcon = styled.span<{ $unlocked: boolean }>`
-  font-size: 16px;
+  display: flex;
+  align-items: center;
   opacity: ${({ $unlocked }) => ($unlocked ? 1 : 0.4)};
+  color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#4A5C63')};
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `
 
 function formatPool(ens: string): string {
@@ -99,7 +107,7 @@ export function TierTable({ tiers, currentTierIndex }: TierTableProps) {
               </TierInfo>
               <PoolSize>{formatPool(tier.poolSizeEns)}</PoolSize>
               <StatusIcon $unlocked={tier.isUnlocked}>
-                {tier.isUnlocked ? '✓' : '🔒'}
+                {tier.isUnlocked ? <CheckSVG /> : <LockSVG />}
               </StatusIcon>
             </TierRow>
           )
