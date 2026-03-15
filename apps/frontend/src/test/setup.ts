@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import './mocks/wagmi'
 
 import { server } from './mocks/server'
 

@@ -1,4 +1,6 @@
 import styled from 'styled-components'
+import { useEnsName, useEnsAvatar } from 'wagmi'
+import makeBlockie from 'ethereum-blockies-base64'
 
 interface EnsAvatarProps {
   address: string
@@ -6,36 +8,28 @@ interface EnsAvatarProps {
   size?: number
 }
 
-function hueFromAddress(address: string): number {
-  let hash = 0
-  for (let i = 0; i < address.length; i++) {
-    hash = address.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return Math.abs(hash) % 360
-}
-
-const Circle = styled.div<{ $size: number; $hue: number }>`
+const Img = styled.img<{ $size: number }>`
   width: ${({ $size }) => $size}px;
   height: ${({ $size }) => $size}px;
   border-radius: 50%;
-  background: hsl(${({ $hue }) => $hue}, 65%, 55%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: ${({ $size }) => Math.round($size * 0.4)}px;
-  text-transform: uppercase;
   flex-shrink: 0;
+  object-fit: cover;
 `
 
 export function EnsAvatar({ address, name, size = 32 }: EnsAvatarProps) {
-  const label = name ? name.slice(0, 2) : address.slice(2, 4)
-  const hue = hueFromAddress(address)
+  const { data: resolvedName } = useEnsName({
+    address: address as `0x${string}`,
+    query: { enabled: !name },
+  })
 
-  return (
-    <Circle $size={size} $hue={hue}>
-      {label}
-    </Circle>
-  )
+  const ensName = name ?? resolvedName ?? undefined
+
+  const { data: avatarUrl } = useEnsAvatar({
+    name: ensName,
+    query: { enabled: !!ensName },
+  })
+
+  const src = avatarUrl ?? makeBlockie(address)
+
+  return <Img $size={size} src={src} alt={ensName ?? address} />
 }

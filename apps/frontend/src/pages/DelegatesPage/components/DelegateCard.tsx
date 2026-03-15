@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
+import { useEnsName } from 'wagmi'
 import type { DelegateDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -10,11 +11,19 @@ interface DelegateCardProps {
   delegate: DelegateDetail
 }
 
-function formatVotingPower(vp: string): string {
-  const num = Number(vp)
-  if (num >= 1_000_000) return `${Math.round(num / 1_000_000)}M VP`
-  if (num >= 1_000) return `${Math.round(num / 1_000)}K VP`
-  return `${num} VP`
+function formatVotingPower(vpWei: string): string {
+  const ens = Number(vpWei) / 1e18
+  if (ens >= 1_000_000) {
+    const m = ens / 1_000_000
+    const rounded = Math.round(m * 10) / 10
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}M VP`
+  }
+  if (ens >= 1_000) {
+    const k = ens / 1_000
+    const rounded = Math.round(k * 10) / 10
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K VP`
+  }
+  return `${Math.round(ens)} VP`
 }
 
 function formatActiveSince(iso: string): string {
@@ -106,16 +115,21 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === delegate.address.toLowerCase()
 
+  const { data: resolvedEnsName } = useEnsName({
+    address: delegate.address as `0x${string}`,
+  })
+  const ensName = delegate.ensName ?? resolvedEnsName ?? null
+
   return (
     <Card>
       <IdentityRow>
         <EnsAvatar
           address={delegate.address}
-          name={delegate.ensName ?? undefined}
+          name={ensName ?? undefined}
           size={40}
         />
         <IdentityInfo>
-          {delegate.ensName && <Name>{delegate.ensName}</Name>}
+          {ensName && <Name>{ensName}</Name>}
           <Address>{truncateAddress(delegate.address)}</Address>
         </IdentityInfo>
       </IdentityRow>
@@ -158,7 +172,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
           </Button>
         )}
         <ProfileLink
-          href={`https://app.ens.domains/${delegate.ensName ?? delegate.address}`}
+          href={`https://anticapture.com/ens/holders-and-delegates?tab=delegates&drawerAddress=${delegate.address}`}
           target="_blank"
           rel="noopener noreferrer"
         >
