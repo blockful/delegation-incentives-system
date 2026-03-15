@@ -1,6 +1,6 @@
 import type { ProposalRepository, Proposal } from "@ens-dis/domain"
 import { seconds } from "@ens-dis/domain"
-import { desc } from "drizzle-orm"
+import { ne, desc } from "drizzle-orm"
 import { governanceProposal } from "ponder:schema"
 
 type GovernanceProposalRow = typeof governanceProposal.$inferSelect
@@ -12,6 +12,7 @@ export class ProposalAdapter implements ProposalRepository {
     const rows: GovernanceProposalRow[] = await this.db
       .select()
       .from(governanceProposal)
+      .where(ne(governanceProposal.status, "active"))
       .orderBy(desc(governanceProposal.timestamp))
       .limit(count)
 
