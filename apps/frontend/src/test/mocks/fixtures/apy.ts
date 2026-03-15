@@ -14,4 +14,5 @@ export const apyFixture: ApyEstimateResponse = {
   userShareWei: '3410000000000000000',
   totalShareWei: '208700000000000000000',
   currentBalanceEns: '3.41',
+  qualifiesForLottery: false,
 }

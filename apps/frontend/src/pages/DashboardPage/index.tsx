@@ -99,8 +99,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   const roundEndDate = new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const percentComplete = round.data.percentComplete
 
-  const estimatedReward = parseFloat(apy.data.estimatedMonthlyRewardEns)
-  const qualifiesForLottery = estimatedReward > 0 && estimatedReward < 1
+  const qualifiesForLottery = apy.data.qualifiesForLottery
 
   return (
     <Page>

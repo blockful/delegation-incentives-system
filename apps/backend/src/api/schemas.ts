@@ -179,4 +179,6 @@ export const ApyEstimateSchema = z.object({
    */
   totalShareWei: z.string(),
   currentBalanceEns: z.string(),
+  /** True when the estimated monthly reward falls below the 1 ENS minimum payout threshold, entering the lottery. */
+  qualifiesForLottery: z.boolean(),
 }).openapi("ApyEstimate")
