@@ -3,6 +3,10 @@ import { wei, seconds, type Seconds } from "@ens-dis/domain"
 import { and, asc, desc, lte } from "drizzle-orm"
 import { ensDelegationEvent, ensDelegation, ensBalance } from "ponder:schema"
 
+type DelegationEventRow = typeof ensDelegationEvent.$inferSelect
+type DelegationRow = typeof ensDelegation.$inferSelect
+type BalanceRow = typeof ensBalance.$inferSelect
+
 export class DelegationAdapter implements DelegationRepository {
   constructor(private db: any) {}
 
@@ -25,7 +29,7 @@ export class DelegationAdapter implements DelegationRepository {
     // would avoid loading all historical rows, but Drizzle does not expose
     // DISTINCT ON. The current approach is correct; add a DB index on
     // (delegatorId, timestamp DESC) to keep the query fast as history grows.
-    const rows = await this.db
+    const rows: DelegationEventRow[] = await this.db
       .select()
       .from(ensDelegationEvent)
       .where(lte(ensDelegationEvent.timestamp, atBig))
@@ -34,9 +38,9 @@ export class DelegationAdapter implements DelegationRepository {
     // For each delegator, keep only the latest event (first row per delegator
     // since results are sorted desc by timestamp within each delegatorId group)
     const seen = new Set<string>()
-    const latestByDelegator = new Map<string, any>()
+    const latestByDelegator = new Map<string, DelegationEventRow>()
     for (const row of rows) {
-      const delegatorId = (row.delegatorId as string).toLowerCase()
+      const delegatorId = row.delegatorId.toLowerCase()
       if (!seen.has(delegatorId)) {
         seen.add(delegatorId)
         latestByDelegator.set(delegatorId, row)
@@ -46,13 +50,13 @@ export class DelegationAdapter implements DelegationRepository {
     // Keep only those whose latest toDelegate is in delegateIds
     const result: Delegation[] = []
     for (const [delegatorId, row] of latestByDelegator) {
-      const toDelegateId = (row.toDelegateId as string).toLowerCase()
+      const toDelegateId = row.toDelegateId.toLowerCase()
       if (idSet.has(toDelegateId)) {
         result.push({
           delegatorId,
           delegateId: toDelegateId,
-          delegatedValue: wei(BigInt(row.delegatedValue as string | number | bigint)),
-          timestamp: seconds(BigInt(row.timestamp as string | number | bigint)),
+          delegatedValue: wei(row.delegatedValue),
+          timestamp: seconds(row.timestamp),
         })
       }
     }
@@ -62,24 +66,23 @@ export class DelegationAdapter implements DelegationRepository {
 
   async getAccountBalances(): Promise<AccountBalance[]> {
     // JOIN ens_delegation (current) with ens_balance (current)
-    const delegationRows = await this.db
+    const delegationRows: DelegationRow[] = await this.db
       .select()
       .from(ensDelegation)
 
-    const balanceRows = await this.db
+    const balanceRows: BalanceRow[] = await this.db
       .select()
       .from(ensBalance)
 
     const balanceMap = new Map<string, bigint>()
     for (const row of balanceRows) {
-      const id = (row.id as string).toLowerCase()
-      balanceMap.set(id, BigInt(row.balance as string | number | bigint))
+      balanceMap.set(row.id.toLowerCase(), row.balance)
     }
 
     const result: AccountBalance[] = []
     for (const row of delegationRows) {
-      const accountId = (row.id as string).toLowerCase()
-      const delegateId = (row.delegateId as string).toLowerCase()
+      const accountId = row.id.toLowerCase()
+      const delegateId = row.delegateId.toLowerCase()
       const balance = balanceMap.get(accountId) ?? 0n
       result.push({
         accountId,

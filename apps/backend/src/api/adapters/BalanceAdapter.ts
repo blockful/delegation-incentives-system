@@ -3,6 +3,8 @@ import { wei, seconds, type Seconds } from "@ens-dis/domain"
 import { and, inArray, lte, gte, eq, desc } from "drizzle-orm"
 import { ensBalanceEvent } from "ponder:schema"
 
+type BalanceEventRow = typeof ensBalanceEvent.$inferSelect
+
 export class BalanceAdapter implements BalanceRepository {
   constructor(private db: any) {}
 
@@ -15,7 +17,7 @@ export class BalanceAdapter implements BalanceRepository {
 
     const normalizedIds = accountIds.map(id => id.toLowerCase())
 
-    const rows = await this.db
+    const rows: BalanceEventRow[] = await this.db
       .select()
       .from(ensBalanceEvent)
       .where(
@@ -26,11 +28,11 @@ export class BalanceAdapter implements BalanceRepository {
         ),
       )
 
-    return rows.map((row: any) => ({
-      accountId: (row.accountId as string).toLowerCase(),
-      balance: wei(BigInt(row.balance as string | number | bigint)),
-      delta: wei(BigInt(row.delta as string | number | bigint)),
-      timestamp: seconds(BigInt(row.timestamp as string | number | bigint)),
+    return rows.map((row) => ({
+      accountId: row.accountId.toLowerCase(),
+      balance: wei(row.balance),
+      delta: wei(row.delta),
+      timestamp: seconds(row.timestamp),
     }))
   }
 
@@ -38,7 +40,7 @@ export class BalanceAdapter implements BalanceRepository {
     const normalizedId = accountId.toLowerCase()
 
     // Try ens_balance_event first: latest event at or before `at`
-    const eventRows = await this.db
+    const eventRows: BalanceEventRow[] = await this.db
       .select()
       .from(ensBalanceEvent)
       .where(
@@ -51,7 +53,7 @@ export class BalanceAdapter implements BalanceRepository {
       .limit(1)
 
     if (eventRows.length > 0) {
-      return wei(BigInt(eventRows[0].balance as string | number | bigint))
+      return wei(eventRows[0].balance)
     }
 
     // No event at or before `at` means the account had no balance yet — return 0.
