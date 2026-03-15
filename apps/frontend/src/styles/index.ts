@@ -1,10 +1,13 @@
 export { tokens } from './tokens'
 export { GlobalStyles } from './GlobalStyles'
 export {
+  fadeInUp,
+  fadeIn,
   Eyebrow,
   PageTitle,
   SectionHeading,
   SectionSubheading,
+  gradientTextStyles,
   PageContainer,
   SectionContainer,
   SectionInner,

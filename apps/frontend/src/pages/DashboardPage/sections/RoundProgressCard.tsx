@@ -16,12 +16,20 @@ const CardLink = styled(Link)`
   border-radius: ${tokens.radius.lg};
   text-decoration: none;
   color: inherit;
-  transition: border-color ${tokens.transition.fast}, box-shadow ${tokens.transition.fast};
+  transition:
+    border-color ${tokens.transition.fast},
+    box-shadow ${tokens.transition.base},
+    transform ${tokens.transition.base};
   background: ${tokens.color.surface};
 
   &:hover {
     border-color: ${tokens.color.gray3};
-    box-shadow: ${tokens.shadow.sm};
+    box-shadow: ${tokens.shadow.md};
+    transform: translateY(-1px);
+
+    span:last-child {
+      transform: translateX(2px);
+    }
   }
 `
 
