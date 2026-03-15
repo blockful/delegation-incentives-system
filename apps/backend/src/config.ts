@@ -12,7 +12,7 @@ import {
 
 export const envSchema = z.object({
   DATABASE_URL: z.string(),
-  PORT: z.coerce.number().default(3000),
+  BACKEND_PORT: z.coerce.number().default(3000),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

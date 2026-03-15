@@ -51,7 +51,7 @@ pnpm --filter @ens-dis/indexer dev
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` in the relevant app directory.
+Copy `.env.example` to `.env` at the project root. All apps read from this single file.
 
 | Variable | App | Description |
 |---|---|---|

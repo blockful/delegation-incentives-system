@@ -14,5 +14,12 @@
       "@/generated": ["./generated/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "ponder.config.ts", "ponder.schema.ts", "generated/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "ponder-env.d.ts",
+    "ponder.config.ts",
+    "ponder.schema.ts",
+    "generated/**/*.ts"
+  ]
 }

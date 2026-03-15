@@ -1,5 +1,10 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 import { createConfig } from "ponder";
-import { http } from "viem";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const erc20MultiDelegateAbi = [
   {

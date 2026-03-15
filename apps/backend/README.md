@@ -59,6 +59,8 @@ This ensures per-entity caps apply to the combined TWB, and rewards route to the
 
 ## Development
 
+Environment variables are loaded from the project root `.env`. See root `.env.example`.
+
 ```bash
 # Run all tests
 pnpm test
