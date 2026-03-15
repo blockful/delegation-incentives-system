@@ -158,10 +158,14 @@ randomness needed). This test uses 5 micro-holders to form a multi-entry pool.
 | d_tiny + 4 siblings | 1 ENS | Last 1 day | ≈ 0.0056 ENS | ≈ 0.005 ENS (< 1 ENS) | Lottery pool |
 | 45 bg delegators | 100 ENS | Full 180 days | 4 500 ENS total | ≈ 94 ENS | Direct payout |
 
-**Why backgrounds are needed:** With only d_big + d_tiny, when d_big's
-excess (4 250 ENS) is redistributed, d_tiny absorbs 100% of it and
-gets capped at 250 ENS — the opposite of the intended test. The 45
-background delegators dilute d_tiny's redistribution share to ≈ 0.005 ENS.
+**Why backgrounds are needed:** Cap redistribution flows pro-rata to
+**all uncapped delegators** across the entire delegator pool — not
+per-delegate. With only d_big + d_tiny in the system, after d_big is
+capped the remaining pool (4 250 ENS) is split among still-uncapped
+recipients: just d_tiny. So d_tiny absorbs the full remaining pool
+(4 250 ENS → capped at 250 ENS). The 45 background delegators
+(4 500 ENS TWB total) provide other uncapped recipients, so d_tiny's
+pro-rata share of the redistributed excess stays ≈ 0.005 ENS.
 
 **Assertions:**
 - d_tiny is NOT in `directPayouts`
@@ -219,9 +223,12 @@ formula, a wrong pool split percentage, or an off-by-one in the cap redistributi
 The scenario tests caught two design errors during development:
 
 1. **Scenario 6 (redistribution dilution):** A naive "big + tiny" setup caused
-   the cap redistribution to funnel all excess to d_tiny, pushing it above
-   threshold. This revealed that sub-threshold lottery routing only works when
-   there are enough other delegators to absorb the redistributed excess.
+   the cap redistribution to funnel all excess to d_tiny. Cap redistribution
+   is global — excess flows pro-rata to every still-uncapped delegator in the
+   program, across all active delegates. With only two delegators, d_tiny was
+   the sole remaining recipient and absorbed the full 4 250 ENS, getting
+   capped at 250 ENS. Adding 45 background delegators provides enough other
+   uncapped recipients to keep d_tiny's share below threshold.
 
 2. **Scenario 7 (cascade capping):** A single whale holding 4 288 ENS TWB gets
    capped at 250 ENS. The redistributed excess (4 038 ENS) then cascades through
