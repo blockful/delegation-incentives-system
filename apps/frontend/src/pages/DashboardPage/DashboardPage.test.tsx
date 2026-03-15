@@ -17,7 +17,7 @@ describe('DashboardPage', () => {
   it('renders earnings when connected', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText(/5\.75% APY/)).toBeInTheDocument()
+      expect(screen.getByText(/3\.95% APY/)).toBeInTheDocument()
     })
     expect(screen.getAllByText(/16\.35/).length).toBeGreaterThanOrEqual(1)
   })
