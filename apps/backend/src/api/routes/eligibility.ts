@@ -3,6 +3,7 @@ import { z } from "zod"
 import { EligibilitySchema, ErrorSchema, AddressParam } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
 import { fetchActiveDelegates, toLowerSet, internalError } from "../helpers.js"
+import { getCachedEnsName, prefetchEnsNames } from "../ens-cache.js"
 
 const eligibilityRoute = createRoute({
   method: "get",
@@ -39,13 +40,19 @@ eligibilityRouter.openapi(eligibilityRoute, async (c) => {
     const isDelegatorToActive =
       accountBalance !== undefined && activeLower.has(accountBalance.delegate.toLowerCase())
 
+    const delegatedTo = accountBalance?.delegate ?? null
+    const addressesToPrefetch = [address, ...(delegatedTo ? [delegatedTo] : [])]
+    prefetchEnsNames(addressesToPrefetch).catch(() => {})
+
     return c.json(
       {
         address,
+        ensName: getCachedEnsName(address),
         isActiveDelegate,
         isDelegatorToActiveDelegate: isDelegatorToActive,
         eligible: isActiveDelegate || isDelegatorToActive,
-        delegatedTo: accountBalance?.delegate ?? null,
+        delegatedTo,
+        delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
       },
       200,
     )

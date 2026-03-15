@@ -21,6 +21,7 @@ import {
   wei,
   seconds,
 } from "@ens-dis/domain"
+import { getCachedEnsName, prefetchEnsNames } from "../ens-cache.js"
 
 const apyRoute = createRoute({
   method: "get",
@@ -64,11 +65,15 @@ apyRouter.openapi(apyRoute, async (c) => {
       accountBalance !== undefined && activeLower.has(accountBalance.delegate.toLowerCase())
 
     if (!isActiveDelegate && !isDelegatorToActive) {
+      const delegatedTo = accountBalance?.delegate ?? null
+      prefetchEnsNames([address, ...(delegatedTo ? [delegatedTo] : [])]).catch(() => {})
       return c.json(
         {
           address,
+          ensName: getCachedEnsName(address),
           role: "ineligible" as const,
-          delegatedTo: accountBalance?.delegate ?? null,
+          delegatedTo,
+          delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: "0",
           estimatedApyPct: "0",
@@ -83,6 +88,7 @@ apyRouter.openapi(apyRoute, async (c) => {
     const twbWindowStart = seconds(monthEnd - TWB_WINDOW_SECONDS)
 
     if (isActiveDelegate) {
+      prefetchEnsNames([address]).catch(() => {})
       const vpMap = await dataSource.votingPower.getVotingPower(activeDelegateArray)
       const userVP = vpMap.get(address) ?? vpMap.get(address.toLowerCase()) ?? wei(0n)
       let totalVP = 0n
@@ -96,8 +102,10 @@ apyRouter.openapi(apyRoute, async (c) => {
       return c.json(
         {
           address,
+          ensName: getCachedEnsName(address),
           role: "delegate" as const,
           delegatedTo: null,
+          delegatedToEnsName: null,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: formatEns(cappedReward),
           estimatedApyPct: computeApyPct(cappedReward, userVP),
@@ -146,11 +154,15 @@ apyRouter.openapi(apyRoute, async (c) => {
     const cappedReward =
       estimatedReward > poolTier.delegatorCap ? poolTier.delegatorCap : estimatedReward
 
+    const delegatedTo = accountBalance?.delegate ?? null
+    prefetchEnsNames([address, ...(delegatedTo ? [delegatedTo] : [])]).catch(() => {})
     return c.json(
       {
         address,
+        ensName: getCachedEnsName(address),
         role: "delegator" as const,
-        delegatedTo: accountBalance?.delegate ?? null,
+        delegatedTo,
+        delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
         poolSizeEns: formatWholeEns(monthlyPool),
         estimatedMonthlyRewardEns: formatEns(cappedReward),
         estimatedApyPct: computeApyPct(cappedReward, currentBalance),

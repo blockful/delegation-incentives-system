@@ -1,7 +1,17 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { distributionToJson } from "../json-writer.js"
 import type { DistributionResult } from "@ens-dis/domain"
 import { wei, basisPoints } from "@ens-dis/domain"
+
+vi.mock("../../ens-cache.js", () => ({
+  getCachedEnsName: vi.fn((address: string) => {
+    const map: Record<string, string> = {
+      "0xdelegate1": "delegate.eth",
+      "0xlotteryWinner": "winner.eth",
+    }
+    return map[address] ?? null
+  }),
+}))
 
 const ONE_ENS = 10n ** 18n
 
@@ -122,5 +132,19 @@ describe("distributionToJson", () => {
     const json = distributionToJson(makeFixture())
     const parsed = JSON.parse(json)
     expect(parsed.metadata.computedAt).toBe("2025-03-31T00:00:00.000Z")
+  })
+
+  it("includes ensName on direct payouts from cache", () => {
+    const json = distributionToJson(makeFixture())
+    const parsed = JSON.parse(json)
+    expect(parsed.directPayouts[0].ensName).toBe("delegate.eth")
+    expect(parsed.directPayouts[1].ensName).toBeNull()
+  })
+
+  it("includes winnerEnsName and entry ensName on lottery pools from cache", () => {
+    const json = distributionToJson(makeFixture())
+    const parsed = JSON.parse(json)
+    expect(parsed.lotteryPools[0].winnerEnsName).toBe("winner.eth")
+    expect(parsed.lotteryPools[0].entries[0].ensName).toBe("winner.eth")
   })
 })

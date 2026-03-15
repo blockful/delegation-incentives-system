@@ -1,5 +1,6 @@
 import { type DistributionResult } from "@ens-dis/domain";
 import { bigintToString, weiToEnsString } from "./format.js";
+import { getCachedEnsName } from "../ens-cache.js";
 
 /**
  * Serialize a DistributionResult to a JSON string.
@@ -26,6 +27,7 @@ export function distributionToJson(result: DistributionResult): string {
     },
     directPayouts: result.directPayouts.map((p) => ({
       address: p.address,
+      ensName: getCachedEnsName(p.address),
       amount: bigintToString(p.amount),
       amountEns: weiToEnsString(p.amount),
       role: p.role,
@@ -34,8 +36,10 @@ export function distributionToJson(result: DistributionResult): string {
       totalPrize: bigintToString(pool.totalPrize),
       totalPrizeEns: weiToEnsString(pool.totalPrize),
       winner: pool.winner,
+      winnerEnsName: getCachedEnsName(pool.winner),
       entries: pool.entries.map((e) => ({
         address: e.address,
+        ensName: getCachedEnsName(e.address),
         originalAmount: bigintToString(e.originalAmount),
         role: e.role,
       })),

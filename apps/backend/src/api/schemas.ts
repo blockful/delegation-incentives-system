@@ -29,6 +29,7 @@ export const TierSchema = z.object({
 
 export const PayoutSchema = z.object({
   address: z.string(),
+  ensName: z.string().nullable(),
   amount: z.string(),
   amountEns: z.string(),
   role: z.enum(["delegate", "delegator"]),
@@ -36,6 +37,7 @@ export const PayoutSchema = z.object({
 
 export const LotteryEntrySchema = z.object({
   address: z.string(),
+  ensName: z.string().nullable(),
   originalAmount: z.string(),
   role: z.enum(["delegate", "delegator"]),
 }).openapi("LotteryEntry")
@@ -44,6 +46,7 @@ export const LotteryPoolSchema = z.object({
   totalPrize: z.string(),
   totalPrizeEns: z.string(),
   winner: z.string(),
+  winnerEnsName: z.string().nullable(),
   entries: z.array(LotteryEntrySchema),
 }).openapi("LotteryPool")
 
@@ -97,10 +100,12 @@ export const ActiveDelegatesDetailSchema = z.object({
 
 export const EligibilitySchema = z.object({
   address: z.string(),
+  ensName: z.string().nullable(),
   isActiveDelegate: z.boolean(),
   isDelegatorToActiveDelegate: z.boolean(),
   eligible: z.boolean(),
   delegatedTo: z.string().nullable(),
+  delegatedToEnsName: z.string().nullable(),
 }).openapi("Eligibility")
 
 export const StatusSchema = z.object({
@@ -150,9 +155,11 @@ export const RoundInfoSchema = z.object({
 
 export const ApyEstimateSchema = z.object({
   address: z.string(),
+  ensName: z.string().nullable(),
   /** "delegate" | "delegator" | "ineligible". Self-delegates who are active get "delegate". */
   role: z.enum(["delegate", "delegator", "ineligible"]),
   delegatedTo: z.string().nullable(),
+  delegatedToEnsName: z.string().nullable(),
   poolSizeEns: z.string(),
   estimatedMonthlyRewardEns: z.string(),
   estimatedApyPct: z.string(),

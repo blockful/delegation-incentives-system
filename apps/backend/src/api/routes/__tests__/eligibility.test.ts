@@ -6,6 +6,14 @@ vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
 }))
 
+vi.mock("../../ens-cache.js", () => ({
+  getCachedEnsName: vi.fn((address: string) => {
+    if (address === "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") return "delegate.eth"
+    return null
+  }),
+  prefetchEnsNames: vi.fn(() => Promise.resolve()),
+}))
+
 import { buildDataSource } from "../../data-source.js"
 
 const DELEGATE_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -66,6 +74,8 @@ describe("GET /eligibility/{address}", () => {
     expect(body.isActiveDelegate).toBe(true)
     expect(body.isDelegatorToActiveDelegate).toBe(false)
     expect(body.address).toBe(DELEGATE_A)
+    expect(body.ensName).toBe("delegate.eth")
+    expect(body.delegatedToEnsName).toBeNull()
   })
 
   it("returns eligible=true for delegator to active delegate", async () => {
@@ -77,6 +87,8 @@ describe("GET /eligibility/{address}", () => {
     expect(body.isActiveDelegate).toBe(false)
     expect(body.isDelegatorToActiveDelegate).toBe(true)
     expect(body.delegatedTo).toBe(DELEGATE_A)
+    expect(body.ensName).toBeNull()
+    expect(body.delegatedToEnsName).toBe("delegate.eth")
   })
 
   it("returns eligible=false for unknown address (200 not 404)", async () => {

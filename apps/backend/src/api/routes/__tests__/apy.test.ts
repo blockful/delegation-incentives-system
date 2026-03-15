@@ -6,6 +6,14 @@ vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
 }))
 
+vi.mock("../../ens-cache.js", () => ({
+  getCachedEnsName: vi.fn((address: string) => {
+    if (address === "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") return "delegate.eth"
+    return null
+  }),
+  prefetchEnsNames: vi.fn(() => Promise.resolve()),
+}))
+
 import { buildDataSource } from "../../data-source.js"
 
 const DELEGATE_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -112,14 +120,32 @@ describe("GET /apy/{address}", () => {
     const res = await apyRouter.fetch(req)
     const body = await res.json()
     expect(body).toHaveProperty("address")
+    expect(body).toHaveProperty("ensName")
     expect(body).toHaveProperty("role")
     expect(body).toHaveProperty("delegatedTo")
+    expect(body).toHaveProperty("delegatedToEnsName")
     expect(body).toHaveProperty("poolSizeEns")
     expect(body).toHaveProperty("estimatedMonthlyRewardEns")
     expect(body).toHaveProperty("estimatedApyPct")
     expect(body).toHaveProperty("userShareWei")
     expect(body).toHaveProperty("totalShareWei")
     expect(body).toHaveProperty("currentBalanceEns")
+  })
+
+  it("includes ensName for active delegate", async () => {
+    const req = new Request(`http://localhost/apy/${DELEGATE_A}`)
+    const res = await apyRouter.fetch(req)
+    const body = await res.json()
+    expect(body.ensName).toBe("delegate.eth")
+    expect(body.delegatedToEnsName).toBeNull()
+  })
+
+  it("includes delegatedToEnsName for delegator", async () => {
+    const req = new Request(`http://localhost/apy/${DELEGATOR_B}`)
+    const res = await apyRouter.fetch(req)
+    const body = await res.json()
+    expect(body.ensName).toBeNull()
+    expect(body.delegatedToEnsName).toBe("delegate.eth")
   })
 
   it("returns 500 when data source throws", async () => {
