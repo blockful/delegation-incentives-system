@@ -2,6 +2,7 @@ import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { useLottery } from '@/features/lottery/useLottery'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { truncateAddress } from '@/utils/format'
 
 const Page = styled.div`
   max-width: 720px;
@@ -191,10 +192,6 @@ const ErrorMessage = styled.p`
   color: #c62828;
   font-size: 16px;
 `
-
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-}
 
 const HOW_IT_WORKS_STEPS = [
   'Small balances that fall below the minimum payout threshold are pooled together into a lottery.',

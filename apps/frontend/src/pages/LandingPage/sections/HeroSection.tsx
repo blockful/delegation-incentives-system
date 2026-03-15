@@ -2,6 +2,10 @@ import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
+const RouterLink = styled(Link)`
+  text-decoration: none;
+`
+
 interface HeroSectionProps {
   currentApyPct: string
 }
@@ -84,12 +88,16 @@ export function HeroSection({ currentApyPct }: HeroSectionProps) {
         automatic, gas is sponsored.
       </Subtitle>
       <Actions>
-        <Button as="a" href="/delegates" colorStyle="bluePrimary">
-          Delegate Now &rarr; Free
-        </Button>
-        <Button as="a" href="#" colorStyle="blueSecondary">
-          Share this initiative
-        </Button>
+        <RouterLink to="/delegates">
+          <Button colorStyle="bluePrimary">
+            Delegate Now &rarr; Free
+          </Button>
+        </RouterLink>
+        <RouterLink to="#">
+          <Button colorStyle="blueSecondary">
+            Share this initiative
+          </Button>
+        </RouterLink>
       </Actions>
     </Section>
   )

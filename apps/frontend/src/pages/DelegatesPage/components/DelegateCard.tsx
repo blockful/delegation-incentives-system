@@ -4,13 +4,10 @@ import type { DelegateDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { truncateAddress } from '@/utils/format'
 
 interface DelegateCardProps {
   delegate: DelegateDetail
-}
-
-function truncateAddress(address: string): string {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`
 }
 
 function formatVotingPower(vp: string): string {

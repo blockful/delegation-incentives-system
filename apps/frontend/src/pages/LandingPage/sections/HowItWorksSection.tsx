@@ -2,6 +2,10 @@ import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
+const RouterLink = styled(Link)`
+  text-decoration: none;
+`
+
 const Section = styled.section`
   padding: 48px 20px;
   background: #f7f9fc;
@@ -192,12 +196,16 @@ export function HowItWorksSection() {
         </Cards>
 
         <Actions>
-          <Button as="a" href="/rounds" colorStyle="bluePrimary">
-            Round breakdown &rarr;
-          </Button>
-          <Button as="a" href="/lottery" colorStyle="blueSecondary">
-            Check lottery status
-          </Button>
+          <RouterLink to="/rounds">
+            <Button colorStyle="bluePrimary">
+              Round breakdown &rarr;
+            </Button>
+          </RouterLink>
+          <RouterLink to="/lottery">
+            <Button colorStyle="blueSecondary">
+              Check lottery status
+            </Button>
+          </RouterLink>
         </Actions>
       </Inner>
     </Section>

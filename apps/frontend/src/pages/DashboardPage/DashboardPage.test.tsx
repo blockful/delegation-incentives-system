@@ -32,7 +32,7 @@ describe('DashboardPage', () => {
   it('renders round progress card', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Round 4/ })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Round 2/ })).toBeInTheDocument()
     })
   })
 })

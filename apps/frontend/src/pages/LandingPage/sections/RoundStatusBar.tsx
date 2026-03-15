@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { CURRENT_ROUND, ROUND_TIME_LEFT } from '@/config/round'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
@@ -102,9 +103,9 @@ export function RoundStatusBar({
         <InfoCell>
           <InfoValue>
             <LiveDot />
-            Round 1
+            Round {CURRENT_ROUND}
           </InfoValue>
-          <InfoLabel>ends 18d 14h</InfoLabel>
+          <InfoLabel>ends {ROUND_TIME_LEFT}</InfoLabel>
         </InfoCell>
         <InfoCell>
           <InfoValue>

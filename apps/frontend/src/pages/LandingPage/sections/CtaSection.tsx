@@ -1,5 +1,10 @@
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
+import { Link } from 'react-router-dom'
+
+const RouterLink = styled(Link)`
+  text-decoration: none;
+`
 
 const Section = styled.section`
   background: #121218;
@@ -92,12 +97,16 @@ export function CtaSection() {
         Delegate in under a minute. Gas is sponsored. Rewards are automatic.
       </Subtitle>
       <Actions>
-        <Button as="a" href="/delegates" colorStyle="bluePrimary">
-          Delegate to an Active Delegate &rarr;
-        </Button>
-        <Button as="a" href="/rounds" colorStyle="blueSecondary">
-          View Live Round Progress
-        </Button>
+        <RouterLink to="/delegates">
+          <Button colorStyle="bluePrimary">
+            Delegate to an Active Delegate &rarr;
+          </Button>
+        </RouterLink>
+        <RouterLink to="/rounds">
+          <Button colorStyle="blueSecondary">
+            View Live Round Progress
+          </Button>
+        </RouterLink>
       </Actions>
       <Checks>
         {checkItems.map((item) => (

@@ -7,7 +7,7 @@ describe('RoundsPage', () => {
     renderApp(<RoundsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Round 4 is/)).toBeInTheDocument()
+      expect(screen.getByText(/Round 2 is/)).toBeInTheDocument()
     })
     expect(screen.getByText('live')).toBeInTheDocument()
   })

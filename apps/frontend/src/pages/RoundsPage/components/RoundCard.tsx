@@ -56,7 +56,7 @@ const ProgressBarTrack = styled.div`
 const ProgressBarFill = styled.div<{ $pct: number }>`
   height: 100%;
   border-radius: 4px;
-  background: #49b365;
+  background: #3889FF;
   width: ${({ $pct }) => Math.min($pct, 100)}%;
   transition: width 0.3s ease;
 `

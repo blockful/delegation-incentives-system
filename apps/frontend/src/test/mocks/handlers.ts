@@ -4,7 +4,7 @@ import {
   statusFixture,
   delegatesFixture,
   roundsFixture,
-  eligibleDelegateFixture,
+  eligibleDelegatorFixture,
   apyFixture,
   distributionFixture,
 } from './fixtures'
@@ -21,7 +21,7 @@ export const handlers = [
   ),
 
   http.get('/api/eligibility/:address', () =>
-    HttpResponse.json(eligibleDelegateFixture),
+    HttpResponse.json(eligibleDelegatorFixture),
   ),
 
   http.get('/api/apy/:address', () => HttpResponse.json(apyFixture)),

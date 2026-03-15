@@ -76,12 +76,13 @@ const ErrorMessage = styled.p`
   font-size: 16px;
 `
 
-// Hardcoded — backend doesn't provide round metadata yet.
-const CURRENT_ROUND = 4
-const ROUND_START = 'Mar 1, 2026'
-const ROUND_END = 'Mar 31, 2026'
-const PERCENT_COMPLETE = 48
-const TIME_LEFT = '16 days'
+import {
+  CURRENT_ROUND,
+  ROUND_START_DATE as ROUND_START,
+  ROUND_END_DATE as ROUND_END,
+  ROUND_PERCENT_COMPLETE as PERCENT_COMPLETE,
+  ROUND_TIME_LEFT as TIME_LEFT,
+} from '@/config/round'
 
 // Hardcoded mock data — needs API wiring when round history endpoint is available.
 const ROUND_HISTORY: RoundHistoryEntry[] = [

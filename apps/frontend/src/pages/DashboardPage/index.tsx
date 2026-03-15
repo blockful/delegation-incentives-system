@@ -49,12 +49,12 @@ const ErrorMessage = styled.p`
   font-size: 16px;
 `
 
-// Hardcoded values — backend doesn't provide round timing yet.
-const CURRENT_ROUND = 4
-const TIME_LEFT = '16d 8h'
-const PERCENT_COMPLETE = 48
-const ROUND_END_LABEL = '16 days'
-const ROUND_END_DATE = 'Mar 31, 2026'
+import {
+  CURRENT_ROUND,
+  ROUND_TIME_LEFT as TIME_LEFT,
+  ROUND_PERCENT_COMPLETE as PERCENT_COMPLETE,
+  ROUND_END_DATE,
+} from '@/config/round'
 
 // Hardcoded — lottery data requires distribution endpoint wiring.
 const LOTTERY_POOL_NUMBER = 1
@@ -119,7 +119,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
         <RightColumn>
           <RoundDetailsSection
             balanceEns={apy.data.currentBalanceEns}
-            roundEnds={ROUND_END_LABEL}
+            roundEnds={TIME_LEFT}
             roundEndDate={ROUND_END_DATE}
             poolSizeEns={poolSizeEns}
           />

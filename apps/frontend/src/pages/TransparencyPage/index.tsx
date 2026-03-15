@@ -4,6 +4,7 @@ import { Spinner, Tag } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
+import { truncateAddress } from '@/utils/format'
 
 const Page = styled.div`
   max-width: 1120px;
@@ -207,10 +208,6 @@ const LoadingWrapper = styled.div`
   min-height: 200px;
 `
 
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-}
-
 const VERIFY_LINKS = [
   {
     icon: '📂',
@@ -241,8 +238,7 @@ const HOW_REWARDS_STEPS = [
   'Individual rewards are proportional to your share of the pool, capped per-address to ensure fair distribution.',
 ]
 
-// Hardcoded — backend doesn't provide round metadata.
-const CURRENT_ROUND = 4
+import { CURRENT_ROUND } from '@/config/round'
 
 export function TransparencyPage() {
   const fetchStatus = useCallback(() => api.status(), [])

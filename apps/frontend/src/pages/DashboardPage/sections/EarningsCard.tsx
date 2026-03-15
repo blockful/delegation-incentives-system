@@ -1,6 +1,7 @@
 import styled from 'styled-components'
 import { Button, Tag } from '@ensdomains/thorin'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { truncateAddress } from '@/utils/format'
 
 interface EarningsCardProps {
   earnedEns: string
@@ -90,10 +91,6 @@ const ButtonRow = styled.div`
   gap: 12px;
   flex-wrap: wrap;
 `
-
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-}
 
 export function EarningsCard({
   earnedEns,

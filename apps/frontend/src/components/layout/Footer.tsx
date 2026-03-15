@@ -74,7 +74,7 @@ export function Footer() {
         <Top>
           <div>
             <Title>Incentives Pilot v1</Title>
-            <Subtitle>ENS Delegation Incentive Program</Subtitle>
+            <Subtitle>A security campaign for safer ENS governance</Subtitle>
           </div>
           <Nav>
             <FooterLink to="/">How It Works</FooterLink>
