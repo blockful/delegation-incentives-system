@@ -85,6 +85,7 @@ export const ActiveDelegatesSchema = z.object({
 export const DelegateDetailSchema = z.object({
   address: z.string(),
   ensName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
   votingPower: z.string().nullable().openapi({ description: "Voting power in wei" }),
   delegatorCount: z.number().nullable(),
   activeSince: z.string().nullable().openapi({ description: "ISO date of first delegation received" }),
@@ -156,10 +157,12 @@ export const RoundInfoSchema = z.object({
 export const ApyEstimateSchema = z.object({
   address: z.string(),
   ensName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
   /** "delegate" | "delegator" | "ineligible". Self-delegates who are active get "delegate". */
   role: z.enum(["delegate", "delegator", "ineligible"]),
   delegatedTo: z.string().nullable(),
   delegatedToEnsName: z.string().nullable(),
+  delegatedToAvatarUrl: z.string().nullable(),
   poolSizeEns: z.string(),
   estimatedMonthlyRewardEns: z.string(),
   estimatedApyPct: z.string(),

@@ -17,6 +17,7 @@ const CONCURRENCY = 5
 
 interface CacheEntry {
   name: string | null
+  avatar: string | null
   cachedAt: number
 }
 
@@ -25,6 +26,11 @@ const cache = new Map<string, CacheEntry>()
 /** Return the cached ENS name for an address, or null if not yet resolved. */
 export function getCachedEnsName(address: string): string | null {
   return cache.get(address.toLowerCase())?.name ?? null
+}
+
+/** Return the cached avatar URL for an address, or null if not yet resolved. */
+export function getCachedAvatarUrl(address: string): string | null {
+  return cache.get(address.toLowerCase())?.avatar ?? null
 }
 
 /**
@@ -54,19 +60,19 @@ async function resolveAndCache(address: string): Promise<void> {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
     if (!res.ok) {
-      cache.set(key, { name: null, cachedAt: Date.now() })
+      cache.set(key, { name: null, avatar: null, cachedAt: Date.now() })
       return
     }
-    const data = (await res.json()) as { name?: string }
-    cache.set(key, { name: data.name ?? null, cachedAt: Date.now() })
+    const data = (await res.json()) as { name?: string; avatar?: string }
+    cache.set(key, { name: data.name ?? null, avatar: data.avatar ?? null, cachedAt: Date.now() })
   } catch {
-    cache.set(key, { name: null, cachedAt: Date.now() })
+    cache.set(key, { name: null, avatar: null, cachedAt: Date.now() })
   }
 }
 
 /** Directly inject an entry — used in tests and for Ponder-indexed aliases. */
-export function setCachedEnsName(address: string, name: string | null): void {
-  cache.set(address.toLowerCase(), { name, cachedAt: Date.now() })
+export function setCachedEnsName(address: string, name: string | null, avatar?: string | null): void {
+  cache.set(address.toLowerCase(), { name, avatar: avatar ?? null, cachedAt: Date.now() })
 }
 
 /** Clear all entries — used in tests. */

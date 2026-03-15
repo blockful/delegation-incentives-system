@@ -18,6 +18,7 @@ vi.mock("@ens-dis/domain", async (importOriginal) => {
 
 vi.mock("../../ens-cache.js", () => ({
   getCachedEnsName: vi.fn(() => null),
+  getCachedAvatarUrl: vi.fn(() => null),
 }))
 
 import { isConfiguredRound } from "../../rounds.js"

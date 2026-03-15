@@ -11,6 +11,7 @@ vi.mock("../../ens-cache.js", () => ({
     if (address === "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") return "delegate.eth"
     return null
   }),
+  getCachedAvatarUrl: vi.fn(() => null),
   prefetchEnsNames: vi.fn(() => Promise.resolve()),
 }))
 

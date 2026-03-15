@@ -21,7 +21,7 @@ import {
   wei,
   seconds,
 } from "@ens-dis/domain"
-import { getCachedEnsName, prefetchEnsNames } from "../ens-cache.js"
+import { getCachedEnsName, getCachedAvatarUrl, prefetchEnsNames } from "../ens-cache.js"
 
 const apyRoute = createRoute({
   method: "get",
@@ -71,9 +71,11 @@ apyRouter.openapi(apyRoute, async (c) => {
         {
           address,
           ensName: getCachedEnsName(address),
+          avatarUrl: getCachedAvatarUrl(address),
           role: "ineligible" as const,
           delegatedTo,
           delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
+          delegatedToAvatarUrl: delegatedTo ? getCachedAvatarUrl(delegatedTo) : null,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: "0",
           estimatedApyPct: "0",
@@ -103,9 +105,11 @@ apyRouter.openapi(apyRoute, async (c) => {
         {
           address,
           ensName: getCachedEnsName(address),
+          avatarUrl: getCachedAvatarUrl(address),
           role: "delegate" as const,
           delegatedTo: null,
           delegatedToEnsName: null,
+          delegatedToAvatarUrl: null,
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: formatEns(cappedReward),
           estimatedApyPct: computeApyPct(cappedReward, userVP),
@@ -160,9 +164,11 @@ apyRouter.openapi(apyRoute, async (c) => {
       {
         address,
         ensName: getCachedEnsName(address),
+        avatarUrl: getCachedAvatarUrl(address),
         role: "delegator" as const,
         delegatedTo,
         delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
+        delegatedToAvatarUrl: delegatedTo ? getCachedAvatarUrl(delegatedTo) : null,
         poolSizeEns: formatWholeEns(monthlyPool),
         estimatedMonthlyRewardEns: formatEns(cappedReward),
         estimatedApyPct: computeApyPct(cappedReward, currentBalance),

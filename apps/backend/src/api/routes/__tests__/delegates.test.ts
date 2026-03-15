@@ -8,6 +8,7 @@ vi.mock("../../data-source.js", () => ({
 
 vi.mock("../../ens-cache.js", () => ({
   getCachedEnsName: vi.fn(() => null),
+  getCachedAvatarUrl: vi.fn(() => null),
   prefetchEnsNames: vi.fn(() => Promise.resolve()),
 }))
 

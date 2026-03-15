@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
 import { ActiveDelegatesDetailSchema, ErrorSchema } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
 import { fetchActiveDelegates, internalError } from "../helpers.js"
-import { getCachedEnsName, prefetchEnsNames } from "../ens-cache.js"
+import { getCachedEnsName, getCachedAvatarUrl, prefetchEnsNames } from "../ens-cache.js"
 
 const activeDelegatesRoute = createRoute({
   method: "get",
@@ -68,6 +68,7 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
       return {
         address,
         ensName: getCachedEnsName(address),
+        avatarUrl: getCachedAvatarUrl(address),
         votingPower: vp != null ? vp.toString() : null,
         delegatorCount: delegatorCountMap.get(lc) ?? 0,
         activeSince: firstVoteTs != null
