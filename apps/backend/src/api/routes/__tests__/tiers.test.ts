@@ -34,6 +34,13 @@ const mockDataSource = {
   votingPower: {
     getAggregateDelegatedPower: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
   },
+  delegations: {
+    getAccountBalances: vi.fn().mockResolvedValue([
+      { accountId: "0x1111", balance: wei(500n * 10n ** 18n), delegate: "0xaaa" },
+      { accountId: "0x2222", balance: wei(300n * 10n ** 18n), delegate: "0xaaa" },
+      { accountId: "0x3333", balance: wei(200n * 10n ** 18n), delegate: "0xbbb" }, // not active
+    ]),
+  },
 }
 
 beforeEach(() => {
@@ -77,21 +84,20 @@ describe("GET /tiers/progression", () => {
     expect(typeof body.activeDelegateCount).toBe("number")
   })
 
-  it("returns maxDelegatorApyPct as a string", async () => {
+  it("returns maxDelegatorApyPct based on total eligible delegator balance", async () => {
     const req = new Request("http://localhost/tiers/progression")
     const res = await tiersRouter.fetch(req)
     const body = await res.json()
     expect(typeof body.maxDelegatorApyPct).toBe("string")
-    // With currentAVP = 1000 ENS and tier 0 poolSize = 5000 ENS, delegatorPoolBps = 9000:
+    // 0xaaa is the only active delegate; delegators to 0xaaa have 500+300=800 ENS
+    // tier 0 poolSize = 5000, delegatorPoolBps = 9000:
     // delegatorPool = 5000 * 9000 / 10000 = 4500 ENS
-    // maxDelegatorApyPct = (4500 * 12 / 1000) * 100 = 5400.00
-    expect(body.maxDelegatorApyPct).toBe("5400.00")
+    // maxDelegatorApyPct = (4500 * 12 / 800) * 100 = 6750.00
+    expect(body.maxDelegatorApyPct).toBe("6750.00")
   })
 
-  it("returns maxDelegatorApyPct of 0.00 when AVP is zero", async () => {
-    vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower).mockResolvedValue(
-      wei(0n),
-    )
+  it("returns maxDelegatorApyPct of 0.00 when no eligible delegators", async () => {
+    vi.mocked(mockDataSource.delegations.getAccountBalances).mockResolvedValue([])
     const req = new Request("http://localhost/tiers/progression")
     const res = await tiersRouter.fetch(req)
     const body = await res.json()

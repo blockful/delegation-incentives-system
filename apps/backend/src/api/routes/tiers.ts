@@ -9,6 +9,7 @@ import {
   computeMaxDelegatorApyPct,
 } from "../helpers.js"
 import { POOL_TIERS, percentageGrowthBps, mulDiv, DELEGATOR_POOL_BPS, ONE_ENS } from "@ens-dis/domain"
+import { toLowerSet } from "../helpers.js"
 
 const tierProgressionRoute = createRoute({
   method: "get",
@@ -41,13 +42,23 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
 
     const growthBps = percentageGrowthBps(currentAVP, previousAVP)
 
+    // Sum current balances of delegators who delegate to active delegates
+    const activeLower = toLowerSet(activeDelegates)
+    const accountBalances = await dataSource.delegations.getAccountBalances()
+    let totalDelegatorBalance = 0n
+    for (const ab of accountBalances) {
+      if (activeLower.has(ab.delegate.toLowerCase())) {
+        totalDelegatorBalance += ab.balance
+      }
+    }
+
     const currentTierPoolSize = POOL_TIERS[currentTierIndex]?.poolSize ?? POOL_TIERS[0].poolSize
     const poolSizeEns = Number(currentTierPoolSize) / Number(ONE_ENS)
-    const currentAVPEns = Number(currentAVP) / Number(ONE_ENS)
+    const totalDelegatorBalanceEns = Number(totalDelegatorBalance) / Number(ONE_ENS)
     const maxDelegatorApyPct = computeMaxDelegatorApyPct(
       poolSizeEns,
       Number(DELEGATOR_POOL_BPS),
-      currentAVPEns,
+      totalDelegatorBalanceEns,
     )
 
     const tiers = POOL_TIERS.map((tier, index) => {
