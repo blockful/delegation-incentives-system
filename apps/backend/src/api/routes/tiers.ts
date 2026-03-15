@@ -5,7 +5,7 @@ import {
   fetchActiveDelegates,
   fetchMonthContext,
   formatWholeEns,
-  errorMessage,
+  internalError,
   computeMaxDelegatorApyPct,
 } from "../helpers.js"
 import { POOL_TIERS, percentageGrowthBps, mulDiv, DELEGATOR_POOL_BPS, ONE_ENS } from "@ens-dis/domain"
@@ -96,6 +96,6 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
       200,
     )
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })

@@ -50,6 +50,13 @@ beforeEach(() => {
 })
 
 describe("GET /eligibility/{address}", () => {
+  it("returns 400 for invalid address", async () => {
+    const req = new Request("http://localhost/eligibility/not-an-address")
+    const res = await eligibilityRouter.fetch(req)
+    expect(res.status).toBe(400)
+  })
+
+
   it("returns eligible=true for active delegate", async () => {
     const req = new Request(`http://localhost/eligibility/${DELEGATE_A}`)
     const res = await eligibilityRouter.fetch(req)

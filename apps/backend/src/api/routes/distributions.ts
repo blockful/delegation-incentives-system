@@ -9,7 +9,8 @@ import {
 import { buildDataSource } from "../data-source.js"
 import { distributionToCsv } from "../output/csv-writer.js"
 import { distributionToJson } from "../output/json-writer.js"
-import { errorMessage } from "../helpers.js"
+import { internalError } from "../helpers.js"
+import { isConfiguredRound } from "../rounds.js"
 import { runDistributionPipeline } from "@ens-dis/domain"
 
 const listDistributionsRoute = createRoute({
@@ -43,6 +44,10 @@ const computeRoute = createRoute({
     400: {
       content: { "application/json": { schema: ErrorSchema } },
       description: "Invalid month format",
+    },
+    403: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Month is not a configured round",
     },
     500: {
       content: { "application/json": { schema: ErrorSchema } },
@@ -95,12 +100,15 @@ distributionsRouter.openapi(listDistributionsRoute, async (c) => {
     const months = await dataSource.distributions.list()
     return c.json(months, 200)
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
 
 distributionsRouter.openapi(computeRoute, async (c) => {
   const { month } = c.req.valid("param")
+  if (!isConfiguredRound(month)) {
+    return c.json({ error: `${month} is not a configured round` }, 403)
+  }
   try {
     const dataSource = buildDataSource()
 
@@ -134,7 +142,7 @@ distributionsRouter.openapi(computeRoute, async (c) => {
       200,
     )
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
 
@@ -151,7 +159,7 @@ distributionsRouter.openapi(getDistributionRoute, async (c) => {
     }
     return c.json(JSON.parse(distributionToJson(result)), 200)
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })
 
@@ -168,6 +176,6 @@ distributionsRouter.openapi(getCsvRoute, async (c) => {
       "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
     })
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })

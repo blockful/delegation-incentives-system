@@ -9,7 +9,7 @@ import type {
   WalletAliasRepository,
   BlockRepository,
   DistributionRepository,
-} from "./interfaces.js";
+} from "../../src/interfaces.js";
 import {
   type Proposal,
   type Vote,
@@ -23,8 +23,8 @@ import {
   type Seconds,
   type DistributionResult,
   wei,
-} from "./types.js";
-import { sum } from "./util/bigint-math.js";
+} from "../../src/types.js";
+import { sum } from "../../src/util/bigint-math.js";
 
 /**
  * In-memory implementation of IncentivesDataSource for testing.

@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
 import { z } from "zod"
 import { HealthSchema, StatusSchema, ErrorSchema } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, errorMessage } from "../helpers.js"
+import { fetchActiveDelegates, internalError } from "../helpers.js"
 
 const healthRoute = createRoute({
   method: "get",
@@ -52,6 +52,6 @@ healthRouter.openapi(statusRoute, async (c) => {
       200,
     )
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })

@@ -69,8 +69,27 @@ export function runLottery(
     pools.push(currentPool);
   }
 
-  // For each pool, draw a weighted random winner
-  const lotteryPools: LotteryPool[] = pools.map((entries, poolIndex) => {
+  // A single-entry pool has no randomness — promote to direct payout.
+  const soloEntries: LotteryEntry[] = [];
+  const multiEntryPools: LotteryEntry[][] = [];
+  for (const pool of pools) {
+    if (pool.length === 1) {
+      soloEntries.push(pool[0]);
+    } else {
+      multiEntryPools.push(pool);
+    }
+  }
+
+  for (const entry of soloEntries) {
+    directPayouts.push({
+      address: entry.address,
+      amount: entry.originalAmount,
+      role: entry.role,
+    });
+  }
+
+  // For each multi-entry pool, draw a weighted random winner
+  const lotteryPools: LotteryPool[] = multiEntryPools.map((entries, poolIndex) => {
     const totalPrize = wei(
       sum(entries.map((e) => e.originalAmount)),
     );

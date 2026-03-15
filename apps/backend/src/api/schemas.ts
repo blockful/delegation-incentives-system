@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { isAddress } from "viem"
 
 export const MonthParam = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "must be YYYY-MM").openapi({
   param: { name: "month", in: "path" },
@@ -6,11 +7,14 @@ export const MonthParam = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "must be Y
   description: "Distribution month in YYYY-MM format",
 })
 
-export const AddressParam = z.string().openapi({
-  param: { name: "address", in: "path" },
-  example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  description: "Ethereum address",
-})
+export const AddressParam = z
+  .string()
+  .refine((v) => isAddress(v, { strict: false }), { message: "Invalid Ethereum address" })
+  .openapi({
+    param: { name: "address", in: "path" },
+    example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    description: "Ethereum address (checksummed or lowercase)",
+  })
 
 export const ErrorSchema = z.object({ error: z.string() }).openapi("Error")
 export const HealthSchema = z.object({ status: z.enum(["ok"]) }).openapi("Health")

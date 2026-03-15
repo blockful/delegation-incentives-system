@@ -9,7 +9,7 @@ import {
   computeApyPct,
   formatEns,
   formatWholeEns,
-  errorMessage,
+  internalError,
 } from "../helpers.js"
 import {
   DELEGATE_POOL_BPS,
@@ -161,6 +161,6 @@ apyRouter.openapi(apyRoute, async (c) => {
       200,
     )
   } catch (error) {
-    return c.json({ error: errorMessage(error) }, 500)
+    return c.json({ error: internalError(error) }, 500)
   }
 })

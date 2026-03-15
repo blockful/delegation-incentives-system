@@ -3,6 +3,8 @@ import { wei, seconds, type Seconds } from "@ens-dis/domain"
 import { and, inArray, lte, gte } from "drizzle-orm"
 import { ensVotingPowerSnapshot } from "ponder:schema"
 
+type VPSnapshotRow = typeof ensVotingPowerSnapshot.$inferSelect
+
 export class VotingPowerAdapter implements VotingPowerRepository {
   constructor(private db: any) {}
 
@@ -15,7 +17,7 @@ export class VotingPowerAdapter implements VotingPowerRepository {
 
     const normalizedIds = accountIds.map(id => id.toLowerCase())
 
-    const rows = await this.db
+    const rows: VPSnapshotRow[] = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
       .where(
@@ -26,11 +28,11 @@ export class VotingPowerAdapter implements VotingPowerRepository {
         ),
       )
 
-    return rows.map((row: any) => ({
-      accountId: (row.accountId as string).toLowerCase(),
-      votingPower: wei(BigInt(row.votingPower as string | number | bigint)),
-      delta: wei(BigInt(row.delta as string | number | bigint)),
-      timestamp: seconds(BigInt(row.timestamp as string | number | bigint)),
+    return rows.map((row) => ({
+      accountId: row.accountId.toLowerCase(),
+      votingPower: wei(row.votingPower),
+      delta: wei(row.delta),
+      timestamp: seconds(row.timestamp),
     }))
   }
 
@@ -42,7 +44,7 @@ export class VotingPowerAdapter implements VotingPowerRepository {
 
     const normalizedIds = activeDelegateIds.map(id => id.toLowerCase())
 
-    const rows = await this.db
+    const rows: VPSnapshotRow[] = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
       .where(
@@ -55,12 +57,10 @@ export class VotingPowerAdapter implements VotingPowerRepository {
     // For each delegate, keep only the latest snapshot
     const latestByAccount = new Map<string, { votingPower: bigint; timestamp: bigint }>()
     for (const row of rows) {
-      const accountId = (row.accountId as string).toLowerCase()
-      const ts = BigInt(row.timestamp as string | number | bigint)
-      const vp = BigInt(row.votingPower as string | number | bigint)
+      const accountId = row.accountId.toLowerCase()
       const existing = latestByAccount.get(accountId)
-      if (!existing || ts > existing.timestamp) {
-        latestByAccount.set(accountId, { votingPower: vp, timestamp: ts })
+      if (!existing || row.timestamp > existing.timestamp) {
+        latestByAccount.set(accountId, { votingPower: row.votingPower, timestamp: row.timestamp })
       }
     }
 
@@ -76,7 +76,7 @@ export class VotingPowerAdapter implements VotingPowerRepository {
 
     const normalizedIds = accountIds.map(id => id.toLowerCase())
 
-    const rows = await this.db
+    const rows: VPSnapshotRow[] = await this.db
       .select()
       .from(ensVotingPowerSnapshot)
       .where(inArray(ensVotingPowerSnapshot.accountId, normalizedIds))
@@ -84,12 +84,10 @@ export class VotingPowerAdapter implements VotingPowerRepository {
     // For each account, keep the latest snapshot (no time filter)
     const latestByAccount = new Map<string, { votingPower: bigint; timestamp: bigint }>()
     for (const row of rows) {
-      const accountId = (row.accountId as string).toLowerCase()
-      const ts = BigInt(row.timestamp as string | number | bigint)
-      const vp = BigInt(row.votingPower as string | number | bigint)
+      const accountId = row.accountId.toLowerCase()
       const existing = latestByAccount.get(accountId)
-      if (!existing || ts > existing.timestamp) {
-        latestByAccount.set(accountId, { votingPower: vp, timestamp: ts })
+      if (!existing || row.timestamp > existing.timestamp) {
+        latestByAccount.set(accountId, { votingPower: row.votingPower, timestamp: row.timestamp })
       }
     }
 
