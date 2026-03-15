@@ -9,7 +9,6 @@ import {
   computeMaxDelegatorApyPct,
 } from "../helpers.js"
 import { POOL_TIERS, percentageGrowthBps, mulDiv, DELEGATOR_POOL_BPS, ONE_ENS } from "@ens-dis/domain"
-import { toLowerSet } from "../helpers.js"
 
 const tierProgressionRoute = createRoute({
   method: "get",
@@ -42,28 +41,18 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
 
     const growthBps = percentageGrowthBps(currentAVP, previousAVP)
 
-    // Sum current balances of delegators who delegate to active delegates
-    const activeLower = toLowerSet(activeDelegates)
-    const accountBalances = await dataSource.delegations.getAccountBalances()
-    let totalDelegatorBalance = 0n
-    for (const ab of accountBalances) {
-      if (activeLower.has(ab.delegate.toLowerCase())) {
-        totalDelegatorBalance += ab.balance
-      }
-    }
-
+    // maxDelegatorApyPct uses the current tier pool and current AVP
     const currentTierPoolSize = POOL_TIERS[currentTierIndex]?.poolSize ?? POOL_TIERS[0].poolSize
-    const poolSizeEns = Number(currentTierPoolSize) / Number(ONE_ENS)
-    const totalDelegatorBalanceEns = Number(totalDelegatorBalance) / Number(ONE_ENS)
+    const currentPoolEns = Number(currentTierPoolSize) / Number(ONE_ENS)
+    const currentAVPEns = Number(currentAVP) / Number(ONE_ENS)
     const maxDelegatorApyPct = computeMaxDelegatorApyPct(
-      poolSizeEns,
+      currentPoolEns,
       Number(DELEGATOR_POOL_BPS),
-      totalDelegatorBalanceEns,
+      currentAVPEns,
     )
 
-    // Current growth ratio for scaling delegator balance to hypothetical tiers
-    const currentGrowthRatio = 1 + Number(growthBps) / 10000
     const delegatorPoolBps = Number(DELEGATOR_POOL_BPS)
+    const previousAVPEns = Number(previousAVP) / Number(ONE_ENS)
 
     const tiers = POOL_TIERS.map((tier, index) => {
       const requiredAVP =
@@ -72,21 +61,14 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
           : previousAVP + mulDiv(previousAVP, tier.momGrowthMinBps, 10000n)
       const additionalVPNeeded = requiredAVP > currentAVP ? requiredAVP - currentAVP : 0n
 
-      // Estimate APY for this tier:
-      // - Pool size increases per tier definition
-      // - Delegator balance scales proportionally with the VP growth needed
+      // Estimate APY based on initial VP of the round (previousAVP).
+      // For each tier, VP would have grown by tier.momGrowthMinBps from previousAVP.
       let estimatedApyPct = "0.00"
-      if (totalDelegatorBalanceEns > 0) {
+      if (previousAVPEns > 0) {
         const tierPoolEns = Number(tier.poolSize) / Number(ONE_ENS)
         const tierGrowthRatio = 1 + Number(tier.momGrowthMinBps) / 10000
-
-        // For current/unlocked tiers, use actual balance
-        // For higher tiers, scale balance by growth ratio
-        const scaledBalance = index <= currentTierIndex
-          ? totalDelegatorBalanceEns
-          : totalDelegatorBalanceEns * (tierGrowthRatio / currentGrowthRatio)
-
-        estimatedApyPct = computeMaxDelegatorApyPct(tierPoolEns, delegatorPoolBps, scaledBalance)
+        const estimatedVPEns = previousAVPEns * tierGrowthRatio
+        estimatedApyPct = computeMaxDelegatorApyPct(tierPoolEns, delegatorPoolBps, estimatedVPEns)
       }
 
       return {
