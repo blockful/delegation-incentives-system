@@ -1,10 +1,8 @@
 import { NavLink, Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
-import { useAccount, useEnsName } from 'wagmi'
+import { Button, EnsSVG, Profile, WalletSVG, ExitSVG } from '@ensdomains/thorin'
+import { useAccount, useEnsName, useEnsAvatar, useDisconnect } from 'wagmi'
 import { appKit } from '@/app/providers/AppKitProvider'
-import { EnsAvatar } from '@/components/shared/EnsAvatar'
-import { truncateAddress } from '@/utils/format'
 
 const StyledHeader = styled.header`
   display: flex;
@@ -21,13 +19,6 @@ const Brand = styled(Link)`
   gap: 12px;
   text-decoration: none;
   color: inherit;
-`
-
-const Logo = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #44bcf0, #7b61ff, #ff6b6b);
 `
 
 const BrandText = styled.span`
@@ -66,25 +57,6 @@ const WalletArea = styled.div`
   align-items: center;
 `
 
-const AccountPill = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px 8px 8px;
-  border-radius: 20px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text};
-  transition: background 0.15s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.04);
-  }
-`
-
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/delegates', label: 'Active Delegates' },
@@ -95,13 +67,20 @@ const navItems = [
 
 function ConnectedAccount({ address }: { address: `0x${string}` }) {
   const { data: ensName } = useEnsName({ address })
-  const displayName = ensName ?? truncateAddress(address)
+  const { data: avatarUrl } = useEnsAvatar({ name: ensName ?? undefined })
+  const { disconnect } = useDisconnect()
 
   return (
-    <AccountPill onClick={() => appKit.open()}>
-      <EnsAvatar address={address} name={ensName ?? undefined} size={24} />
-      {displayName}
-    </AccountPill>
+    <Profile
+      address={address}
+      ensName={ensName ?? undefined}
+      avatar={avatarUrl ?? undefined}
+      size="small"
+      dropdownItems={[
+        { label: 'Account', onClick: () => appKit.open(), icon: <WalletSVG /> },
+        { label: 'Disconnect', onClick: () => disconnect(), color: 'red', icon: <ExitSVG /> },
+      ]}
+    />
   )
 }
 
@@ -111,7 +90,7 @@ export function Header() {
   return (
     <StyledHeader>
       <Brand to="/">
-        <Logo aria-hidden />
+        <EnsSVG style={{ width: 32, height: 32 }} />
         <BrandText>Incentives Program</BrandText>
       </Brand>
 
