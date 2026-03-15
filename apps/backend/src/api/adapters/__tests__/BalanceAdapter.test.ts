@@ -81,17 +81,19 @@ describe("BalanceAdapter.getBalanceAt", () => {
     expect(result).toBe(1000n)
   })
 
-  it("fallbacks to ens_balance table when no events before timestamp", async () => {
+  it("returns 0 when no events exist before timestamp (account had no balance yet)", async () => {
     const adapter = new BalanceAdapter(db)
-    // 0xaaa has events but at timestamps > 50
+    // 0xaaa has events but all at timestamps > 50, so at t=50 balance was 0
     const result = await adapter.getBalanceAt("0xaaa", seconds(50n))
-    expect(result).toBe(9999n)
+    expect(result).toBe(0n)
   })
 
-  it("fallbacks to ens_balance for account with no events at all", async () => {
+  it("returns 0 for account with no balance events at all", async () => {
     const adapter = new BalanceAdapter(db)
+    // 0xccc exists in ens_balance (current state) but has no historical events
+    // — current balance must not be used for historical queries
     const result = await adapter.getBalanceAt("0xccc", seconds(9999n))
-    expect(result).toBe(5000n)
+    expect(result).toBe(0n)
   })
 
   it("returns wei(0n) for completely unknown account", async () => {
