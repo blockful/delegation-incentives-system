@@ -12,7 +12,7 @@ describe('LandingPage', () => {
     })
   })
 
-  it('renders tier table with 6 tiers', async () => {
+  it('renders tier table with 7 tiers', async () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(screen.getByText('Tier #1')).toBeInTheDocument()
@@ -22,6 +22,7 @@ describe('LandingPage', () => {
     expect(screen.getByText('Tier #4')).toBeInTheDocument()
     expect(screen.getByText('Tier #5')).toBeInTheDocument()
     expect(screen.getByText('Tier #6')).toBeInTheDocument()
+    expect(screen.getByText('Tier #7')).toBeInTheDocument()
   })
 
   it('renders how it works section', async () => {

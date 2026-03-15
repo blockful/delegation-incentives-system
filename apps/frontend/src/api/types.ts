@@ -43,6 +43,7 @@ export interface TierProgressionResponse {
   currentGrowthPct: string;
   currentTierIndex: number;
   activeDelegateCount: number;
+  maxDelegatorApyPct: string;
   tiers: TierEntry[];
 }
 

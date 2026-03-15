@@ -12,11 +12,11 @@ describe('RoundsPage', () => {
     expect(screen.getByText('live')).toBeInTheDocument()
   })
 
-  it('renders tier table with 6 tiers', async () => {
+  it('renders tier table with 7 tiers', async () => {
     renderApp(<RoundsPage />)
 
     await waitFor(() => {
-      expect(screen.getAllByTestId('tier-row')).toHaveLength(6)
+      expect(screen.getAllByTestId('tier-row')).toHaveLength(7)
     })
   })
 
