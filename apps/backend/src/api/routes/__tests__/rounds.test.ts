@@ -6,7 +6,13 @@ vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
 }))
 
+vi.mock("../../rounds.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../rounds.js")>()
+  return { ...actual }
+})
+
 import { buildDataSource } from "../../data-source.js"
+import * as roundsModule from "../../rounds.js"
 
 const makeProposals = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
@@ -34,9 +40,13 @@ const mockDataSource = {
   votingPower: {
     getAggregateDelegatedPower: vi.fn().mockResolvedValue(wei(1000n * 10n ** 18n)),
   },
+  distributions: {
+    list: vi.fn(async () => [] as string[]),
+  },
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   const proposals = makeProposals(10)
   const votes = makeVotes(["0xaaa"], proposals.map((p) => p.id))
   vi.mocked(buildDataSource).mockReturnValue(mockDataSource as any)
@@ -45,6 +55,7 @@ beforeEach(() => {
   vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower).mockResolvedValue(
     wei(1000n * 10n ** 18n),
   )
+  vi.mocked(mockDataSource.distributions.list).mockResolvedValue([])
 })
 
 // ── Pure function tests ────────────────────────────────────────────────────────
@@ -88,7 +99,6 @@ describe("getCurrentRound (pure)", () => {
   })
 
   it("percentComplete is 100 at end of round", () => {
-    // 1ms before round ends
     const almostEnd = new Date(ROUND_1_START.getTime() + ROUND_DURATION_DAYS * 24 * 60 * 60 * 1000 - 1)
     const result = getCurrentRound(almostEnd)
     expect(result.roundNumber).toBe(1)
@@ -96,7 +106,7 @@ describe("getCurrentRound (pure)", () => {
   })
 })
 
-// ── HTTP route tests ──────────────────────────────────────────────────────────
+// ── HTTP route tests — GET /rounds/current ───────────────────────────────────
 
 describe("GET /rounds/current", () => {
   it("returns 200 with correct shape", async () => {
@@ -141,7 +151,6 @@ describe("GET /rounds/current", () => {
     const req = new Request("http://localhost/rounds/current")
     const res = await roundsRouter.fetch(req)
     const body = await res.json()
-    // Default mock returns 1000 ENS AVP with no previous => tier 0 => 5000 ENS pool
     expect(body.poolSizeEns).toBe("5000")
     expect(body.tierIndex).toBe(0)
   })
@@ -153,7 +162,42 @@ describe("GET /rounds/current", () => {
     const req = new Request("http://localhost/rounds/current")
     const res = await roundsRouter.fetch(req)
     expect(res.status).toBe(500)
+  })
+})
+
+// ── HTTP route tests — GET /rounds ────────────────────────────────────────────
+
+describe("GET /rounds", () => {
+  it("returns configured: false when ROUND_MONTHS is not set", async () => {
+    vi.spyOn(roundsModule, "getConfiguredRounds").mockReturnValue(null)
+    const req = new Request("http://localhost/rounds")
+    const res = await roundsRouter.fetch(req)
+    expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.error).toBe("DB connection failed")
+    expect(body.configured).toBe(false)
+    expect(body.rounds).toEqual([])
+  })
+
+  it("returns configured: true with pending rounds when nothing computed", async () => {
+    vi.spyOn(roundsModule, "getConfiguredRounds").mockReturnValue(["2026-03", "2026-04", "2026-05"])
+    const req = new Request("http://localhost/rounds")
+    const res = await roundsRouter.fetch(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.configured).toBe(true)
+    expect(body.rounds).toHaveLength(3)
+    expect(body.rounds.every((r: { status: string }) => r.status === "pending")).toBe(true)
+  })
+
+  it("marks a round as computed once its distribution exists", async () => {
+    vi.spyOn(roundsModule, "getConfiguredRounds").mockReturnValue(["2026-03", "2026-04"])
+    vi.mocked(mockDataSource.distributions.list).mockResolvedValue(["2026-03"])
+    const req = new Request("http://localhost/rounds")
+    const res = await roundsRouter.fetch(req)
+    const body = await res.json()
+    const mar = body.rounds.find((r: { month: string }) => r.month === "2026-03")
+    const apr = body.rounds.find((r: { month: string }) => r.month === "2026-04")
+    expect(mar.status).toBe("computed")
+    expect(apr.status).toBe("pending")
   })
 })

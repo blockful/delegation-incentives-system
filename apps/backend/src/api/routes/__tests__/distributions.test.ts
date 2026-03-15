@@ -3,6 +3,12 @@ import { distributionsRouter } from "../distributions.js"
 import { wei, basisPoints, seconds } from "@ens-dis/domain"
 import type { DistributionResult } from "@ens-dis/domain"
 
+vi.mock("../../rounds.js", () => ({
+  isConfiguredRound: vi.fn(() => true),
+}))
+
+import { isConfiguredRound } from "../../rounds.js"
+
 // Mock buildDataSource
 vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
@@ -148,6 +154,17 @@ describe("POST /distributions/{month}/compute", () => {
     })
     const res = await distributionsRouter.fetch(req)
     expect(res.status).toBe(400)
+  })
+
+  it("returns 403 when month is not a configured round", async () => {
+    vi.mocked(isConfiguredRound).mockReturnValue(false)
+    const req = new Request("http://localhost/distributions/2025-03/compute", {
+      method: "POST",
+    })
+    const res = await distributionsRouter.fetch(req)
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toContain("2025-03")
   })
 })
 

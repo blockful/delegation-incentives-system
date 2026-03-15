@@ -10,6 +10,7 @@ import { buildDataSource } from "../data-source.js"
 import { distributionToCsv } from "../output/csv-writer.js"
 import { distributionToJson } from "../output/json-writer.js"
 import { internalError } from "../helpers.js"
+import { isConfiguredRound } from "../rounds.js"
 import { runDistributionPipeline } from "@ens-dis/domain"
 
 const listDistributionsRoute = createRoute({
@@ -43,6 +44,10 @@ const computeRoute = createRoute({
     400: {
       content: { "application/json": { schema: ErrorSchema } },
       description: "Invalid month format",
+    },
+    403: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Month is not a configured round",
     },
     500: {
       content: { "application/json": { schema: ErrorSchema } },
@@ -101,6 +106,9 @@ distributionsRouter.openapi(listDistributionsRoute, async (c) => {
 
 distributionsRouter.openapi(computeRoute, async (c) => {
   const { month } = c.req.valid("param")
+  if (!isConfiguredRound(month)) {
+    return c.json({ error: `${month} is not a configured round` }, 403)
+  }
   try {
     const dataSource = buildDataSource()
 
