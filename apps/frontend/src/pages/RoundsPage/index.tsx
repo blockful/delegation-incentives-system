@@ -1,9 +1,10 @@
 import { useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner, Tag, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
+import { Spinner, Tag } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
+import { tokens, Eyebrow, PageTitle, SectionSubheading, LoadingWrapper, ErrorMessage } from '@/styles'
 import { TierTable } from './components/TierTable'
 import { RoundCard } from './components/RoundCard'
 import {
@@ -14,22 +15,28 @@ import {
 const Page = styled.div`
   max-width: 1120px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 const HeadingRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
+`
+
+const HeaderBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
 `
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 
   @media (min-width: 768px) {
     grid-template-columns: 2fr 1fr;
@@ -39,21 +46,7 @@ const Grid = styled.div`
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 32px;
-`
-
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-`
-
-const ErrorMessage = styled.p`
-  text-align: center;
-  padding: 40px 20px;
-  color: #c62828;
-  font-size: 16px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 // Hardcoded mock data — needs API wiring when round history endpoint is available.
@@ -106,26 +99,17 @@ export function RoundsPage() {
 
   return (
     <Page>
-      <div>
-        <Typography
-          fontVariant="label"
-          color="blue"
-          weight="bold"
-          style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
-        >
-          Rounds
-        </Typography>
+      <HeaderBlock>
+        <Eyebrow>Rounds</Eyebrow>
         <HeadingRow>
-          <ThorinHeading level="1" responsive style={{ margin: 0 }}>
-            Round {roundNumber} is
-          </ThorinHeading>
+          <PageTitle>Round {roundNumber} is</PageTitle>
           <Tag colorStyle="greenPrimary">live</Tag>
         </HeadingRow>
-        <Typography fontVariant="body" color="textTertiary">
+        <SectionSubheading>
           Incentive rounds run for 30 days. Rewards are distributed at the end
           of each round based on your tier.
-        </Typography>
-      </div>
+        </SectionSubheading>
+      </HeaderBlock>
 
       <Grid>
         <LeftColumn>
