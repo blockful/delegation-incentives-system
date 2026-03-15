@@ -174,13 +174,6 @@ const ensGovernorAbi = [
   },
 ] as const;
 
-// Port is controlled via process.env.PORT (Ponder 0.16 reads PORT env var, default 42069).
-// Set BACKEND_PORT in .env and map it: PORT=$BACKEND_PORT ponder dev
-// We sync the env var here so the dev/start scripts pick it up automatically.
-if (process.env.BACKEND_PORT && !process.env.PORT) {
-  process.env.PORT = process.env.BACKEND_PORT;
-}
-
 export default createConfig({
   chains: {
     mainnet: {

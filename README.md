@@ -17,7 +17,7 @@ packages/
 
 ## Apps
 
-### [Indexer](./apps/indexer/)
+### [Backend](./apps/backend/)
 
 Ponder-based event indexer tracking two Ethereum mainnet contracts, with integrated REST API (Hono + Zod OpenAPI) for computing monthly reward distributions.
 
@@ -141,12 +141,11 @@ curl http://localhost:42069/apy/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
   "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "role": "delegator",
   "delegatedTo": "0x...",
-  "currentTierIndex": 1,
   "poolSizeEns": "8000",
   "estimatedMonthlyRewardEns": "12.5000",
   "estimatedApyPct": "4.28",
-  "userWeight": "350000000000000000000000",
-  "totalPoolWeight": "2100000000000000000000000",
+  "userShareWei": "350000000000000000000000",
+  "totalShareWei": "2100000000000000000000000",
   "currentBalanceEns": "3500.0000"
 }
 ```
@@ -372,4 +371,4 @@ Tests are organized by package:
 | Package | Tests |
 |---------|-------|
 | `packages/domain` | Unit + property-based tests for distribution logic (active delegates, cap redistribution, TWB, lottery, etc.) |
-| `apps/indexer` | Integration tests for API routes and data layer |
+| `apps/backend` | Integration tests for API routes and data layer |
