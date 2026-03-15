@@ -19,6 +19,7 @@ const erc20MultiDelegateAbi = [
     type: "event",
     name: "DelegationProcessed",
     inputs: [
+      { name: "owner", type: "address", indexed: true },
       { name: "from", type: "address", indexed: true },
       { name: "to", type: "address", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
@@ -59,8 +60,11 @@ const hedgeyVestingAbi = [
       { name: "amount", type: "uint256", indexed: false },
       { name: "start", type: "uint256", indexed: false },
       { name: "cliff", type: "uint256", indexed: false },
+      { name: "end", type: "uint256", indexed: false },
       { name: "rate", type: "uint256", indexed: false },
       { name: "period", type: "uint256", indexed: false },
+      { name: "vestingAdmin", type: "address", indexed: false },
+      { name: "adminTransferOBO", type: "bool", indexed: false },
     ],
   },
   {
@@ -125,8 +129,8 @@ export default createConfig({
     ERC20MultiDelegate: {
       chain: "mainnet",
       abi: erc20MultiDelegateAbi,
-      address: "0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446",
-      startBlock: 18564837,
+      address: "0x3CA5CCC96648d016D41c5aF40eED82202BD019cc",
+      startBlock: 22140079,
     },
     HedgeyVesting: {
       chain: "mainnet",
