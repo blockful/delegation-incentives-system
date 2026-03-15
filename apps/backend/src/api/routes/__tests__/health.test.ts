@@ -35,7 +35,7 @@ beforeEach(() => {
 
 describe("GET /health", () => {
   it("returns 200 { status: 'ok' }", async () => {
-    const req = new Request("http://localhost/health")
+    const req = new Request("http://localhost/api/health")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -45,7 +45,7 @@ describe("GET /health", () => {
 
 describe("GET /status", () => {
   it("returns 200 with non-negative counts", async () => {
-    const req = new Request("http://localhost/status")
+    const req = new Request("http://localhost/api/status")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -55,7 +55,7 @@ describe("GET /status", () => {
   })
 
   it("includes proposalCount matching proposal list", async () => {
-    const req = new Request("http://localhost/status")
+    const req = new Request("http://localhost/api/status")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -64,7 +64,7 @@ describe("GET /status", () => {
 
   it("includes cachedDistributions from distributions.list()", async () => {
     vi.mocked(mockDataSource.distributions.list).mockResolvedValue(["2025-01", "2025-02"])
-    const req = new Request("http://localhost/status")
+    const req = new Request("http://localhost/api/status")
     const res = await healthRouter.fetch(req)
     expect(res.status).toBe(200)
     const body = await res.json()
