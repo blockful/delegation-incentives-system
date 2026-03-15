@@ -12,7 +12,7 @@ export interface StatusResponse {
 
 export interface ActiveDelegatesResponse {
   count: number;
-  delegates: string[];
+  delegates: DelegateDetail[];
 }
 
 export interface EligibilityResponse {

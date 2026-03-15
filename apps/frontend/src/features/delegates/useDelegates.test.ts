@@ -20,10 +20,8 @@ describe('useDelegates', () => {
 
     const first = result.current.data![0]
     expect(first.address).toBe('0x1234567890abcdef1234567890abcdef12345678')
-    expect(first.ensName).toBeNull()
-    expect(first.votingPower).toBeNull()
-    expect(first.delegatorCount).toBeNull()
-    expect(first.activeSince).toBeNull()
-    expect(first.last10ProposalsVoted).toBeNull()
+    expect(first.votingPower).toBe('500000000000000000000')
+    expect(first.delegatorCount).toBe(12)
+    expect(first.last10ProposalsVoted).toHaveLength(10)
   })
 })
