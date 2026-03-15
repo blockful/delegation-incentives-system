@@ -77,6 +77,27 @@ describe("GET /tiers/progression", () => {
     expect(typeof body.activeDelegateCount).toBe("number")
   })
 
+  it("returns maxDelegatorApyPct as a string", async () => {
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    const body = await res.json()
+    expect(typeof body.maxDelegatorApyPct).toBe("string")
+    // With currentAVP = 1000 ENS and tier 0 poolSize = 5000 ENS, delegatorPoolBps = 9000:
+    // delegatorPool = 5000 * 9000 / 10000 = 4500 ENS
+    // maxDelegatorApyPct = (4500 * 12 / 1000) * 100 = 5400.00
+    expect(body.maxDelegatorApyPct).toBe("5400.00")
+  })
+
+  it("returns maxDelegatorApyPct of 0.00 when AVP is zero", async () => {
+    vi.mocked(mockDataSource.votingPower.getAggregateDelegatedPower).mockResolvedValue(
+      wei(0n),
+    )
+    const req = new Request("http://localhost/tiers/progression")
+    const res = await tiersRouter.fetch(req)
+    const body = await res.json()
+    expect(body.maxDelegatorApyPct).toBe("0.00")
+  })
+
   it("each tier has required fields", async () => {
     const req = new Request("http://localhost/tiers/progression")
     const res = await tiersRouter.fetch(req)

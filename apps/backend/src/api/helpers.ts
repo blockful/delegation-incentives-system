@@ -74,6 +74,25 @@ export function formatWholeEns(value: bigint): string {
   return `${value / BigInt(ONE_ENS)}`
 }
 
+/**
+ * Compute the maximum delegator APY percentage for a given tier.
+ * Formula: (delegatorPool * 12 / totalWeightEns) * 100
+ * where delegatorPool = poolSizeEns * delegatorPoolBps / 10000
+ *
+ * All inputs are plain numbers (ENS units, not Wei).
+ * Returns a fixed-2 string; returns "0.00" when totalWeightEns is 0.
+ */
+export function computeMaxDelegatorApyPct(
+  poolSizeEns: number,
+  delegatorPoolBps: number,
+  totalWeightEns: number,
+): string {
+  if (totalWeightEns === 0) return "0.00"
+  const delegatorPool = (poolSizeEns * delegatorPoolBps) / 10000
+  const apyPct = (delegatorPool * 12 / totalWeightEns) * 100
+  return apyPct.toFixed(2)
+}
+
 /** Extract error message from unknown catch value. */
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error"

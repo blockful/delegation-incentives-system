@@ -109,6 +109,7 @@ export const TierProgressionSchema = z.object({
   currentGrowthPct: z.string(),
   currentTierIndex: z.number(),
   activeDelegateCount: z.number(),
+  maxDelegatorApyPct: z.string(),
   tiers: z.array(TierProgressionEntrySchema),
 }).openapi("TierProgression")
 

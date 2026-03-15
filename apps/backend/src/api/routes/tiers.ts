@@ -6,8 +6,9 @@ import {
   fetchMonthContext,
   formatWholeEns,
   errorMessage,
+  computeMaxDelegatorApyPct,
 } from "../helpers.js"
-import { POOL_TIERS, percentageGrowthBps, mulDiv } from "@ens-dis/domain"
+import { POOL_TIERS, percentageGrowthBps, mulDiv, DELEGATOR_POOL_BPS, ONE_ENS } from "@ens-dis/domain"
 
 const tierProgressionRoute = createRoute({
   method: "get",
@@ -40,6 +41,15 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
 
     const growthBps = percentageGrowthBps(currentAVP, previousAVP)
 
+    const currentTierPoolSize = POOL_TIERS[currentTierIndex]?.poolSize ?? POOL_TIERS[0].poolSize
+    const poolSizeEns = Number(currentTierPoolSize) / Number(ONE_ENS)
+    const currentAVPEns = Number(currentAVP) / Number(ONE_ENS)
+    const maxDelegatorApyPct = computeMaxDelegatorApyPct(
+      poolSizeEns,
+      Number(DELEGATOR_POOL_BPS),
+      currentAVPEns,
+    )
+
     const tiers = POOL_TIERS.map((tier, index) => {
       const requiredAVP =
         previousAVP === 0n
@@ -69,6 +79,7 @@ tiersRouter.openapi(tierProgressionRoute, async (c) => {
         currentGrowthPct: `${Number(growthBps) / 100}`,
         currentTierIndex,
         activeDelegateCount: activeDelegates.size,
+        maxDelegatorApyPct,
         tiers,
       },
       200,
