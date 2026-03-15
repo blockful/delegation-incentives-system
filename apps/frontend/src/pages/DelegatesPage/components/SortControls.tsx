@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 
-export type SortField = 'random' | 'votingPower' | 'activity'
+export type SortField = 'random' | 'votingPower' | 'activity' | 'activeSince'
 export type SortDirection = 'desc' | 'asc'
 export interface SortState {
   field: SortField
@@ -17,6 +17,7 @@ const fields: { value: SortField; label: string }[] = [
   { value: 'random', label: 'Random' },
   { value: 'votingPower', label: 'Voting Power' },
   { value: 'activity', label: 'Activity' },
+  { value: 'activeSince', label: 'Active Since' },
 ]
 
 const Wrapper = styled.div`

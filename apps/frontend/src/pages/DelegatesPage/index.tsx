@@ -100,6 +100,12 @@ export function DelegatesPage() {
       })
     } else if (sort.field === 'activity') {
       sorted.sort((a, b) => (activityScore(a) - activityScore(b)) * dir)
+    } else if (sort.field === 'activeSince') {
+      sorted.sort((a, b) => {
+        const aTime = a.activeSince ? new Date(a.activeSince).getTime() : 0
+        const bTime = b.activeSince ? new Date(b.activeSince).getTime() : 0
+        return (aTime - bTime) * dir
+      })
     }
 
     return sorted
