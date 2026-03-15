@@ -238,6 +238,21 @@ export function LotteryPage() {
   if (error) {
     return (
       <Page>
+        <Hero>
+          <Typography
+            fontVariant="label"
+            color="blue"
+            weight="bold"
+            style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
+          >
+            Lottery
+          </Typography>
+          <div style={{ marginTop: 12 }}>
+            <ThorinHeading level="1" responsive>
+              Small balance? You still have a shot.
+            </ThorinHeading>
+          </div>
+        </Hero>
         <ErrorCard>
           <ErrorIcon aria-hidden>⚠️</ErrorIcon>
           <ErrorTitle>Couldn't load lottery data</ErrorTitle>
@@ -253,6 +268,17 @@ export function LotteryPage() {
             Try again
           </Button>
         </ErrorCard>
+        <Section>
+          <ThorinHeading level="2">How the draw works</ThorinHeading>
+          <StepList>
+            {HOW_IT_WORKS_STEPS.map((text, i) => (
+              <Step key={i}>
+                <StepNumber>{i + 1}</StepNumber>
+                <StepText>{text}</StepText>
+              </Step>
+            ))}
+          </StepList>
+        </Section>
       </Page>
     )
   }
