@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { Card } from '@ensdomains/thorin'
 
 interface RoundDetailsSectionProps {
   balanceEns: string
@@ -13,14 +14,10 @@ const Grid = styled.div`
   gap: 12px;
 `
 
-const StatCard = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 20px 16px;
+const StatCard = styled(Card)`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: ${({ theme }) => theme.colors.background};
 `
 
 const StatLabel = styled.span`

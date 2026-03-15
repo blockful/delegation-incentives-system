@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, PersonPlusSVG, FlameSVG, EthSVG, HeartSVG, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -18,35 +18,6 @@ const Section = styled.section`
 const Inner = styled.div`
   max-width: 1200px;
   margin: 0 auto;
-`
-
-const Eyebrow = styled.p`
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #4A5C63;
-  margin: 0 0 12px;
-`
-
-const Heading = styled.h2`
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0 0 12px;
-
-  @media (min-width: 768px) {
-    font-size: 36px;
-  }
-`
-
-const Subtitle = styled.p`
-  font-size: 15px;
-  line-height: 1.6;
-  color: #4A5C63;
-  margin: 0 0 36px;
-  max-width: 520px;
 `
 
 const Cards = styled.div`
@@ -69,7 +40,7 @@ const Card = styled.div`
   position: relative;
 `
 
-const CardIcon = styled.div<{ $bg: string }>`
+const CardIcon = styled.div<{ $bg: string; $color: string }>`
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -77,8 +48,13 @@ const CardIcon = styled.div<{ $bg: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   margin-bottom: 16px;
+  color: ${({ $color }) => $color};
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `
 
 const StepNumber = styled.span`
@@ -127,8 +103,9 @@ const Actions = styled.div`
 
 const steps = [
   {
-    icon: '\u270D\uFE0F',
+    Icon: PersonPlusSVG,
     bg: '#e8f5e9',
+    iconColor: '#1a6b3c',
     number: '1',
     title: 'Delegate to an active voter',
     desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens.',
@@ -137,8 +114,9 @@ const steps = [
     tagBg: '#e8f5e9',
   },
   {
-    icon: '\uD83D\uDCC8',
+    Icon: FlameSVG,
     bg: '#fff3e0',
+    iconColor: '#c77700',
     number: '2',
     title: 'Your share grows with time',
     desc: 'Rewards are based on your average ENS balance over the last 180 days \u2014 not just your current balance. Longer holding means a bigger share.',
@@ -147,8 +125,9 @@ const steps = [
     tagBg: '#fff3e0',
   },
   {
-    icon: '\uD83D\uDCB0',
+    Icon: EthSVG,
     bg: '#fff3e0',
+    iconColor: '#c77700',
     number: '3a',
     title: 'Receive ENS at round end',
     desc: "If your share is 1 ENS or more, it's sent directly to your wallet at the end of each monthly round.",
@@ -157,8 +136,9 @@ const steps = [
     tagBg: '#fff3e0',
   },
   {
-    icon: '\uD83C\uDFC6',
+    Icon: HeartSVG,
     bg: '#fce4ec',
+    iconColor: '#c62828',
     number: '3b',
     title: 'Small balance? Enter the lottery',
     desc: 'Payouts under 1 ENS pool together until they reach 10 ENS \u2014 one winner takes the full prize.',
@@ -172,19 +152,32 @@ export function HowItWorksSection() {
   return (
     <Section>
       <Inner>
-        <Eyebrow>How It Works</Eyebrow>
-        <Heading>
-          Simple to join. Better when more people do.
-        </Heading>
-        <Subtitle>
-          ENS governance is only as strong as its participation. This program
-          makes it worth your while.
-        </Subtitle>
+        <div style={{ margin: '0 0 12px' }}>
+          <Typography
+            fontVariant="label"
+            color="grey"
+            weight="bold"
+            style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
+          >
+            How It Works
+          </Typography>
+        </div>
+        <div style={{ margin: '0 0 12px' }}>
+          <ThorinHeading level="2" responsive>
+            Simple to join. Better when more people do.
+          </ThorinHeading>
+        </div>
+        <div style={{ margin: '0 0 36px', maxWidth: '520px' }}>
+          <Typography fontVariant="body" color="textSecondary">
+            ENS governance is only as strong as its participation. This program
+            makes it worth your while.
+          </Typography>
+        </div>
 
         <Cards>
           {steps.map((step) => (
             <Card key={step.number}>
-              <CardIcon $bg={step.bg}>{step.icon}</CardIcon>
+              <CardIcon $bg={step.bg} $color={step.iconColor}><step.Icon /></CardIcon>
               <StepNumber>{step.number}</StepNumber>
               <CardTitle>{step.title}</CardTitle>
               <CardDesc>{step.desc}</CardDesc>

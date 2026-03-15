@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Tag } from '@ensdomains/thorin'
+import { Card, Tag } from '@ensdomains/thorin'
 
 interface RoundCardProps {
   roundNumber: number
@@ -12,14 +12,10 @@ interface RoundCardProps {
   currentApyPct: string
 }
 
-const Card = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 24px;
+const StyledCard = styled(Card)`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: ${({ theme }) => theme.colors.background};
 `
 
 const Header = styled.div`
@@ -108,7 +104,7 @@ export function RoundCard({
   currentApyPct,
 }: RoundCardProps) {
   return (
-    <Card>
+    <StyledCard>
       <Header>
         <RoundTitle>Round {roundNumber}</RoundTitle>
         <Tag colorStyle="greenPrimary">In progress</Tag>
@@ -142,6 +138,6 @@ export function RoundCard({
           <StatValue>{currentApyPct}%</StatValue>
         </StatCard>
       </StatsGrid>
-    </Card>
+    </StyledCard>
   )
 }

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
+import { Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
 import { DelegateCard } from './components/DelegateCard'
 import { SortControls, type SortState } from './components/SortControls'
@@ -14,29 +14,6 @@ const Page = styled.div`
   display: flex;
   flex-direction: column;
   gap: 32px;
-`
-
-const Label = styled.span`
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #0080BC;
-`
-
-const Heading = styled.h1`
-  font-size: 32px;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  line-height: 1.2;
-`
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textTertiary};
-  margin: 0;
-  line-height: 1.5;
 `
 
 const Grid = styled.div`
@@ -115,12 +92,23 @@ export function DelegatesPage() {
   return (
     <Page>
       <div>
-        <Label>Delegate Your Tokens</Label>
-        <Heading>Delegate to someone who shows up</Heading>
-        <Subtitle>
+        <Typography
+          fontVariant="label"
+          color="blue"
+          weight="bold"
+          style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        >
+          Delegate Your Tokens
+        </Typography>
+        <div style={{ margin: '4px 0' }}>
+          <ThorinHeading level="1" responsive style={{ margin: 0 }}>
+            Delegate to someone who shows up
+          </ThorinHeading>
+        </div>
+        <Typography fontVariant="body" color="textTertiary">
           Choose a delegate who votes on at least 7 out of 10 proposals to
           maximize your rewards.
-        </Subtitle>
+        </Typography>
       </div>
 
       <StatsBar activeDelegates={count} />

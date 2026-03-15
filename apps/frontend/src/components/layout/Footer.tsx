@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { EnsSVG, Typography } from '@ensdomains/thorin'
 
 const StyledFooter = styled.footer`
   border-top: 1px solid #E5E5E5;
@@ -21,18 +22,6 @@ const Top = styled.div`
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 16px;
-`
-
-const Title = styled.div`
-  font-weight: 600;
-  font-size: 14px;
-  color: #011A25;
-`
-
-const Subtitle = styled.div`
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
 `
 
 const Nav = styled.nav`
@@ -61,20 +50,17 @@ const ExternalLink = styled.a`
   }
 `
 
-const Attribution = styled.div`
-  font-size: 12px;
-  color: #999;
-  text-align: center;
-`
-
 export function Footer() {
   return (
     <StyledFooter>
       <Inner>
         <Top>
           <div>
-            <Title>Incentives Pilot v1</Title>
-            <Subtitle>A security campaign for safer ENS governance</Subtitle>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <EnsSVG style={{ width: 24, height: 24 }} />
+              <Typography fontVariant="body" weight="bold">Incentives Program</Typography>
+            </div>
+            <Typography fontVariant="small" color="textTertiary">A security campaign for safer ENS governance</Typography>
           </div>
           <Nav>
             <FooterLink to="/">How It Works</FooterLink>
@@ -98,9 +84,9 @@ export function Footer() {
             </ExternalLink>
           </Nav>
         </Top>
-        <Attribution>
+        <Typography fontVariant="small" color="textTertiary" style={{ textAlign: 'center' }}>
           Built by Blockful &middot; Powered by Anticapture
-        </Attribution>
+        </Typography>
       </Inner>
     </StyledFooter>
   )

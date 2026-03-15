@@ -7,5 +7,6 @@ vi.mock('wagmi', async () => {
     useEnsName: vi.fn().mockReturnValue({ data: null }),
     useEnsAvatar: vi.fn().mockReturnValue({ data: null }),
     useAccount: vi.fn().mockReturnValue({ address: undefined, isConnected: false }),
+    useDisconnect: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
   }
 })

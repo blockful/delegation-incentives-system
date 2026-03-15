@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner, Tag } from '@ensdomains/thorin'
+import { Spinner, Tag, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
@@ -20,33 +20,10 @@ const Page = styled.div`
   gap: 32px;
 `
 
-const Label = styled.span`
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #0080BC;
-`
-
 const HeadingRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-`
-
-const Heading = styled.h1`
-  font-size: 32px;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  line-height: 1.2;
-`
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textTertiary};
-  margin: 0;
-  line-height: 1.5;
 `
 
 const Grid = styled.div`
@@ -130,15 +107,24 @@ export function RoundsPage() {
   return (
     <Page>
       <div>
-        <Label>Rounds</Label>
+        <Typography
+          fontVariant="label"
+          color="blue"
+          weight="bold"
+          style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        >
+          Rounds
+        </Typography>
         <HeadingRow>
-          <Heading>Round {roundNumber} is</Heading>
+          <ThorinHeading level="1" responsive style={{ margin: 0 }}>
+            Round {roundNumber} is
+          </ThorinHeading>
           <Tag colorStyle="greenPrimary">live</Tag>
         </HeadingRow>
-        <Subtitle>
+        <Typography fontVariant="body" color="textTertiary">
           Incentive rounds run for 30 days. Rewards are distributed at the end
           of each round based on your tier.
-        </Subtitle>
+        </Typography>
       </div>
 
       <Grid>

@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 
 const RouterLink = styled(Link)`
@@ -20,27 +20,6 @@ const Section = styled.section`
   }
 `
 
-const Label = styled.p`
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #4A5C63;
-  margin: 0 0 16px;
-`
-
-const Heading = styled.h1`
-  font-size: 32px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0 0 20px;
-
-  @media (min-width: 768px) {
-    font-size: 48px;
-  }
-`
-
 const ApyHighlight = styled.span`
   display: inline-block;
   background: #0080BC;
@@ -48,18 +27,6 @@ const ApyHighlight = styled.span`
   padding: 2px 12px;
   border-radius: 8px;
   font-weight: 800;
-`
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  line-height: 1.5;
-  color: #4A5C63;
-  margin: 0 auto 32px;
-  max-width: 480px;
-
-  @media (min-width: 768px) {
-    font-size: 18px;
-  }
 `
 
 const Actions = styled.div`
@@ -78,15 +45,28 @@ const Actions = styled.div`
 export function HeroSection({ currentApyPct }: HeroSectionProps) {
   return (
     <Section>
-      <Label>ENS Governance &middot; 90-Day Pilot</Label>
-      <Heading>
-        Your ENS is sitting idle. It could be earning{' '}
-        <ApyHighlight>{currentApyPct}% APY</ApyHighlight>
-      </Heading>
-      <Subtitle>
-        Help secure ENS governance by delegating to an active voter. Rewards are
-        automatic, gas is sponsored.
-      </Subtitle>
+      <div style={{ margin: '0 0 16px' }}>
+        <Typography
+          fontVariant="label"
+          color="grey"
+          weight="bold"
+          style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
+        >
+          ENS Governance &middot; 90-Day Pilot
+        </Typography>
+      </div>
+      <div style={{ margin: '0 0 20px' }}>
+        <ThorinHeading level="1" responsive>
+          Your ENS is sitting idle. It could be earning{' '}
+          <ApyHighlight>{currentApyPct}% APY</ApyHighlight>
+        </ThorinHeading>
+      </div>
+      <div style={{ margin: '0 auto 32px', maxWidth: '480px' }}>
+        <Typography fontVariant="large" color="textSecondary">
+          Help secure ENS governance by delegating to an active voter. Rewards are
+          automatic, gas is sponsored.
+        </Typography>
+      </div>
       <Actions>
         <RouterLink to="/delegates">
           <Button colorStyle="bluePrimary">
