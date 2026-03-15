@@ -29,10 +29,10 @@ describe('DashboardPage', () => {
     })
   })
 
-  it('renders round progress card', async () => {
+  it('renders tier table with reward tiers', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Round 2/ })).toBeInTheDocument()
+      expect(screen.getByText('Reward Tiers')).toBeInTheDocument()
     })
   })
 })
