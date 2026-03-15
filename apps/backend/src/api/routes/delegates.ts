@@ -35,10 +35,11 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
       dataSource.delegations.getActiveDelegations(delegateAddresses, now),
     ])
 
-    // Count delegators per delegate
+    // Count delegators per delegate (keys are lowercased to match adapter output)
     const delegatorCountMap = new Map<string, number>()
     for (const d of delegations) {
-      delegatorCountMap.set(d.delegate, (delegatorCountMap.get(d.delegate) ?? 0) + 1)
+      const key = d.delegateId.toLowerCase()
+      delegatorCountMap.set(key, (delegatorCountMap.get(key) ?? 0) + 1)
     }
 
     // Build vote lookup: voterAccountId -> Set<proposalId>
@@ -53,13 +54,16 @@ delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
     const last10 = proposals.slice(-10)
 
     const delegates = delegateAddresses.map((address) => {
-      const vp = votingPowerMap.get(address)
+      // Adapters normalize addresses to lowercase; voter IDs from active-delegate
+      // detection may be mixed-case, so we must lowercase for map lookups.
+      const lc = address.toLowerCase()
+      const vp = votingPowerMap.get(lc)
       const voterSet = votesByVoter.get(address)
       return {
         address,
         ensName: null,
         votingPower: vp != null ? vp.toString() : null,
-        delegatorCount: delegatorCountMap.get(address) ?? null,
+        delegatorCount: delegatorCountMap.get(lc) ?? 0,
         activeSince: null,
         last10ProposalsVoted: last10.map((p) => voterSet?.has(p.id) ?? false),
       }

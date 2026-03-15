@@ -28,8 +28,13 @@ const makeVotes = (voterIds: string[], proposalIds: string[]) =>
     })),
   )
 
-const DELEGATE_A = "0xaaaa"
-const DELEGATE_B = "0xbbbb"
+// Mixed-case addresses matching real indexer output
+const DELEGATE_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+const DELEGATE_B = "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+
+// Adapters normalize to lowercase — this is what real data sources return
+const DELEGATE_A_LC = DELEGATE_A.toLowerCase()
+const DELEGATE_B_LC = DELEGATE_B.toLowerCase()
 
 const mockDataSource = {
   proposals: {
@@ -39,18 +44,21 @@ const mockDataSource = {
     getVotesForProposals: vi.fn(),
   },
   votingPower: {
+    // getVotingPower returns a lowercase-keyed map (matches VotingPowerAdapter)
     getVotingPower: vi.fn().mockResolvedValue(
       new Map([
-        [DELEGATE_A, wei(500n * 10n ** 18n)],
-        [DELEGATE_B, wei(300n * 10n ** 18n)],
+        [DELEGATE_A_LC, wei(500n * 10n ** 18n)],
+        [DELEGATE_B_LC, wei(300n * 10n ** 18n)],
       ]),
     ),
   },
   delegations: {
+    // getActiveDelegations returns { delegatorId, delegateId } — matches Delegation interface
+    // delegateId is lowercased (matches DelegationAdapter)
     getActiveDelegations: vi.fn().mockResolvedValue([
-      { delegatorId: "0x1111", delegate: DELEGATE_A },
-      { delegatorId: "0x2222", delegate: DELEGATE_A },
-      { delegatorId: "0x3333", delegate: DELEGATE_B },
+      { delegatorId: "0x1111", delegateId: DELEGATE_A_LC, delegatedValue: wei(100n), timestamp: seconds(1000n) },
+      { delegatorId: "0x2222", delegateId: DELEGATE_A_LC, delegatedValue: wei(100n), timestamp: seconds(1000n) },
+      { delegatorId: "0x3333", delegateId: DELEGATE_B_LC, delegatedValue: wei(100n), timestamp: seconds(1000n) },
     ]),
   },
 }
@@ -94,7 +102,19 @@ describe("GET /delegates/active", () => {
     expect(delegateA.activeSince).toBeNull()
   })
 
-  it("returns delegatorCount per delegate", async () => {
+  it("votingPower is populated even when addresses are mixed-case", async () => {
+    // VotingPowerAdapter returns lowercase-keyed map; route must normalize to match
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    // Must not be null — fails when address case doesn't match map key
+    expect(delegateA.votingPower).not.toBeNull()
+    expect(delegateA.votingPower).toBe(wei(500n * 10n ** 18n).toString())
+  })
+
+  it("returns delegatorCount per delegate using delegateId field", async () => {
+    // Bug: route was using d.delegate (undefined on real Delegation objects) instead of d.delegateId
     const req = new Request("http://localhost/delegates/active")
     const res = await delegatesRouter.fetch(req)
     const body = await res.json()
@@ -102,6 +122,27 @@ describe("GET /delegates/active", () => {
     const delegateB = body.delegates.find((d: { address: string }) => d.address === DELEGATE_B)
     expect(delegateA.delegatorCount).toBe(2)
     expect(delegateB.delegatorCount).toBe(1)
+  })
+
+  it("delegatorCount uses case-insensitive matching (adapter lowercases, voter IDs may be mixed-case)", async () => {
+    // DelegationAdapter lowercases delegateId; activeDelegates uses original-case voter IDs.
+    // delegatorCountMap.get(address) must find the count even when address is mixed-case.
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(delegateA.delegatorCount).not.toBeNull()
+    expect(delegateA.delegatorCount).toBe(2)
+  })
+
+  it("delegates with no delegators get delegatorCount of 0, not null", async () => {
+    vi.mocked(mockDataSource.delegations.getActiveDelegations).mockResolvedValueOnce([])
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    // No delegations → 0, not null
+    expect(delegateA.delegatorCount).toBe(0)
   })
 
   it("returns last10ProposalsVoted as array of booleans", async () => {
@@ -112,6 +153,25 @@ describe("GET /delegates/active", () => {
     expect(Array.isArray(delegateA.last10ProposalsVoted)).toBe(true)
     expect(delegateA.last10ProposalsVoted).toHaveLength(10)
     expect(delegateA.last10ProposalsVoted.every((v: boolean) => v === true)).toBe(true)
+  })
+
+  it("last10ProposalsVoted is false for proposals the delegate did not vote on", async () => {
+    const proposals = makeProposals(10)
+    // DELEGATE_A only votes on first 7 proposals, misses last 3
+    const votes = [
+      ...makeVotes([DELEGATE_A], proposals.slice(0, 7).map((p) => p.id)),
+      ...makeVotes([DELEGATE_B], proposals.map((p) => p.id)),
+    ]
+    vi.mocked(mockDataSource.proposals.getRecentProposals).mockResolvedValue(proposals)
+    vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValue(votes)
+
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    expect(delegateA.last10ProposalsVoted).toHaveLength(10)
+    const votedCount = delegateA.last10ProposalsVoted.filter(Boolean).length
+    expect(votedCount).toBe(7)
   })
 
   it("returns 500 on error", async () => {
