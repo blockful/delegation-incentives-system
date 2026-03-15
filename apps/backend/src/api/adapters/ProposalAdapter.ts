@@ -18,7 +18,7 @@ export class ProposalAdapter implements ProposalRepository {
       id: row.id as string,
       status: row.status as string,
       timestamp: seconds(BigInt(row.timestamp as string | number | bigint)),
-      endTimestamp: seconds(BigInt(row.endBlock as string | number | bigint)),
+      endBlock: BigInt(row.endBlock as string | number | bigint),
       daoId: "ens",
     }))
   }

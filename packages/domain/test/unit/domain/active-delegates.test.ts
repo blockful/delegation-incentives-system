@@ -7,7 +7,7 @@ function makeProposal(id: string, timestamp: number): Proposal {
     id,
     status: "executed",
     timestamp: seconds(BigInt(timestamp)),
-    endTimestamp: seconds(BigInt(timestamp + 7 * 86400)),
+    endBlock: BigInt(timestamp + 7 * 86400),
     daoId: "ens",
   };
 }

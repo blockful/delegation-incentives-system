@@ -11,8 +11,8 @@ import { buildDataSource } from "../../data-source.js"
 const mockDataSource = {
   proposals: {
     getRecentProposals: vi.fn().mockResolvedValue([
-      { id: "1", status: "executed", timestamp: 1000n, endTimestamp: 2000n, daoId: "ens" },
-      { id: "2", status: "defeated", timestamp: 900n, endTimestamp: 1800n, daoId: "ens" },
+      { id: "1", status: "executed", timestamp: 1000n, endBlock: 2000n, daoId: "ens" },
+      { id: "2", status: "defeated", timestamp: 900n, endBlock: 1800n, daoId: "ens" },
     ]),
   },
   votes: {
@@ -26,8 +26,8 @@ const mockDataSource = {
 beforeEach(() => {
   vi.mocked(buildDataSource).mockReturnValue(mockDataSource as any)
   vi.mocked(mockDataSource.proposals.getRecentProposals).mockResolvedValue([
-    { id: "1", status: "executed", timestamp: 1000n, endTimestamp: 2000n, daoId: "ens" },
-    { id: "2", status: "defeated", timestamp: 900n, endTimestamp: 1800n, daoId: "ens" },
+    { id: "1", status: "executed", timestamp: 1000n, endBlock: 2000n, daoId: "ens" },
+    { id: "2", status: "defeated", timestamp: 900n, endBlock: 1800n, daoId: "ens" },
   ])
   vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValue([])
   vi.mocked(mockDataSource.distributions.list).mockResolvedValue([])

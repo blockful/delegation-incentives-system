@@ -15,7 +15,7 @@ const makeProposals = (n: number) =>
     id: `${i + 1}`,
     status: "executed",
     timestamp: seconds(BigInt(1000 + i)),
-    endTimestamp: seconds(BigInt(2000 + i)),
+    endBlock: BigInt(2000 + i),
     daoId: "ens",
   }))
 

@@ -44,7 +44,7 @@ describe("ProposalAdapter.getRecentProposals", () => {
     expect(first.status).toBe("canceled")
     expect(first.daoId).toBe("ens")
     expect(first.timestamp).toBe(4000n)
-    expect(first.endTimestamp).toBe(400n)
+    expect(first.endBlock).toBe(400n)
   })
 
   it("returns empty array when no concluded proposals", async () => {
