@@ -120,7 +120,7 @@ roundsRouter.openapi(currentRoundRoute, async (c) => {
     const currentTierPoolSize = POOL_TIERS[currentTierIndex]?.poolSize ?? POOL_TIERS[0].poolSize
     const poolSizeEns = formatWholeEns(currentTierPoolSize)
 
-    const { roundNumber, startDate, endDate, percentComplete, daysRemaining } = getCurrentRound(new Date())
+    const { roundNumber, startDate, endDate, percentComplete, daysRemaining } = getCurrentRound(new Date(), getConfiguredRounds())
 
     return c.json(
       {
