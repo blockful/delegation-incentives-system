@@ -194,4 +194,18 @@ describe("consolidateDelegators (with wallet aliases)", () => {
     const result = consolidateDelegators(scores, protocolMappings, []);
     expect(result[0].delegatorId).toBe("0xreal-owner");
   });
+
+  it("resolves transitive chain even when intermediate mapping stored mixed-case", () => {
+    const scores: DelegatorScore[] = [
+      { delegatorId: "0xchild", delegateId: "0xdelegate", timeWeightedBalance: wei(100n) },
+    ];
+    // Simulate: child → 0xPROXY (mixed case), 0xproxy → 0xoperator
+    const mappings: ProtocolMapping[] = [
+      { childAddress: "0xchild", operatorAddress: "0xPROXY", protocol: "test" },
+      { childAddress: "0xproxy", operatorAddress: "0xoperator", protocol: "test" },
+    ];
+    const result = consolidateDelegators(scores, mappings, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].delegatorId).toBe("0xoperator");
+  });
 });
