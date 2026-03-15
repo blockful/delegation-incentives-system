@@ -22,7 +22,7 @@ Three wallet-state variants rendered on the same route, driven by `AppWalletStat
 
 **Disconnected:**
 - Header: "ENS GOVERNANCE · 90-DAY PILOT" label
-- Hero headline: "Your ENS is sitting idle. It could be earning [APY]%" — APY value is the current tier's `momGrowthMaxPct` from `TierProgressionResponse.tiers[currentTierIndex].momGrowthMaxPct`
+- Hero headline: "Your ENS is sitting idle. It could be earning [APY]%" — APY value is `TierProgressionResponse.tiers[currentTierIndex].momGrowthMaxPct` where `currentTierIndex` is the globally active tier (`TierProgressionResponse.currentTierIndex`), not the connected user's tier. This applies to all three wallet states of the Landing page.
 - Subtext: "Help secure ENS governance by delegating to an active voter. Rewards are automatic, gas is sponsored."
 - CTAs: "Delegate Now → Free" (primary blue), "Share this initiative" (secondary)
 - Round status bar: "No tokens locked · Gas sponsored · Rewards auto-sent" · Round # with live dot · +X.X% active VP growth · Tier N pool size
@@ -187,7 +187,12 @@ Until the backend is extended, the Delegates page renders address-only cards (av
 - 3 link rows with icon, title, description, chevron: GitHub (allocation scripts and data) · Anticapture (delegate activity & governance health) · Dune Analytics (live round data & payout breakdown)
 
 **"SMART CONTRACTS" section:**
-- 3 contract rows: name · truncated address · "Verified" green badge · external link icon
+- 3 contract rows: name · truncated address · "Verified" green badge · external link icon (Etherscan)
+- Contracts are hardcoded constants (not from API):
+  1. ENS Incentives — `0x4f3a…9b2c` (placeholder; real address in `src/config/contracts.ts`)
+  2. DelegateBySig — `0x7c1a…f34d` (placeholder; real address in `src/config/contracts.ts`)
+  3. Reward Distributor — `0x2e9b…c72a` (placeholder; real address in `src/config/contracts.ts`)
+- A `src/config/contracts.ts` file exports the 3 addresses from environment variables (`VITE_CONTRACT_ENS_INCENTIVES`, `VITE_CONTRACT_DELEGATE_BY_SIG`, `VITE_CONTRACT_REWARD_DISTRIBUTOR`) with hardcoded fallback values for development.
 
 **"ROUND N · LIVE DATA" section:**
 - 2×2 stat grid: SNAPSHOT BLOCK · TOTAL DELEGATED · ELIGIBLE HOLDERS · REWARD POOL
@@ -350,7 +355,7 @@ apps/frontend/src/
 type AppWalletState =
   | { status: 'disconnected' }
   | { status: 'connected'; address: `0x${string}` }
-  | { status: 'delegated'; address: `0x${string}`; delegatedTo: string; ensName?: string }
+  | { status: 'delegated'; address: `0x${string}`; delegatedTo: `0x${string}`; ensName?: string }
 ```
 
 `WalletStateProvider` derives this by:
