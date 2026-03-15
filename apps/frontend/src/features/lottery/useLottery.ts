@@ -1,16 +1,16 @@
 import { useCallback } from 'react'
 import { api } from '@/api/client'
 import { useAsync } from '@/hooks/useAsync'
+import type { DistributionResponse } from '@/api/types'
 
-function currentMonth(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}`
+async function fetchLatestDistribution(): Promise<DistributionResponse | null> {
+  const months = await api.distributionList()
+  if (months.length === 0) return null
+  const latest = months[months.length - 1] // list is sorted ascending
+  return api.distribution(latest)
 }
 
 export function useLottery() {
-  const month = currentMonth()
-  const fetchDistribution = useCallback(() => api.distribution(month), [month])
-  return useAsync(fetchDistribution)
+  const fn = useCallback(() => fetchLatestDistribution(), [])
+  return useAsync(fn)
 }

@@ -1,9 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { server } from '@/test/mocks/server'
 import { useLottery } from './useLottery'
 
 describe('useLottery', () => {
-  it('fetches distribution and returns lottery pools', async () => {
+  it('fetches the latest completed distribution', async () => {
     const { result } = renderHook(() => useLottery())
 
     await waitFor(() => {
@@ -13,6 +15,21 @@ describe('useLottery', () => {
     expect(result.current.data).toBeDefined()
     expect(result.current.data!.lotteryPools).toHaveLength(1)
     expect(result.current.data!.lotteryPools[0].totalPrizeEns).toBe('8.00')
+    expect(result.current.error).toBeNull()
+  })
+
+  it('returns null data (not an error) when no rounds are completed yet', async () => {
+    server.use(
+      http.get('/api/distributions', () => HttpResponse.json([])),
+    )
+
+    const { result } = renderHook(() => useLottery())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    expect(result.current.data).toBeNull()
     expect(result.current.error).toBeNull()
   })
 })

@@ -47,20 +47,20 @@ Swagger UI with all endpoints: `http://localhost:3310/docs`
 
 ## How cycles work
 
-**There are no hardcoded program dates.** You — the operator — decide which months are incentive cycles by triggering computation for them. The system will compute a distribution for any past month you specify in `YYYY-MM` format.
+**There are no hardcoded program dates.** The system computes a distribution for any past configured month, automatically, on first access.
 
-- A month that has never been computed returns 404.
-- Computation is **idempotent**: calling compute twice returns the cached result from the first run.
-- You can recompute a month by deleting its cached record first (see below).
+- Computation is **triggered automatically** on the first `GET /distributions/<month>` after the month ends.
+- The result is **cached forever** — subsequent requests are served from the database, no recomputation.
+- You can force a recompute by deleting the cached record first (see below).
 
 **Practical flow for the 90-day pilot (Feb–Apr 2026):**
 
-At the end of each month, once the chain is fully indexed for that month, you trigger:
+At the end of each month, once the chain is fully indexed for that month, simply fetch the distribution:
 
 ```bash
-POST /distributions/2026-02/compute
-POST /distributions/2026-03/compute
-POST /distributions/2026-04/compute
+curl http://localhost:3310/distributions/2026-02   # triggers compute on first call
+curl http://localhost:3310/distributions/2026-03
+curl http://localhost:3310/distributions/2026-04
 ```
 
 Then export the payout list for each month and execute the transfers.
@@ -69,26 +69,13 @@ Then export the payout list for each month and execute the transfers.
 
 ## Triggering a distribution
 
-### 1. Compute
+### 1. Fetch (auto-computes on first access)
 
 ```bash
-curl -X POST http://localhost:3310/distributions/2026-03/compute
+curl http://localhost:3310/distributions/2026-03
 ```
 
-Returns a summary:
-
-```json
-{
-  "month": "2026-03",
-  "totalDistributed": "8000000000000000000000",
-  "activeDelegateCount": 35,
-  "eligibleDelegatorCount": 890,
-  "directPayoutCount": 840,
-  "lotteryPoolCount": 12
-}
-```
-
-`totalDistributed` is in wei (divide by 10^18 for ENS). The pool size depends on MoM voting power growth — see the [tier table](#pool-tiers).
+On first call after month-end, the pipeline runs automatically and the result is cached. Returns the full distribution JSON including all payouts and lottery results. Subsequent calls return the cached result instantly.
 
 ### 2. Review
 
@@ -174,13 +161,19 @@ Transitive resolution is supported: if A→B and B→C exist, A resolves to C.
 
 ## Recomputing a month
 
-Computation is cached. To force a recompute (e.g. after adding wallet aliases, or if you suspect stale index data):
+Computation is cached forever. To force a recompute (e.g. after adding wallet aliases, or if you suspect stale index data):
+
+```bash
+./scripts/force-recompute.sh 2026-03
+```
+
+Or directly in SQL:
 
 ```sql
 DELETE FROM distribution_result WHERE month = '2026-03';
 ```
 
-Then POST to compute again.
+The next `GET /distributions/2026-03` will automatically recompute.
 
 ---
 

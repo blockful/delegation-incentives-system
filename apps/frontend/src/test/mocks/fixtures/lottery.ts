@@ -22,18 +22,21 @@ export const distributionFixture: DistributionResponse = {
   directPayouts: [
     {
       address: '0x1234567890abcdef1234567890abcdef12345678',
+      ensName: null,
       amount: '50000000000000000000',
       amountEns: '50.00',
       role: 'delegate',
     },
     {
       address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+      ensName: null,
       amount: '35000000000000000000',
       amountEns: '35.00',
       role: 'delegate',
     },
     {
       address: '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+      ensName: null,
       amount: '12000000000000000000',
       amountEns: '12.00',
       role: 'delegator',
@@ -44,19 +47,23 @@ export const distributionFixture: DistributionResponse = {
       totalPrize: '8000000000000000000',
       totalPrizeEns: '8.00',
       winner: '0x9876543210fedcba9876543210fedcba98765432',
+      winnerEnsName: null,
       entries: [
         {
           address: '0x9876543210fedcba9876543210fedcba98765432',
+          ensName: null,
           originalAmount: '3000000000000000000',
           role: 'delegator',
         },
         {
           address: '0x1111111111111111111111111111111111111111',
+          ensName: null,
           originalAmount: '2500000000000000000',
           role: 'delegator',
         },
         {
           address: '0x2222222222222222222222222222222222222222',
+          ensName: null,
           originalAmount: '2500000000000000000',
           role: 'delegator',
         },

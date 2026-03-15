@@ -175,6 +175,16 @@ const ErrorMessage = styled.p`
   font-size: 16px;
 `
 
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+  border-radius: 16px;
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: 15px;
+  line-height: 1.6;
+`
+
 const HOW_IT_WORKS_STEPS = [
   'Small balances that fall below the minimum payout threshold are pooled together into a lottery.',
   'At the end of each round, a verifiable random draw selects a winner from the pool.',
@@ -202,9 +212,47 @@ export function LotteryPage() {
     )
   }
 
-  const pool = data?.lotteryPools[0]
+  // No completed rounds yet — show explainer instead of breaking
+  if (!data) {
+    return (
+      <Page>
+        <Hero>
+          <Typography
+            fontVariant="label"
+            color="blue"
+            weight="bold"
+            style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
+          >
+            Lottery
+          </Typography>
+          <div style={{ marginTop: 12 }}>
+            <ThorinHeading level="1" responsive>
+              Small balance? You still have a shot.
+            </ThorinHeading>
+          </div>
+        </Hero>
+        <EmptyState>
+          <p>No rounds have been completed yet.</p>
+          <p>Lottery results will appear here after the first round ends.</p>
+        </EmptyState>
+        <Section>
+          <ThorinHeading level="2">How the draw works</ThorinHeading>
+          <StepList>
+            {HOW_IT_WORKS_STEPS.map((text, i) => (
+              <Step key={i}>
+                <StepNumber>{i + 1}</StepNumber>
+                <StepText>{text}</StepText>
+              </Step>
+            ))}
+          </StepList>
+        </Section>
+      </Page>
+    )
+  }
+
+  const pool = data.lotteryPools[0]
   const entryCount = pool?.entries.length ?? 0
-  const poolCount = data?.lotteryPools.length ?? 0
+  const poolCount = data.lotteryPools.length
 
   return (
     <Page>

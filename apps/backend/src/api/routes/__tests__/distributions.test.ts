@@ -1,33 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { distributionsRouter } from "../distributions.js"
-import { wei, basisPoints, seconds } from "@ens-dis/domain"
+import { distributionsRouter, isMonthOver } from "../distributions.js"
+import { wei, basisPoints } from "@ens-dis/domain"
 import type { DistributionResult } from "@ens-dis/domain"
 
 vi.mock("../../rounds.js", () => ({
   isConfiguredRound: vi.fn(() => true),
 }))
 
-import { isConfiguredRound } from "../../rounds.js"
-
-// Mock buildDataSource
 vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
 }))
 
-// Mock runDistributionPipeline from domain
 vi.mock("@ens-dis/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@ens-dis/domain")>()
-  return {
-    ...actual,
-    runDistributionPipeline: vi.fn(),
-  }
+  return { ...actual, runDistributionPipeline: vi.fn() }
 })
 
+vi.mock("../../ens-cache.js", () => ({
+  getCachedEnsName: vi.fn(() => null),
+}))
+
+import { isConfiguredRound } from "../../rounds.js"
 import { buildDataSource } from "../../data-source.js"
 import { runDistributionPipeline } from "@ens-dis/domain"
 
+// 2025-03 is always in the past; 2099-12 is always in the future.
+const PAST_MONTH = "2025-03"
+const FUTURE_MONTH = "2099-12"
+
 const MOCK_RESULT: DistributionResult = {
-  month: "2025-03",
+  month: PAST_MONTH,
   directPayouts: [
     { address: "0xaaa", amount: wei(100n * 10n ** 18n), role: "delegate" },
   ],
@@ -49,7 +51,6 @@ const MOCK_RESULT: DistributionResult = {
   },
 }
 
-// In-memory store for distribution data
 let distributionStore: Map<string, DistributionResult>
 
 const mockDataSource = {
@@ -67,7 +68,6 @@ beforeEach(() => {
   distributionStore = new Map()
   vi.mocked(buildDataSource).mockReturnValue(mockDataSource as any)
   vi.mocked(runDistributionPipeline).mockResolvedValue(MOCK_RESULT)
-  // Reset mock call counts
   vi.mocked(mockDataSource.distributions.load).mockImplementation(
     async (month: string) => distributionStore.get(month) ?? null,
   )
@@ -81,179 +81,164 @@ beforeEach(() => {
   )
 })
 
-describe("GET /distributions", () => {
-  it("returns 200 [] when empty", async () => {
-    const req = new Request("http://localhost/distributions")
-    const res = await distributionsRouter.fetch(req)
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toEqual([])
+// ─── isMonthOver ─────────────────────────────────────────────────────────────
+
+describe("isMonthOver", () => {
+  it("returns true for a month clearly in the past", () => {
+    expect(isMonthOver(PAST_MONTH)).toBe(true)
   })
 
-  it("returns list after compute", async () => {
-    distributionStore.set("2025-03", MOCK_RESULT)
-    const req = new Request("http://localhost/distributions")
-    const res = await distributionsRouter.fetch(req)
+  it("returns false for a month clearly in the future", () => {
+    expect(isMonthOver(FUTURE_MONTH)).toBe(false)
+  })
+})
+
+// ─── GET /distributions ───────────────────────────────────────────────────────
+
+describe("GET /distributions", () => {
+  it("returns 200 [] when empty", async () => {
+    const res = await distributionsRouter.fetch(new Request("http://localhost/distributions"))
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toEqual(["2025-03"])
+    expect(await res.json()).toEqual([])
+  })
+
+  it("returns list of computed months", async () => {
+    distributionStore.set(PAST_MONTH, MOCK_RESULT)
+    const res = await distributionsRouter.fetch(new Request("http://localhost/distributions"))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual([PAST_MONTH])
   })
 
   it("returns 500 when list() throws", async () => {
-    vi.mocked(mockDataSource.distributions.list).mockRejectedValueOnce(
-      new Error("DB connection failed"),
-    )
-    const req = new Request("http://localhost/distributions")
-    const res = await distributionsRouter.fetch(req)
+    vi.mocked(mockDataSource.distributions.list).mockRejectedValueOnce(new Error("DB error"))
+    const res = await distributionsRouter.fetch(new Request("http://localhost/distributions"))
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(typeof body.error).toBe("string")
   })
 })
 
-describe("POST /distributions/{month}/compute", () => {
-  it("returns 200 with summary on first compute", async () => {
-    const req = new Request("http://localhost/distributions/2025-03/compute", {
-      method: "POST",
-    })
-    const res = await distributionsRouter.fetch(req)
+// ─── GET /distributions/{month} ───────────────────────────────────────────────
+
+describe("GET /distributions/{month}", () => {
+  it("returns cached result without calling pipeline", async () => {
+    distributionStore.set(PAST_MONTH, MOCK_RESULT)
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
+    )
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.month).toBe("2025-03")
-    expect(typeof body.totalDistributed).toBe("string")
-    expect(typeof body.activeDelegateCount).toBe("number")
-    expect(typeof body.eligibleDelegatorCount).toBe("number")
-    expect(typeof body.directPayoutCount).toBe("number")
-    expect(typeof body.lotteryPoolCount).toBe("number")
+    expect(body.month).toBe(PAST_MONTH)
+    expect(vi.mocked(runDistributionPipeline)).not.toHaveBeenCalled()
   })
 
-  it("calls pipeline exactly once on first compute", async () => {
-    const req = new Request("http://localhost/distributions/2025-03/compute", {
-      method: "POST",
-    })
-    await distributionsRouter.fetch(req)
+  it("auto-computes on first GET for a past configured round", async () => {
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.month).toBe(PAST_MONTH)
     expect(vi.mocked(runDistributionPipeline)).toHaveBeenCalledTimes(1)
   })
 
-  it("returns same result on second call without calling pipeline again", async () => {
-    const req1 = new Request("http://localhost/distributions/2025-03/compute", {
-      method: "POST",
-    })
-    await distributionsRouter.fetch(req1)
-    const pipelineCallCount = vi.mocked(runDistributionPipeline).mock.calls.length
+  it("saves result to store on first compute so subsequent calls skip pipeline", async () => {
+    await distributionsRouter.fetch(new Request(`http://localhost/distributions/${PAST_MONTH}`))
+    vi.mocked(runDistributionPipeline).mockClear()
 
-    const req2 = new Request("http://localhost/distributions/2025-03/compute", {
-      method: "POST",
-    })
-    const res2 = await distributionsRouter.fetch(req2)
+    const res2 = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
+    )
     expect(res2.status).toBe(200)
-    // Pipeline should NOT have been called again
-    expect(vi.mocked(runDistributionPipeline).mock.calls.length).toBe(pipelineCallCount)
+    expect(vi.mocked(runDistributionPipeline)).not.toHaveBeenCalled()
   })
 
-  it("returns 400 for invalid month format (bad-month)", async () => {
-    const req = new Request("http://localhost/distributions/bad-month/compute", {
-      method: "POST",
-    })
-    const res = await distributionsRouter.fetch(req)
-    expect(res.status).toBe(400)
+  it("concurrent requests share one in-flight computation", async () => {
+    const [res1, res2] = await Promise.all([
+      distributionsRouter.fetch(new Request(`http://localhost/distributions/${PAST_MONTH}`)),
+      distributionsRouter.fetch(new Request(`http://localhost/distributions/${PAST_MONTH}`)),
+    ])
+    expect(res1.status).toBe(200)
+    expect(res2.status).toBe(200)
+    expect(vi.mocked(runDistributionPipeline)).toHaveBeenCalledTimes(1)
   })
 
-  it("returns 400 for month without zero-pad (2025-3)", async () => {
-    const req = new Request("http://localhost/distributions/2025-3/compute", {
-      method: "POST",
-    })
-    const res = await distributionsRouter.fetch(req)
-    expect(res.status).toBe(400)
-  })
-
-  it("returns 403 when month is not a configured round", async () => {
-    vi.mocked(isConfiguredRound).mockReturnValue(false)
-    const req = new Request("http://localhost/distributions/2025-03/compute", {
-      method: "POST",
-    })
-    const res = await distributionsRouter.fetch(req)
-    expect(res.status).toBe(403)
-    const body = await res.json()
-    expect(body.error).toContain("2025-03")
-  })
-
-  it("returns 500 when pipeline throws", async () => {
-    vi.mocked(isConfiguredRound).mockReturnValue(true)
+  it("retries computation after pipeline failure", async () => {
     vi.mocked(runDistributionPipeline).mockRejectedValueOnce(new Error("pipeline failed"))
-    const req = new Request("http://localhost/distributions/2025-03/compute", {
-      method: "POST",
-    })
-    const res = await distributionsRouter.fetch(req)
-    expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(typeof body.error).toBe("string")
-  })
-})
 
-describe("GET /distributions/{month}", () => {
-  it("returns 404 before compute", async () => {
-    const req = new Request("http://localhost/distributions/2025-03")
-    const res = await distributionsRouter.fetch(req)
+    const res1 = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
+    )
+    expect(res1.status).toBe(500)
+
+    // Second request must retry — in-flight entry was removed on failure
+    const res2 = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
+    )
+    expect(res2.status).toBe(200)
+    expect(vi.mocked(runDistributionPipeline)).toHaveBeenCalledTimes(2)
+  })
+
+  it("returns 404 when month has not ended yet", async () => {
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${FUTURE_MONTH}`),
+    )
     expect(res.status).toBe(404)
-    const body = await res.json()
-    expect(body.error).toBeDefined()
+    expect(vi.mocked(runDistributionPipeline)).not.toHaveBeenCalled()
   })
 
-  it("returns 200 with distribution after compute", async () => {
-    distributionStore.set("2025-03", MOCK_RESULT)
-
-    const req = new Request("http://localhost/distributions/2025-03")
-    const res = await distributionsRouter.fetch(req)
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.month).toBe("2025-03")
-    expect(body.metadata).toBeDefined()
-    expect(Array.isArray(body.directPayouts)).toBe(true)
-    expect(Array.isArray(body.lotteryPools)).toBe(true)
+  it("returns 404 for non-configured round even if month is over", async () => {
+    vi.mocked(isConfiguredRound).mockReturnValueOnce(false)
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
+    )
+    expect(res.status).toBe(404)
+    expect(vi.mocked(runDistributionPipeline)).not.toHaveBeenCalled()
   })
 
   it("returns 500 when load() throws", async () => {
-    vi.mocked(mockDataSource.distributions.load).mockRejectedValueOnce(
-      new Error("Database connection failed"),
+    vi.mocked(mockDataSource.distributions.load).mockRejectedValueOnce(new Error("DB error"))
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}`),
     )
-    const req = new Request("http://localhost/distributions/2025-03")
-    const res = await distributionsRouter.fetch(req)
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBeDefined()
-    expect(typeof body.error).toBe("string")
   })
 })
+
+// ─── GET /distributions/{month}/csv ──────────────────────────────────────────
 
 describe("GET /distributions/{month}/csv", () => {
-  it("returns 404 before compute", async () => {
-    const req = new Request("http://localhost/distributions/2025-03/csv")
-    const res = await distributionsRouter.fetch(req)
+  it("returns 404 when month has not ended", async () => {
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${FUTURE_MONTH}/csv`),
+    )
     expect(res.status).toBe(404)
   })
 
-  it("returns 200 text/csv with Content-Disposition after compute", async () => {
-    distributionStore.set("2025-03", MOCK_RESULT)
-
-    const req = new Request("http://localhost/distributions/2025-03/csv")
-    const res = await distributionsRouter.fetch(req)
+  it("auto-computes and returns CSV for a past month", async () => {
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}/csv`),
+    )
     expect(res.status).toBe(200)
     expect(res.headers.get("Content-Type")).toContain("text/csv")
-    expect(res.headers.get("Content-Disposition")).toContain("distribution-2025-03.csv")
+    expect(res.headers.get("Content-Disposition")).toContain(`distribution-${PAST_MONTH}.csv`)
     const text = await res.text()
     expect(text).toContain("address")
+    expect(vi.mocked(runDistributionPipeline)).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns cached result for CSV without recomputing", async () => {
+    distributionStore.set(PAST_MONTH, MOCK_RESULT)
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}/csv`),
+    )
+    expect(res.status).toBe(200)
+    expect(vi.mocked(runDistributionPipeline)).not.toHaveBeenCalled()
   })
 
   it("returns 500 when load() throws", async () => {
-    vi.mocked(mockDataSource.distributions.load).mockRejectedValueOnce(
-      new Error("Database connection failed"),
+    vi.mocked(mockDataSource.distributions.load).mockRejectedValueOnce(new Error("DB error"))
+    const res = await distributionsRouter.fetch(
+      new Request(`http://localhost/distributions/${PAST_MONTH}/csv`),
     )
-    const req = new Request("http://localhost/distributions/2025-03/csv")
-    const res = await distributionsRouter.fetch(req)
     expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBeDefined()
-    expect(typeof body.error).toBe("string")
   })
 })

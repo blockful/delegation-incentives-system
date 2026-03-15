@@ -17,10 +17,12 @@ export interface ActiveDelegatesResponse {
 
 export interface EligibilityResponse {
   address: string;
+  ensName: string | null;
   isActiveDelegate: boolean;
   isDelegatorToActiveDelegate: boolean;
   eligible: boolean;
   delegatedTo: string | null;
+  delegatedToEnsName: string | null;
 }
 
 export interface TierEntry {
@@ -50,19 +52,21 @@ export interface TierProgressionResponse {
 
 export interface ApyEstimateResponse {
   address: string;
+  ensName: string | null;
   role: "delegate" | "delegator" | "ineligible";
   delegatedTo: string | null;
-  currentTierIndex: number;
+  delegatedToEnsName: string | null;
   poolSizeEns: string;
   estimatedMonthlyRewardEns: string;
   estimatedApyPct: string;
-  userWeight: string;
-  totalPoolWeight: string;
+  userShareWei: string;
+  totalShareWei: string;
   currentBalanceEns: string;
 }
 
 export interface Payout {
   address: string;
+  ensName: string | null;
   amount: string;
   amountEns: string;
   role: "delegate" | "delegator";
@@ -70,6 +74,7 @@ export interface Payout {
 
 export interface LotteryEntry {
   address: string;
+  ensName: string | null;
   originalAmount: string;
   role: "delegate" | "delegator";
 }
@@ -78,6 +83,7 @@ export interface LotteryPool {
   totalPrize: string;
   totalPrizeEns: string;
   winner: string;
+  winnerEnsName: string | null;
   entries: LotteryEntry[];
 }
 
@@ -103,15 +109,6 @@ export interface DistributionResponse {
   metadata: DistributionMetadata;
   directPayouts: Payout[];
   lotteryPools: LotteryPool[];
-}
-
-export interface ComputeResultResponse {
-  month: string;
-  totalDistributed: string;
-  activeDelegateCount: number;
-  eligibleDelegatorCount: number;
-  directPayoutCount: number;
-  lotteryPoolCount: number;
 }
 
 export interface DelegateDetail {

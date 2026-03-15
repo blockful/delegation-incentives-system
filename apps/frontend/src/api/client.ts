@@ -6,7 +6,6 @@ import type {
   TierProgressionResponse,
   ApyEstimateResponse,
   DistributionResponse,
-  ComputeResultResponse,
   RoundInfoResponse,
 } from "./types";
 
@@ -45,13 +44,10 @@ export const api = {
 
   apy: (address: string) => request<ApyEstimateResponse>(`/apy/${address}`),
 
+  distributionList: () => request<string[]>("/distributions"),
+
   distribution: (month: string) =>
     request<DistributionResponse>(`/distributions/${month}`),
-
-  computeDistribution: (month: string) =>
-    request<ComputeResultResponse>(`/distributions/${month}/compute`, {
-      method: "POST",
-    }),
 
   currentRound: () => request<RoundInfoResponse>("/rounds/current"),
 } as const;

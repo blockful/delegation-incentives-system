@@ -27,6 +27,10 @@ export const handlers = [
 
   http.get('/api/apy/:address', () => HttpResponse.json(apyFixture)),
 
+  http.get('/api/distributions', () =>
+    HttpResponse.json([distributionFixture.month]),
+  ),
+
   http.get('/api/distributions/:month', () =>
     HttpResponse.json(distributionFixture),
   ),
