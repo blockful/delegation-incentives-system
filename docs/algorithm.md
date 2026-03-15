@@ -121,7 +121,7 @@ In discrete form (step function over balance change events):
 TWB = SUM_i( balance_i × (t_{i+1} − t_i) ) / windowSeconds
 ```
 
-Implemented in `time-weighted-balance.ts` using the same TWAP algorithm as `util/twap.ts`. The opening balance (at `twbWindowStart`) is determined by the last event before the window — if no event exists, the opening balance is `0` (the account had no tokens yet).
+Implemented in `time-weighted-balance.ts`. The opening balance (at `twbWindowStart`) is determined by the last event before the window — if no event exists, the opening balance is `0` (the account had no tokens yet).
 
 A delegator with no balance events in or before the window gets `TWB = 0` and is excluded from rewards.
 
@@ -187,9 +187,7 @@ This ensures the full pool is distributed without any participant receiving more
 
 ---
 
-## TWAP (Time-Weighted Average)
-
-Implemented in `util/twap.ts`. Used for both delegate AVP and delegator TWB.
+## Time-Weighted Average (TWA)
 
 Given a step function defined by `(timestamp, value)` snapshots sorted ascending, and a window `[from, to]`:
 

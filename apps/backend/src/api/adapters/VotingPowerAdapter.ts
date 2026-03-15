@@ -5,6 +5,17 @@ import { ensVotingPowerSnapshot } from "ponder:schema"
 
 type VPSnapshotRow = typeof ensVotingPowerSnapshot.$inferSelect
 
+/** Keep the latest row per accountId. Input may be in any order. */
+function keepLatest(rows: VPSnapshotRow[]): Map<string, VPSnapshotRow> {
+  const result = new Map<string, VPSnapshotRow>()
+  for (const row of rows) {
+    const id = row.accountId.toLowerCase()
+    const existing = result.get(id)
+    if (!existing || row.timestamp > existing.timestamp) result.set(id, row)
+  }
+  return result
+}
+
 export class VotingPowerAdapter implements VotingPowerRepository {
   constructor(private db: any) {}
 
@@ -54,20 +65,8 @@ export class VotingPowerAdapter implements VotingPowerRepository {
         ),
       )
 
-    // For each delegate, keep the latest snapshot ≤ at
-    const latestByDelegate = new Map<string, { votingPower: bigint; timestamp: bigint }>()
-    for (const row of rows) {
-      const id = row.accountId.toLowerCase()
-      const existing = latestByDelegate.get(id)
-      if (!existing || row.timestamp > existing.timestamp) {
-        latestByDelegate.set(id, { votingPower: row.votingPower, timestamp: row.timestamp })
-      }
-    }
-
     let total = 0n
-    for (const entry of latestByDelegate.values()) {
-      total += entry.votingPower
-    }
+    for (const row of keepLatest(rows).values()) total += row.votingPower
     return wei(total)
   }
 
@@ -81,20 +80,8 @@ export class VotingPowerAdapter implements VotingPowerRepository {
       .from(ensVotingPowerSnapshot)
       .where(inArray(ensVotingPowerSnapshot.accountId, normalizedIds))
 
-    // For each account, keep the latest snapshot (no time filter)
-    const latestByAccount = new Map<string, { votingPower: bigint; timestamp: bigint }>()
-    for (const row of rows) {
-      const accountId = row.accountId.toLowerCase()
-      const existing = latestByAccount.get(accountId)
-      if (!existing || row.timestamp > existing.timestamp) {
-        latestByAccount.set(accountId, { votingPower: row.votingPower, timestamp: row.timestamp })
-      }
-    }
-
     const result = new Map<string, Wei>()
-    for (const [accountId, entry] of latestByAccount) {
-      result.set(accountId, wei(entry.votingPower))
-    }
+    for (const [id, row] of keepLatest(rows)) result.set(id, wei(row.votingPower))
     return result
   }
 }
