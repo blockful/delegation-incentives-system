@@ -195,6 +195,22 @@ describe("consolidateDelegators (with wallet aliases)", () => {
     expect(result[0].delegatorId).toBe("0xreal-owner");
   });
 
+  it("handles circular mappings without infinite loop", () => {
+    // A → B → A is a cycle; resolve() detects the cycle via the `seen` set
+    // and stops, leaving both A and B as their own canonical addresses.
+    // Circular mappings shouldn't exist in practice, but if they do the
+    // system must not hang — both addresses are treated as separate entities.
+    const scores = [score("0xa", 100n), score("0xb", 200n)];
+    const mappings: ProtocolMapping[] = [
+      { childAddress: "0xa", operatorAddress: "0xb", protocol: "test" },
+      { childAddress: "0xb", operatorAddress: "0xa", protocol: "test" },
+    ];
+    expect(() => consolidateDelegators(scores, mappings, [])).not.toThrow();
+    const result = consolidateDelegators(scores, mappings, []);
+    // Cycle detected: A resolves to A, B resolves to B → 2 separate entries
+    expect(result.length).toBe(2);
+  });
+
   it("resolves transitive chain even when intermediate mapping stored mixed-case", () => {
     const scores: DelegatorScore[] = [
       { delegatorId: "0xchild", delegateId: "0xdelegate", timeWeightedBalance: wei(100n) },

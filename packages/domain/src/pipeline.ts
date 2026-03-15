@@ -90,52 +90,53 @@ export async function runDistributionPipeline(
     previousAVP === 0n ? POOL_TIERS[0] : determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
   const monthlyPool = poolTier.poolSize;
 
-  // Step 5: Compute average voting power for each active delegate
-  const vpHistory = await dataSource.votingPower.getVotingPowerHistory(
-    activeDelegateArray,
-    monthStart,
-    monthEnd,
-  );
+  // Step 5: Compute average voting power for each active delegate.
+  // Fetch both the within-month history and the pre-month history in parallel,
+  // then compute per-delegate TWAP in memory without further round-trips.
+  const [vpHistory, preMonthVPHistory] = await Promise.all([
+    dataSource.votingPower.getVotingPowerHistory(activeDelegateArray, monthStart, monthEnd),
+    dataSource.votingPower.getVotingPowerHistory(activeDelegateArray, seconds(0n), monthStart),
+  ]);
 
-  // Get initial VP at month start for each delegate
-  const delegateScores: DelegateScore[] = [];
-  for (const delegateId of activeDelegateArray) {
-    const delegateEvents = vpHistory
-      .filter((s) => s.accountId === delegateId)
-      .map((s) => ({
-        accountId: s.accountId,
-        balance: s.votingPower, // reuse TWB algo for VP
-        delta: s.delta,
-        timestamp: s.timestamp,
-      }));
+  // Group pre-month snapshots by delegate for O(1) initial-VP lookup
+  const preMonthByDelegate = new Map<string, typeof preMonthVPHistory[number]>();
+  for (const s of preMonthVPHistory) {
+    const existing = preMonthByDelegate.get(s.accountId);
+    if (!existing || s.timestamp > existing.timestamp) {
+      preMonthByDelegate.set(s.accountId, s);
+    }
+  }
 
-    // Get initial VP before month start
-    const preMonthEvents = (
-      await dataSource.votingPower.getVotingPowerHistory(
-        [delegateId],
-        seconds(0n),
-        monthStart,
-      )
-    ).sort((a, b) => Number(b.timestamp - a.timestamp));
-    const initialVP = preMonthEvents.length > 0 ? preMonthEvents[0].votingPower : wei(0n);
+  // Build vote lookup: voterAccountId → Set<proposalId>
+  const votesByDelegate = new Map<string, Set<string>>();
+  for (const v of votes) {
+    const set = votesByDelegate.get(v.voterAccountId) ?? new Set<string>();
+    set.add(v.proposalId);
+    votesByDelegate.set(v.voterAccountId, set);
+  }
 
-    const avgVP = computeTimeWeightedBalance(
-      delegateEvents,
-      monthStart,
-      monthEnd,
-      initialVP,
-    );
+  // Group VP history by accountId once (O(H)) to avoid a per-delegate filter inside the map.
+  const vpByDelegate = new Map<string, typeof vpHistory>();
+  for (const s of vpHistory) {
+    const bucket = vpByDelegate.get(s.accountId);
+    if (bucket) bucket.push(s);
+    else vpByDelegate.set(s.accountId, [s]);
+  }
 
-    const votesForDelegate = votes.filter(
-      (v) => v.voterAccountId === delegateId,
-    );
-    delegateScores.push({
+  const delegateScores: DelegateScore[] = activeDelegateArray.map((delegateId) => {
+    const delegateEvents = (vpByDelegate.get(delegateId) ?? [])
+      .map((s) => ({ accountId: s.accountId, balance: s.votingPower, delta: s.delta, timestamp: s.timestamp }));
+
+    const initialVP = preMonthByDelegate.get(delegateId)?.votingPower ?? wei(0n);
+    const avgVP = computeTimeWeightedBalance(delegateEvents, monthStart, monthEnd, initialVP);
+
+    return {
       delegateId,
       averageVotingPower: avgVP,
-      proposalsVoted: new Set(votesForDelegate.map((v) => v.proposalId)).size,
+      proposalsVoted: votesByDelegate.get(delegateId)?.size ?? 0,
       isActive: true,
-    });
-  }
+    };
+  });
 
   // Step 6: Compute delegate rewards
   const delegateResults = computeDelegateRewards(
@@ -154,40 +155,33 @@ export async function runDistributionPipeline(
   const protocolMappings = await dataSource.protocolMappings.getMappings();
   const walletAliases = await dataSource.walletAliases.getAliases();
 
-  const rawDelegatorScores: DelegatorScore[] = [];
   const delegatorIds = [...new Set(delegations.map((d) => d.delegatorId))];
 
-  // Step 9: Compute 180-day TWB for each eligible delegator
-  for (const delegatorId of delegatorIds) {
-    const balanceEvents = await dataSource.balances.getBalanceHistory(
-      [delegatorId],
-      twbWindowStart,
-      monthEnd,
-    );
-    const initialBalance = await dataSource.balances.getBalanceAt(
-      delegatorId,
-      twbWindowStart,
-    );
+  // Step 9: Compute 180-day TWB for each eligible delegator.
+  // Fetch all balance history in one batch query, initial balances in parallel.
+  const [allBalanceEvents, initialBalances] = await Promise.all([
+    dataSource.balances.getBalanceHistory(delegatorIds, twbWindowStart, monthEnd),
+    Promise.all(delegatorIds.map((id) => dataSource.balances.getBalanceAt(id, twbWindowStart))),
+  ]);
 
-    const twb = computeTimeWeightedBalance(
-      balanceEvents,
-      twbWindowStart,
-      monthEnd,
-      initialBalance,
-    );
+  const delegationByDelegator = new Map(delegations.map((d) => [d.delegatorId, d]));
 
-    const delegation = delegations.find(
-      (d) => d.delegatorId === delegatorId,
-    );
-    // delegations was fetched for activeDelegates at monthEnd; if somehow
-    // a delegatorId has no matching record, skip rather than crash.
+  // Group balance events by accountId once (O(E)) to avoid a per-delegator filter inside the loop.
+  const balanceEventsByAccount = new Map<string, typeof allBalanceEvents>();
+  for (const e of allBalanceEvents) {
+    const bucket = balanceEventsByAccount.get(e.accountId);
+    if (bucket) bucket.push(e);
+    else balanceEventsByAccount.set(e.accountId, [e]);
+  }
+
+  const rawDelegatorScores: DelegatorScore[] = [];
+  for (let i = 0; i < delegatorIds.length; i++) {
+    const delegatorId = delegatorIds[i];
+    const delegation = delegationByDelegator.get(delegatorId);
     if (!delegation) continue;
 
-    rawDelegatorScores.push({
-      delegatorId,
-      delegateId: delegation.delegateId,
-      timeWeightedBalance: twb,
-    });
+    const twb = computeTimeWeightedBalance(balanceEventsByAccount.get(delegatorId) ?? [], twbWindowStart, monthEnd, initialBalances[i]);
+    rawDelegatorScores.push({ delegatorId, delegateId: delegation.delegateId, timeWeightedBalance: twb });
   }
 
   // Step 10: Consolidate wallets BEFORE cap calculation

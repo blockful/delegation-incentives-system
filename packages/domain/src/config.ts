@@ -41,12 +41,6 @@ export const DELEGATE_POOL_BPS = basisPoints(1000n); // 10%
 /** Delegator pool is 90% of monthly pool */
 export const DELEGATOR_POOL_BPS = basisPoints(9000n); // 90%
 
-/** Per-delegate cap: 1% of total monthly pool */
-export const DELEGATE_CAP_PERCENT = 1n;
-
-/** Per-delegator cap: 5% of total monthly pool */
-export const DELEGATOR_CAP_PERCENT = 5n;
-
 /** Minimum payout threshold before entering lottery (1 ENS) */
 export const MIN_PAYOUT_THRESHOLD: Wei = ONE_ENS;
 

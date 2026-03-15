@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { apyRouter } from "../apy.js"
 import { seconds, wei } from "@ens-dis/domain"
+import { makeProposals, makeVotes } from "./test-utils.js"
 
 vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
@@ -20,26 +21,6 @@ import { buildDataSource } from "../../data-source.js"
 const DELEGATE_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 const DELEGATOR_B = "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 const INELIGIBLE = "0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
-
-const makeProposals = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({
-    id: `${i + 1}`,
-    status: "executed",
-    timestamp: seconds(BigInt(1000 + i)),
-    endBlock: BigInt(2000 + i),
-    daoId: "ens",
-  }))
-
-const makeVotes = (voterIds: string[], proposalIds: string[]) =>
-  voterIds.flatMap((voter) =>
-    proposalIds.map((proposalId) => ({
-      voterAccountId: voter,
-      proposalId,
-      support: 1,
-      votingPower: wei(1000n * 10n ** 18n),
-      timestamp: seconds(1000n),
-    })),
-  )
 
 const mockDataSource = {
   proposals: { getRecentProposals: vi.fn() },
@@ -250,13 +231,11 @@ describe("GET /apy/{address}", () => {
       { delegatorId: DELEGATOR_B, delegateId: DELEGATE_A, delegatedValue: wei(1n), timestamp: seconds(1000n) },
       { delegatorId: OTHER_DELEGATOR, delegateId: DELEGATE_A, delegatedValue: wei(1000n * 10n ** 18n), timestamp: seconds(1000n) },
     ])
-    // Sequence of getBalanceAt calls:
-    // 1. getBalanceAt(DELEGATOR_B, twbWindowStart) → for userTWB
-    // 2. getBalanceAt(DELEGATOR_B, monthEnd) → for currentBalance display
-    // 3. getBalanceAt(DELEGATOR_B, twbWindowStart) → for totalTWB contribution (first delegator)
-    // 4. getBalanceAt(OTHER_DELEGATOR, twbWindowStart) → for totalTWB (second delegator)
+    // Batched sequence: currentBalance first, then initial balances in parallel
+    // 1. getBalanceAt(DELEGATOR_B, monthEnd)        → currentBalance (display)
+    // 2. getBalanceAt(DELEGATOR_B, twbWindowStart)  → initial (totalTWB, delegator 1)
+    // 3. getBalanceAt(OTHER_DELEGATOR, twbWindowStart) → initial (totalTWB, delegator 2)
     vi.mocked(mockDataSource.balances.getBalanceAt)
-      .mockResolvedValueOnce(wei(1n))                       // DELEGATOR_B initial (userTWB)
       .mockResolvedValueOnce(wei(1n))                       // DELEGATOR_B current (display)
       .mockResolvedValueOnce(wei(1n))                       // DELEGATOR_B initial (totalTWB)
       .mockResolvedValueOnce(wei(1000n * 10n ** 18n))       // OTHER_DELEGATOR initial (totalTWB)

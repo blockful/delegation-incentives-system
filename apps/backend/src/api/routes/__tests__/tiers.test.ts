@@ -1,32 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { tiersRouter } from "../tiers.js"
-import { seconds, wei, POOL_TIERS } from "@ens-dis/domain"
+import { wei, POOL_TIERS } from "@ens-dis/domain"
+import { makeProposals, makeVotes } from "./test-utils.js"
 
 vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
 }))
 
 import { buildDataSource } from "../../data-source.js"
-
-const makeProposals = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({
-    id: `${i + 1}`,
-    status: "executed",
-    timestamp: seconds(BigInt(1000 + i)),
-    endBlock: BigInt(2000 + i),
-    daoId: "ens",
-  }))
-
-const makeVotes = (voterIds: string[], proposalIds: string[]) =>
-  voterIds.flatMap((voter) =>
-    proposalIds.map((proposalId) => ({
-      voterAccountId: voter,
-      proposalId,
-      support: 1,
-      votingPower: wei(100n),
-      timestamp: seconds(1000n),
-    })),
-  )
 
 const mockDataSource = {
   proposals: { getRecentProposals: vi.fn() },

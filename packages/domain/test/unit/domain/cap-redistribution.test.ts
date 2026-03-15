@@ -101,6 +101,30 @@ describe("allocateWithCap", () => {
     expect(result.find((r) => r.id === "b")!.amount).toBe(wei(499n));
   });
 
+  it("zero-weight recipient gets 0 regardless of other recipients", () => {
+    const result = allocateWithCap(
+      [input("nonzero", 100n), input("zero", 0n)],
+      1000n,
+      500n,
+    );
+    expect(result.find((r) => r.id === "nonzero")!.amount).toBe(wei(500n));
+    expect(result.find((r) => r.id === "zero")!.amount).toBe(wei(0n));
+  });
+
+  it("zero-weight recipient gets 0 even when remaining pool is positive after capping", () => {
+    // nonzero gets capped at 200; only zero-weight remains → 800 returned to treasury
+    const result = allocateWithCap(
+      [input("nonzero", 100n), input("zero", 0n)],
+      1000n,
+      200n, // cap < pool
+    );
+    expect(result.find((r) => r.id === "nonzero")!.amount).toBe(wei(200n));
+    expect(result.find((r) => r.id === "zero")!.amount).toBe(wei(0n));
+    // 800 ENS not allocated — zero-weight is never a dust recipient
+    const total = sum(result.map((r) => r.amount as bigint));
+    expect(total).toBe(200n);
+  });
+
   it("all recipients exceed cap", () => {
     const result = allocateWithCap(
       [input("a", 50n), input("b", 50n)],
