@@ -420,11 +420,11 @@ function formatDate(iso: string): string {
 }
 
 function formatVP(value: string): string {
-  const num = parseFloat(value)
-  if (isNaN(num)) return '0'
+  const num = Number(value) / 1e18
+  if (isNaN(num) || num <= 0) return '0'
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
-  if (num >= 1_000) return `${(num / 1_000).toFixed(0)}k`
-  return num.toFixed(0)
+  if (num >= 1_000) return `${Math.round(num / 1_000)}K`
+  return Math.round(num).toString()
 }
 
 function formatPayout(ens: string): string {
