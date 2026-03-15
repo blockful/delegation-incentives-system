@@ -12,12 +12,15 @@
   },
   "dependencies": {
     "@ens-dis/domain": "workspace:*",
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-openapi": "^1.2.2",
     "csv-stringify": "^6.6.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.41.0",
-    "ponder": "^0.16.3",
     "hono": "^4.12.5",
-    "viem": "^2.47.0"
+    "ponder": "^0.16.3",
+    "viem": "^2.47.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
