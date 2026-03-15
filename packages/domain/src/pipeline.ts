@@ -80,8 +80,13 @@ export async function runDistributionPipeline(
     prevMonthEnd,
   );
 
-  const momGrowthBps = percentageGrowthBps(currentAVP, previousAVP);
-  const poolTier = determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
+  // Bootstrap guard: if there is no prior VP history (first program month),
+  // previousAVP is 0 and growth would compute as 100% → forcing the top tier.
+  // Default to tier 0 (lowest) so the first distribution is conservative.
+  const momGrowthBps =
+    previousAVP === 0n ? basisPoints(0n) : basisPoints(percentageGrowthBps(currentAVP, previousAVP));
+  const poolTier =
+    previousAVP === 0n ? POOL_TIERS[0] : determinePoolTier(currentAVP, previousAVP, POOL_TIERS);
   const monthlyPool = poolTier.poolSize;
 
   // Step 5: Compute average voting power for each active delegate
@@ -269,7 +274,7 @@ export async function runDistributionPipeline(
     metadata: {
       totalDistributed: wei(totalDistributed),
       poolTier,
-      momGrowthBps: basisPoints(momGrowthBps),
+      momGrowthBps,
       activeDelegateCount: activeDelegateIds.size,
       eligibleDelegatorCount: dedupedScores.length,
       computedAt: new Date().toISOString(),
