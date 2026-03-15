@@ -41,6 +41,25 @@ const apyRoute = createRoute({
   },
 })
 
+/** ENS name + avatar for a primary address (served from in-memory cache). */
+function ensOf(address: string) {
+  return { ensName: getCachedEnsName(address), avatarUrl: getCachedAvatarUrl(address) }
+}
+
+/** Delegate address fields (or nulls when there is no delegate). */
+function delegateEnsOf(delegatedTo: string | null) {
+  return {
+    delegatedTo,
+    delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
+    delegatedToAvatarUrl: delegatedTo ? getCachedAvatarUrl(delegatedTo) : null,
+  }
+}
+
+/** Fire-and-forget ENS prefetch; network failures are silently ignored. */
+function triggerEnsPrefetch(address: string, delegatedTo: string | null = null) {
+  prefetchEnsNames(delegatedTo ? [address, delegatedTo] : [address]).catch(() => {})
+}
+
 export const apyRouter = new OpenAPIHono()
 
 apyRouter.openapi(apyRoute, async (c) => {
@@ -50,32 +69,26 @@ apyRouter.openapi(apyRoute, async (c) => {
     const { activeDelegates } = await fetchActiveDelegates(dataSource)
     const activeLower = toLowerSet(activeDelegates)
     const activeDelegateArray = Array.from(activeDelegates)
-    const { monthEnd, poolTier } = await fetchMonthContext(
-      dataSource,
-      activeDelegateArray,
-    )
+    const { monthEnd, poolTier } = await fetchMonthContext(dataSource, activeDelegateArray)
 
     const monthlyPool = poolTier.poolSize
-    const isActiveDelegate = activeLower.has(address.toLowerCase())
+    const addrLower = address.toLowerCase()
+    const isActiveDelegate = activeLower.has(addrLower)
+
     const accountBalances = await dataSource.delegations.getAccountBalances()
-    const accountBalance = accountBalances.find(
-      (ab) => ab.accountId.toLowerCase() === address.toLowerCase(),
-    )
+    const accountBalance = accountBalances.find((ab) => ab.accountId.toLowerCase() === addrLower)
+    const delegatedTo = accountBalance?.delegate ?? null
     const isDelegatorToActive =
       accountBalance !== undefined && activeLower.has(accountBalance.delegate.toLowerCase())
 
     if (!isActiveDelegate && !isDelegatorToActive) {
-      const delegatedTo = accountBalance?.delegate ?? null
-      prefetchEnsNames([address, ...(delegatedTo ? [delegatedTo] : [])]).catch(() => {})
+      triggerEnsPrefetch(address, delegatedTo)
       return c.json(
         {
           address,
-          ensName: getCachedEnsName(address),
-          avatarUrl: getCachedAvatarUrl(address),
+          ...ensOf(address),
           role: "ineligible" as const,
-          delegatedTo,
-          delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
-          delegatedToAvatarUrl: delegatedTo ? getCachedAvatarUrl(delegatedTo) : null,
+          ...delegateEnsOf(delegatedTo),
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: "0",
           estimatedApyPct: "0",
@@ -90,26 +103,22 @@ apyRouter.openapi(apyRoute, async (c) => {
     const twbWindowStart = seconds(monthEnd - TWB_WINDOW_SECONDS)
 
     if (isActiveDelegate) {
-      prefetchEnsNames([address]).catch(() => {})
+      triggerEnsPrefetch(address)
       const vpMap = await dataSource.votingPower.getVotingPower(activeDelegateArray)
-      const userVP = vpMap.get(address) ?? vpMap.get(address.toLowerCase()) ?? wei(0n)
-      let totalVP = 0n
-      for (const vp of vpMap.values()) totalVP += vp
+      // Adapters normalize to lowercase; accept both to be defensive
+      const userVP = vpMap.get(address) ?? vpMap.get(addrLower) ?? wei(0n)
+      const totalVP = [...vpMap.values()].reduce((sum, vp) => sum + vp, 0n)
 
       const delegatePool = applyBasisPoints(monthlyPool, DELEGATE_POOL_BPS)
-      const estimatedReward = totalVP > 0n ? mulDiv(userVP, delegatePool, totalVP) : 0n
-      const cappedReward =
-        estimatedReward > poolTier.delegateCap ? poolTier.delegateCap : estimatedReward
+      const rawReward = totalVP > 0n ? mulDiv(userVP, delegatePool, totalVP) : 0n
+      const cappedReward = rawReward > poolTier.delegateCap ? poolTier.delegateCap : rawReward
 
       return c.json(
         {
           address,
-          ensName: getCachedEnsName(address),
-          avatarUrl: getCachedAvatarUrl(address),
+          ...ensOf(address),
           role: "delegate" as const,
-          delegatedTo: null,
-          delegatedToEnsName: null,
-          delegatedToAvatarUrl: null,
+          ...delegateEnsOf(null),
           poolSizeEns: formatWholeEns(monthlyPool),
           estimatedMonthlyRewardEns: formatEns(cappedReward),
           estimatedApyPct: computeApyPct(cappedReward, userVP),
@@ -121,54 +130,38 @@ apyRouter.openapi(apyRoute, async (c) => {
       )
     }
 
-    // Delegator APY
-    const balanceEvents = await dataSource.balances.getBalanceHistory(
-      [address],
-      twbWindowStart,
-      monthEnd,
-    )
-    const initialBalance = await dataSource.balances.getBalanceAt(address, twbWindowStart)
-    const userTWB = computeTimeWeightedBalance(
-      balanceEvents,
-      twbWindowStart,
-      monthEnd,
-      initialBalance,
-    )
-    const currentBalance = await dataSource.balances.getBalanceAt(address, monthEnd)
-
-    const delegations = await dataSource.delegations.getActiveDelegations(
-      activeDelegateArray,
-      monthEnd,
-    )
+    // Delegator path
+    const delegations = await dataSource.delegations.getActiveDelegations(activeDelegateArray, monthEnd)
     const allDelegatorIds = [...new Set(delegations.map((d) => d.delegatorId))]
 
+    // Batch balance history in one query; fetch initial balances and current balance in parallel
+    const [allEvents, currentBalance, initialBalances] = await Promise.all([
+      dataSource.balances.getBalanceHistory(allDelegatorIds, twbWindowStart, monthEnd),
+      dataSource.balances.getBalanceAt(address, monthEnd),
+      Promise.all(allDelegatorIds.map((id) => dataSource.balances.getBalanceAt(id, twbWindowStart))),
+    ])
+
+    let userTWB = 0n
     let totalTWB = 0n
-    for (const delegatorId of allDelegatorIds) {
-      const events = await dataSource.balances.getBalanceHistory(
-        [delegatorId],
-        twbWindowStart,
-        monthEnd,
-      )
-      const initBal = await dataSource.balances.getBalanceAt(delegatorId, twbWindowStart)
-      totalTWB += computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initBal)
+    for (let i = 0; i < allDelegatorIds.length; i++) {
+      const id = allDelegatorIds[i]
+      const events = allEvents.filter((e) => e.accountId === id)
+      const twb = computeTimeWeightedBalance(events, twbWindowStart, monthEnd, initialBalances[i])
+      totalTWB += twb
+      if (id.toLowerCase() === addrLower) userTWB = twb
     }
 
     const delegatorPool = applyBasisPoints(monthlyPool, DELEGATOR_POOL_BPS)
-    const estimatedReward = totalTWB > 0n ? mulDiv(userTWB, delegatorPool, totalTWB) : 0n
-    const cappedReward =
-      estimatedReward > poolTier.delegatorCap ? poolTier.delegatorCap : estimatedReward
+    const rawReward = totalTWB > 0n ? mulDiv(userTWB, delegatorPool, totalTWB) : 0n
+    const cappedReward = rawReward > poolTier.delegatorCap ? poolTier.delegatorCap : rawReward
 
-    const delegatedTo = accountBalance?.delegate ?? null
-    prefetchEnsNames([address, ...(delegatedTo ? [delegatedTo] : [])]).catch(() => {})
+    triggerEnsPrefetch(address, delegatedTo)
     return c.json(
       {
         address,
-        ensName: getCachedEnsName(address),
-        avatarUrl: getCachedAvatarUrl(address),
+        ...ensOf(address),
         role: "delegator" as const,
-        delegatedTo,
-        delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
-        delegatedToAvatarUrl: delegatedTo ? getCachedAvatarUrl(delegatedTo) : null,
+        ...delegateEnsOf(delegatedTo),
         poolSizeEns: formatWholeEns(monthlyPool),
         estimatedMonthlyRewardEns: formatEns(cappedReward),
         estimatedApyPct: computeApyPct(cappedReward, currentBalance),

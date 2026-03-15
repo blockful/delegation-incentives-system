@@ -37,14 +37,10 @@ export class DelegationAdapter implements DelegationRepository {
 
     // For each delegator, keep only the latest event (first row per delegator
     // since results are sorted desc by timestamp within each delegatorId group)
-    const seen = new Set<string>()
     const latestByDelegator = new Map<string, DelegationEventRow>()
     for (const row of rows) {
       const delegatorId = row.delegatorId.toLowerCase()
-      if (!seen.has(delegatorId)) {
-        seen.add(delegatorId)
-        latestByDelegator.set(delegatorId, row)
-      }
+      if (!latestByDelegator.has(delegatorId)) latestByDelegator.set(delegatorId, row)
     }
 
     // Keep only those whose latest toDelegate is in delegateIds
