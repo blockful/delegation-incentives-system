@@ -1,19 +1,16 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { Card } from '@ensdomains/thorin'
 
 interface RoundProgressCardProps {
   roundNumber: number
   percentComplete: number
 }
 
-const CardLink = styled(Link)`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 20px;
+const CardLink = styled(Card)`
   display: flex;
   align-items: center;
   gap: 16px;
-  background: ${({ theme }) => theme.colors.background};
   text-decoration: none;
   color: inherit;
   transition: border-color 0.15s;
@@ -61,7 +58,7 @@ export function RoundProgressCard({
   percentComplete,
 }: RoundProgressCardProps) {
   return (
-    <CardLink to="/rounds">
+    <CardLink as={Link} to="/rounds">
       <Content>
         <Title>Round {roundNumber}</Title>
         <ProgressTrack>

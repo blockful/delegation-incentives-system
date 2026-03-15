@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button, Tag } from '@ensdomains/thorin'
+import { Button, Card, Tag } from '@ensdomains/thorin'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
@@ -16,10 +16,8 @@ interface EarningsCardProps {
   roundEndDate: string
 }
 
-const Card = styled.div`
-  border-radius: 20px;
+const StyledCard = styled(Card)`
   background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f0 100%);
-  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -113,7 +111,7 @@ export function EarningsCard({
   const streamingEarnings = useStreamingCounter(earnedEns, roundStartDate, roundEndDate)
 
   return (
-    <Card>
+    <StyledCard>
       <Label>Your Earnings</Label>
       <EarnedAmount>+{streamingEarnings}</EarnedAmount>
       <Subtitle>ENS earned so far</Subtitle>
@@ -140,6 +138,6 @@ export function EarningsCard({
           Share on Telegram
         </Button>
       </ButtonRow>
-    </Card>
+    </StyledCard>
   )
 }

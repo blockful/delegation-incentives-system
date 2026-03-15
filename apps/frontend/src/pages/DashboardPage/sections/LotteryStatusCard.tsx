@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { Card } from '@ensdomains/thorin'
 
 interface LotteryStatusCardProps {
   poolNumber: number
@@ -7,14 +8,10 @@ interface LotteryStatusCardProps {
   odds: string
 }
 
-const CardLink = styled(Link)`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 20px;
+const CardLink = styled(Card)`
   display: flex;
   align-items: center;
   gap: 16px;
-  background: ${({ theme }) => theme.colors.background};
   text-decoration: none;
   color: inherit;
   transition: border-color 0.15s;
@@ -53,7 +50,7 @@ export function LotteryStatusCard({
   odds,
 }: LotteryStatusCardProps) {
   return (
-    <CardLink to="/lottery">
+    <CardLink as={Link} to="/lottery">
       <Content>
         <Title>Lottery Pool #{poolNumber}</Title>
         <Detail>

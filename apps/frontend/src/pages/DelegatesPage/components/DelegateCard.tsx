@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, Card } from '@ensdomains/thorin'
 import { useEnsName } from 'wagmi'
 import type { DelegateDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -33,14 +33,10 @@ function formatActiveSince(iso: string): string {
   return `${month} '${year}`
 }
 
-const Card = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 16px;
-  padding: 20px;
+const StyledCard = styled(Card)`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: ${({ theme }) => theme.colors.background};
 `
 
 const IdentityRow = styled.div`
@@ -121,7 +117,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
   const ensName = delegate.ensName ?? resolvedEnsName ?? null
 
   return (
-    <Card>
+    <StyledCard>
       <IdentityRow>
         <EnsAvatar
           address={delegate.address}
@@ -173,6 +169,6 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
           Full profile ↗
         </ProfileLink>
       </Actions>
-    </Card>
+    </StyledCard>
   )
 }
