@@ -4,13 +4,17 @@ import { RoundInfoSchema, ErrorSchema } from "../schemas.js"
 import { buildDataSource } from "../data-source.js"
 import { fetchActiveDelegates, fetchMonthContext, formatWholeEns, internalError } from "../helpers.js"
 import { getConfiguredRounds } from "../rounds.js"
-import { ROUND_1_START, ROUND_DURATION_DAYS, POOL_TIERS } from "@ens-dis/domain"
+import { POOL_TIERS } from "@ens-dis/domain"
 
 /**
  * Pure function: compute round info for a given moment in time.
- * Accepts `now` as a parameter for testability.
+ * Uses ROUND_MONTHS from .env when configured (each month = one round),
+ * with start/end dates derived from calendar month boundaries.
  */
-export function getCurrentRound(now: Date): {
+export function getCurrentRound(
+  now: Date,
+  configuredMonths: string[] | null = getConfiguredRounds(),
+): {
   roundNumber: number
   startDate: Date
   endDate: Date
@@ -18,23 +22,46 @@ export function getCurrentRound(now: Date): {
   daysRemaining: number
 } {
   const msPerDay = 24 * 60 * 60 * 1000
-  const roundDurationMs = ROUND_DURATION_DAYS * msPerDay
 
-  const elapsed = now.getTime() - ROUND_1_START.getTime()
-  // Guard against dates before program launch — treat as round 1, 0% complete
-  const safeElapsed = Math.max(0, elapsed)
+  if (configuredMonths && configuredMonths.length > 0) {
+    // Find which configured month we're in (or the closest one)
+    const nowMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`
+    let roundIndex = configuredMonths.indexOf(nowMonth)
 
-  const roundIndex = Math.floor(safeElapsed / roundDurationMs) // 0-based
-  const roundNumber = roundIndex + 1
-  const startDate = new Date(ROUND_1_START.getTime() + roundIndex * roundDurationMs)
-  const endDate = new Date(startDate.getTime() + roundDurationMs)
+    // If current month isn't configured, find the latest past round or first future round
+    if (roundIndex === -1) {
+      roundIndex = configuredMonths.findIndex((m) => m >= nowMonth)
+      if (roundIndex === -1) roundIndex = configuredMonths.length - 1
+    }
 
-  const msIntoRound = now.getTime() - startDate.getTime()
-  const percentComplete = Math.min(100, Math.max(0, Math.round((msIntoRound / roundDurationMs) * 100)))
-  const msRemaining = Math.max(0, endDate.getTime() - now.getTime())
-  const daysRemaining = Math.ceil(msRemaining / msPerDay)
+    const month = configuredMonths[roundIndex]
+    const [year, mon] = month.split("-").map(Number)
+    const startDate = new Date(Date.UTC(year, mon - 1, 1))
+    const endDate = new Date(Date.UTC(year, mon, 1)) // first day of next month
 
-  return { roundNumber, startDate, endDate, percentComplete, daysRemaining }
+    const totalMs = endDate.getTime() - startDate.getTime()
+    const elapsedMs = Math.max(0, now.getTime() - startDate.getTime())
+    const percentComplete = Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100)))
+    const msRemaining = Math.max(0, endDate.getTime() - now.getTime())
+    const daysRemaining = Math.ceil(msRemaining / msPerDay)
+
+    return {
+      roundNumber: roundIndex + 1,
+      startDate,
+      endDate,
+      percentComplete,
+      daysRemaining,
+    }
+  }
+
+  // Fallback: no configured months — return round 1 at 0%
+  return {
+    roundNumber: 1,
+    startDate: now,
+    endDate: now,
+    percentComplete: 0,
+    daysRemaining: 0,
+  }
 }
 
 const RoundSchema = z.object({

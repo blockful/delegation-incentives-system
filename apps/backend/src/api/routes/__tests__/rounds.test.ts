@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { roundsRouter, getCurrentRound } from "../rounds.js"
-import { seconds, wei, ROUND_1_START, ROUND_DURATION_DAYS } from "@ens-dis/domain"
+import { seconds, wei } from "@ens-dis/domain"
 
 vi.mock("../../data-source.js", () => ({
   buildDataSource: vi.fn(),
@@ -60,49 +60,50 @@ beforeEach(() => {
 
 // ── Pure function tests ────────────────────────────────────────────────────────
 
+const MONTHS = ["2026-03", "2026-04", "2026-05"]
+
 describe("getCurrentRound (pure)", () => {
-  it("returns round 1 at program start", () => {
-    const result = getCurrentRound(ROUND_1_START)
+  it("returns round 1 for the first configured month", () => {
+    const now = new Date("2026-03-15T12:00:00Z")
+    const result = getCurrentRound(now, MONTHS)
     expect(result.roundNumber).toBe(1)
-    expect(result.startDate.toISOString()).toBe(ROUND_1_START.toISOString())
-    expect(result.percentComplete).toBe(0)
+    expect(result.startDate.toISOString()).toBe("2026-03-01T00:00:00.000Z")
+    expect(result.endDate.toISOString()).toBe("2026-04-01T00:00:00.000Z")
   })
 
-  it("returns round 1 halfway through first round", () => {
-    const halfwayMs = ROUND_1_START.getTime() + (ROUND_DURATION_DAYS / 2) * 24 * 60 * 60 * 1000
-    const result = getCurrentRound(new Date(halfwayMs))
-    expect(result.roundNumber).toBe(1)
-    expect(result.percentComplete).toBe(50)
-    expect(result.daysRemaining).toBe(15)
-  })
-
-  it("returns round 2 after first round ends", () => {
-    const round2StartMs = ROUND_1_START.getTime() + ROUND_DURATION_DAYS * 24 * 60 * 60 * 1000
-    const result = getCurrentRound(new Date(round2StartMs))
+  it("returns round 2 for the second configured month", () => {
+    const now = new Date("2026-04-10T00:00:00Z")
+    const result = getCurrentRound(now, MONTHS)
     expect(result.roundNumber).toBe(2)
-    expect(result.percentComplete).toBe(0)
-    expect(result.daysRemaining).toBe(ROUND_DURATION_DAYS)
+    expect(result.startDate.toISOString()).toBe("2026-04-01T00:00:00.000Z")
+    expect(result.endDate.toISOString()).toBe("2026-05-01T00:00:00.000Z")
   })
 
-  it("endDate is startDate + 30 days", () => {
-    const result = getCurrentRound(ROUND_1_START)
-    const diffMs = result.endDate.getTime() - result.startDate.getTime()
-    const diffDays = diffMs / (24 * 60 * 60 * 1000)
-    expect(diffDays).toBe(ROUND_DURATION_DAYS)
+  it("computes percentComplete based on calendar month", () => {
+    // March 16 out of 31 days ≈ 48%
+    const now = new Date("2026-03-16T00:00:00Z")
+    const result = getCurrentRound(now, MONTHS)
+    expect(result.percentComplete).toBe(48)
   })
 
-  it("handles dates before program launch as round 1 with 0% progress", () => {
-    const beforeLaunch = new Date(ROUND_1_START.getTime() - 1000)
-    const result = getCurrentRound(beforeLaunch)
+  it("daysRemaining counts remaining days in the month", () => {
+    const now = new Date("2026-03-25T00:00:00Z")
+    const result = getCurrentRound(now, MONTHS)
+    // 7 days remaining (March 25 to April 1)
+    expect(result.daysRemaining).toBe(7)
+  })
+
+  it("returns the last round when now is past all configured months", () => {
+    const now = new Date("2026-06-15T00:00:00Z")
+    const result = getCurrentRound(now, MONTHS)
+    expect(result.roundNumber).toBe(3)
+  })
+
+  it("returns fallback when no months configured", () => {
+    const now = new Date("2026-03-15T00:00:00Z")
+    const result = getCurrentRound(now, null)
     expect(result.roundNumber).toBe(1)
     expect(result.percentComplete).toBe(0)
-  })
-
-  it("percentComplete is 100 at end of round", () => {
-    const almostEnd = new Date(ROUND_1_START.getTime() + ROUND_DURATION_DAYS * 24 * 60 * 60 * 1000 - 1)
-    const result = getCurrentRound(almostEnd)
-    expect(result.roundNumber).toBe(1)
-    expect(result.percentComplete).toBe(100)
   })
 })
 
