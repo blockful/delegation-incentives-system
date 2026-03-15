@@ -5,7 +5,7 @@ import { Spinner } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { tokens, Eyebrow, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, Eyebrow, LoadingWrapper, ErrorMessage } from '@/styles'
 import { EarningsCard } from './sections/EarningsCard'
 import { RoundDetailsSection } from './sections/RoundDetailsSection'
 import { RoundProgressCard } from './sections/RoundProgressCard'
@@ -18,6 +18,7 @@ const Page = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xl};
+  animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
@@ -40,11 +41,6 @@ const RightColumn = styled.div`
   gap: ${tokens.spacing.md};
 `
 
-// Hardcoded — lottery data requires distribution endpoint wiring.
-const LOTTERY_POOL_NUMBER = 1
-const LOTTERY_ACCUMULATED = '8.00'
-const LOTTERY_ODDS = '1 in 3'
-
 export function DashboardPage() {
   const wallet = useWalletState()
 
@@ -53,6 +49,12 @@ export function DashboardPage() {
   }
 
   return <DashboardContent address={wallet.address} />
+}
+
+function formatBalanceWhole(balanceEns: string): string {
+  const num = parseFloat(balanceEns)
+  if (isNaN(num)) return '0'
+  return Math.round(num).toLocaleString('en-US')
 }
 
 function DashboardContent({ address }: { address: `0x${string}` }) {
@@ -85,14 +87,20 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
   if (!apy.data || !tiers.data || !round.data) return null
 
-  const currentTier = tiers.data.tiers[tiers.data.currentTierIndex]
-  const poolSizeEns = currentTier?.poolSizeEns ?? '0'
+  const currentTierIndex = tiers.data.currentTierIndex
+  const currentTier = tiers.data.tiers[currentTierIndex]
+  const nextTier = tiers.data.tiers[currentTierIndex + 1]
   const delegatedTo = (apy.data.delegatedTo ?? address) as `0x${string}`
+  const delegateEnsName = apy.data.delegatedToEnsName ?? undefined
   const roundNumber = round.data.roundNumber
   const daysRemaining = round.data.daysRemaining
   const timeLeft = `${daysRemaining}d left`
   const roundEndDate = new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const percentComplete = round.data.percentComplete
+
+  // Determine if user qualifies for lottery (reward < 1 ENS)
+  const estimatedReward = parseFloat(apy.data.estimatedMonthlyRewardEns)
+  const qualifiesForLottery = estimatedReward > 0 && estimatedReward < 1
 
   return (
     <Page>
@@ -101,8 +109,9 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
         <EarningsCard
           earnedEns={apy.data.estimatedMonthlyRewardEns}
           apyPct={apy.data.estimatedApyPct}
-          tierIndex={tiers.data.currentTierIndex}
+          tierIndex={currentTierIndex}
           delegatedTo={delegatedTo}
+          delegateEnsName={delegateEnsName}
           delegateAvatarUrl={apy.data.delegatedToAvatarUrl ?? undefined}
           roundNumber={roundNumber}
           timeLeft={timeLeft}
@@ -111,20 +120,19 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
         />
         <RightColumn>
           <RoundDetailsSection
-            balanceEns={apy.data.currentBalanceEns}
+            balanceEns={formatBalanceWhole(apy.data.currentBalanceEns)}
             roundEnds={timeLeft}
             roundEndDate={roundEndDate}
-            poolSizeEns={poolSizeEns}
+            nextTierApyPct={nextTier?.estimatedApyPct}
+            nextTierVpNeeded={nextTier?.additionalVPNeeded}
+            currentTierIndex={currentTierIndex}
+            totalTiers={tiers.data.tiers.length}
           />
           <RoundProgressCard
             roundNumber={roundNumber}
             percentComplete={percentComplete}
           />
-          <LotteryStatusCard
-            poolNumber={LOTTERY_POOL_NUMBER}
-            accumulated={LOTTERY_ACCUMULATED}
-            odds={LOTTERY_ODDS}
-          />
+          <LotteryStatusCard qualifies={qualifiesForLottery} />
         </RightColumn>
       </Grid>
     </Page>

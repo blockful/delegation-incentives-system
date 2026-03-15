@@ -3,9 +3,7 @@ import styled from 'styled-components'
 import { tokens } from '@/styles/tokens'
 
 interface LotteryStatusCardProps {
-  poolNumber: number
-  accumulated: string
-  odds: string
+  qualifies: boolean
 }
 
 const CardLink = styled(Link)`
@@ -27,18 +25,26 @@ const CardLink = styled(Link)`
     border-color: ${tokens.color.gray3};
     box-shadow: ${tokens.shadow.md};
     transform: translateY(-1px);
-
-    span:last-child {
-      transform: translateX(2px);
-    }
   }
+`
+
+const IconCircle = styled.div<{ $active: boolean }>`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: ${({ $active }) => ($active ? tokens.color.lightYellow : tokens.color.surfaceAlt)};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
 `
 
 const Content = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.xs};
+  gap: 2px;
 `
 
 const Title = styled.span`
@@ -48,28 +54,44 @@ const Title = styled.span`
 `
 
 const Detail = styled.span`
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.sm};
   color: ${tokens.color.textMuted};
+  line-height: 1.4;
+`
+
+const StatusBadge = styled.span<{ $active: boolean }>`
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${({ $active }) => ($active ? tokens.color.positive : tokens.color.textMuted)};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 `
 
 const Chevron = styled.span`
   font-size: ${tokens.font.size.xl};
   color: ${tokens.color.textFaint};
+  transition: transform ${tokens.transition.fast};
 `
 
-export function LotteryStatusCard({
-  poolNumber,
-  accumulated,
-  odds,
-}: LotteryStatusCardProps) {
+export function LotteryStatusCard({ qualifies }: LotteryStatusCardProps) {
   return (
     <CardLink to="/lottery">
+      <IconCircle $active={qualifies}>
+        {qualifies ? '🎟️' : '🎲'}
+      </IconCircle>
       <Content>
-        <Title>Lottery Pool #{poolNumber}</Title>
+        <Title>
+          {qualifies ? 'You\'re in the lottery' : 'Lottery'}
+        </Title>
         <Detail>
-          {accumulated} ENS accumulated &middot; {odds} odds
+          {qualifies
+            ? 'Your payout is below 1 ENS, so it enters a 10 ENS prize pool drawn at round end.'
+            : 'Payouts below 1 ENS are pooled into a 10 ENS lottery prize. Learn how it works.'
+          }
         </Detail>
       </Content>
+      {qualifies && <StatusBadge $active>Eligible</StatusBadge>}
       <Chevron aria-hidden>&rsaquo;</Chevron>
     </CardLink>
   )

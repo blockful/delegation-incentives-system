@@ -5,7 +5,10 @@ interface RoundDetailsSectionProps {
   balanceEns: string
   roundEnds: string
   roundEndDate: string
-  poolSizeEns: string
+  nextTierApyPct?: string
+  nextTierVpNeeded?: string
+  currentTierIndex: number
+  totalTiers: number
 }
 
 const Grid = styled.div`
@@ -45,12 +48,35 @@ const StatHint = styled.span`
   color: ${tokens.color.textFaint};
 `
 
+const AccentHint = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.accent};
+  font-weight: ${tokens.font.weight.medium};
+`
+
+function formatVpNeeded(vpWei: string): string {
+  const num = Number(vpWei) / 1e18
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(1)}M`
+  }
+  if (num >= 1_000) {
+    return `${Math.round(num / 1_000)}K`
+  }
+  return Math.round(num).toString()
+}
+
 export function RoundDetailsSection({
   balanceEns,
   roundEnds,
   roundEndDate,
-  poolSizeEns,
+  nextTierApyPct,
+  nextTierVpNeeded,
+  currentTierIndex,
+  totalTiers,
 }: RoundDetailsSectionProps) {
+  const isMaxTier = currentTierIndex >= totalTiers - 1
+  const hasNextTierData = nextTierApyPct && nextTierVpNeeded
+
   return (
     <Grid>
       <StatCell>
@@ -64,8 +90,23 @@ export function RoundDetailsSection({
         <StatHint>{roundEndDate}</StatHint>
       </StatCell>
       <StatCell>
-        <StatLabel>Pool</StatLabel>
-        <StatValue>{poolSizeEns} ENS</StatValue>
+        <StatLabel>Next Tier</StatLabel>
+        {isMaxTier ? (
+          <>
+            <StatValue>Max</StatValue>
+            <AccentHint>Tier {totalTiers} reached</AccentHint>
+          </>
+        ) : hasNextTierData ? (
+          <>
+            <StatValue>{nextTierApyPct}%</StatValue>
+            <AccentHint>+{formatVpNeeded(nextTierVpNeeded)} VP needed</AccentHint>
+          </>
+        ) : (
+          <>
+            <StatValue>Tier {currentTierIndex + 2}</StatValue>
+            <StatHint>Delegate more to unlock</StatHint>
+          </>
+        )}
       </StatCell>
     </Grid>
   )

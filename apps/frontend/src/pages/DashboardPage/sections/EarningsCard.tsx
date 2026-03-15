@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { Button, Tag } from '@ensdomains/thorin'
+import { useEnsName } from 'wagmi'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
@@ -89,6 +90,13 @@ const InfoPill = styled.div`
   color: ${tokens.color.lightBlue};
 `
 
+const DelegateName = styled.span`
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
 const TextPill = styled.div`
   background: rgba(255, 255, 255, 0.08);
   border-radius: ${tokens.radius.pill};
@@ -116,7 +124,12 @@ export function EarningsCard({
   roundStartDate,
   roundEndDate,
 }: EarningsCardProps) {
-  const displayName = delegateEnsName ?? truncateAddress(delegatedTo)
+  // Resolve ENS name client-side if not provided by the API
+  const { data: resolvedEnsName } = useEnsName({
+    address: delegatedTo as `0x${string}`,
+    query: { enabled: !delegateEnsName },
+  })
+  const displayName = delegateEnsName ?? resolvedEnsName ?? truncateAddress(delegatedTo)
   const tierLabel = `Tier ${tierIndex + 1}`
   const streamingEarnings = useStreamingCounter(earnedEns, roundStartDate, roundEndDate)
 
@@ -135,8 +148,8 @@ export function EarningsCard({
 
       <InfoRow>
         <InfoPill>
-          <EnsAvatar address={delegatedTo} name={delegateEnsName} avatarUrl={delegateAvatarUrl} size={20} />
-          {displayName}
+          <EnsAvatar address={delegatedTo} name={delegateEnsName ?? resolvedEnsName ?? undefined} avatarUrl={delegateAvatarUrl} size={20} />
+          <DelegateName>Delegating to {displayName}</DelegateName>
         </InfoPill>
         <TextPill>Round {roundNumber}</TextPill>
         <TextPill>{timeLeft}</TextPill>
