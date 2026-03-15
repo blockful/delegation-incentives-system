@@ -40,11 +40,10 @@ describe("runLottery", () => {
       10n * ONE_ENS,
       SEED,
     );
-    expect(directPayouts.length).toBe(1);
-    expect(directPayouts[0].address).toBe("0xa");
-    expect(lotteryPools.length).toBe(1);
-    expect(lotteryPools[0].entries.length).toBe(1);
-    expect(lotteryPools[0].winner).toBe("0xb"); // single entry wins
+    expect(directPayouts.length).toBe(2); // solo sub-threshold entry promoted to direct payout
+    expect(directPayouts.map((p) => p.address)).toContain("0xa");
+    expect(directPayouts.map((p) => p.address)).toContain("0xb");
+    expect(lotteryPools.length).toBe(0);
   });
 
   it("groups entries into pools approaching target size", () => {
@@ -117,14 +116,33 @@ describe("runLottery", () => {
       alloc("0xa", 0n),
       alloc("0xb", ONE_ENS / 2n),
     ];
-    const { lotteryPools } = runLottery(
+    const { directPayouts, lotteryPools } = runLottery(
       allocations,
       ONE_ENS,
       10n * ONE_ENS,
       SEED,
     );
-    expect(lotteryPools.length).toBe(1);
-    expect(lotteryPools[0].entries.length).toBe(1);
+    // 0xa has zero amount — excluded entirely; 0xb is a solo sub-threshold entry → direct payout
+    expect(lotteryPools.length).toBe(0);
+    expect(directPayouts.map((p) => p.address)).toContain("0xb");
+    expect(directPayouts.map((p) => p.address)).not.toContain("0xa");
+  });
+
+  it("promotes solo lottery pool to direct payout", () => {
+    // One entry below threshold that would form its own pool (solo) → direct payout
+    const allocations = [
+      alloc("0xa", 2n * ONE_ENS), // above threshold → direct
+      alloc("0xsolo", ONE_ENS / 2n), // below threshold, forms solo pool → direct
+    ];
+    const { directPayouts, lotteryPools } = runLottery(
+      allocations,
+      ONE_ENS,
+      10n * ONE_ENS,
+      SEED,
+    );
+    expect(lotteryPools).toHaveLength(0);
+    expect(directPayouts.map((p) => p.address)).toContain("0xa");
+    expect(directPayouts.map((p) => p.address)).toContain("0xsolo");
   });
 
   it("lottery pool total prize equals sum of entry amounts", () => {
