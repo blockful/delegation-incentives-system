@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ens-dis/domain": "workspace:*",
+    "csv-stringify": "^6.6.0",
     "dotenv": "^17.3.1",
     "ponder": "^0.16.3",
     "hono": "^4.12.5",

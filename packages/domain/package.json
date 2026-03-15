@@ -1,0 +1,25 @@
+{
+  "name": "@ens-dis/domain",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "fast-check": "^3.23.2"
+  },
+  "dependencies": {
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-openapi": "^1.2.2",
+    "csv-stringify": "^6.6.0",
+    "hono": "^4.12.8",
+    "viem": "^2.47.0",
+    "zod": "^4.3.6"
+  }
+}
