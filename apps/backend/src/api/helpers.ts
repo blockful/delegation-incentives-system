@@ -10,7 +10,6 @@ import {
   monthEndTimestamp,
   previousMonth,
   currentMonth,
-  basisPoints,
 } from "@ens-dis/domain"
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────

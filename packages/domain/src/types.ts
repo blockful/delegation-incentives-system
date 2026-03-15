@@ -33,9 +33,6 @@ export const PRECISION = 10n ** 18n;
 export const SECONDS_PER_DAY = seconds(86400n);
 export const DAYS_180 = 180n;
 export const TWB_WINDOW_SECONDS = seconds(DAYS_180 * 86400n);
-export const DAYS_30 = 30n;
-/** Lookback window used to compute the time-weighted average VP for delegates. */
-export const AVP_WINDOW_SECONDS = seconds(DAYS_30 * 86400n);
 export const ACTIVE_VOTE_THRESHOLD = 7;
 export const PROPOSAL_WINDOW_SIZE = 10;
 
