@@ -138,11 +138,12 @@ export const TierProgressionSchema = z.object({
 }).openapi("TierProgression")
 
 export const RoundInfoSchema = z.object({
-  roundNumber: z.number().openapi({ description: "Current round number (1-based)", example: 2 }),
-  startDate: z.string().openapi({ description: "Round start date ISO", example: "2025-02-14T00:00:00.000Z" }),
-  endDate: z.string().openapi({ description: "Round end date ISO", example: "2025-03-16T00:00:00.000Z" }),
+  roundNumber: z.number().openapi({ description: "Current round number (1-based)", example: 1 }),
+  month: z.string().openapi({ description: "Round month in YYYY-MM format", example: "2026-03" }),
+  startDate: z.string().openapi({ description: "Round start date ISO (first day of month UTC)", example: "2026-03-01T00:00:00.000Z" }),
+  endDate: z.string().openapi({ description: "Round end date ISO (first day of next month UTC)", example: "2026-04-01T00:00:00.000Z" }),
   percentComplete: z.number().openapi({ description: "Round progress 0-100", example: 47 }),
-  daysRemaining: z.number().openapi({ description: "Days until round end", example: 14 }),
+  daysRemaining: z.number().openapi({ description: "Days until round end", example: 16 }),
   poolSizeEns: z.string().openapi({ description: "Current tier pool size in ENS", example: "5000" }),
   tierIndex: z.number().openapi({ description: "Current tier index", example: 0 }),
 }).openapi("RoundInfo")
