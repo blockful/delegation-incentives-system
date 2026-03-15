@@ -177,7 +177,10 @@ export async function runDistributionPipeline(
 
     const delegation = delegations.find(
       (d) => d.delegatorId === delegatorId,
-    )!;
+    );
+    // delegations was fetched for activeDelegates at monthEnd; if somehow
+    // a delegatorId has no matching record, skip rather than crash.
+    if (!delegation) continue;
 
     rawDelegatorScores.push({
       delegatorId,
