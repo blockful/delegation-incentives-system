@@ -16,7 +16,7 @@ interface DelegatedLandingProps {
  */
 export function DelegatedLanding({ tierData }: DelegatedLandingProps) {
   const currentTier = tierData.tiers[tierData.currentTierIndex]
-  const currentApyPct = currentTier?.momGrowthMaxPct ?? '0'
+  const currentApyPct = tierData.maxDelegatorApyPct
   const poolSizeEns = currentTier?.poolSizeEns ?? '0'
 
   return (

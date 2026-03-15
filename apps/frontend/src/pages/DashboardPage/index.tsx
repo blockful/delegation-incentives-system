@@ -49,12 +49,6 @@ const ErrorMessage = styled.p`
   font-size: 16px;
 `
 
-import {
-  CURRENT_ROUND,
-  ROUND_TIME_LEFT as TIME_LEFT,
-  ROUND_PERCENT_COMPLETE as PERCENT_COMPLETE,
-  ROUND_END_DATE,
-} from '@/config/round'
 
 // Hardcoded — lottery data requires distribution endpoint wiring.
 const LOTTERY_POOL_NUMBER = 1
@@ -74,10 +68,12 @@ export function DashboardPage() {
 function DashboardContent({ address }: { address: `0x${string}` }) {
   const fetchApy = useCallback(() => api.apy(address), [address])
   const fetchTiers = useCallback(() => api.tierProgression(), [])
+  const fetchRound = useCallback(() => api.currentRound(), [])
   const apy = useAsync(fetchApy)
   const tiers = useAsync(fetchTiers)
+  const round = useAsync(fetchRound)
 
-  if (apy.loading || tiers.loading) {
+  if (apy.loading || tiers.loading || round.loading) {
     return (
       <Page>
         <LoadingWrapper>
@@ -87,23 +83,29 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
     )
   }
 
-  if (apy.error || tiers.error) {
+  if (apy.error || tiers.error || round.error) {
     return (
       <Page>
         <ErrorMessage>
-          Failed to load dashboard data: {apy.error ?? tiers.error}
+          Failed to load dashboard data: {apy.error ?? tiers.error ?? round.error}
         </ErrorMessage>
       </Page>
     )
   }
 
-  if (!apy.data || !tiers.data) return null
+  if (!apy.data || !tiers.data || !round.data) return null
 
   const currentTier = tiers.data.tiers[tiers.data.currentTierIndex]
   const poolSizeEns = currentTier?.poolSizeEns ?? '0'
 
   // delegatedTo: use apy response or fallback to self
   const delegatedTo = (apy.data.delegatedTo ?? address) as `0x${string}`
+
+  const roundNumber = round.data.roundNumber
+  const daysRemaining = round.data.daysRemaining
+  const timeLeft = `${daysRemaining}d left`
+  const roundEndDate = new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const percentComplete = round.data.percentComplete
 
   return (
     <Page>
@@ -113,19 +115,19 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           apyPct={apy.data.estimatedApyPct}
           tierIndex={apy.data.currentTierIndex}
           delegatedTo={delegatedTo}
-          roundNumber={CURRENT_ROUND}
-          timeLeft={TIME_LEFT}
+          roundNumber={roundNumber}
+          timeLeft={timeLeft}
         />
         <RightColumn>
           <RoundDetailsSection
             balanceEns={apy.data.currentBalanceEns}
-            roundEnds={TIME_LEFT}
-            roundEndDate={ROUND_END_DATE}
+            roundEnds={timeLeft}
+            roundEndDate={roundEndDate}
             poolSizeEns={poolSizeEns}
           />
           <RoundProgressCard
-            roundNumber={CURRENT_ROUND}
-            percentComplete={PERCENT_COMPLETE}
+            roundNumber={roundNumber}
+            percentComplete={percentComplete}
           />
           <LotteryStatusCard
             poolNumber={LOTTERY_POOL_NUMBER}

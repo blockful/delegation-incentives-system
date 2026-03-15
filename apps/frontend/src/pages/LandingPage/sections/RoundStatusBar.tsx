@@ -5,6 +5,8 @@ interface RoundStatusBarProps {
   currentGrowthPct: string
   currentTierIndex: number
   poolSizeEns: string
+  roundNumber?: number
+  roundTimeLeft?: string
 }
 
 const Wrapper = styled.div`
@@ -74,8 +76,8 @@ const LiveDot = styled.span`
   display: inline-block;
 `
 
-const GrowthValue = styled.span`
-  color: #1a9a5c;
+const GrowthValue = styled.span<{ $negative?: boolean }>`
+  color: ${({ $negative }) => ($negative ? '#C6301B' : '#1a9a5c')};
   font-weight: 700;
 `
 
@@ -89,7 +91,15 @@ export function RoundStatusBar({
   currentGrowthPct,
   currentTierIndex,
   poolSizeEns,
+  roundNumber,
+  roundTimeLeft,
 }: RoundStatusBarProps) {
+  const growthNum = parseFloat(currentGrowthPct)
+  const isNegative = growthNum < 0
+  const growthPrefix = isNegative ? '' : '+'
+  const displayRound = roundNumber ?? CURRENT_ROUND
+  const displayTimeLeft = roundTimeLeft ?? ROUND_TIME_LEFT
+
   return (
     <Wrapper>
       <Pills>
@@ -103,13 +113,15 @@ export function RoundStatusBar({
         <InfoCell>
           <InfoValue>
             <LiveDot />
-            Round {CURRENT_ROUND}
+            Round {displayRound}
           </InfoValue>
-          <InfoLabel>ends {ROUND_TIME_LEFT}</InfoLabel>
+          <InfoLabel>ends {displayTimeLeft}</InfoLabel>
         </InfoCell>
         <InfoCell>
           <InfoValue>
-            <GrowthValue>+{currentGrowthPct}%</GrowthValue>
+            <GrowthValue $negative={isNegative}>
+                {growthPrefix}{currentGrowthPct}%
+            </GrowthValue>
           </InfoValue>
           <InfoLabel>active VP growth</InfoLabel>
         </InfoCell>

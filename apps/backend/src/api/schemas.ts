@@ -75,6 +75,22 @@ export const ActiveDelegatesSchema = z.object({
   delegates: z.array(z.string()),
 }).openapi("ActiveDelegates")
 
+export const DelegateDetailSchema = z.object({
+  address: z.string(),
+  ensName: z.string().nullable(),
+  votingPower: z.string().nullable().openapi({ description: "Voting power in wei" }),
+  delegatorCount: z.number().nullable(),
+  activeSince: z.string().nullable().openapi({ description: "ISO date of first delegation received" }),
+  last10ProposalsVoted: z.array(z.boolean()).nullable().openapi({
+    description: "Array of 10 booleans, true = delegate voted on that proposal",
+  }),
+}).openapi("DelegateDetail")
+
+export const ActiveDelegatesDetailSchema = z.object({
+  count: z.number(),
+  delegates: z.array(DelegateDetailSchema),
+}).openapi("ActiveDelegatesDetail")
+
 export const EligibilitySchema = z.object({
   address: z.string(),
   isActiveDelegate: z.boolean(),
@@ -109,8 +125,19 @@ export const TierProgressionSchema = z.object({
   currentGrowthPct: z.string(),
   currentTierIndex: z.number(),
   activeDelegateCount: z.number(),
+  maxDelegatorApyPct: z.string(),
   tiers: z.array(TierProgressionEntrySchema),
 }).openapi("TierProgression")
+
+export const RoundInfoSchema = z.object({
+  roundNumber: z.number().openapi({ description: "Current round number (1-based)", example: 2 }),
+  startDate: z.string().openapi({ description: "Round start date ISO", example: "2025-02-14T00:00:00.000Z" }),
+  endDate: z.string().openapi({ description: "Round end date ISO", example: "2025-03-16T00:00:00.000Z" }),
+  percentComplete: z.number().openapi({ description: "Round progress 0-100", example: 47 }),
+  daysRemaining: z.number().openapi({ description: "Days until round end", example: 14 }),
+  poolSizeEns: z.string().openapi({ description: "Current tier pool size in ENS", example: "5000" }),
+  tierIndex: z.number().openapi({ description: "Current tier index", example: 0 }),
+}).openapi("RoundInfo")
 
 export const ApyEstimateSchema = z.object({
   address: z.string(),

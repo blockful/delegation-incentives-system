@@ -7,6 +7,7 @@ import {
   eligibleDelegatorFixture,
   apyFixture,
   distributionFixture,
+  roundInfoFixture,
 } from './fixtures'
 
 export const handlers = [
@@ -28,5 +29,9 @@ export const handlers = [
 
   http.get('/api/distributions/:month', () =>
     HttpResponse.json(distributionFixture),
+  ),
+
+  http.get('/api/rounds/current', () =>
+    HttpResponse.json(roundInfoFixture),
   ),
 ]

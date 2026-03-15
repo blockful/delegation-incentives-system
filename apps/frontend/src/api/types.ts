@@ -43,6 +43,7 @@ export interface TierProgressionResponse {
   currentGrowthPct: string;
   currentTierIndex: number;
   activeDelegateCount: number;
+  maxDelegatorApyPct: string;
   tiers: TierEntry[];
 }
 
@@ -123,4 +124,14 @@ export interface DelegateDetail {
 
 export interface ApiError {
   error: string;
+}
+
+export interface RoundInfoResponse {
+  roundNumber: number;
+  startDate: string;
+  endDate: string;
+  percentComplete: number;
+  daysRemaining: number;
+  poolSizeEns: string;
+  tierIndex: number;
 }

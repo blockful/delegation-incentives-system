@@ -11,7 +11,7 @@ interface DisconnectedLandingProps {
 
 export function DisconnectedLanding({ tierData }: DisconnectedLandingProps) {
   const currentTier = tierData.tiers[tierData.currentTierIndex]
-  const currentApyPct = currentTier?.momGrowthMaxPct ?? '0'
+  const currentApyPct = tierData.maxDelegatorApyPct
   const poolSizeEns = currentTier?.poolSizeEns ?? '0'
 
   return (

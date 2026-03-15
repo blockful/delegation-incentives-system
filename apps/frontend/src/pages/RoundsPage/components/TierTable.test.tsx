@@ -6,12 +6,12 @@ import { roundsFixture } from '@/test/mocks/fixtures'
 const { tiers, currentTierIndex } = roundsFixture
 
 describe('TierTable', () => {
-  it('renders all 6 tiers (Tier #1 through Tier #6)', () => {
+  it('renders all 7 tiers (Tier #1 through Tier #7)', () => {
     renderApp(
       <TierTable tiers={tiers} currentTierIndex={currentTierIndex} />,
     )
 
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 7; i++) {
       expect(screen.getByText(`Tier #${i}`)).toBeInTheDocument()
     }
   })
@@ -22,7 +22,7 @@ describe('TierTable', () => {
     )
 
     const rows = screen.getAllByTestId('tier-row')
-    expect(rows).toHaveLength(6)
+    expect(rows).toHaveLength(7)
 
     rows.forEach((row, i) => {
       if (i === currentTierIndex) {
@@ -45,5 +45,6 @@ describe('TierTable', () => {
     expect(screen.getByText('4,000 ENS')).toBeInTheDocument()
     expect(screen.getByText('8,000 ENS')).toBeInTheDocument()
     expect(screen.getByText('16,000 ENS')).toBeInTheDocument()
+    expect(screen.getByText('30,000 ENS')).toBeInTheDocument()
   })
 })

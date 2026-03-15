@@ -18,7 +18,7 @@ const Dot = styled.div<{ $filled: boolean }>`
   background: ${({ $filled }) => ($filled ? '#121218' : '#E8E8ED')};
 `
 
-export function TierDots({ tierIndex, totalTiers = 6 }: TierDotsProps) {
+export function TierDots({ tierIndex, totalTiers = 7 }: TierDotsProps) {
   return (
     <Wrapper>
       {Array.from({ length: totalTiers }, (_, i) => (

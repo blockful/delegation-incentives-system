@@ -7,6 +7,7 @@ export const roundsFixture: TierProgressionResponse = {
   currentGrowthPct: '12.40',
   currentTierIndex: 1,
   activeDelegateCount: 47,
+  maxDelegatorApyPct: '5400.00',
   tiers: [
     {
       index: 0,
@@ -79,6 +80,18 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '530000000000000000000000',
       requiredAVP: '1780000000000000000000000',
+    },
+    {
+      index: 6,
+      momGrowthMinPct: '100.00',
+      momGrowthMaxPct: '10000.00',
+      poolSizeEns: '30000',
+      delegateCapEns: '3000',
+      delegatorCapEns: '600',
+      isCurrent: false,
+      isUnlocked: false,
+      additionalVPNeeded: '750000000000000000000000',
+      requiredAVP: '2000000000000000000000000',
     },
   ],
 }

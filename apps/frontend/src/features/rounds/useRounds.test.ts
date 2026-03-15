@@ -13,14 +13,14 @@ describe('useRounds', () => {
     expect(result.current.data?.currentTierIndex).toBe(1)
   })
 
-  it('returns 6 tiers', async () => {
+  it('returns 7 tiers', async () => {
     const { result } = renderHook(() => useRounds())
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
     })
 
-    expect(result.current.data?.tiers).toHaveLength(6)
+    expect(result.current.data?.tiers).toHaveLength(7)
   })
 
   it("returns currentGrowthPct '12.40'", async () => {
