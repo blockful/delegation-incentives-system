@@ -99,7 +99,41 @@ describe("GET /delegates/active", () => {
     expect(delegateA).toBeDefined()
     expect(typeof delegateA.votingPower).toBe("string")
     expect(delegateA.ensName).toBeNull()
-    expect(typeof delegateA.activeSince).toBe("string")
+  })
+
+  it("activeSince is the ISO date of the delegate's earliest vote", async () => {
+    const proposals = makeProposals(10)
+    // DELEGATE_A first voted at timestamp 500, DELEGATE_B at timestamp 800
+    const votesA = proposals.map((p) => ({
+      voterAccountId: DELEGATE_A,
+      proposalId: p.id,
+      support: 1,
+      votingPower: wei(100n),
+      timestamp: seconds(500n + BigInt(Number(p.id))), // 501, 502, ...
+    }))
+    const votesB = proposals.map((p) => ({
+      voterAccountId: DELEGATE_B,
+      proposalId: p.id,
+      support: 1,
+      votingPower: wei(100n),
+      timestamp: seconds(800n + BigInt(Number(p.id))), // 801, 802, ...
+    }))
+    vi.mocked(mockDataSource.proposals.getRecentProposals).mockResolvedValue(proposals)
+    vi.mocked(mockDataSource.votes.getVotesForProposals).mockResolvedValue([...votesA, ...votesB])
+
+    const req = new Request("http://localhost/delegates/active")
+    const res = await delegatesRouter.fetch(req)
+    const body = await res.json()
+
+    const delegateA = body.delegates.find((d: { address: string }) => d.address === DELEGATE_A)
+    const delegateB = body.delegates.find((d: { address: string }) => d.address === DELEGATE_B)
+
+    // Earliest vote for A is at timestamp 501 seconds
+    expect(delegateA.activeSince).toBe(new Date(501 * 1000).toISOString())
+    // Earliest vote for B is at timestamp 801 seconds
+    expect(delegateB.activeSince).toBe(new Date(801 * 1000).toISOString())
+    // A should be earlier than B
+    expect(new Date(delegateA.activeSince).getTime()).toBeLessThan(new Date(delegateB.activeSince).getTime())
   })
 
   it("votingPower is populated even when addresses are mixed-case", async () => {
