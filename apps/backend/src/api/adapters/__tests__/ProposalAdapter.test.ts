@@ -5,7 +5,8 @@ import { ProposalAdapter } from "../ProposalAdapter.js"
 const PROPOSALS = [
   { id: "1", status: "executed", timestamp: 1000n, endBlock: 100n, proposer: "0xaaa" },
   { id: "2", status: "defeated", timestamp: 2000n, endBlock: 200n, proposer: "0xbbb" },
-  { id: "3", status: "active",   timestamp: 3000n, endBlock: 300n, proposer: "0xccc" },
+  // id "3": truly active — endBlock is above the highest resolved endBlock (400n), so voting is ongoing
+  { id: "3", status: "active",   timestamp: 3000n, endBlock: 500n, proposer: "0xccc" },
   { id: "4", status: "canceled", timestamp: 4000n, endBlock: 400n, proposer: "0xddd" },
   { id: "5", status: "executed", timestamp: 500n,  endBlock: 50n,  proposer: "0xeee" },
 ]
@@ -45,6 +46,25 @@ describe("ProposalAdapter.getRecentProposals", () => {
     expect(first.daoId).toBe("ens")
     expect(first.timestamp).toBe(4000n)
     expect(first.endBlock).toBe(400n)
+  })
+
+  it("includes stuck-active proposals whose endBlock is <= max resolved endBlock", async () => {
+    const db = new FakePonderDb({
+      governance_proposal: [
+        { id: "1", status: "executed", timestamp: 1000n, endBlock: 300n, proposer: "0xaaa" },
+        // stuck: status=active but endBlock 200 < max resolved endBlock 300
+        { id: "2", status: "active",   timestamp: 2000n, endBlock: 200n, proposer: "0xbbb" },
+        // truly active: endBlock 400 > max resolved endBlock 300
+        { id: "3", status: "active",   timestamp: 3000n, endBlock: 400n, proposer: "0xccc" },
+      ],
+    })
+    const adapter = new ProposalAdapter(db)
+    const results = await adapter.getRecentProposals(10)
+
+    const ids = results.map((p) => p.id)
+    expect(ids).toContain("1")    // resolved
+    expect(ids).toContain("2")    // stuck-active — included
+    expect(ids).not.toContain("3") // truly active — excluded
   })
 
   it("returns empty array when no concluded proposals", async () => {
