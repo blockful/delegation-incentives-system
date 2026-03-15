@@ -47,7 +47,8 @@ const BrandText = styled.span`
 `
 
 const BrandSub = styled.span`
-  font-size: 12px;
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-size: 14px;
   color: #4A5C63;
 `
 

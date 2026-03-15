@@ -8,6 +8,7 @@ interface TierTableSectionProps {
 
 const Section = styled.section`
   padding: 64px 20px;
+  border-bottom: 1px solid #E5E5E5;
 
   @media (min-width: 768px) {
     padding: 96px 40px;
@@ -95,10 +96,11 @@ const TierBar = styled.div`
 `
 
 const BarSegment = styled.div<{ $filled: boolean }>`
-  width: 20px;
-  height: 4px;
-  border-radius: 2px;
-  background: ${({ $filled }) => ($filled ? '#011A25' : '#C4C7C8')};
+  width: 16px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: ${({ $filled }) => ($filled ? '#011A25' : '#E5E5E5')};
+  transition: background 0.2s ease;
 `
 
 const TierRight = styled.div`
