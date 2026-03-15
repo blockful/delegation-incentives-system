@@ -6,6 +6,7 @@ import type { DelegateDetail } from '@/api/types'
 const fullDelegate: DelegateDetail = {
   address: '0x1234567890abcdef1234567890abcdef12345678',
   ensName: 'alice.eth',
+  avatarUrl: null,
   votingPower: '42000000000000000000000',
   delegatorCount: 128,
   activeSince: '2024-01-15T00:00:00Z',
@@ -15,6 +16,7 @@ const fullDelegate: DelegateDetail = {
 const nullDelegate: DelegateDetail = {
   address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
   ensName: null,
+  avatarUrl: null,
   votingPower: null,
   delegatorCount: null,
   activeSince: null,

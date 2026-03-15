@@ -53,9 +53,11 @@ export interface TierProgressionResponse {
 export interface ApyEstimateResponse {
   address: string;
   ensName: string | null;
+  avatarUrl: string | null;
   role: "delegate" | "delegator" | "ineligible";
   delegatedTo: string | null;
   delegatedToEnsName: string | null;
+  delegatedToAvatarUrl: string | null;
   poolSizeEns: string;
   estimatedMonthlyRewardEns: string;
   estimatedApyPct: string;
@@ -114,6 +116,7 @@ export interface DistributionResponse {
 export interface DelegateDetail {
   address: string;
   ensName: string | null;
+  avatarUrl: string | null;
   votingPower: string | null;
   delegatorCount: number | null;
   activeSince: string | null;

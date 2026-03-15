@@ -101,8 +101,9 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
         <EarningsCard
           earnedEns={apy.data.estimatedMonthlyRewardEns}
           apyPct={apy.data.estimatedApyPct}
-          tierIndex={apy.data.currentTierIndex}
+          tierIndex={tiers.data.currentTierIndex}
           delegatedTo={delegatedTo}
+          delegateAvatarUrl={apy.data.delegatedToAvatarUrl ?? undefined}
           roundNumber={roundNumber}
           timeLeft={timeLeft}
           roundStartDate={round.data.startDate}

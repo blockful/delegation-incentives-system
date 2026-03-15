@@ -6,6 +6,7 @@ export const delegatesFixture: ActiveDelegatesResponse = {
     {
       address: '0x1234567890abcdef1234567890abcdef12345678',
       ensName: null,
+      avatarUrl: null,
       votingPower: '500000000000000000000',
       delegatorCount: 12,
       activeSince: null,
@@ -14,6 +15,7 @@ export const delegatesFixture: ActiveDelegatesResponse = {
     {
       address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
       ensName: null,
+      avatarUrl: null,
       votingPower: '300000000000000000000',
       delegatorCount: 8,
       activeSince: null,
@@ -22,6 +24,7 @@ export const delegatesFixture: ActiveDelegatesResponse = {
     {
       address: '0x9876543210fedcba9876543210fedcba98765432',
       ensName: null,
+      avatarUrl: null,
       votingPower: '200000000000000000000',
       delegatorCount: 5,
       activeSince: null,

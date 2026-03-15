@@ -6,6 +6,7 @@ import makeBlockie from 'ethereum-blockies-base64'
 interface EnsAvatarProps {
   address: string
   name?: string
+  avatarUrl?: string | null
   size?: number
 }
 
@@ -15,17 +16,17 @@ const Wrapper = styled.div<{ $size: number }>`
   flex-shrink: 0;
 `
 
-export function EnsAvatar({ address, name, size = 32 }: EnsAvatarProps) {
+export function EnsAvatar({ address, name, avatarUrl, size = 32 }: EnsAvatarProps) {
   const { data: resolvedName } = useEnsName({
     address: address as `0x${string}`,
     query: { enabled: !name },
   })
   const ensName = name ?? resolvedName ?? undefined
-  const { data: avatarUrl } = useEnsAvatar({
+  const { data: resolvedAvatar } = useEnsAvatar({
     name: ensName,
-    query: { enabled: !!ensName },
+    query: { enabled: !!ensName && !avatarUrl },
   })
-  const src = avatarUrl ?? makeBlockie(address)
+  const src = avatarUrl ?? resolvedAvatar ?? makeBlockie(address)
 
   return (
     <Wrapper $size={size}>

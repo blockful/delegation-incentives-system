@@ -10,6 +10,7 @@ interface EarningsCardProps {
   tierIndex: number
   delegatedTo: string
   delegateEnsName?: string
+  delegateAvatarUrl?: string
   roundNumber: number
   timeLeft: string
   roundStartDate: string
@@ -108,6 +109,7 @@ export function EarningsCard({
   tierIndex,
   delegatedTo,
   delegateEnsName,
+  delegateAvatarUrl,
   roundNumber,
   timeLeft,
   roundStartDate,
@@ -132,7 +134,7 @@ export function EarningsCard({
 
       <InfoRow>
         <InfoPill>
-          <EnsAvatar address={delegatedTo} name={delegateEnsName} size={20} />
+          <EnsAvatar address={delegatedTo} name={delegateEnsName} avatarUrl={delegateAvatarUrl} size={20} />
           {displayName}
         </InfoPill>
         <TextPill>Round {roundNumber}</TextPill>

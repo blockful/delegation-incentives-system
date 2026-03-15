@@ -122,6 +122,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
         <EnsAvatar
           address={delegate.address}
           name={ensName ?? undefined}
+          avatarUrl={delegate.avatarUrl}
           size={40}
         />
         <IdentityInfo>
