@@ -6,7 +6,7 @@ This document is the source of truth for how the ENS Delegation Incentives Syste
 
 Each month, a reward pool of 5,000–30,000 ENS is distributed to:
 
-- **Delegates** (10% of pool) — addresses that voted on ≥ 7 of the last 10 governance proposals, weighted by their 30-day time-weighted average voting power (AVP).
+- **Delegates** (10% of pool) — addresses that voted on ≥ 7 of the last 10 governance proposals, weighted by their calendar-month time-weighted average voting power (AVP).
 - **Delegators** (90% of pool) — holders who delegated to an active delegate, weighted by their 180-day time-weighted balance (TWB).
 
 The pool size is determined by month-over-month growth in aggregate delegated voting power.
