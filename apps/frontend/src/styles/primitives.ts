@@ -3,6 +3,7 @@
  * These enforce consistent typography, spacing, and visual patterns.
  */
 import styled, { css } from 'styled-components'
+import { Link } from 'react-router-dom'
 import { tokens } from './tokens'
 
 /* ─── Typography ─── */
@@ -137,4 +138,10 @@ export const ErrorMessage = styled.p`
   padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
   color: ${tokens.color.negative};
   font-size: ${tokens.font.size.lg};
+`
+
+/* ─── Navigation ─── */
+
+export const RouterLink = styled(Link)`
+  text-decoration: none;
 `

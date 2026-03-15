@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 
 export type SortField = 'random' | 'votingPower' | 'activity' | 'activeSince'
 export type SortDirection = 'desc' | 'asc'
@@ -22,22 +23,22 @@ const fields: { value: SortField; label: string }[] = [
 
 const Wrapper = styled.div`
   display: flex;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
   align-items: center;
 `
 
 const Pill = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.text : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.background : theme.colors.text};
-  font-size: 14px;
-  font-weight: 600;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.xl};
+  border: 1px solid ${tokens.color.border};
+  background: ${({ $active }) =>
+    $active ? tokens.color.text : 'transparent'};
+  color: ${({ $active }) =>
+    $active ? tokens.color.surface : tokens.color.text};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all ${tokens.transition.fast};
 
   &:hover {
     opacity: 0.8;

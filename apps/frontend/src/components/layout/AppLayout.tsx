@@ -10,7 +10,7 @@ const Main = styled.main<{ $fullWidth?: boolean }>`
     $fullWidth
       ? ''
       : `
-    max-width: 1200px;
+    max-width: 1120px;
     margin: 0 auto;
     padding: 24px;
   `}

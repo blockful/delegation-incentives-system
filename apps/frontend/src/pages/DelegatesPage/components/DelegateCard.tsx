@@ -6,6 +6,7 @@ import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { truncateAddress } from '@/utils/format'
+import { tokens } from '@/styles/tokens'
 
 interface DelegateCardProps {
   delegate: DelegateDetail
@@ -36,13 +37,13 @@ function formatActiveSince(iso: string): string {
 const StyledCard = styled(Card)`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const IdentityRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const IdentityInfo = styled.div`
@@ -52,9 +53,9 @@ const IdentityInfo = styled.div`
 `
 
 const Name = styled.span`
-  font-weight: 700;
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.text};
+  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.lg};
+  color: ${tokens.color.text};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -62,12 +63,12 @@ const Name = styled.span`
 
 const Address = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const StatsRow = styled.div`
   display: flex;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const Stat = styled.div`
@@ -77,26 +78,26 @@ const Stat = styled.div`
 `
 
 const StatLabel = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
   text-transform: uppercase;
 `
 
 const StatValue = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
 `
 
 const Actions = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const ProfileLink = styled.a`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.blue};
+  color: ${tokens.color.accent};
   text-decoration: none;
   white-space: nowrap;
 

@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 
 interface RoundDetailsSectionProps {
   balanceEns: string
@@ -11,37 +12,37 @@ const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
-  background: #E5E5E5;
-  border: 1px solid #E5E5E5;
-  border-radius: 16px;
+  background: ${tokens.color.border};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.lg};
   overflow: hidden;
 `
 
 const StatCell = styled.div`
-  background: #fff;
-  padding: 20px 16px;
+  background: ${tokens.color.surface};
+  padding: ${tokens.spacing.xl} ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${tokens.spacing.xs};
 `
 
 const StatLabel = styled.span`
-  font-size: 11px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #4A5C63;
+  color: ${tokens.color.textMuted};
 `
 
 const StatValue = styled.span`
-  font-size: 20px;
-  font-weight: 700;
-  color: #011A25;
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
 `
 
 const StatHint = styled.span`
-  font-size: 12px;
-  color: #C4C7C8;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textFaint};
 `
 
 export function RoundDetailsSection({

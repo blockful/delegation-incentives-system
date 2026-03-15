@@ -3,17 +3,18 @@ import styled from 'styled-components'
 import { Button, EnsSVG, Profile, WalletSVG, ExitSVG } from '@ensdomains/thorin'
 import { useAccount, useEnsName, useEnsAvatar, useDisconnect } from 'wagmi'
 import { appKit } from '@/app/providers/AppKitProvider'
+import { tokens } from '@/styles/tokens'
 
 const StyledHeader = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid #E5E5E5;
-  background: #fff;
+  padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
+  border-bottom: 1px solid ${tokens.color.border};
+  background: ${tokens.color.surface};
 
   @media (min-width: 768px) {
-    padding: 16px 40px;
+    padding: ${tokens.spacing.lg} ${tokens.spacing['4xl']};
   }
 `
 
@@ -26,9 +27,9 @@ const Brand = styled(Link)`
 `
 
 const BrandText = styled.span`
-  font-weight: 700;
-  font-size: 15px;
-  color: #011A25;
+  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.md};
+  color: ${tokens.color.darkBlue};
   letter-spacing: -0.01em;
 `
 
@@ -43,19 +44,19 @@ const Nav = styled.nav`
 
 const StyledNavLink = styled(NavLink)`
   text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: #4A5C63;
-  transition: color 0.15s;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textMuted};
+  transition: color ${tokens.transition.fast};
   letter-spacing: 0.01em;
 
   &:hover {
-    color: #011A25;
+    color: ${tokens.color.darkBlue};
   }
 
   &.active {
-    color: #011A25;
-    font-weight: 600;
+    color: ${tokens.color.darkBlue};
+    font-weight: ${tokens.font.weight.semibold};
   }
 `
 

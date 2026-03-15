@@ -1,17 +1,14 @@
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
-import { Link } from 'react-router-dom'
-
-const RouterLink = styled(Link)`
-  text-decoration: none;
-`
+import { RouterLink } from '@/styles'
+import { tokens } from '@/styles/tokens'
 
 const Section = styled.section`
-  padding: 64px 20px;
-  background: #f6f6f6;
+  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
+  background: ${tokens.color.surfaceAlt};
 
   @media (min-width: 768px) {
-    padding: 96px 40px;
+    padding: ${tokens.spacing['8xl']} ${tokens.spacing['4xl']};
   }
 `
 
@@ -22,23 +19,23 @@ const Inner = styled.div`
 
 const Eyebrow = styled.span`
   display: block;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: #0080BC;
-  margin-bottom: 16px;
+  color: ${tokens.color.accent};
+  margin-bottom: ${tokens.spacing.lg};
 `
 
 const Heading = styled.h2`
-  font-size: 28px;
-  font-weight: 800;
-  color: #011A25;
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.darkBlue};
   line-height: 1.2;
-  margin: 0 0 48px;
+  margin: 0 0 ${tokens.spacing['5xl']};
 
   @media (min-width: 768px) {
-    font-size: 36px;
+    font-size: ${tokens.font.size['4xl']};
     margin-bottom: 56px;
   }
 `
@@ -46,51 +43,51 @@ const Heading = styled.h2`
 const Steps = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
-  margin-bottom: 48px;
+  gap: ${tokens.spacing['2xl']};
+  margin-bottom: ${tokens.spacing['5xl']};
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(3, 1fr);
-    gap: 32px;
+    gap: ${tokens.spacing['3xl']};
   }
 `
 
 const Step = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const StepNumber = styled.span`
-  font-size: 12px;
-  font-weight: 700;
-  color: #0080BC;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.accent};
   letter-spacing: 0.1em;
 `
 
 const StepTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 700;
-  color: #011A25;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
   margin: 0;
   line-height: 1.3;
 `
 
 const StepDesc = styled.p`
-  font-family: 'EB Garamond', 'Georgia', serif;
-  font-size: 16px;
+  font-family: ${tokens.font.serif};
+  font-size: ${tokens.font.size.lg};
   line-height: 1.55;
-  color: #4A5C63;
+  color: ${tokens.color.textMuted};
   margin: 0;
 `
 
 const StepTag = styled.span`
   display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #093C52;
-  background: #CEE1E8;
-  padding: 4px 10px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.midnightBlue};
+  background: ${tokens.color.lightBlue};
+  padding: ${tokens.spacing.xs} 10px;
   border-radius: 6px;
   align-self: flex-start;
 `
@@ -98,7 +95,7 @@ const StepTag = styled.span`
 const Actions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 
   @media (min-width: 768px) {
     flex-direction: row;

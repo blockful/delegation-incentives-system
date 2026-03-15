@@ -1,26 +1,12 @@
 import { useCallback } from 'react'
 import { Spinner } from '@ensdomains/thorin'
-import styled from 'styled-components'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { LoadingWrapper, ErrorMessage } from '@/styles'
 import { DisconnectedLanding } from './states/DisconnectedLanding'
 import { ConnectedLanding } from './states/ConnectedLanding'
 import { DelegatedLanding } from './states/DelegatedLanding'
-
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-`
-
-const ErrorMessage = styled.p`
-  text-align: center;
-  padding: 64px 20px;
-  color: #F53293;
-  font-size: 16px;
-`
 
 export function LandingPage() {
   const fetchTiers = useCallback(() => api.tierProgression(), [])

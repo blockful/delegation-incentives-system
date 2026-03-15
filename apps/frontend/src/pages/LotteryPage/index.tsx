@@ -3,61 +3,62 @@ import { Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thori
 import { useLottery } from '@/features/lottery/useLottery'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
+import { tokens } from '@/styles/tokens'
 
 const Page = styled.div`
   max-width: 720px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 const Hero = styled.div`
-  background: linear-gradient(135deg, #CEE1E8 0%, #C5DDCC 100%);
-  border-radius: 20px;
-  padding: 32px 24px;
+  background: linear-gradient(135deg, ${tokens.color.lightBlue} 0%, ${tokens.color.lightGreen} 100%);
+  border-radius: ${tokens.radius.xl};
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']};
   text-align: center;
 `
 
 
 const QualifyCard = styled.div`
-  background: #C5DDCC;
-  border-radius: 16px;
-  padding: 20px 24px;
+  background: ${tokens.color.lightGreen};
+  border-radius: ${tokens.radius.lg};
+  padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']};
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const QualifyTitle = styled.span`
-  font-size: 15px;
-  font-weight: 700;
-  color: #007C23;
+  font-size: ${tokens.font.size.md};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positive};
 `
 
 const QualifyDetail = styled.span`
   font-size: 13px;
-  color: #093C52;
+  color: ${tokens.color.midnightBlue};
 `
 
 const PrizeCard = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 24px;
+  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing['2xl']};
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  gap: ${tokens.spacing.md};
+  background: ${tokens.color.surface};
 `
 
 const TrophyIcon = styled.span`
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  background: #F8F6D6;
+  width: ${tokens.spacing['5xl']};
+  height: ${tokens.spacing['5xl']};
+  border-radius: ${tokens.radius.lg};
+  background: ${tokens.color.lightYellow};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,40 +66,40 @@ const TrophyIcon = styled.span`
 `
 
 const PrizeLabel = styled.span`
-  font-size: 12px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const PrizeAmount = styled.span`
-  font-size: 36px;
-  font-weight: 800;
-  color: #007C23;
+  font-size: ${tokens.font.size['4xl']};
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.positive};
 `
 
 const PrizeStat = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 
 const StepList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const Step = styled.div`
   display: flex;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
   align-items: flex-start;
 `
 
@@ -106,10 +107,10 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #093C52;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
+  background: ${tokens.color.midnightBlue};
+  color: ${tokens.color.surface};
+  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.base};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,21 +118,21 @@ const StepNumber = styled.div`
 `
 
 const StepText = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.text};
   margin: 0;
   line-height: 1.5;
   padding-top: 3px;
 `
 
 const WinnerCard = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 20px 24px;
+  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']};
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  gap: ${tokens.spacing.md};
+  background: ${tokens.color.surface};
 `
 
 const WinnerInfo = styled.div`
@@ -142,23 +143,23 @@ const WinnerInfo = styled.div`
 `
 
 const WinnerLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const WinnerAddress = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
 `
 
 const WinnerPrize = styled.span`
-  font-size: 18px;
-  font-weight: 700;
-  color: #007C23;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positive};
 `
 
 const LoadingWrapper = styled.div`
@@ -170,9 +171,9 @@ const LoadingWrapper = styled.div`
 
 const ErrorMessage = styled.p`
   text-align: center;
-  padding: 64px 20px;
-  color: #F53293;
-  font-size: 16px;
+  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
+  color: ${tokens.color.negative};
+  font-size: ${tokens.font.size.lg};
 `
 
 const HOW_IT_WORKS_STEPS = [

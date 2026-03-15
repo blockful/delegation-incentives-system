@@ -2,6 +2,7 @@ import styled from 'styled-components'
 import { CheckSVG, LockSVG } from '@ensdomains/thorin'
 import { TierDots } from '@/components/shared/TierDots'
 import type { TierEntry } from '@/api/types'
+import { tokens } from '@/styles/tokens'
 
 interface TierTableProps {
   tiers: TierEntry[]
@@ -11,20 +12,20 @@ interface TierTableProps {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const Label = styled.span`
   font-size: 13px;
-  font-weight: 700;
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #0080BC;
+  color: ${tokens.color.accent};
 `
 
 const Description = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.textMuted};
   margin: 0;
   line-height: 1.5;
 `
@@ -32,17 +33,17 @@ const Description = styled.p`
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const TierRow = styled.div<{ $active: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.md};
   background: ${({ $active }) =>
-    $active ? 'rgba(0, 124, 35, 0.12)' : 'rgba(0, 0, 0, 0.02)'};
+    $active ? 'rgba(0, 124, 35, 0.12)' : tokens.color.surfaceAlt};
   border: 1px solid
     ${({ $active }) => ($active ? 'rgba(0, 124, 35, 0.3)' : 'transparent')};
 `
@@ -50,27 +51,27 @@ const TierRow = styled.div<{ $active: boolean }>`
 const TierInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const TierName = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
   min-width: 56px;
 `
 
 const PoolSize = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textMuted};
 `
 
 const StatusIcon = styled.span<{ $unlocked: boolean }>`
   display: flex;
   align-items: center;
   opacity: ${({ $unlocked }) => ($unlocked ? 1 : 0.4)};
-  color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#4A5C63')};
+  color: ${({ $unlocked }) => ($unlocked ? tokens.color.positive : tokens.color.textMuted)};
 
   svg {
     width: 16px;

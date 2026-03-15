@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 
 interface LotteryStatusCardProps {
   poolNumber: number
@@ -10,18 +11,18 @@ interface LotteryStatusCardProps {
 const CardLink = styled(Link)`
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  border: 1px solid #E5E5E5;
-  border-radius: 16px;
+  gap: ${tokens.spacing.lg};
+  padding: ${tokens.spacing.xl};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.lg};
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  background: #fff;
+  transition: border-color ${tokens.transition.fast}, box-shadow ${tokens.transition.fast};
+  background: ${tokens.color.surface};
 
   &:hover {
-    border-color: #C4C7C8;
-    box-shadow: 0 2px 8px rgba(1, 26, 37, 0.04);
+    border-color: ${tokens.color.textFaint};
+    box-shadow: ${tokens.shadow.sm};
   }
 `
 
@@ -29,23 +30,23 @@ const Content = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${tokens.spacing.xs};
 `
 
 const Title = styled.span`
-  font-size: 14px;
-  font-weight: 700;
-  color: #011A25;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
 `
 
 const Detail = styled.span`
   font-size: 13px;
-  color: #4A5C63;
+  color: ${tokens.color.textMuted};
 `
 
 const Chevron = styled.span`
-  font-size: 18px;
-  color: #C4C7C8;
+  font-size: ${tokens.font.size.xl};
+  color: ${tokens.color.textFaint};
 `
 
 export function LotteryStatusCard({

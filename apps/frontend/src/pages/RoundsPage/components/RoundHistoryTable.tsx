@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { Tag } from '@ensdomains/thorin'
+import { tokens } from '@/styles/tokens'
 
 export interface RoundHistoryEntry {
   round: number
@@ -15,15 +16,15 @@ interface RoundHistoryTableProps {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const Label = styled.span`
   font-size: 13px;
-  font-weight: 700;
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #0080BC;
+  color: ${tokens.color.accent};
 `
 
 const Table = styled.table`
@@ -33,25 +34,25 @@ const Table = styled.table`
 
 const Th = styled.th`
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
-  padding: 8px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${tokens.color.textMuted};
+  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
+  border-bottom: 1px solid ${tokens.color.border};
 `
 
 const Td = styled.td`
-  font-size: 14px;
-  padding: 12px;
-  color: ${({ theme }) => theme.colors.text};
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  font-size: ${tokens.font.size.base};
+  padding: ${tokens.spacing.md};
+  color: ${tokens.color.text};
+  border-bottom: 1px solid ${tokens.color.surfaceAlt};
 `
 
 const EarnedValue = styled.span`
-  color: #007C23;
-  font-weight: 600;
+  color: ${tokens.color.positive};
+  font-weight: ${tokens.font.weight.semibold};
 `
 
 export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {

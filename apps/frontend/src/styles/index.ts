@@ -16,4 +16,5 @@ export {
   Chevron,
   LoadingWrapper,
   ErrorMessage,
+  RouterLink,
 } from './primitives'

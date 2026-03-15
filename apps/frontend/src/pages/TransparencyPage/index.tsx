@@ -5,21 +5,22 @@ import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
 import { truncateAddress } from '@/utils/format'
+import { tokens } from '@/styles/tokens'
 
 const Page = styled.div`
   max-width: 1120px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 
   @media (min-width: 768px) {
     grid-template-columns: 2fr 1fr;
@@ -29,44 +30,44 @@ const Grid = styled.div`
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const SectionLabel = styled.span`
-  font-size: 12px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #0080BC;
+  color: ${tokens.color.accent};
 `
 
 const SectionTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
   margin: 0;
 `
 
 const LinkCard = styled.a`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 16px 20px;
+  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  gap: ${tokens.spacing.md};
+  background: ${tokens.color.surface};
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s;
+  transition: border-color ${tokens.transition.fast};
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.textTertiary};
+    border-color: ${tokens.color.textMuted};
   }
 `
 
@@ -74,34 +75,34 @@ const LinkIcon = styled.span`
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #CEE1E8;
+  background: ${tokens.color.lightBlue};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: ${tokens.font.size.lg};
   flex-shrink: 0;
 `
 
 const LinkTitle = styled.span`
   flex: 1;
-  font-size: 15px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.md};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
 `
 
 const Chevron = styled.span`
-  font-size: 18px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.xl};
+  color: ${tokens.color.textMuted};
 `
 
 const ContractRow = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 16px 20px;
+  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  gap: ${tokens.spacing.md};
+  background: ${tokens.color.surface};
 `
 
 const ContractInfo = styled.div`
@@ -112,20 +113,20 @@ const ContractInfo = styled.div`
 `
 
 const ContractName = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
 `
 
 const ContractAddress = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textTertiary};
-  font-family: monospace;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
+  font-family: ${tokens.font.mono};
 `
 
 const ExternalLink = styled.a`
-  font-size: 14px;
-  color: #0080BC;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.accent};
   text-decoration: none;
   flex-shrink: 0;
 
@@ -137,41 +138,41 @@ const ExternalLink = styled.a`
 const StatGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const StatCard = styled.div`
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.02);
-  padding: 16px;
+  border-radius: ${tokens.radius.md};
+  background: ${tokens.color.surfaceAlt};
+  padding: ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${tokens.spacing.xs};
 `
 
 const StatLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const StatValue = styled.span`
-  font-size: 18px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
 `
 
 const StepList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const Step = styled.div`
   display: flex;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
   align-items: flex-start;
 `
 
@@ -179,10 +180,10 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #093C52;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
+  background: ${tokens.color.midnightBlue};
+  color: ${tokens.color.surface};
+  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.base};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,8 +191,8 @@ const StepNumber = styled.div`
 `
 
 const StepText = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.text};
   margin: 0;
   line-height: 1.5;
   padding-top: 3px;

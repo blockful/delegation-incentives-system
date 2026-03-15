@@ -3,6 +3,7 @@ import { Button, Tag } from '@ensdomains/thorin'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
+import { tokens } from '@/styles/tokens'
 
 interface EarningsCardProps {
   earnedEns: string
@@ -17,30 +18,30 @@ interface EarningsCardProps {
 }
 
 const Card = styled.div`
-  background: #011A25;
-  border-radius: 20px;
-  padding: 32px;
+  background: ${tokens.color.darkBlue};
+  border-radius: ${tokens.radius.xl};
+  padding: ${tokens.spacing['3xl']};
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: ${tokens.spacing['2xl']};
 
   @media (min-width: 768px) {
-    padding: 40px;
+    padding: ${tokens.spacing['4xl']};
   }
 `
 
 const Label = styled.span`
-  font-size: 11px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: #0080BC;
+  color: ${tokens.color.accent};
 `
 
 const EarnedAmount = styled.span`
   font-size: 40px;
-  font-weight: 800;
-  color: #fff;
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.surface};
   line-height: 1;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
@@ -51,8 +52,8 @@ const EarnedAmount = styled.span`
 `
 
 const Unit = styled.span`
-  font-size: 14px;
-  color: #CEE1E8;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.lightBlue};
   opacity: 0.6;
 `
 
@@ -64,15 +65,15 @@ const ApyRow = styled.div`
 `
 
 const ApyText = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: #CEE1E8;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.lightBlue};
 `
 
 const InfoRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const InfoPill = styled.div`
@@ -80,25 +81,25 @@ const InfoPill = styled.div`
   align-items: center;
   gap: 6px;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 6px 12px 6px 6px;
+  border-radius: ${tokens.radius.xl};
+  padding: 6px ${tokens.spacing.md} 6px 6px;
   font-size: 13px;
-  font-weight: 500;
-  color: #CEE1E8;
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.lightBlue};
 `
 
 const TextPill = styled.div`
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 6px 12px;
+  border-radius: ${tokens.radius.xl};
+  padding: 6px ${tokens.spacing.md};
   font-size: 13px;
-  font-weight: 500;
-  color: #CEE1E8;
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.lightBlue};
 `
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
   flex-wrap: wrap;
 `
 

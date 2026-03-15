@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 
 interface ProposalBarProps {
   votes: boolean[]
@@ -7,7 +8,7 @@ interface ProposalBarProps {
 const Wrapper = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const Segments = styled.div`
@@ -20,12 +21,12 @@ const Segment = styled.div<{ $voted: boolean }>`
   height: 6px;
   flex: 1;
   border-radius: 4px;
-  background: ${({ $voted }) => ($voted ? '#007C23' : '#E5E5E5')};
+  background: ${({ $voted }) => ($voted ? tokens.color.positive : tokens.color.border)};
 `
 
 const Score = styled.span`
-  font-size: 13px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${({ theme }) => theme.colors.text};
   white-space: nowrap;
 `

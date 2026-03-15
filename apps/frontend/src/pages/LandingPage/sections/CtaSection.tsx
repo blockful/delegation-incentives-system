@@ -1,27 +1,24 @@
 import styled from 'styled-components'
 import { Button, CheckSVG } from '@ensdomains/thorin'
-import { Link } from 'react-router-dom'
-
-const RouterLink = styled(Link)`
-  text-decoration: none;
-`
+import { RouterLink } from '@/styles'
+import { tokens } from '@/styles/tokens'
 
 const Section = styled.section`
-  background: #011A25;
-  padding: 80px 20px;
+  background: ${tokens.color.darkBlue};
+  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl};
   text-align: center;
 
   @media (min-width: 768px) {
-    padding: 120px 40px;
+    padding: 120px ${tokens.spacing['4xl']};
   }
 `
 
 const Heading = styled.h2`
   font-size: 32px;
-  font-weight: 800;
-  color: #fff;
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.surface};
   line-height: 1.15;
-  margin: 0 auto 16px;
+  margin: 0 auto ${tokens.spacing.lg};
   max-width: 500px;
 
   @media (min-width: 768px) {
@@ -30,11 +27,11 @@ const Heading = styled.h2`
 `
 
 const Subtitle = styled.p`
-  font-family: 'EB Garamond', 'Georgia', serif;
+  font-family: ${tokens.font.serif};
   font-size: 19px;
-  color: #CEE1E8;
+  color: ${tokens.color.lightBlue};
   opacity: 0.7;
-  margin: 0 auto 40px;
+  margin: 0 auto ${tokens.spacing['4xl']};
   max-width: 400px;
   line-height: 1.5;
 `
@@ -42,9 +39,9 @@ const Subtitle = styled.p`
 const Actions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
   max-width: 420px;
-  margin: 0 auto 48px;
+  margin: 0 auto ${tokens.spacing['5xl']};
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -55,19 +52,19 @@ const Actions = styled.div`
 const Checks = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
   align-items: center;
 
   @media (min-width: 768px) {
     flex-direction: row;
-    gap: 24px;
+    gap: ${tokens.spacing['2xl']};
     justify-content: center;
   }
 `
 
 const Check = styled.span`
-  font-size: 13px;
-  color: #CEE1E8;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.lightBlue};
   opacity: 0.6;
   display: flex;
   align-items: center;
@@ -77,7 +74,7 @@ const Check = styled.span`
 const CheckMark = styled.span`
   display: flex;
   align-items: center;
-  color: #007C23;
+  color: ${tokens.color.positive};
 
   svg {
     width: 14px;

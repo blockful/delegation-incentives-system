@@ -6,6 +6,7 @@ import { DelegatesPage } from '@/pages/DelegatesPage'
 import { RoundsPage } from '@/pages/RoundsPage'
 import { LotteryPage } from '@/pages/LotteryPage'
 import { TransparencyPage } from '@/pages/TransparencyPage'
+import { NotFoundPage } from '@/pages/NotFoundPage'
 
 export function Router() {
   return (
@@ -17,6 +18,7 @@ export function Router() {
         <Route path="rounds" element={<RoundsPage />} />
         <Route path="lottery" element={<LotteryPage />} />
         <Route path="transparency" element={<TransparencyPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   )

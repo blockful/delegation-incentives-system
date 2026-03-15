@@ -3,6 +3,7 @@ import { AppKitProvider } from './providers/AppKitProvider'
 import { ThorinProvider } from './providers/ThorinProvider'
 import { WalletStateProvider } from '@/features/wallet/WalletStateProvider'
 import { GlobalStyles } from '@/styles/GlobalStyles'
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { Router } from './Router'
 
 export function App() {
@@ -12,7 +13,9 @@ export function App() {
         <GlobalStyles />
         <BrowserRouter>
           <WalletStateProvider>
-            <Router />
+            <ErrorBoundary>
+              <Router />
+            </ErrorBoundary>
           </WalletStateProvider>
         </BrowserRouter>
       </ThorinProvider>
