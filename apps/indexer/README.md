@@ -72,9 +72,9 @@ ENS tokens sit inside the vesting contract. The beneficiary holds an ERC721 NFT 
 ## Development
 
 ```bash
-# Set up environment
+# Set up environment (from project root)
 cp .env.example .env
-# Edit .env with your Ethereum RPC URL
+# Edit .env with your Ethereum RPC URL (PONDER_RPC_URL_1)
 
 # Start development (with hot reload)
 pnpm dev
@@ -87,6 +87,8 @@ pnpm codegen
 ```
 
 ## Environment Variables
+
+All env vars are loaded from the project root `.env`. See root `.env.example`.
 
 | Variable | Description |
 |---|---|

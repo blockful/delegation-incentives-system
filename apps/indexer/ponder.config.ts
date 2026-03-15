@@ -1,5 +1,10 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 import { createConfig } from "ponder";
-import { http } from "viem";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const erc20MultiDelegateAbi = [
   {
@@ -14,6 +19,7 @@ const erc20MultiDelegateAbi = [
     type: "event",
     name: "DelegationProcessed",
     inputs: [
+      { name: "owner", type: "address", indexed: true },
       { name: "from", type: "address", indexed: true },
       { name: "to", type: "address", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
@@ -54,8 +60,11 @@ const hedgeyVestingAbi = [
       { name: "amount", type: "uint256", indexed: false },
       { name: "start", type: "uint256", indexed: false },
       { name: "cliff", type: "uint256", indexed: false },
+      { name: "end", type: "uint256", indexed: false },
       { name: "rate", type: "uint256", indexed: false },
       { name: "period", type: "uint256", indexed: false },
+      { name: "vestingAdmin", type: "address", indexed: false },
+      { name: "adminTransferOBO", type: "bool", indexed: false },
     ],
   },
   {
@@ -109,6 +118,69 @@ const ensTokenAbi = [
   },
 ] as const;
 
+const ensGovernorAbi = [
+  {
+    name: "ProposalCreated",
+    type: "event",
+    inputs: [
+      { name: "proposalId", type: "uint256", indexed: false },
+      { name: "proposer", type: "address", indexed: false },
+      { name: "targets", type: "address[]", indexed: false },
+      { name: "values", type: "uint256[]", indexed: false },
+      { name: "signatures", type: "string[]", indexed: false },
+      { name: "calldatas", type: "bytes[]", indexed: false },
+      { name: "voteStart", type: "uint256", indexed: false },
+      { name: "voteEnd", type: "uint256", indexed: false },
+      { name: "description", type: "string", indexed: false },
+    ],
+  },
+  {
+    name: "VoteCast",
+    type: "event",
+    inputs: [
+      { name: "voter", type: "address", indexed: true },
+      { name: "proposalId", type: "uint256", indexed: false },
+      { name: "support", type: "uint8", indexed: false },
+      { name: "weight", type: "uint256", indexed: false },
+      { name: "reason", type: "string", indexed: false },
+    ],
+  },
+  {
+    name: "VoteCastWithParams",
+    type: "event",
+    inputs: [
+      { name: "voter", type: "address", indexed: true },
+      { name: "proposalId", type: "uint256", indexed: false },
+      { name: "support", type: "uint8", indexed: false },
+      { name: "weight", type: "uint256", indexed: false },
+      { name: "reason", type: "string", indexed: false },
+      { name: "params", type: "bytes", indexed: false },
+    ],
+  },
+  {
+    name: "ProposalExecuted",
+    type: "event",
+    inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
+  },
+  {
+    name: "ProposalDefeated",
+    type: "event",
+    inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
+  },
+  {
+    name: "ProposalCanceled",
+    type: "event",
+    inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
+  },
+] as const;
+
+// Port is controlled via process.env.PORT (Ponder 0.16 reads PORT env var, default 42069).
+// Set BACKEND_PORT in .env and map it: PORT=$BACKEND_PORT ponder dev
+// We sync the env var here so the dev/start scripts pick it up automatically.
+if (process.env.BACKEND_PORT && !process.env.PORT) {
+  process.env.PORT = process.env.BACKEND_PORT;
+}
+
 export default createConfig({
   chains: {
     mainnet: {
@@ -120,8 +192,8 @@ export default createConfig({
     ERC20MultiDelegate: {
       chain: "mainnet",
       abi: erc20MultiDelegateAbi,
-      address: "0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446",
-      startBlock: 18564837,
+      address: "0x3CA5CCC96648d016D41c5aF40eED82202BD019cc",
+      startBlock: 22140079,
     },
     HedgeyVesting: {
       chain: "mainnet",
@@ -137,6 +209,12 @@ export default createConfig({
       // Provides ample margin beyond the 180-day TWB window.
       // Adjust if the program timeline shifts.
       startBlock: 21000000,
+    },
+    ENSGovernor: {
+      chain: "mainnet",
+      abi: ensGovernorAbi,
+      address: "0x323a76393544d5ecca80cd6ef2a560c6a395b7e3",
+      startBlock: 13533800,
     },
   },
 });

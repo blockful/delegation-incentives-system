@@ -4,19 +4,28 @@ A monorepo for computing and distributing ENS delegation incentive rewards. The 
 
 ## Architecture
 
+Single-service architecture: The Ponder indexer serves both indexed data and REST API endpoints.
+
 ```
 apps/
-├── backend/    — API server + distribution calculation engine
-├── indexer/    — Ponder-based on-chain event indexer
+├── indexer/    — Ponder event indexer + REST API server
 └── frontend/   — Web dashboard (placeholder)
+
+packages/
+└── domain/     — Pure domain logic (active delegates, tier sizing, rewards, etc.)
 ```
 
 ## Apps
 
-### [Backend](./apps/backend/)
+### [Indexer](./apps/indexer/)
 
-REST API (Hono + Zod OpenAPI) that computes monthly reward distributions. Core features:
+Ponder-based event indexer tracking two Ethereum mainnet contracts, with integrated REST API (Hono + Zod OpenAPI) for computing monthly reward distributions.
 
+**On-chain indexing:**
+- **ERC20MultiDelegate** — Multi-delegation proxy positions and ERC1155 balances
+- **Hedgey TokenVestingPlans** — Vesting schedules, redemptions, NFT ownership
+
+**API features:**
 - **Active delegate identification** — 7/10 proposal voting threshold
 - **Pool sizing** — MoM voting power growth mapped to reward tiers (5k–30k ENS)
 - **Cap redistribution** — Iterative pro-rata algorithm with per-entity caps
@@ -24,47 +33,38 @@ REST API (Hono + Zod OpenAPI) that computes monthly reward distributions. Core f
 - **Wallet consolidation** — Protocol mappings + known aliases merged before caps
 - **Lottery** — Deterministic RANDAO-seeded weighted lottery for small payouts
 
-### [Indexer](./apps/indexer/)
-
-Ponder indexer tracking two Ethereum mainnet contracts:
-
-- **ERC20MultiDelegate** — Multi-delegation proxy positions and ERC1155 balances
-- **Hedgey TokenVestingPlans** — Vesting schedules, redemptions, NFT ownership
-
-Produces a `protocol_mapping` table consumed by the backend for address deduplication.
-
 ## Getting Started
 
 ```bash
 # Install dependencies
 pnpm install
 
-# Run backend tests
-pnpm --filter @ens-dis/backend test
+# Run domain logic tests
+pnpm --filter @ens-dis/domain test
 
-# Start backend dev server
-pnpm --filter @ens-dis/backend dev
+# Run indexer tests
+pnpm --filter @ens-dis/indexer test
 
-# Start indexer (requires PONDER_RPC_URL_1)
+# Start the indexer (requires PONDER_RPC_URL_1, serves API on BACKEND_PORT)
 pnpm --filter @ens-dis/indexer dev
 ```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` in the relevant app directory.
+Copy `.env.example` to `.env` at the project root.
 
-| Variable | App | Description |
-|---|---|---|
-| `DATABASE_URL` | backend | PostgreSQL connection string |
-| `PORT` | backend | API server port (default: 3000) |
-| `PONDER_RPC_URL_1` | indexer | Ethereum mainnet RPC URL |
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (required) |
+| `BACKEND_PORT` | API server port (indexer listens here) |
+| `PONDER_RPC_URL_1` | Ethereum mainnet RPC URL (required) |
 
 ## Tech Stack
 
 - **Runtime**: Node.js 18+
 - **Package manager**: pnpm workspaces
-- **Backend**: Hono, Zod OpenAPI, Drizzle ORM, viem
-- **Indexer**: Ponder 0.16, viem
+- **Indexer & API**: Ponder 0.16, Hono, Zod OpenAPI, Drizzle ORM, viem
+- **Domain logic**: Pure TypeScript modules (packages/domain), no framework dependencies
 - **Testing**: Vitest, fast-check (property-based)
 - **All arithmetic**: BigInt (zero floating point)
 
@@ -74,7 +74,7 @@ Copy `.env.example` to `.env` in the relevant app directory.
 
 ### API Endpoints
 
-The backend exposes an OpenAPI 3.1 spec at `GET /doc`. All endpoints are defined with Zod schemas for request/response validation.
+The indexer exposes an OpenAPI 3.1 spec at `GET /doc` (via Hono + Zod). All endpoints are defined with Zod schemas for request/response validation. The API listens on the port specified by `BACKEND_PORT` (default: 42069).
 
 | Method | Path | Tag | Description |
 |--------|------|-----|-------------|
@@ -92,7 +92,7 @@ The backend exposes an OpenAPI 3.1 spec at `GET /doc`. All endpoints are defined
 #### Example: Tier progression
 
 ```bash
-curl http://localhost:3000/tiers/progression
+curl http://localhost:42069/tiers/progression
 ```
 
 ```json
@@ -133,7 +133,7 @@ curl http://localhost:3000/tiers/progression
 #### Example: APY estimate
 
 ```bash
-curl http://localhost:3000/apy/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+curl http://localhost:42069/apy/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 ```
 
 ```json
@@ -171,7 +171,7 @@ curl -X POST http://localhost:3000/distributions/2025-03/compute
 #### Example: Fetch distribution results
 
 ```bash
-curl http://localhost:3000/distributions/2025-03
+curl http://localhost:42069/distributions/2025-03
 ```
 
 ```json
@@ -212,7 +212,7 @@ curl http://localhost:3000/distributions/2025-03
 #### Example: Check eligibility
 
 ```bash
-curl http://localhost:3000/eligibility/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+curl http://localhost:42069/eligibility/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 ```
 
 ```json
@@ -361,17 +361,15 @@ All monetary values use **BigInt** with branded types to prevent unit mixing at 
 ### Testing
 
 ```bash
-pnpm --filter @ens-dis/backend test           # all tests
-pnpm --filter @ens-dis/backend test:watch      # watch mode
-pnpm --filter @ens-dis/backend test:coverage   # with coverage
+pnpm --filter @ens-dis/domain test             # domain logic tests
+pnpm --filter @ens-dis/indexer test            # indexer tests
+pnpm test:watch                                 # watch mode (all)
+pnpm test:coverage                              # with coverage (all)
 ```
 
-Tests are organized by type:
+Tests are organized by package:
 
-| Directory | Type | What it covers |
-|-----------|------|----------------|
-| `test/unit/domain/` | Unit | Each domain module (active delegates, cap redistribution, TWB, lottery, etc.) |
-| `test/unit/util/` | Unit | BigInt math utilities |
-| `test/integration/` | Integration | Full pipeline runs, API route testing |
-| `test/property/` | Property-based | Cap redistribution invariants via fast-check |
-| `test/fixtures/expected-outputs/` | Fixtures | Reference computation results for regression testing |
+| Package | Tests |
+|---------|-------|
+| `packages/domain` | Unit + property-based tests for distribution logic (active delegates, cap redistribution, TWB, lottery, etc.) |
+| `apps/indexer` | Integration tests for API routes and data layer |
