@@ -11,6 +11,8 @@ const StyledHeader = styled.header`
   padding: 16px 24px;
   border-bottom: 1px solid #E5E5E5;
   background: #fff;
+  position: relative;
+  z-index: 100;
 
   @media (min-width: 768px) {
     padding: 16px 40px;
@@ -64,6 +66,12 @@ const WalletArea = styled.div`
   align-items: center;
 `
 
+/* Scale medium Profile down ~85% to sit comfortably in the header */
+const ProfileScaler = styled.div`
+  transform: scale(0.85);
+  transform-origin: right center;
+`
+
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/delegates', label: 'Delegates' },
@@ -78,16 +86,19 @@ function ConnectedAccount({ address }: { address: `0x${string}` }) {
   const { disconnect } = useDisconnect()
 
   return (
-    <Profile
-      address={address}
-      ensName={ensName ?? undefined}
-      avatar={avatarUrl ?? undefined}
-      size="small"
-      dropdownItems={[
-        { label: 'Account', onClick: () => appKit.open(), icon: <WalletSVG /> },
-        { label: 'Disconnect', onClick: () => disconnect(), color: 'red', icon: <ExitSVG /> },
-      ]}
-    />
+    <ProfileScaler>
+      <Profile
+        address={address}
+        ensName={ensName ?? undefined}
+        avatar={avatarUrl ?? undefined}
+        size="medium"
+        alignDropdown="right"
+        dropdownItems={[
+          { label: 'Account', onClick: () => appKit.open(), icon: <WalletSVG /> },
+          { label: 'Disconnect', onClick: () => disconnect(), color: 'red', icon: <ExitSVG /> },
+        ]}
+      />
+    </ProfileScaler>
   )
 }
 
