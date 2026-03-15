@@ -17,23 +17,24 @@ describe("ProposalAdapter.getRecentProposals", () => {
     db = new FakePonderDb({ governance_proposal: PROPOSALS })
   })
 
-  it("returns N most recent concluded proposals ordered by timestamp DESC", async () => {
+  it("returns N most recent proposals ordered by timestamp DESC, including active", async () => {
     const adapter = new ProposalAdapter(db)
     const results = await adapter.getRecentProposals(3)
 
     expect(results).toHaveLength(3)
-    // Should be ordered by timestamp DESC: 4000, 2000, 1000
+    // Active proposal (id "3", timestamp 3000) must be included
+    // Order by timestamp DESC: 4000, 3000, 2000
     expect(results[0].id).toBe("4")
-    expect(results[1].id).toBe("2")
-    expect(results[2].id).toBe("1")
+    expect(results[1].id).toBe("3")
+    expect(results[2].id).toBe("2")
   })
 
-  it("excludes active proposals", async () => {
+  it("includes active proposals so delegates are not undercounted", async () => {
     const adapter = new ProposalAdapter(db)
     const results = await adapter.getRecentProposals(10)
 
     const ids = results.map((p) => p.id)
-    expect(ids).not.toContain("3")
+    expect(ids).toContain("3") // active proposal must be present
   })
 
   it("maps domain fields correctly", async () => {
@@ -47,12 +48,8 @@ describe("ProposalAdapter.getRecentProposals", () => {
     expect(first.endBlock).toBe(400n)
   })
 
-  it("returns empty array when no concluded proposals", async () => {
-    const emptyDb = new FakePonderDb({
-      governance_proposal: [
-        { id: "1", status: "active", timestamp: 1000n, endBlock: 100n, proposer: "0xaaa" },
-      ],
-    })
+  it("returns empty array when no proposals exist", async () => {
+    const emptyDb = new FakePonderDb({ governance_proposal: [] })
     const adapter = new ProposalAdapter(emptyDb)
     const results = await adapter.getRecentProposals(5)
     expect(results).toHaveLength(0)
