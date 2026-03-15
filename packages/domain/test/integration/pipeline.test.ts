@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { runDistributionPipeline } from "@/pipeline.js";
-import { InMemoryDataSource } from "@/in-memory-datasource.js";
+import { InMemoryDataSource } from "../doubles/InMemoryDataSource.js";
 import {
   type Proposal,
   type Vote,
