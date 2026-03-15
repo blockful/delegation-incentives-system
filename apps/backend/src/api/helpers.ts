@@ -5,7 +5,9 @@ import {
   PROPOSAL_WINDOW_SIZE,
   ONE_ENS,
   POOL_TIERS,
+  AVP_WINDOW_SECONDS,
   wei,
+  seconds,
   parseMonth,
   monthEndTimestamp,
   previousMonth,
@@ -40,11 +42,14 @@ export async function fetchMonthContext(
   const { year: prevYear, month: prevMonth } = parseMonth(prevMonthStr)
   const prevMonthEnd = monthEndTimestamp(prevYear, prevMonth)
 
+  const avpWindowStart = (at: typeof monthEnd) =>
+    seconds(BigInt(at) - BigInt(AVP_WINDOW_SECONDS))
+
   const [currentAVP, previousAVP] =
     activeDelegateArray.length > 0
       ? await Promise.all([
-          dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, monthEnd),
-          dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, prevMonthEnd),
+          dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, avpWindowStart(monthEnd), monthEnd),
+          dataSource.votingPower.getAggregateDelegatedPower(activeDelegateArray, avpWindowStart(prevMonthEnd), prevMonthEnd),
         ])
       : [wei(0n), wei(0n)]
 

@@ -24,7 +24,7 @@ import {
   type DistributionResult,
   wei,
 } from "./types.js";
-import { sum } from "./util/bigint-math.js";
+import { computeTWAP } from "./util/twap.js";
 
 /**
  * In-memory implementation of IncentivesDataSource for testing.
@@ -116,21 +116,34 @@ class InMemoryVotingPowerRepository implements VotingPowerRepository {
 
   async getAggregateDelegatedPower(
     activeDelegateIds: string[],
-    at: Seconds,
+    from: Seconds,
+    to: Seconds,
   ): Promise<Wei> {
+    if (activeDelegateIds.length === 0) return wei(0n);
     const ids = new Set(activeDelegateIds);
-    const latestByAccount = new Map<string, VotingPowerSnapshot>();
+    const fromBig = BigInt(from);
+    const toBig = BigInt(to);
+    const window = toBig - fromBig;
+    if (window === 0n) return wei(0n);
+
+    // Group snapshots by delegate (all with timestamp <= to, sorted ascending)
+    const byDelegate = new Map<string, VotingPowerSnapshot[]>();
     for (const s of this.data) {
       if (!ids.has(s.accountId)) continue;
-      if (s.timestamp > at) continue;
-      const existing = latestByAccount.get(s.accountId);
-      if (!existing || s.timestamp > existing.timestamp) {
-        latestByAccount.set(s.accountId, s);
-      }
+      if (BigInt(s.timestamp) > toBig) continue;
+      const list = byDelegate.get(s.accountId) ?? [];
+      list.push(s);
+      byDelegate.set(s.accountId, list);
     }
-    return wei(
-      sum(Array.from(latestByAccount.values()).map((s) => s.votingPower)),
-    );
+
+    let total = 0n;
+    for (const id of activeDelegateIds) {
+      const snapshots = (byDelegate.get(id) ?? [])
+        .sort((a, b) => Number(BigInt(a.timestamp) - BigInt(b.timestamp)))
+        .map((s) => ({ timestamp: BigInt(s.timestamp), votingPower: BigInt(s.votingPower) }));
+      total += computeTWAP(snapshots, fromBig, toBig, window);
+    }
+    return wei(total);
   }
 
   async getVotingPower(accountIds: string[]): Promise<Map<string, Wei>> {

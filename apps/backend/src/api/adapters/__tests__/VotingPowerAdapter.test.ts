@@ -50,36 +50,78 @@ describe("VotingPowerAdapter.getVotingPowerHistory", () => {
   })
 })
 
-describe("VotingPowerAdapter.getAggregateDelegatedPower", () => {
+describe("VotingPowerAdapter.getAggregateDelegatedPower (TWAP)", () => {
   let db: FakePonderDb
 
   beforeEach(() => {
     db = new FakePonderDb({ ens_voting_power_snapshot: SNAPSHOTS })
   })
 
-  it("sums latest snapshots for provided delegates at timestamp", async () => {
+  it("computes TWAP for a single delegate over the window", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // At timestamp 200: aaa=1500, bbb=800 → sum 2300
+    // 0xaaa: VP=0 at t=50..100, VP=1000 at t=100..200
+    // window [50, 200] = 150s
+    // TWAP = (0*50 + 1000*100) / 150 = 666n
     const result = await adapter.getAggregateDelegatedPower(
-      ["0xaaa", "0xbbb"],
+      ["0xaaa"],
+      seconds(50n),
       seconds(200n),
     )
-    expect(result).toBe(2300n)
+    expect(result).toBe(666n)
+  })
+
+  it("uses base VP from snapshot before window start", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    // 0xaaa: VP=1000 (set at t=100) at window start t=150, then VP=1500 at t=200
+    // window [150, 200] = 50s
+    // TWAP = (1000*50 + 1500*0) / 50 = 1000n
+    const result = await adapter.getAggregateDelegatedPower(
+      ["0xaaa"],
+      seconds(150n),
+      seconds(200n),
+    )
+    expect(result).toBe(1000n)
+  })
+
+  it("sums TWAP across multiple delegates", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    // window [50, 200] = 150s
+    // 0xaaa TWAP = 666n
+    // 0xbbb: VP=0 at t=50..150, VP=800 at t=150..200 → (0*100 + 800*50)/150 = 266n
+    // total = 932n
+    const result = await adapter.getAggregateDelegatedPower(
+      ["0xaaa", "0xbbb"],
+      seconds(50n),
+      seconds(200n),
+    )
+    expect(result).toBe(932n)
   })
 
   it("only sums provided active delegates (not all)", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // Only aaa, not bbb or ccc
+    // Only 0xaaa in window [150, 200]: base VP=1000 → TWAP = 1000n
     const result = await adapter.getAggregateDelegatedPower(
       ["0xaaa"],
-      seconds(300n),
+      seconds(150n),
+      seconds(200n),
     )
-    expect(result).toBe(1500n)
+    expect(result).toBe(1000n)
   })
 
   it("returns 0n for empty delegate list", async () => {
     const adapter = new VotingPowerAdapter(db)
-    const result = await adapter.getAggregateDelegatedPower([], seconds(300n))
+    const result = await adapter.getAggregateDelegatedPower([], seconds(50n), seconds(200n))
+    expect(result).toBe(0n)
+  })
+
+  it("returns 0n for delegate with no snapshots in or before the window", async () => {
+    const adapter = new VotingPowerAdapter(db)
+    // 0xccc has its first snapshot at t=300, window ends at t=200
+    const result = await adapter.getAggregateDelegatedPower(
+      ["0xccc"],
+      seconds(50n),
+      seconds(200n),
+    )
     expect(result).toBe(0n)
   })
 })
@@ -115,7 +157,6 @@ describe("VotingPowerAdapter with checksummed addresses", () => {
 
   it("handles checksummed addresses in getVotingPowerHistory", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // DB has lowercase "0xaaa", but we pass uppercase
     const results = await adapter.getVotingPowerHistory(
       ["0xAAA"],
       seconds(100n),
@@ -127,17 +168,17 @@ describe("VotingPowerAdapter with checksummed addresses", () => {
 
   it("handles checksummed addresses in getAggregateDelegatedPower", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // DB has lowercase addresses, but we pass uppercase
+    // window [50, 200] → 0xaaa TWAP=666, 0xbbb TWAP=266, total=932
     const result = await adapter.getAggregateDelegatedPower(
       ["0xAAA", "0xBBB"],
+      seconds(50n),
       seconds(200n),
     )
-    expect(result).toBe(2300n)
+    expect(result).toBe(932n)
   })
 
   it("handles checksummed addresses in getVotingPower", async () => {
     const adapter = new VotingPowerAdapter(db)
-    // DB has lowercase addresses, but we pass uppercase
     const result = await adapter.getVotingPower(["0xAAA", "0xBBB"])
     expect(result.get("0xaaa")).toBe(1500n)
     expect(result.get("0xbbb")).toBe(800n)

@@ -11,6 +11,7 @@ import {
   basisPoints,
   ONE_ENS,
   TWB_WINDOW_SECONDS,
+  AVP_WINDOW_SECONDS,
   PROPOSAL_WINDOW_SIZE,
 } from "./types.js";
 import { identifyActiveDelegates } from "./active-delegates.js";
@@ -70,13 +71,16 @@ export async function runDistributionPipeline(
 
   const activeDelegateArray = Array.from(activeDelegateIds);
 
-  // Step 4: Compute MoM VP growth and determine pool tier
+  // Step 4: Compute MoM VP growth and determine pool tier.
+  // AVP is a 30-day time-weighted average ending at each month boundary.
   const currentAVP = await dataSource.votingPower.getAggregateDelegatedPower(
     activeDelegateArray,
+    seconds(BigInt(monthEnd) - BigInt(AVP_WINDOW_SECONDS)),
     monthEnd,
   );
   const previousAVP = await dataSource.votingPower.getAggregateDelegatedPower(
     activeDelegateArray,
+    seconds(BigInt(prevMonthEnd) - BigInt(AVP_WINDOW_SECONDS)),
     prevMonthEnd,
   );
 
