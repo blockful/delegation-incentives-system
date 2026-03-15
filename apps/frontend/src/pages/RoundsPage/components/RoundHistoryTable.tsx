@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { Tag } from '@ensdomains/thorin'
+import { tokens, Eyebrow } from '@/styles'
 
 export interface RoundHistoryEntry {
   round: number
@@ -15,15 +16,7 @@ interface RoundHistoryTableProps {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-`
-
-const Label = styled.span`
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #0080BC;
+  gap: ${tokens.spacing.lg};
 `
 
 const Table = styled.table`
@@ -33,31 +26,47 @@ const Table = styled.table`
 
 const Th = styled.th`
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
-  padding: 8px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${tokens.color.textMuted};
+  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
+  border-bottom: 1px solid ${tokens.color.border};
 `
 
 const Td = styled.td`
-  font-size: 14px;
-  padding: 12px;
-  color: ${({ theme }) => theme.colors.text};
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  font-size: ${tokens.font.size.base};
+  padding: ${tokens.spacing.md};
+  color: ${tokens.color.text};
+  border-bottom: 1px solid ${tokens.color.surfaceAlt};
+  white-space: nowrap;
 `
 
 const EarnedValue = styled.span`
-  color: #007C23;
-  font-weight: 600;
+  color: ${tokens.color.positive};
+  font-weight: ${tokens.font.weight.semibold};
 `
+
+/**
+ * Compress date ranges that share the same month.
+ * "Mar 1 – Mar 31" → "Mar 1–31"
+ * Cross-month ranges are returned unchanged.
+ */
+function compactDateRange(raw: string): string {
+  const m = raw.match(
+    /^([A-Z][a-z]+)\s+(\d+)\s*[–—-]\s*([A-Z][a-z]+)\s+(\d+)$/,
+  )
+  if (!m) return raw
+  const [, startMonth, startDay, endMonth, endDay] = m
+  if (startMonth === endMonth) return `${startMonth} ${startDay}–${endDay}`
+  return `${startMonth} ${startDay} – ${endMonth} ${endDay}`
+}
 
 export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
   return (
     <Container>
-      <Label>Round History</Label>
+      <Eyebrow>Round History</Eyebrow>
       <Table>
         <thead>
           <tr>
@@ -71,7 +80,7 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
           {entries.map((entry) => (
             <tr key={entry.round}>
               <Td>Round {entry.round}</Td>
-              <Td>{entry.dates}</Td>
+              <Td>{compactDateRange(entry.dates)}</Td>
               <Td>
                 <EarnedValue>+{entry.earned} ENS</EarnedValue>
               </Td>

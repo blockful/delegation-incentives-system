@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
@@ -10,8 +11,8 @@ interface RoundStatusBarProps {
 
 const Wrapper = styled.div`
   max-width: 680px;
-  margin: -32px auto 0;
-  padding: 0 20px;
+  margin: -${tokens.spacing['3xl']} auto 0;
+  padding: 0 ${tokens.spacing.xl};
   position: relative;
   z-index: 1;
 
@@ -23,56 +24,56 @@ const Wrapper = styled.div`
 const Bar = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(1, 26, 37, 0.08);
+  background: ${tokens.color.surface};
+  border-radius: ${tokens.radius.lg};
+  box-shadow: ${tokens.shadow.md};
   overflow: hidden;
 `
 
 const Cell = styled.div`
-  padding: 20px 16px;
+  padding: ${tokens.spacing.xl} ${tokens.spacing.lg};
   text-align: center;
 
   &:not(:last-child) {
-    border-right: 1px solid #E5E5E5;
+    border-right: 1px solid ${tokens.color.border};
   }
 
   @media (min-width: 768px) {
-    padding: 24px 20px;
+    padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
   }
 `
 
 const CellValue = styled.div`
-  font-size: 16px;
-  font-weight: 700;
-  color: #011A25;
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
 
   @media (min-width: 768px) {
-    font-size: 18px;
+    font-size: ${tokens.font.size.xl};
   }
 `
 
 const LiveDot = styled.span`
-  width: 8px;
-  height: 8px;
+  width: ${tokens.spacing.sm};
+  height: ${tokens.spacing.sm};
   border-radius: 50%;
-  background: #007C23;
+  background: ${tokens.color.positive};
   flex-shrink: 0;
 `
 
 const GrowthValue = styled.span<{ $negative?: boolean }>`
-  color: ${({ $negative }) => ($negative ? '#F53293' : '#007C23')};
-  font-weight: 700;
+  color: ${({ $negative }) => ($negative ? tokens.color.negative : tokens.color.positive)};
+  font-weight: ${tokens.font.weight.bold};
 `
 
 const CellLabel = styled.div`
-  font-size: 12px;
-  color: #4A5C63;
-  margin-top: 4px;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
+  margin-top: ${tokens.spacing.xs};
   letter-spacing: 0.02em;
 `
 
@@ -85,7 +86,8 @@ export function RoundStatusBar({
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
-  const growthPrefix = isNegative ? '' : '+'
+  const growthPrefix = isNegative ? '\u2013' : '+'
+  const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
   const displayRound = roundNumber ?? 1
   const displayTimeLeft = roundTimeLeft ?? ''
 
@@ -102,7 +104,7 @@ export function RoundStatusBar({
         <Cell>
           <CellValue>
             <GrowthValue $negative={isNegative}>
-              {growthPrefix}{currentGrowthPct}%
+              {growthPrefix}{displayGrowth}%
             </GrowthValue>
           </CellValue>
           <CellLabel>VP growth</CellLabel>

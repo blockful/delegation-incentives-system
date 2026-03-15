@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Spinner } from '@ensdomains/thorin'
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -17,9 +18,9 @@ const LoadingWrapper = styled.div`
 
 const ErrorMessage = styled.p`
   text-align: center;
-  padding: 64px 20px;
-  color: #F53293;
-  font-size: 16px;
+  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
+  color: ${tokens.color.negative};
+  font-size: ${tokens.font.size.lg};
 `
 
 export function LandingPage() {
