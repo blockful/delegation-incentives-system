@@ -120,6 +120,7 @@ export function RoundCard({
         <ProgressLabel>
           {percentComplete}% complete · {timeLeft} left
         </ProgressLabel>
+
         <ProgressBarTrack>
           <ProgressBarFill $pct={percentComplete} />
         </ProgressBarTrack>
