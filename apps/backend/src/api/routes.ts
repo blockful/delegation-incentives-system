@@ -1,4 +1,5 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { swaggerUI } from "@hono/swagger-ui";
 import type { IncentivesDataSource } from "@/data/interfaces.js";
 import { runDistributionPipeline } from "@/pipeline/distribution-pipeline.js";
 import { distributionToCsv } from "@/output/csv-writer.js";
@@ -565,7 +566,7 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
     }
   });
 
-  app.doc("/doc", {
+  app.doc("/docs/json", {
     openapi: "3.1.0",
     info: {
       title: "ENS Delegation Incentives API",
@@ -584,6 +585,8 @@ export function createApi(deps: ApiDeps): OpenAPIHono {
       { name: "APY", description: "Estimated APY for addresses" },
     ],
   });
+
+  app.get("/docs", swaggerUI({ url: "/docs/json" }));
 
   return app;
 }

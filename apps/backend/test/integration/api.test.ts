@@ -187,4 +187,20 @@ describe("REST API", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("GET /docs/json returns valid OpenAPI spec", async () => {
+    const res = await app.request("/docs/json");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.openapi).toBe("3.1.0");
+    expect(body.info.title).toBe("ENS Delegation Incentives API");
+    expect(body.paths).toBeDefined();
+  });
+
+  it("GET /docs returns Swagger UI HTML", async () => {
+    const res = await app.request("/docs");
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("swagger-ui");
+  });
 });
