@@ -43,10 +43,10 @@ pnpm install
 pnpm --filter @ens-dis/domain test
 
 # Run indexer tests
-pnpm --filter @ens-dis/indexer test
+pnpm --filter @ens-dis/backend test
 
-# Start the indexer (requires PONDER_RPC_URL_1, serves API on BACKEND_PORT)
-pnpm --filter @ens-dis/indexer dev
+# Start the indexer (requires RPC_URL, serves API on BACKEND_PORT)
+pnpm --filter @ens-dis/backend dev
 ```
 
 ## Environment Variables
@@ -57,7 +57,7 @@ Copy `.env.example` to `.env` at the project root.
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string (required) |
 | `BACKEND_PORT` | API server port (indexer listens here) |
-| `PONDER_RPC_URL_1` | Ethereum mainnet RPC URL (required) |
+| `RPC_URL` | Ethereum mainnet RPC URL (required) |
 
 ## Tech Stack
 
@@ -362,7 +362,7 @@ All monetary values use **BigInt** with branded types to prevent unit mixing at 
 
 ```bash
 pnpm --filter @ens-dis/domain test             # domain logic tests
-pnpm --filter @ens-dis/indexer test            # indexer tests
+pnpm --filter @ens-dis/backend test            # indexer tests
 pnpm test:watch                                 # watch mode (all)
 pnpm test:coverage                              # with coverage (all)
 ```

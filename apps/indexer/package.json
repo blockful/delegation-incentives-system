@@ -1,5 +1,5 @@
 {
-  "name": "@ens-dis/indexer",
+  "name": "@ens-dis/backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
