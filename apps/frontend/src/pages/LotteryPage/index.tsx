@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
+import { Button, Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
 import { useLottery } from '@/features/lottery/useLottery'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
@@ -168,11 +168,42 @@ const LoadingWrapper = styled.div`
   min-height: 300px;
 `
 
-const ErrorMessage = styled.p`
+const ErrorCard = styled.div`
+  border-radius: 20px;
+  background: linear-gradient(135deg, #FEE9F0 0%, #FDE8E8 100%);
+  border: 1px solid #FBCDD8;
+  padding: 40px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   text-align: center;
-  padding: 64px 20px;
-  color: #F53293;
-  font-size: 16px;
+`
+
+const ErrorIcon = styled.div`
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #FBCDD8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+`
+
+const ErrorTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 700;
+  color: #93001A;
+  margin: 0;
+`
+
+const ErrorDetail = styled.p`
+  font-size: 14px;
+  color: #C0365A;
+  margin: 0;
+  max-width: 340px;
+  line-height: 1.5;
 `
 
 const EmptyState = styled.div`
@@ -192,7 +223,7 @@ const HOW_IT_WORKS_STEPS = [
 ]
 
 export function LotteryPage() {
-  const { data, loading, error } = useLottery()
+  const { data, loading, error, execute } = useLottery()
 
   if (loading) {
     return (
@@ -207,7 +238,21 @@ export function LotteryPage() {
   if (error) {
     return (
       <Page>
-        <ErrorMessage>Failed to load lottery data: {error}</ErrorMessage>
+        <ErrorCard>
+          <ErrorIcon aria-hidden>⚠️</ErrorIcon>
+          <ErrorTitle>Couldn't load lottery data</ErrorTitle>
+          <ErrorDetail>
+            Something went wrong while fetching the latest round. This is usually temporary.
+          </ErrorDetail>
+          <Button
+            colorStyle="redSecondary"
+            size="medium"
+            width="auto"
+            onClick={execute}
+          >
+            Try again
+          </Button>
+        </ErrorCard>
       </Page>
     )
   }
