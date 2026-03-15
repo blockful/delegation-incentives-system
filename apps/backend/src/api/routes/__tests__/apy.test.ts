@@ -67,6 +67,13 @@ beforeEach(() => {
 })
 
 describe("GET /apy/{address}", () => {
+  it("returns 400 for invalid address", async () => {
+    const req = new Request("http://localhost/apy/not-an-address")
+    const res = await apyRouter.fetch(req)
+    expect(res.status).toBe(400)
+  })
+
+
   it("returns 200 for ineligible address with role=ineligible and estimatedMonthlyRewardEns='0'", async () => {
     const req = new Request(`http://localhost/apy/${INELIGIBLE}`)
     const res = await apyRouter.fetch(req)
