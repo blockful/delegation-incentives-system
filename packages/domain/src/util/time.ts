@@ -15,7 +15,10 @@ export function monthEndTimestamp(year: number, month: number): Seconds {
 export function parseMonth(monthStr: string): { year: number; month: number } {
   const match = monthStr.match(/^(\d{4})-(\d{2})$/);
   if (!match) throw new Error(`Invalid month format: ${monthStr}. Expected YYYY-MM`);
-  return { year: parseInt(match[1], 10), month: parseInt(match[2], 10) };
+  const month = parseInt(match[2], 10);
+  if (month < 1 || month > 12)
+    throw new Error(`Invalid month: ${month} in "${monthStr}". Must be 01-12`);
+  return { year: parseInt(match[1], 10), month };
 }
 
 /** Get previous month as "YYYY-MM" */

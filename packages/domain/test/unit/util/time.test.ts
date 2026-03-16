@@ -56,6 +56,18 @@ describe("parseMonth", () => {
   it("throws for wrong format '2026-3'", () => {
     expect(() => parseMonth("2026-3")).toThrow()
   })
+
+  it("throws for month 00 (out of range)", () => {
+    expect(() => parseMonth("2026-00")).toThrow(/Must be 01-12/)
+  })
+
+  it("throws for month 13 (out of range)", () => {
+    expect(() => parseMonth("2026-13")).toThrow(/Must be 01-12/)
+  })
+
+  it("throws for month 99 (out of range)", () => {
+    expect(() => parseMonth("2026-99")).toThrow(/Must be 01-12/)
+  })
 })
 
 describe("previousMonth", () => {
