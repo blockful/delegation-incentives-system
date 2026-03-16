@@ -93,12 +93,10 @@ describe("determinePoolTier property tests", () => {
     );
   });
 
-  it("higher growth → equal or higher pool size (within valid tier range)", () => {
-    // The last POOL_TIER covers bps [10000, 100_000_000). Growth >= 100_000_000 bps
-    // falls through to the tier[0] fallback, creating intentionally non-monotonic behavior.
-    // We test only within the valid range by using a base and growth such that bps < 100_000_000.
-    // bps = (growth * 10000) / base < 100_000_000 → growth < base * 10_000.
-    // Strategy: use base=10_000n, growthA/growthB in [1, 9_999] so bps stays in [1, 9_999_000].
+  it("higher growth → equal or higher pool size (monotonicity for positive growth)", () => {
+    // For any two positive growth values, the one with higher growth should
+    // get an equal or higher pool tier. This is now unconditionally true
+    // after fixing the extreme-growth fallback to return the highest tier.
     const smallBase = 10_000n;
     const smallGrowthArb = fc.bigInt({ min: 1n, max: 9_999n });
 

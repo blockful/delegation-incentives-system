@@ -22,6 +22,7 @@ export function determinePoolTier(
     }
   }
 
-  // If growth is negative or no tier matches, return lowest tier
-  return tierTable[0];
+  // Negative growth → lowest tier; extreme positive growth → highest tier
+  if (growthBps < 0n) return tierTable[0];
+  return tierTable[tierTable.length - 1];
 }

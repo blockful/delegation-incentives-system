@@ -727,6 +727,53 @@ describe("Scenario 6: sub-threshold delegator enters lottery, not direct payout"
   })
 })
 
+// ─── Scenario: all delegators zero TWB ────────────────────────────────────────
+
+describe("Edge case: all delegators have zero TWB — delegator pool is unallocated", () => {
+  /**
+   * When every delegator has a zero time-weighted balance (they held no ENS
+   * tokens during the 180-day window), the entire delegator pool (90%) remains
+   * unallocated. Only the delegate gets a payout (capped).
+   *
+   * This verifies the system doesn't crash, produce negative amounts, or
+   * create zero-amount entries in directPayouts.
+   */
+  it("only the delegate receives a payout when all delegators have zero TWB", async () => {
+    const proposals = makeProposals()
+    const delegate = "del-alpha"
+
+    // Delegators exist but have NO balance events → initial balance = 0 → TWB = 0
+    const delegatorIds = ["d_zero_1", "d_zero_2", "d_zero_3"]
+    const delegations = delegatorIds.map((id) => makeDelegation(id, delegate))
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes: makeVotes(delegate, proposals),
+      votingPowerSnapshots: makeTier0VPSnapshots(delegate),
+      balanceEvents: [],
+      delegations,
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    // Only the delegate appears in direct payouts
+    expect(result.directPayouts.length).toBe(1)
+    expect(result.directPayouts[0].role).toBe("delegate")
+    expect(result.directPayouts[0].address).toBe(delegate)
+    expect(result.directPayouts[0].amount).toBe(D_CAP) // 50 ENS
+
+    // No delegator payouts at all
+    const delegatorPayouts = result.directPayouts.filter((p) => p.role === "delegator")
+    expect(delegatorPayouts.length).toBe(0)
+
+    // No lottery pools (all zero-amount entries excluded)
+    expect(result.lotteryPools.length).toBe(0)
+
+    // Total distributed = delegate cap only
+    expect(result.metadata.totalDistributed).toBe(D_CAP)
+  })
+})
+
 // ─── Scenario 7 ───────────────────────────────────────────────────────────────
 
 describe("Scenario 7: partial-window holding — exact TWB for fractional durations", () => {

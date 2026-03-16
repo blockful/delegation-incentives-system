@@ -68,6 +68,32 @@ describe("applyBasisPoints", () => {
   it("handles 0 bps", () => {
     expect(applyBasisPoints(1000n, 0n)).toBe(0n);
   });
+
+  it("truncates down on odd pool (10% + 90% < 100% by at most 1 wei)", () => {
+    // Odd pool: 10_001 wei
+    const pool = 10_001n;
+    const d10 = applyBasisPoints(pool, 1000n);  // 10%
+    const d90 = applyBasisPoints(pool, 9000n);  // 90%
+    // Each truncates independently: 10_001 * 1000 / 10000 = 1_000 (exact)
+    //                                10_001 * 9000 / 10000 = 9_000 (truncated from 9000.9)
+    expect(d10).toBe(1_000n);
+    expect(d90).toBe(9_000n);
+    // At most 1 wei rounding loss total (acceptable for 18-decimal token values)
+    expect(pool - d10 - d90).toBeLessThanOrEqual(1n);
+    expect(pool - d10 - d90).toBeGreaterThanOrEqual(0n);
+  });
+
+  it("rounding loss is negligible at ENS precision (18 decimals)", () => {
+    // Worst-case odd pool in ENS: 10_001 * 10^18 + 1
+    const ONE_ENS = 10n ** 18n;
+    const pool = 10_001n * ONE_ENS + 1n;
+    const d10 = applyBasisPoints(pool, 1000n);
+    const d90 = applyBasisPoints(pool, 9000n);
+    const loss = pool - d10 - d90;
+    // Loss is at most 1 wei — negligible vs millions of ENS
+    expect(loss).toBeLessThanOrEqual(1n);
+    expect(loss).toBeGreaterThanOrEqual(0n);
+  });
 });
 
 describe("percentageGrowthBps", () => {

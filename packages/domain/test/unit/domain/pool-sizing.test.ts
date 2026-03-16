@@ -79,4 +79,17 @@ describe("determinePoolTier", () => {
     const tier = determinePoolTier(wei(10999n), wei(10000n), POOL_TIERS);
     expect(tier.poolSize).toBe(ens(5_000n));
   });
+
+  it("extreme growth (>= 1,000,000%) returns highest tier, not lowest", () => {
+    // prev=1, curr=10001 → growth = 10_000_000_000% = 100_000_000 bps
+    // This exceeds tier 6's upper bound but must return tier 6 (highest), not tier 0
+    const tier = determinePoolTier(wei(10_001n), wei(1n), POOL_TIERS);
+    expect(tier.poolSize).toBe(ens(30_000n));
+  });
+
+  it("extreme growth with realistic values returns highest tier", () => {
+    // prev=1 ENS, curr=100_000 ENS → 9,999,900% growth
+    const tier = determinePoolTier(ens(100_000n), ens(1n), POOL_TIERS);
+    expect(tier.poolSize).toBe(ens(30_000n));
+  });
 });
