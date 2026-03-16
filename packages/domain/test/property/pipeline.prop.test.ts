@@ -32,7 +32,8 @@ import {
   type BalanceEvent,
   type Delegation,
 } from "@/types.js";
-import { sum } from "@/util/bigint-math.js";
+import { sum, applyBasisPoints } from "@/util/bigint-math.js";
+import { DELEGATE_POOL_BPS, DELEGATOR_POOL_BPS } from "@/config.js";
 import { monthStartTimestamp, monthEndTimestamp } from "@/util/time.js";
 
 // ---------------------------------------------------------------------------
@@ -523,6 +524,68 @@ describe("pipeline property tests", () => {
               expect(entry.role).toBe("delegator");
             }
           }
+        }
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("delegate sub-pool ≤ 10% and delegator sub-pool ≤ 90% of monthly pool", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        const poolSize = result.metadata.poolTier.poolSize as unknown as bigint;
+
+        const delegateTotal = sum(
+          result.directPayouts
+            .filter((p) => p.role === "delegate")
+            .map((p) => p.amount as bigint),
+        );
+        const delegateInLottery = sum(
+          result.lotteryPools.flatMap((pool) =>
+            pool.entries.filter((e) => e.role === "delegate").map((e) => e.originalAmount as bigint),
+          ),
+        );
+        const delegatorTotal = sum(
+          result.directPayouts
+            .filter((p) => p.role === "delegator")
+            .map((p) => p.amount as bigint),
+        );
+        const delegatorInLottery = sum(
+          result.lotteryPools.flatMap((pool) =>
+            pool.entries.filter((e) => e.role === "delegator").map((e) => e.originalAmount as bigint),
+          ),
+        );
+
+        const delegateSubPool = applyBasisPoints(poolSize, DELEGATE_POOL_BPS as unknown as bigint);
+        const delegatorSubPool = applyBasisPoints(poolSize, DELEGATOR_POOL_BPS as unknown as bigint);
+
+        expect(delegateTotal + delegateInLottery).toBeLessThanOrEqual(delegateSubPool);
+        expect(delegatorTotal + delegatorInLottery).toBeLessThanOrEqual(delegatorSubPool);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("each lottery pool totalPrize equals sum of entry originalAmounts", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        for (const pool of result.lotteryPools) {
+          const entrySum = sum(pool.entries.map((e) => e.originalAmount as bigint));
+          expect(pool.totalPrize as unknown as bigint).toBe(entrySum);
+        }
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("lottery pools have ≥ 2 entries (solo entries are promoted to direct payouts)", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        for (const pool of result.lotteryPools) {
+          expect(pool.entries.length).toBeGreaterThanOrEqual(2);
         }
       }),
       { numRuns: 200 },

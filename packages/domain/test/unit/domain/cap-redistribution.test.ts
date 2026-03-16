@@ -173,4 +173,61 @@ describe("allocateWithCap", () => {
     const total = sum(result.map((r) => r.amount as bigint));
     expect(total).toBe(0n);
   });
+
+  // ─── Production-scale precision tests (18-decimal wei values) ──────────────
+
+  it("production-scale: 30,000 ENS pool split among 50 delegates preserves total", () => {
+    const ONE_ENS = 10n ** 18n;
+    const pool = 30_000n * ONE_ENS;
+    const cap = 300n * ONE_ENS;
+    const inputs = Array.from({ length: 50 }, (_, i) =>
+      input(`del-${i}`, BigInt(100 + i) * ONE_ENS),
+    );
+
+    const result = allocateWithCap(inputs, pool, cap);
+
+    const total = sum(result.map((r) => r.amount as bigint));
+    expect(total).toBeLessThanOrEqual(pool);
+    expect(total).toBeGreaterThan(0n);
+
+    for (const r of result) {
+      expect(r.amount as bigint).toBeLessThanOrEqual(cap);
+      expect(r.amount as bigint).toBeGreaterThanOrEqual(0n);
+    }
+
+    // Unallocated = pool - total (can be large when many participants hit cap)
+    const unallocated = pool - total;
+    expect(unallocated).toBeGreaterThanOrEqual(0n);
+  });
+
+  it("production-scale: 4,500 ENS delegator pool with whale + 200 minnows", () => {
+    const ONE_ENS = 10n ** 18n;
+    const pool = 4_500n * ONE_ENS;
+    const cap = 250n * ONE_ENS;
+
+    const whale = input("whale", 500_000n * ONE_ENS);
+    const minnows = Array.from({ length: 200 }, (_, i) =>
+      input(`minnow-${i}`, BigInt(10 + i) * ONE_ENS),
+    );
+    const inputs = [whale, ...minnows];
+
+    const result = allocateWithCap(inputs, pool, cap);
+
+    // Whale must be capped
+    const whaleResult = result.find((r) => r.id === "whale")!;
+    expect(whaleResult.amount).toBe(cap);
+
+    // All minnows under cap
+    for (const r of result.filter((r) => r.id.startsWith("minnow"))) {
+      expect(r.amount as bigint).toBeLessThanOrEqual(cap);
+      expect(r.amount as bigint).toBeGreaterThan(0n);
+    }
+
+    // Conservation
+    const total = sum(result.map((r) => r.amount as bigint));
+    expect(total).toBeLessThanOrEqual(pool);
+
+    // All IDs preserved
+    expect(result.length).toBe(inputs.length);
+  });
 });

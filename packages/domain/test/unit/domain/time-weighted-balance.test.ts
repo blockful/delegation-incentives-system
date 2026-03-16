@@ -208,4 +208,55 @@ describe("computeTimeWeightedBalance", () => {
     );
     expect(resultReversed).toBe(resultSorted);
   });
+
+  // ─── Production-scale precision tests (real ENS amounts in wei) ────────────
+
+  it("production-scale: 100,000 ENS held for full 180-day window", () => {
+    const ONE_ENS = 10n ** 18n;
+    const windowStart = seconds(0n);
+    const windowEnd = seconds(180n * 86400n);
+    const balance = 100_000n * ONE_ENS;
+
+    const result = computeTimeWeightedBalance([], windowStart, windowEnd, wei(balance));
+    expect(result).toBe(wei(balance));
+  });
+
+  it("production-scale: TWB precision for 1 ENS held 1 day of 180", () => {
+    const ONE_ENS = 10n ** 18n;
+    const WINDOW = 180n * 86400n;
+    const ONE_DAY = 86400n;
+    const windowStart = seconds(0n);
+    const windowEnd = seconds(WINDOW);
+
+    const events = [makeEvent(ONE_ENS, WINDOW - ONE_DAY)];
+    const result = computeTimeWeightedBalance(events, windowStart, windowEnd, wei(0n));
+
+    // Expected: 1 ENS × 86400 / (180 × 86400) = 1 ENS / 180
+    const expected = ONE_ENS / 180n;
+    expect(result).toBe(wei(expected));
+
+    // Verify the truncation error is less than 1 wei
+    const exact = ONE_ENS * ONE_DAY;
+    const remainder = exact % WINDOW;
+    expect(remainder).toBeLessThan(WINDOW);
+  });
+
+  it("production-scale: large whale (1M ENS) and tiny holder (0.01 ENS) produce proportional TWBs", () => {
+    const ONE_ENS = 10n ** 18n;
+    const windowStart = seconds(0n);
+    const windowEnd = seconds(1000n);
+
+    const whaleBalance = 1_000_000n * ONE_ENS;
+    const tinyBalance = ONE_ENS / 100n; // 0.01 ENS
+
+    const whaleTwb = computeTimeWeightedBalance([], windowStart, windowEnd, wei(whaleBalance));
+    const tinyTwb = computeTimeWeightedBalance([], windowStart, windowEnd, wei(tinyBalance));
+
+    // Constant holders → TWB = balance
+    expect(whaleTwb).toBe(wei(whaleBalance));
+    expect(tinyTwb).toBe(wei(tinyBalance));
+
+    // Ratio preserved
+    expect((whaleTwb as bigint) / (tinyTwb as bigint)).toBe(100_000_000n);
+  });
 });

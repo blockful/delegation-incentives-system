@@ -29,6 +29,25 @@ describe("weiToEnsString", () => {
   it("converts 2 ENS to '2.000000000000000000'", () => {
     expect(weiToEnsString(2n * 10n ** 18n)).toBe("2.000000000000000000")
   })
+
+  it("converts 30,000 ENS (max pool size) correctly", () => {
+    expect(weiToEnsString(30_000n * 10n ** 18n)).toBe("30000.000000000000000000")
+  })
+
+  it("converts 250 ENS (delegator cap) correctly", () => {
+    expect(weiToEnsString(250n * 10n ** 18n)).toBe("250.000000000000000000")
+  })
+
+  it("converts sub-threshold 0.5 ENS (lottery entry) correctly", () => {
+    expect(weiToEnsString(5n * 10n ** 17n)).toBe("0.500000000000000000")
+  })
+
+  it("converts tiny sub-threshold amount correctly (1/180 ENS)", () => {
+    const tinyWei = 10n ** 18n / 180n
+    const result = weiToEnsString(tinyWei)
+    expect(result).toMatch(/^0\.005555555555555555$/)
+    expect(BigInt(result.replace(".", "").replace(/^0+/, ""))).toBeGreaterThan(0n)
+  })
 })
 
 describe("bigintToString", () => {
@@ -46,5 +65,13 @@ describe("bigintToString", () => {
 
   it("converts large values without scientific notation", () => {
     expect(bigintToString(9007199254740993n)).toBe("9007199254740993")
+  })
+
+  it("converts max pool size in wei (30,000 × 10^18) without scientific notation", () => {
+    const maxPoolWei = 30_000n * 10n ** 18n
+    const result = bigintToString(maxPoolWei)
+    expect(result).toBe("30000000000000000000000")
+    expect(result).not.toContain("e")
+    expect(result).not.toContain("E")
   })
 })

@@ -79,15 +79,6 @@ export async function handleProposalExecuted(
     .set({ status: "executed" })
 }
 
-export async function handleProposalDefeated(
-  event: { args: { proposalId: bigint }; block: { timestamp: bigint } },
-  context: { db: any },
-): Promise<void> {
-  await context.db
-    .update(schema.governanceProposal, { id: toProposalId(event.args.proposalId) })
-    .set({ status: "defeated" })
-}
-
 export async function handleProposalCanceled(
   event: { args: { proposalId: bigint }; block: { timestamp: bigint } },
   context: { db: any },
@@ -114,10 +105,6 @@ export function registerEnsGovernorHandlers() {
 
   ponder.on("ENSGovernor:ProposalExecuted", async ({ event, context }) => {
     await handleProposalExecuted(event as any, context)
-  })
-
-  ponder.on("ENSGovernor:ProposalDefeated", async ({ event, context }) => {
-    await handleProposalDefeated(event as any, context)
   })
 
   ponder.on("ENSGovernor:ProposalCanceled", async ({ event, context }) => {

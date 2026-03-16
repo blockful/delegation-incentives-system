@@ -77,4 +77,38 @@ describe("ProposalAdapter.getRecentProposals", () => {
     const results = await adapter.getRecentProposals(5)
     expect(results).toHaveLength(0)
   })
+
+  it("includes stuck-active when endBlock exactly equals max resolved endBlock (boundary)", async () => {
+    const db = new FakePonderDb({
+      governance_proposal: [
+        { id: "1", status: "executed", timestamp: 1000n, endBlock: 300n, proposer: "0xaaa" },
+        { id: "2", status: "active",   timestamp: 2000n, endBlock: 300n, proposer: "0xbbb" },
+      ],
+    })
+    const adapter = new ProposalAdapter(db)
+    const results = await adapter.getRecentProposals(10)
+
+    const ids = results.map((p) => p.id)
+    expect(ids).toContain("1")
+    expect(ids).toContain("2")
+  })
+
+  it("returns all resolved proposals when count exceeds available", async () => {
+    const db = new FakePonderDb({
+      governance_proposal: [
+        { id: "1", status: "executed", timestamp: 1000n, endBlock: 100n, proposer: "0xaaa" },
+        { id: "2", status: "canceled", timestamp: 2000n, endBlock: 200n, proposer: "0xbbb" },
+      ],
+    })
+    const adapter = new ProposalAdapter(db)
+    const results = await adapter.getRecentProposals(100)
+    expect(results).toHaveLength(2)
+  })
+
+  it("returns empty array for empty proposal table", async () => {
+    const db = new FakePonderDb({ governance_proposal: [] })
+    const adapter = new ProposalAdapter(db)
+    const results = await adapter.getRecentProposals(10)
+    expect(results).toHaveLength(0)
+  })
 })

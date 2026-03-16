@@ -3,7 +3,6 @@ import {
   handleProposalCreated,
   handleVoteCast,
   handleProposalExecuted,
-  handleProposalDefeated,
   handleProposalCanceled,
 } from "../../src/handlers/ensGovernor.js"
 
@@ -222,6 +221,26 @@ describe("ENSGovernor:VoteCast", () => {
     expect(row.support).toBe(2)
   })
 
+  it("stores zero-weight vote correctly (delegate is active but contributes 0 VP)", async () => {
+    const store = makeFakeDb()
+    const event = {
+      args: {
+        voter: "0x6666666666666666666666666666666666666666",
+        proposalId: 10n,
+        support: 1,
+        weight: 0n,
+        reason: "",
+      },
+      block: { timestamp: 100n },
+    }
+    await handleVoteCast(event as any, makeContext(store.db))
+
+    const row = store.votes.get(`10-0x6666666666666666666666666666666666666666`)
+    expect(row).toBeDefined()
+    expect(row.weight).toBe("0")
+    expect(row.support).toBe(1)
+  })
+
   it("upserts on duplicate vote (same proposalId + voter) — updates weight", async () => {
     const voter = "0x4444444444444444444444444444444444444444"
     const proposalId = 5n
@@ -286,18 +305,6 @@ describe("ENSGovernor:ProposalExecuted", () => {
   })
 })
 
-describe("ENSGovernor:ProposalDefeated", () => {
-  it("updates governance_proposal.status to 'defeated'", async () => {
-    const store = makeFakeDb()
-    store.proposals.set("43", { id: "43", status: "active" })
-
-    const event = { args: { proposalId: 43n }, block: { timestamp: 0n } }
-    await handleProposalDefeated(event as any, makeContext(store.db))
-
-    expect(store.proposals.get("43").status).toBe("defeated")
-  })
-})
-
 describe("ENSGovernor:ProposalCanceled", () => {
   it("updates governance_proposal.status to 'canceled'", async () => {
     const store = makeFakeDb()
@@ -329,7 +336,6 @@ describe("handler registration smoke tests", () => {
     const store = makeFakeDb()
     const ctx = makeContext(store.db)
     store.proposals.set("1", { id: "1", status: "active" })
-    store.proposals.set("2", { id: "2", status: "active" })
     store.proposals.set("3", { id: "3", status: "active" })
 
     // ProposalCreated callback
@@ -361,12 +367,6 @@ describe("handler registration smoke tests", () => {
       context: ctx,
     })
     expect(store.proposals.get("1").status).toBe("executed")
-
-    await callbacks.get("ENSGovernor:ProposalDefeated")!({
-      event: { args: { proposalId: 2n }, block: { timestamp: 1n } },
-      context: ctx,
-    })
-    expect(store.proposals.get("2").status).toBe("defeated")
 
     await callbacks.get("ENSGovernor:ProposalCanceled")!({
       event: { args: { proposalId: 3n }, block: { timestamp: 1n } },

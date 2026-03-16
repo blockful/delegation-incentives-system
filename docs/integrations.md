@@ -69,9 +69,9 @@ Both are handled identically (the `WithParams` variant is an extended version wi
 
 **Why this matters**: `governance_vote` is consumed by `VoteAdapter.getVotesForProposals` in pipeline Step 2, which then feeds `identifyActiveDelegates` (Step 3). All three support values count — a delegate who votes Against or Abstains still satisfies the activity threshold.
 
-#### `ProposalExecuted(proposalId)`, `ProposalDefeated(proposalId)`, `ProposalCanceled(proposalId)`
+#### `ProposalExecuted(proposalId)`, `ProposalCanceled(proposalId)`
 
-Update the `status` field of the corresponding `governance_proposal` row to `"executed"`, `"defeated"`, or `"canceled"`.
+Update the `status` field of the corresponding `governance_proposal` row to `"executed"` or `"canceled"`. Note: the ENS Governor does not emit a `ProposalDefeated` event — "defeated" is a passive state determined by the `state()` view function after voting ends.
 
 **Why this matters**: `ProposalAdapter.getRecentProposals` filters to `status != "active"` — only finalized proposals count toward the activity threshold. This prevents the count from changing mid-vote as delegates rush to vote before a proposal closes.
 

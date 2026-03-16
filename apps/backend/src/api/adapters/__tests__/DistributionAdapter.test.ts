@@ -68,6 +68,80 @@ describe("DistributionAdapter", () => {
     expect(loaded!.metadata.computedAt).toBe("2026-01-01T00:00:00.000Z")
   })
 
+  it("round-trip preserves addresses, roles, and all poolTier caps exactly", async () => {
+    const db = new FakePonderDb()
+    const adapter = new DistributionAdapter(db)
+
+    const original = makeResult("2026-02")
+    await adapter.save("2026-02", original)
+    const loaded = await adapter.load("2026-02")!
+
+    // Addresses must survive exactly — wrong address = wrong recipient
+    expect(loaded!.directPayouts[0].address).toBe("0xaaa")
+    expect(loaded!.directPayouts[1].address).toBe("0xbbb")
+    expect(loaded!.lotteryPools[0].winner).toBe("0xccc")
+    expect(loaded!.lotteryPools[0].entries[0].address).toBe("0xccc")
+
+    // Roles must survive — swapped role = wrong cap enforcement
+    expect(loaded!.directPayouts[0].role).toBe("delegate")
+    expect(loaded!.directPayouts[1].role).toBe("delegator")
+    expect(loaded!.lotteryPools[0].entries[0].role).toBe("delegator")
+
+    // All poolTier fields — used for post-distribution cap verification
+    expect(loaded!.metadata.poolTier.momGrowthMinBps).toBe(0n)
+    expect(loaded!.metadata.poolTier.momGrowthMaxBps).toBe(10000n)
+    expect(loaded!.metadata.poolTier.delegateCap).toBe(1000000000000000000000n)
+    expect(loaded!.metadata.poolTier.delegatorCap).toBe(100000000000000000000n)
+
+    // eligibleDelegatorCount must survive
+    expect(loaded!.metadata.eligibleDelegatorCount).toBe(1337)
+  })
+
+  it("round-trip with empty directPayouts and lotteryPools", async () => {
+    const db = new FakePonderDb()
+    const adapter = new DistributionAdapter(db)
+
+    const empty: DistributionResult = {
+      ...makeResult("2026-03"),
+      directPayouts: [],
+      lotteryPools: [],
+    }
+    await adapter.save("2026-03", empty)
+    const loaded = await adapter.load("2026-03")
+
+    expect(loaded).not.toBeNull()
+    expect(loaded!.directPayouts).toHaveLength(0)
+    expect(loaded!.lotteryPools).toHaveLength(0)
+    expect(loaded!.metadata.totalDistributed).toBe(3500000000000000000n)
+  })
+
+  it("round-trip preserves max-pool-size values (30,000 ENS = 30,000×10^18 wei)", async () => {
+    const db = new FakePonderDb()
+    const adapter = new DistributionAdapter(db)
+
+    const maxPool: DistributionResult = {
+      ...makeResult("2026-04"),
+      metadata: {
+        ...makeResult("2026-04").metadata,
+        totalDistributed: wei(30_000n * 10n ** 18n),
+        poolTier: {
+          momGrowthMinBps: basisPoints(10000n),
+          momGrowthMaxBps: basisPoints(100000000n),
+          poolSize: wei(30_000n * 10n ** 18n),
+          delegateCap: wei(300n * 10n ** 18n),
+          delegatorCap: wei(1_500n * 10n ** 18n),
+        },
+      },
+    }
+    await adapter.save("2026-04", maxPool)
+    const loaded = await adapter.load("2026-04")
+
+    expect(loaded!.metadata.totalDistributed).toBe(30_000n * 10n ** 18n)
+    expect(loaded!.metadata.poolTier.poolSize).toBe(30_000n * 10n ** 18n)
+    expect(loaded!.metadata.poolTier.delegateCap).toBe(300n * 10n ** 18n)
+    expect(loaded!.metadata.poolTier.delegatorCap).toBe(1_500n * 10n ** 18n)
+  })
+
   it("list returns sorted months", async () => {
     const db = new FakePonderDb()
     const adapter = new DistributionAdapter(db)

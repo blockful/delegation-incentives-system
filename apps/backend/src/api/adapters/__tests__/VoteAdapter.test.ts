@@ -69,6 +69,29 @@ describe("VoteAdapter.getVotesForProposals", () => {
     const [vote] = await adapter.getVotesForProposals(["p2"])
     expect(vote.votingPower).toBe(3000n)
   })
+
+  it("converts zero weight to 0n bigint (delegate voted but with no VP)", async () => {
+    const dbWithZero = new FakePonderDb({
+      governance_vote: [
+        { id: "p1-0xzzz", proposalId: "p1", voter: "0xzzz", support: 1, weight: "0", timestamp: 100n },
+      ],
+    })
+    const adapter = new VoteAdapter(dbWithZero)
+    const [vote] = await adapter.getVotesForProposals(["p1"])
+    expect(vote.votingPower).toBe(0n)
+  })
+
+  it("handles very large weight values (30,000 ENS in wei)", async () => {
+    const largeWeight = "30000000000000000000000"
+    const dbLarge = new FakePonderDb({
+      governance_vote: [
+        { id: "p1-0xlg", proposalId: "p1", voter: "0xlg", support: 1, weight: largeWeight, timestamp: 100n },
+      ],
+    })
+    const adapter = new VoteAdapter(dbLarge)
+    const [vote] = await adapter.getVotesForProposals(["p1"])
+    expect(vote.votingPower).toBe(30_000n * 10n ** 18n)
+  })
 })
 
 describe("VoteAdapter.getEarliestVoteTimestamps", () => {

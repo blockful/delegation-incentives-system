@@ -138,4 +138,35 @@ describe("distributionToCsv", () => {
     // header + 3 data rows
     expect(lines.length).toBe(4)
   })
+
+  it("preserves full wei precision for max-pool-size amounts (no scientific notation)", () => {
+    const fixture = makeFixture()
+    fixture.directPayouts = [
+      { address: "0xwhale", amount: wei(30_000n * ONE_ENS), role: "delegator" },
+    ]
+    fixture.lotteryPools = []
+    const csv = distributionToCsv(fixture)
+
+    expect(csv).toContain("30000000000000000000000")
+    expect(csv).toContain("30000.000000000000000000")
+    expect(csv).not.toMatch(/\d[eE]\+?\d/)
+  })
+
+  it("CSV rows can be parsed back to recover exact addresses and amounts", () => {
+    const csv = distributionToCsv(makeFixture())
+    const lines = csv.trim().split("\n")
+    const dataLines = lines.slice(1)
+
+    for (const line of dataLines) {
+      const fields = line.split(",")
+      expect(fields).toHaveLength(5)
+
+      const [address, amountWei, amountEns, role, type] = fields
+      expect(address).toMatch(/^0x/)
+      expect(BigInt(amountWei)).toBeGreaterThan(0n)
+      expect(parseFloat(amountEns)).toBeGreaterThan(0)
+      expect(["delegate", "delegator"]).toContain(role)
+      expect(["direct", "lottery_winner"]).toContain(type)
+    }
+  })
 })

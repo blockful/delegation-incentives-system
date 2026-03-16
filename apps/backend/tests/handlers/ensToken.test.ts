@@ -187,6 +187,28 @@ describe("ENSToken:Transfer", () => {
     await handleEnsTransfer(event2 as any, makeContext(fakeDb.db))
     expect(fakeDb.stores.get("ens_balance")!.get(ALICE).balance).toBe(150n)
   })
+
+  it("self-transfer (from === to) results in net-zero balance change", async () => {
+    fakeDb.stores.get("ens_balance")!.set(ALICE, { id: ALICE, balance: 500n, lastUpdatedBlock: 0n })
+    const event = makeTransferEvent({ from: ALICE, to: ALICE, value: 100n, logIndex: 7 })
+    await handleEnsTransfer(event as any, makeContext(fakeDb.db))
+
+    const balance = fakeDb.stores.get("ens_balance")!.get(ALICE)
+    expect(balance.balance).toBe(500n)
+  })
+
+  it("zero-value transfer creates events but does not change balance", async () => {
+    fakeDb.stores.get("ens_balance")!.set(ALICE, { id: ALICE, balance: 300n, lastUpdatedBlock: 0n })
+    const event = makeTransferEvent({ from: ALICE, to: BOB, value: 0n, txHash: "0xzero", logIndex: 1 })
+    await handleEnsTransfer(event as any, makeContext(fakeDb.db))
+
+    expect(fakeDb.stores.get("ens_balance")!.get(ALICE).balance).toBe(300n)
+    expect(fakeDb.stores.get("ens_balance")!.get(BOB).balance).toBe(0n)
+
+    const events = fakeDb.stores.get("ens_balance_event")!
+    expect(events.get("0xzero-1-from").delta).toBe(0n)
+    expect(events.get("0xzero-1-to").delta).toBe(0n)
+  })
 })
 
 // ─── ENSToken:DelegateChanged ─────────────────────────────────────────────────
@@ -280,6 +302,21 @@ describe("ENSToken:DelegateVotesChanged", () => {
     const snap = fakeDb.stores.get("ens_voting_power_snapshot")!.get("0xfeed-4")
     expect(snap.delta).toBe(-100n)
     expect(snap.deltaMod).toBe(100n)
+  })
+
+  it("handles zero delta (VP unchanged) — creates snapshot with delta=0", async () => {
+    const fakeDb = makeFakeDb()
+    const event = {
+      args: { delegate: ALICE, previousBalance: 500n, newBalance: 500n },
+      block: { number: 1000n, timestamp: 1n },
+      transaction: { hash: "0xnoop" },
+      log: { logIndex: 0 },
+    }
+    await handleDelegateVotesChanged(event as any, makeContext(fakeDb.db))
+    const snap = fakeDb.stores.get("ens_voting_power_snapshot")!.get("0xnoop-0")
+    expect(snap.votingPower).toBe(500n)
+    expect(snap.delta).toBe(0n)
+    expect(snap.deltaMod).toBe(0n)
   })
 
   it("records blockNumber, timestamp, and transactionHash on snapshot", async () => {

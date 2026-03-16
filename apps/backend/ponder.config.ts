@@ -163,11 +163,6 @@ const ensGovernorAbi = [
     inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
   },
   {
-    name: "ProposalDefeated",
-    type: "event",
-    inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
-  },
-  {
     name: "ProposalCanceled",
     type: "event",
     inputs: [{ name: "proposalId", type: "uint256", indexed: false }],

@@ -241,6 +241,14 @@ export async function runDistributionPipeline(
     `Total distributed (${totalDistributed}) exceeds monthly pool (${monthlyPool})`,
   );
 
+  // All payouts must be non-negative (negative would mean taking tokens)
+  for (const payout of directPayouts) {
+    invariant(
+      payout.amount >= 0n,
+      `Negative payout for ${payout.address}: ${payout.amount}`,
+    );
+  }
+
   // No delegate exceeds delegate cap
   for (const payout of directPayouts.filter((p) => p.role === "delegate")) {
     invariant(
@@ -264,6 +272,18 @@ export async function runDistributionPipeline(
       `Lottery winner ${pool.winner} not found in pool entries`,
     );
   }
+
+  // No duplicate addresses per role in direct payouts
+  const delegateAddrs = directPayouts.filter((p) => p.role === "delegate").map((p) => p.address);
+  const delegatorAddrs = directPayouts.filter((p) => p.role === "delegator").map((p) => p.address);
+  invariant(
+    delegateAddrs.length === new Set(delegateAddrs).size,
+    `Duplicate delegate address in direct payouts`,
+  );
+  invariant(
+    delegatorAddrs.length === new Set(delegatorAddrs).size,
+    `Duplicate delegator address in direct payouts`,
+  );
 
   return {
     month,
