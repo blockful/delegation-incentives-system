@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { consolidateDelegators } from "@/protocol-dedup.js";
 import {
   type DelegatorScore,
@@ -209,6 +209,31 @@ describe("consolidateDelegators (with wallet aliases)", () => {
     const result = consolidateDelegators(scores, mappings, []);
     // Cycle detected: A resolves to A, B resolves to B → 2 separate entries
     expect(result.length).toBe(2);
+  });
+
+  it("warns and keeps first delegateId when consolidated wallets delegate to different delegates", () => {
+    const scores: DelegatorScore[] = [
+      score("0xwallet-a", 100n, "delegate-x"),
+      score("0xwallet-b", 200n, "delegate-y"),
+    ];
+    const aliases: WalletAlias[] = [
+      { secondaryAddress: "0xwallet-b", primaryAddress: "0xwallet-a", source: "manual" },
+    ];
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = consolidateDelegators(scores, [], aliases);
+
+    // TWB is merged
+    expect(result.length).toBe(1);
+    expect(result[0].timeWeightedBalance).toBe(wei(300n * ONE_ENS));
+    // First delegateId is kept
+    expect(result[0].delegateId).toBe("delegate-x");
+    // Warning was emitted
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0][0]).toContain("delegateId conflict");
+    expect(warnSpy.mock.calls[0][0]).toContain("delegate-y");
+
+    warnSpy.mockRestore();
   });
 
   it("resolves transitive chain even when intermediate mapping stored mixed-case", () => {

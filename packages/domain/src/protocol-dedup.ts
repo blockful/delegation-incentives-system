@@ -55,6 +55,14 @@ export function consolidateDelegators(
 
     const existing = merged.get(canonicalId);
     if (existing) {
+      if (existing.delegateId.toLowerCase() !== score.delegateId.toLowerCase()) {
+        console.warn(
+          `[consolidateDelegators] delegateId conflict for canonical address ${canonicalId}: ` +
+          `keeping "${existing.delegateId}", discarding "${score.delegateId}" ` +
+          `(from delegator "${score.delegatorId}" with TWB=${score.timeWeightedBalance}). ` +
+          `Review protocol mappings / wallet aliases.`,
+        );
+      }
       merged.set(canonicalId, {
         delegatorId: canonicalId,
         delegateId: existing.delegateId,
