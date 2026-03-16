@@ -81,4 +81,49 @@ describe("allocateWithCap property tests", () => {
       { numRuns: 200 },
     );
   });
+
+  it("pool fully utilized when cap >= pool and weights > 0", () => {
+    const positiveInputsArb = fc.uniqueArray(
+      fc
+        .record({
+          id: fc.string({ minLength: 4, maxLength: 8, unit: "grapheme" }),
+          weight: fc.bigInt({ min: 1n, max: 10n ** 24n }),
+        })
+        .map(({ id, weight }) => ({ id, weight: wei(weight) }) as AllocationInput),
+      {
+        minLength: 1,
+        maxLength: 20,
+        comparator: (a, b) => a.id === b.id,
+      },
+    );
+
+    fc.assert(
+      fc.property(positiveInputsArb, poolArb, (inputs, pool) => {
+        // cap >= pool ensures no one is capped by the cap itself
+        const cap = pool;
+        const result = allocateWithCap(inputs, pool, cap);
+        const total = sum(result.map((r) => r.amount as bigint));
+        expect(total).toBe(pool);
+      }),
+      { numRuns: 500 },
+    );
+  });
+
+  it("dust is bounded by cap", () => {
+    fc.assert(
+      fc.property(inputsArb, poolArb, capArb, (inputs, pool, cap) => {
+        const result = allocateWithCap(inputs, pool, cap);
+        const total = sum(result.map((r) => r.amount as bigint));
+        const hasNonCapped = result.some(
+          (r) => (r.amount as bigint) > 0n && (r.amount as bigint) < cap,
+        );
+        if (hasNonCapped) {
+          // When there's at least one non-capped recipient with room,
+          // dust is assigned, so total >= pool - (cap - 1)
+          expect(total).toBeGreaterThanOrEqual(pool - (cap - 1n));
+        }
+      }),
+      { numRuns: 500 },
+    );
+  });
 });

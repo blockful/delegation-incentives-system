@@ -463,4 +463,69 @@ describe("pipeline property tests", () => {
       { numRuns: 200 },
     );
   });
+
+  it("metadata.totalDistributed matches actual sum of all payouts", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        const totalDirect = sum(result.directPayouts.map((p) => p.amount as bigint));
+        const totalLottery = sum(result.lotteryPools.map((p) => p.totalPrize as bigint));
+        const actualTotal = totalDirect + totalLottery;
+        expect(result.metadata.totalDistributed as unknown as bigint).toBe(actualTotal);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("no entry appears in both directPayouts and lotteryPools", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        for (const pool of result.lotteryPools) {
+          for (const entry of pool.entries) {
+            const inDirect = result.directPayouts.some(
+              (p) => p.address === entry.address && p.role === entry.role,
+            );
+            expect(inDirect).toBe(false);
+          }
+        }
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("role correctness: delegates get 'delegate', delegators get 'delegator'", async () => {
+    await fc.assert(
+      fc.asyncProperty(scenarioArb, async (scenario) => {
+        const result = await runScenario(scenario);
+        const delegateIds = new Set(
+          Array.from({ length: scenario.numDelegates }, (_, i) => `del-${i}`),
+        );
+        const delegatorIds = new Set(
+          scenario.delegatorPairs.map((_, i) => `dtor-${i}`),
+        );
+
+        for (const p of result.directPayouts) {
+          if (delegateIds.has(p.address)) {
+            expect(p.role).toBe("delegate");
+          }
+          if (delegatorIds.has(p.address)) {
+            expect(p.role).toBe("delegator");
+          }
+        }
+
+        for (const pool of result.lotteryPools) {
+          for (const entry of pool.entries) {
+            if (delegateIds.has(entry.address)) {
+              expect(entry.role).toBe("delegate");
+            }
+            if (delegatorIds.has(entry.address)) {
+              expect(entry.role).toBe("delegator");
+            }
+          }
+        }
+      }),
+      { numRuns: 200 },
+    );
+  });
 });

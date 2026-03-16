@@ -313,6 +313,70 @@ describe("HedgeyVesting:Transfer", () => {
   })
 })
 
+// ─── hedgeyVesting edge cases ────────────────────────────────────────────────
+
+describe("hedgeyVesting edge cases", () => {
+  it("handlePlanCreated with different plan IDs creates separate plans", async () => {
+    const fakeDb = makeFakeDb()
+    const event1 = makePlanCreatedEvent({ id: 1n, recipient: ALICE })
+    const event2 = makePlanCreatedEvent({ id: 2n, recipient: BOB })
+
+    await handlePlanCreated(event1 as any, makeContext(fakeDb.db))
+    await handlePlanCreated(event2 as any, makeContext(fakeDb.db))
+
+    const plans = fakeDb.stores.get("vesting_plan")!
+    expect(plans.size).toBe(2)
+    expect(plans.has("1")).toBe(true)
+    expect(plans.has("2")).toBe(true)
+    expect(plans.get("1").recipient).toBe(ALICE)
+    expect(plans.get("2").recipient).toBe(BOB.toLowerCase())
+
+    // Each plan gets its own protocol mapping
+    const mappings = fakeDb.stores.get("protocol_mapping")!
+    expect(mappings.has("hedgey_vesting-1")).toBe(true)
+    expect(mappings.has("hedgey_vesting-2")).toBe(true)
+  })
+
+  it("handlePlanRedeemed accumulates across many redemptions", async () => {
+    const fakeDb = makeFakeDb()
+    fakeDb.stores.get("vesting_plan")!.set("1", { id: 1n, amountRedeemed: 0n })
+
+    const redeem1 = {
+      args: { id: 1n, amountRedeemed: 100n, planRemainder: 900n },
+      block: { number: 100n, timestamp: 1n },
+      transaction: { hash: "0xr1" },
+      log: { logIndex: 0 },
+    }
+    const redeem2 = {
+      args: { id: 1n, amountRedeemed: 200n, planRemainder: 700n },
+      block: { number: 200n, timestamp: 2n },
+      transaction: { hash: "0xr2" },
+      log: { logIndex: 0 },
+    }
+    const redeem3 = {
+      args: { id: 1n, amountRedeemed: 150n, planRemainder: 550n },
+      block: { number: 300n, timestamp: 3n },
+      transaction: { hash: "0xr3" },
+      log: { logIndex: 0 },
+    }
+
+    await handlePlanRedeemed(redeem1 as any, makeContext(fakeDb.db))
+    await handlePlanRedeemed(redeem2 as any, makeContext(fakeDb.db))
+    await handlePlanRedeemed(redeem3 as any, makeContext(fakeDb.db))
+
+    // 0 + 100 + 200 + 150 = 450
+    const plan = fakeDb.stores.get("vesting_plan")!.get("1")
+    expect(plan.amountRedeemed).toBe(450n)
+
+    // Three separate redemption records
+    const redemptions = fakeDb.stores.get("vesting_redemption")!
+    expect(redemptions.size).toBe(3)
+    expect(redemptions.has("1-100")).toBe(true)
+    expect(redemptions.has("1-200")).toBe(true)
+    expect(redemptions.has("1-300")).toBe(true)
+  })
+})
+
 describe("handler registration smoke tests", () => {
   it("registerHedgeyVestingHandlers does not throw (ponder.on wiring)", async () => {
     const { registerHedgeyVestingHandlers } = await import("../../src/handlers/hedgeyVesting.js")

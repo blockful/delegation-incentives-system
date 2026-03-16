@@ -147,4 +147,65 @@ describe("computeTimeWeightedBalance", () => {
     // TWB = 20000 / 400 = 50
     expect(result).toBe(wei(50n));
   });
+
+  it("balance goes to zero then recovers (intermittent balance)", () => {
+    const start = seconds(0n);
+    const end = seconds(400n);
+    const events = [
+      makeEvent(0n, 100n),   // balance drops to 0 at t=100
+      makeEvent(300n, 200n), // balance recovers to 300 at t=200
+    ];
+    const result = computeTimeWeightedBalance(events, start, end, wei(100n));
+    // Segment 1: 100 * 100 = 10000
+    // Segment 2: 0 * 100 = 0
+    // Segment 3: 300 * 200 = 60000
+    // TWB = 70000 / 400 = 175
+    expect(result).toBe(wei(175n));
+  });
+
+  it("very short window (1 second)", () => {
+    const start = seconds(0n);
+    const end = seconds(1n);
+    const result = computeTimeWeightedBalance([], start, end, wei(500n));
+    // No events, balance is 500 for entire 1-second window
+    // TWB = 500 * 1 / 1 = 500
+    expect(result).toBe(wei(500n));
+  });
+
+  it("many events at same timestamp: only last write wins", () => {
+    const start = seconds(0n);
+    const end = seconds(200n);
+    const events = [
+      makeEvent(20n, 100n),
+      makeEvent(30n, 100n),
+      makeEvent(40n, 100n),
+      makeEvent(50n, 100n),
+      makeEvent(60n, 100n), // last event at t=100 wins
+    ];
+    const result = computeTimeWeightedBalance(events, start, end, wei(10n));
+    // Segment 1: 10 * 100 = 1000
+    // Segment 2: 60 * 100 = 6000 (last event at t=100 wins)
+    // TWB = 7000 / 200 = 35
+    expect(result).toBe(wei(35n));
+  });
+
+  it("unsorted events produce same result as sorted", () => {
+    const start = seconds(0n);
+    const end = seconds(300n);
+    const sortedEvents = [
+      makeEvent(200n, 100n),
+      makeEvent(300n, 200n),
+    ];
+    const reversedEvents = [
+      makeEvent(300n, 200n),
+      makeEvent(200n, 100n),
+    ];
+    const resultSorted = computeTimeWeightedBalance(
+      sortedEvents, start, end, wei(100n),
+    );
+    const resultReversed = computeTimeWeightedBalance(
+      reversedEvents, start, end, wei(100n),
+    );
+    expect(resultReversed).toBe(resultSorted);
+  });
 });

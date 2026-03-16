@@ -137,4 +137,40 @@ describe("allocateWithCap", () => {
     const total = sum(result.map((r) => r.amount as bigint));
     expect(total).toBe(200n);
   });
+
+  it("very small pool with many participants: each gets minimal or 0", () => {
+    const inputs = Array.from({ length: 10 }, (_, i) =>
+      input(`p${i}`, 1n),
+    );
+    const result = allocateWithCap(inputs, 3n, 100n);
+    const total = sum(result.map((r) => r.amount as bigint));
+    // Pool is 3, 10 participants with equal weight → raw = 3/10 = 0 each (BigInt truncation)
+    // Dust = 3, assigned to one recipient
+    expect(total).toBe(3n);
+    // Every allocation is either 0 or small
+    for (const r of result) {
+      expect(r.amount as bigint).toBeLessThanOrEqual(100n);
+      expect(r.amount as bigint).toBeGreaterThanOrEqual(0n);
+    }
+  });
+
+  it("cap equal to pool: single recipient gets entire pool", () => {
+    const result = allocateWithCap([input("solo", 1n)], 1000n, 1000n);
+    expect(result[0].amount).toBe(wei(1000n));
+    const total = sum(result.map((r) => r.amount as bigint));
+    expect(total).toBe(1000n);
+  });
+
+  it("pool equal to zero: all get zero", () => {
+    const result = allocateWithCap(
+      [input("a", 50n), input("b", 50n)],
+      0n,
+      100n,
+    );
+    for (const r of result) {
+      expect(r.amount).toBe(wei(0n));
+    }
+    const total = sum(result.map((r) => r.amount as bigint));
+    expect(total).toBe(0n);
+  });
 });

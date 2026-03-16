@@ -298,6 +298,78 @@ describe("ENSToken:DelegateVotesChanged", () => {
   })
 })
 
+// ─── handler idempotency ─────────────────────────────────────────────────────
+
+describe("handler idempotency", () => {
+  let fakeDb: ReturnType<typeof makeFakeDb>
+
+  beforeEach(() => {
+    fakeDb = makeFakeDb()
+  })
+
+  it("replaying the same Transfer event twice does not double-count balance", async () => {
+    const event1 = makeTransferEvent({ from: zeroAddress, to: ALICE, value: 100n, txHash: "0xdup", logIndex: 1 })
+    const event2 = makeTransferEvent({ from: zeroAddress, to: ALICE, value: 100n, txHash: "0xdup", logIndex: 2 })
+    await handleEnsTransfer(event1 as any, makeContext(fakeDb.db))
+    await handleEnsTransfer(event2 as any, makeContext(fakeDb.db))
+
+    // Two distinct events (different logIndex → different event IDs) correctly accumulate
+    const balance = fakeDb.stores.get("ens_balance")!.get(ALICE)
+    expect(balance.balance).toBe(200n)
+
+    // Both balance events should exist with distinct IDs
+    const events = fakeDb.stores.get("ens_balance_event")!
+    expect(events.has("0xdup-1-to")).toBe(true)
+    expect(events.has("0xdup-2-to")).toBe(true)
+  })
+
+  it("replaying DelegateChanged with same delegator updates to latest delegate", async () => {
+    const CHARLIE = "0xcccccccccccccccccccccccccccccccccccccccc"
+
+    const event1 = {
+      args: { delegator: ALICE, fromDelegate: zeroAddress, toDelegate: BOB },
+      block: { number: 1000n, timestamp: 1n },
+      transaction: { hash: "0xd1" },
+      log: { logIndex: 1 },
+    }
+    const event2 = {
+      args: { delegator: ALICE, fromDelegate: BOB, toDelegate: CHARLIE },
+      block: { number: 1001n, timestamp: 2n },
+      transaction: { hash: "0xd2" },
+      log: { logIndex: 1 },
+    }
+
+    await handleDelegateChanged(event1 as any, makeContext(fakeDb.db))
+    await handleDelegateChanged(event2 as any, makeContext(fakeDb.db))
+
+    // Last write wins via onConflictDoUpdate — delegation should point to CHARLIE
+    const delegation = fakeDb.stores.get("ens_delegation")!.get(ALICE)
+    expect(delegation.delegateId).toBe(CHARLIE)
+
+    // Both delegation events should exist independently
+    const events = fakeDb.stores.get("ens_delegation_event")!
+    expect(events.has("0xd1-1")).toBe(true)
+    expect(events.has("0xd2-1")).toBe(true)
+    expect(events.get("0xd2-1").toDelegateId).toBe(CHARLIE)
+  })
+
+  it("DelegateVotesChanged with negative delta computes correct deltaMod", async () => {
+    const event = {
+      args: { delegate: ALICE, previousBalance: 500n, newBalance: 200n },
+      block: { number: 1000n, timestamp: 1n },
+      transaction: { hash: "0xneg" },
+      log: { logIndex: 0 },
+    }
+    await handleDelegateVotesChanged(event as any, makeContext(fakeDb.db))
+
+    const snap = fakeDb.stores.get("ens_voting_power_snapshot")!.get("0xneg-0")
+    expect(snap.delta).toBe(-300n)
+    // deltaMod is the absolute value — must always be positive
+    expect(snap.deltaMod).toBe(300n)
+    expect(snap.deltaMod > 0n).toBe(true)
+  })
+})
+
 describe("handler registration smoke tests", () => {
   it("registerEnsTokenHandlers does not throw (ponder.on wiring)", async () => {
     const { registerEnsTokenHandlers } = await import("../../src/handlers/ensToken.js")

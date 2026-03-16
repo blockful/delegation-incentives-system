@@ -390,6 +390,63 @@ describe("processMultiDelegateTransfer: position accumulation", () => {
   })
 })
 
+// ─── multiDelegate edge cases ────────────────────────────────────────────────
+
+describe("multiDelegate edge cases", () => {
+  it("processMultiDelegateTransfer: from = to (self-transfer) correctly decrements and increments", async () => {
+    const fakeDb = makeFakeDb()
+    const posId = `${ALICE}-${DELEGATE_1}`
+    fakeDb.stores.get("multi_delegate_position")!.set(posId, { id: posId, amount: 100n, lastUpdatedBlock: 0n })
+
+    await processMultiDelegateTransfer({
+      db: fakeDb.db as any,
+      transferId: "tx-self",
+      from: ALICE,
+      to: ALICE,
+      tokenId: TOKEN_ID_1,
+      value: 100n,
+      blockNumber: 2000n,
+      timestamp: 2n,
+      transactionHash: "0xself",
+    })
+
+    // from side: existing 100 - 100 = 0 → position deleted
+    // to side: re-created via insert with value 100 (onConflictDoUpdate on fresh insert)
+    // Net effect: position still exists with the transferred amount
+    const pos = fakeDb.stores.get("multi_delegate_position")!.get(posId)
+    expect(pos).toBeDefined()
+    expect(pos.amount).toBe(100n)
+  })
+
+  it("processMultiDelegateTransfer: from position not found is a no-op for sender", async () => {
+    const fakeDb = makeFakeDb()
+
+    // No existing position for ALICE — sender side should be silently skipped
+    await processMultiDelegateTransfer({
+      db: fakeDb.db as any,
+      transferId: "tx-noop",
+      from: ALICE,
+      to: BOB,
+      tokenId: TOKEN_ID_1,
+      value: 50n,
+      blockNumber: 3000n,
+      timestamp: 3n,
+      transactionHash: "0xnoop",
+    })
+
+    // Sender has no position — nothing to decrement, no error thrown
+    expect(fakeDb.stores.get("multi_delegate_position")!.has(`${ALICE}-${DELEGATE_1}`)).toBe(false)
+
+    // Receiver still gets their position created normally
+    const bobPos = fakeDb.stores.get("multi_delegate_position")!.get(`${BOB}-${DELEGATE_1}`)
+    expect(bobPos).toBeDefined()
+    expect(bobPos.amount).toBe(50n)
+
+    // Transfer record is always inserted regardless
+    expect(fakeDb.stores.get("multi_delegate_transfer")!.has("tx-noop")).toBe(true)
+  })
+})
+
 describe("handler registration smoke tests", () => {
   it("registerMultiDelegateHandlers does not throw (ponder.on wiring)", async () => {
     const { registerMultiDelegateHandlers } = await import("../../src/handlers/multiDelegate.js")
