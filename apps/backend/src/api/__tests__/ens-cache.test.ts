@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import {
   getCachedEnsName,
+  getCachedAvatarUrl,
   prefetchEnsNames,
   setCachedEnsName,
   clearEnsCache,
@@ -103,6 +104,27 @@ describe("prefetchEnsNames", () => {
       expect.stringContaining("/users/0xABC123/ens"),
       expect.any(Object),
     )
+  })
+})
+
+describe("getCachedAvatarUrl", () => {
+  it("returns null when address is not in cache", () => {
+    expect(getCachedAvatarUrl("0xabc")).toBeNull()
+  })
+
+  it("returns the cached avatar URL when present", () => {
+    setCachedEnsName("0xabc", "alice.eth", "https://example.com/avatar.png")
+    expect(getCachedAvatarUrl("0xabc")).toBe("https://example.com/avatar.png")
+  })
+
+  it("returns null when avatar is not set", () => {
+    setCachedEnsName("0xabc", "alice.eth")
+    expect(getCachedAvatarUrl("0xabc")).toBeNull()
+  })
+
+  it("is case-insensitive", () => {
+    setCachedEnsName("0xabc", "alice.eth", "https://example.com/avatar.png")
+    expect(getCachedAvatarUrl("0xABC")).toBe("https://example.com/avatar.png")
   })
 })
 

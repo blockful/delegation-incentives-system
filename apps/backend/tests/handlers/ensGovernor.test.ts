@@ -315,4 +315,63 @@ describe("handler registration smoke tests", () => {
     const { registerEnsGovernorHandlers } = await import("../../src/handlers/ensGovernor.js")
     expect(() => registerEnsGovernorHandlers()).not.toThrow()
   })
+
+  it("ponder.on callbacks delegate to exported handler functions", async () => {
+    const { ponder } = await import("../../src/common/ponder.js")
+    const callbacks = new Map<string, Function>()
+    const saved = ponder.on
+    ;(ponder as any).on = (name: string, cb: Function) => { callbacks.set(name, cb) }
+
+    const { registerEnsGovernorHandlers } = await import("../../src/handlers/ensGovernor.js")
+    registerEnsGovernorHandlers()
+    ;(ponder as any).on = saved
+
+    const store = makeFakeDb()
+    const ctx = makeContext(store.db)
+    store.proposals.set("1", { id: "1", status: "active" })
+    store.proposals.set("2", { id: "2", status: "active" })
+    store.proposals.set("3", { id: "3", status: "active" })
+
+    // ProposalCreated callback
+    await callbacks.get("ENSGovernor:ProposalCreated")!({
+      event: {
+        args: { proposalId: 50n, proposer: "0x1111111111111111111111111111111111111111", voteStart: 100n, voteEnd: 200n, description: "test" },
+        block: { timestamp: 1n },
+      },
+      context: ctx,
+    })
+    expect(store.proposals.has("50")).toBe(true)
+
+    // VoteCast callback
+    await callbacks.get("ENSGovernor:VoteCast")!({
+      event: { args: { voter: "0x2222222222222222222222222222222222222222", proposalId: 50n, support: 1, weight: 100n }, block: { timestamp: 1n } },
+      context: ctx,
+    })
+    expect(store.votes.has("50-0x2222222222222222222222222222222222222222")).toBe(true)
+
+    // VoteCastWithParams callback
+    await callbacks.get("ENSGovernor:VoteCastWithParams")!({
+      event: { args: { voter: "0x1111111111111111111111111111111111111111", proposalId: 99n, support: 1, weight: 100n }, block: { timestamp: 1n } },
+      context: ctx,
+    })
+    expect(store.votes.has("99-0x1111111111111111111111111111111111111111")).toBe(true)
+
+    await callbacks.get("ENSGovernor:ProposalExecuted")!({
+      event: { args: { proposalId: 1n }, block: { timestamp: 1n } },
+      context: ctx,
+    })
+    expect(store.proposals.get("1").status).toBe("executed")
+
+    await callbacks.get("ENSGovernor:ProposalDefeated")!({
+      event: { args: { proposalId: 2n }, block: { timestamp: 1n } },
+      context: ctx,
+    })
+    expect(store.proposals.get("2").status).toBe("defeated")
+
+    await callbacks.get("ENSGovernor:ProposalCanceled")!({
+      event: { args: { proposalId: 3n }, block: { timestamp: 1n } },
+      context: ctx,
+    })
+    expect(store.proposals.get("3").status).toBe("canceled")
+  })
 })

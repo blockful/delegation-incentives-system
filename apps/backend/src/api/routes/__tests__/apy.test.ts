@@ -223,6 +223,18 @@ describe("GET /apy/{address}", () => {
     expect(body.estimatedMonthlyRewardEns).toBe("0.0000")
   })
 
+  it("groups multiple balance events by accountId in delegator path", async () => {
+    vi.mocked(mockDataSource.balances.getBalanceHistory).mockResolvedValueOnce([
+      { accountId: DELEGATOR_B, balance: wei(100n * 10n ** 18n), delta: wei(100n * 10n ** 18n), timestamp: seconds(1000n) },
+      { accountId: DELEGATOR_B, balance: wei(200n * 10n ** 18n), delta: wei(100n * 10n ** 18n), timestamp: seconds(2000n) },
+    ])
+    const req = new Request(`http://localhost/apy/${DELEGATOR_B}`)
+    const res = await apyRouter.fetch(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.role).toBe("delegator")
+  })
+
   it("does not cap delegator reward when estimated reward is below delegator cap", async () => {
     // DELEGATOR_B has tiny TWB, another delegator has large TWB → B's reward < delegatorCap
     // tier 0: delegatorPool = 90% of 5000 = 4500 ENS, delegatorCap = 250 ENS

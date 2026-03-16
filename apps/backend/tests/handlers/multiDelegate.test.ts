@@ -395,4 +395,60 @@ describe("handler registration smoke tests", () => {
     const { registerMultiDelegateHandlers } = await import("../../src/handlers/multiDelegate.js")
     expect(() => registerMultiDelegateHandlers()).not.toThrow()
   })
+
+  it("ponder.on callbacks delegate to exported handler functions", async () => {
+    const { ponder } = await import("../../src/common/ponder.js")
+    const callbacks = new Map<string, Function>()
+    const saved = ponder.on
+    ;(ponder as any).on = (name: string, cb: Function) => { callbacks.set(name, cb) }
+
+    const { registerMultiDelegateHandlers } = await import("../../src/handlers/multiDelegate.js")
+    registerMultiDelegateHandlers()
+    ;(ponder as any).on = saved
+
+    const fakeDb = makeFakeDb()
+    const ctx = makeContext(fakeDb.db)
+
+    // ProxyDeployed callback
+    await callbacks.get("ERC20MultiDelegate:ProxyDeployed")!({
+      event: {
+        args: { delegate: ALICE, proxyAddress: BOB },
+        block: { number: 500n, timestamp: 1n },
+        transaction: { from: ALICE, hash: "0xcb0" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("multi_delegate_proxy")!.has(BOB)).toBe(true)
+
+    // DelegationProcessed callback (no-op)
+    await callbacks.get("ERC20MultiDelegate:DelegationProcessed")!({
+      event: { args: {}, block: { number: 1n, timestamp: 1n }, transaction: { hash: "0x" }, log: { logIndex: 0 } },
+      context: ctx,
+    })
+
+    // TransferSingle callback
+    await callbacks.get("ERC20MultiDelegate:TransferSingle")!({
+      event: {
+        args: { from: zeroAddress, to: ALICE, id: TOKEN_ID_1, value: 100n },
+        block: { number: 1000n, timestamp: 1n },
+        transaction: { hash: "0xcb1" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("multi_delegate_transfer")!.has("0xcb1-0")).toBe(true)
+
+    // TransferBatch callback
+    await callbacks.get("ERC20MultiDelegate:TransferBatch")!({
+      event: {
+        args: { from: zeroAddress, to: BOB, ids: [TOKEN_ID_1], values: [50n] },
+        block: { number: 2000n, timestamp: 2n },
+        transaction: { hash: "0xcb2" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("multi_delegate_transfer")!.has("0xcb2-0-0")).toBe(true)
+  })
 })

@@ -303,4 +303,51 @@ describe("handler registration smoke tests", () => {
     const { registerEnsTokenHandlers } = await import("../../src/handlers/ensToken.js")
     expect(() => registerEnsTokenHandlers()).not.toThrow()
   })
+
+  it("ponder.on callbacks delegate to exported handler functions", async () => {
+    const { ponder } = await import("../../src/common/ponder.js")
+    const callbacks = new Map<string, Function>()
+    const saved = ponder.on
+    ;(ponder as any).on = (name: string, cb: Function) => { callbacks.set(name, cb) }
+
+    const { registerEnsTokenHandlers } = await import("../../src/handlers/ensToken.js")
+    registerEnsTokenHandlers()
+    ;(ponder as any).on = saved
+
+    const fakeDb = makeFakeDb()
+    const ctx = makeContext(fakeDb.db)
+
+    await callbacks.get("ENSToken:Transfer")!({
+      event: {
+        args: { from: zeroAddress, to: ALICE, value: 100n },
+        block: { number: 1000n, timestamp: 1n },
+        transaction: { hash: "0xcb0" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("ens_balance")!.has(ALICE)).toBe(true)
+
+    await callbacks.get("ENSToken:DelegateChanged")!({
+      event: {
+        args: { delegator: ALICE, fromDelegate: zeroAddress, toDelegate: BOB },
+        block: { number: 1000n, timestamp: 1n },
+        transaction: { hash: "0xcb1" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("ens_delegation")!.has(ALICE)).toBe(true)
+
+    await callbacks.get("ENSToken:DelegateVotesChanged")!({
+      event: {
+        args: { delegate: ALICE, previousBalance: 0n, newBalance: 100n },
+        block: { number: 1000n, timestamp: 1n },
+        transaction: { hash: "0xcb2" },
+        log: { logIndex: 1 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("ens_voting_power_snapshot")!.has("0xcb2-1")).toBe(true)
+  })
 })

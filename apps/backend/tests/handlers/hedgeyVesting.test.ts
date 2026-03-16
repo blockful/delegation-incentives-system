@@ -318,4 +318,52 @@ describe("handler registration smoke tests", () => {
     const { registerHedgeyVestingHandlers } = await import("../../src/handlers/hedgeyVesting.js")
     expect(() => registerHedgeyVestingHandlers()).not.toThrow()
   })
+
+  it("ponder.on callbacks delegate to exported handler functions", async () => {
+    const { ponder } = await import("../../src/common/ponder.js")
+    const callbacks = new Map<string, Function>()
+    const saved = ponder.on
+    ;(ponder as any).on = (name: string, cb: Function) => { callbacks.set(name, cb) }
+
+    const { registerHedgeyVestingHandlers } = await import("../../src/handlers/hedgeyVesting.js")
+    registerHedgeyVestingHandlers()
+    ;(ponder as any).on = saved
+
+    const fakeDb = makeFakeDb()
+    const ctx = makeContext(fakeDb.db)
+
+    // PlanCreated callback
+    await callbacks.get("HedgeyVesting:PlanCreated")!({
+      event: makePlanCreatedEvent(),
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("vesting_plan")!.has("1")).toBe(true)
+
+    // PlanRedeemed callback
+    fakeDb.stores.get("vesting_plan")!.set("10", { id: 10n, amountRedeemed: 0n })
+    await callbacks.get("HedgeyVesting:PlanRedeemed")!({
+      event: {
+        args: { id: 10n, amountRedeemed: 50n, planRemainder: 950n },
+        block: { number: 200n, timestamp: 2n },
+        transaction: { hash: "0xcb1" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("vesting_plan")!.get("10").amountRedeemed).toBe(50n)
+
+    // Transfer callback
+    fakeDb.stores.get("vesting_plan")!.set("11", { id: 11n, recipient: ALICE })
+    fakeDb.stores.get("protocol_mapping")!.set("hedgey_vesting-11", { id: "hedgey_vesting-11", operatorAddress: ALICE })
+    await callbacks.get("HedgeyVesting:Transfer")!({
+      event: {
+        args: { from: ALICE, to: BOB, tokenId: 11n },
+        block: { number: 300n, timestamp: 3n },
+        transaction: { hash: "0xcb2" },
+        log: { logIndex: 0 },
+      },
+      context: ctx,
+    })
+    expect(fakeDb.stores.get("vesting_plan")!.get("11").recipient).toBe(BOB)
+  })
 })

@@ -145,6 +145,26 @@ describe("runLottery", () => {
     expect(directPayouts.map((p) => p.address)).toContain("0xsolo");
   });
 
+  it("splits entries across multiple pools when cumulative amount exceeds target pool size", () => {
+    // 4 entries of 0.5 ENS each = 2 ENS total, target pool = 1 ENS
+    // After adding 2 entries (sum=1), third entry triggers a new pool
+    const allocations = [
+      alloc("0xa", ONE_ENS / 2n),
+      alloc("0xb", ONE_ENS / 2n),
+      alloc("0xc", ONE_ENS / 2n),
+      alloc("0xd", ONE_ENS / 2n),
+    ];
+    const { lotteryPools } = runLottery(
+      allocations,
+      ONE_ENS, // minThreshold
+      ONE_ENS, // targetPoolSize — small enough to force a split
+      SEED,
+    );
+    expect(lotteryPools.length).toBe(2);
+    const totalEntries = lotteryPools.reduce((acc, p) => acc + p.entries.length, 0);
+    expect(totalEntries).toBe(4);
+  });
+
   it("lottery pool total prize equals sum of entry amounts", () => {
     const allocations = Array.from({ length: 10 }, (_, i) =>
       alloc(`0x${i}`, BigInt(100 + i) * (ONE_ENS / 1000n)),
