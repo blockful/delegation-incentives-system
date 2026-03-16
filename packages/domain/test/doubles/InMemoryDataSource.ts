@@ -91,8 +91,8 @@ class InMemoryVoteRepository implements VoteRepository {
   constructor(private data: Vote[]) {}
 
   async getVotesForProposals(proposalIds: string[]): Promise<Vote[]> {
-    const ids = new Set(proposalIds);
-    return this.data.filter((v) => ids.has(v.proposalId));
+    const ids = new Set(proposalIds.map((id) => id.toLowerCase()));
+    return this.data.filter((v) => ids.has(v.proposalId.toLowerCase()));
   }
 }
 
@@ -104,10 +104,10 @@ class InMemoryVotingPowerRepository implements VotingPowerRepository {
     from: Seconds,
     to: Seconds,
   ): Promise<VotingPowerSnapshot[]> {
-    const ids = new Set(accountIds);
+    const ids = new Set(accountIds.map((id) => id.toLowerCase()));
     return this.data.filter(
       (s) =>
-        ids.has(s.accountId) &&
+        ids.has(s.accountId.toLowerCase()) &&
         s.timestamp >= from &&
         s.timestamp <= to,
     );
@@ -118,16 +118,17 @@ class InMemoryVotingPowerRepository implements VotingPowerRepository {
     at: Seconds,
   ): Promise<Wei> {
     if (delegateIds.length === 0) return wei(0n);
-    const ids = new Set(delegateIds);
+    const ids = new Set(delegateIds.map((id) => id.toLowerCase()));
     const atBig = BigInt(at);
 
     const latestByDelegate = new Map<string, VotingPowerSnapshot>();
     for (const s of this.data) {
-      if (!ids.has(s.accountId)) continue;
+      const accountLower = s.accountId.toLowerCase();
+      if (!ids.has(accountLower)) continue;
       if (BigInt(s.timestamp) > atBig) continue;
-      const existing = latestByDelegate.get(s.accountId);
+      const existing = latestByDelegate.get(accountLower);
       if (!existing || s.timestamp > existing.timestamp) {
-        latestByDelegate.set(s.accountId, s);
+        latestByDelegate.set(accountLower, s);
       }
     }
 
@@ -139,13 +140,14 @@ class InMemoryVotingPowerRepository implements VotingPowerRepository {
   }
 
   async getVotingPower(accountIds: string[]): Promise<Map<string, Wei>> {
-    const ids = new Set(accountIds);
+    const ids = new Set(accountIds.map((id) => id.toLowerCase()));
     const latestByAccount = new Map<string, VotingPowerSnapshot>();
     for (const s of this.data) {
-      if (!ids.has(s.accountId)) continue;
-      const existing = latestByAccount.get(s.accountId);
+      const accountLower = s.accountId.toLowerCase();
+      if (!ids.has(accountLower)) continue;
+      const existing = latestByAccount.get(accountLower);
       if (!existing || s.timestamp > existing.timestamp) {
-        latestByAccount.set(s.accountId, s);
+        latestByAccount.set(accountLower, s);
       }
     }
     const result = new Map<string, Wei>();
@@ -164,18 +166,19 @@ class InMemoryBalanceRepository implements BalanceRepository {
     from: Seconds,
     to: Seconds,
   ): Promise<BalanceEvent[]> {
-    const ids = new Set(accountIds);
+    const ids = new Set(accountIds.map((id) => id.toLowerCase()));
     return this.data.filter(
       (e) =>
-        ids.has(e.accountId) &&
+        ids.has(e.accountId.toLowerCase()) &&
         e.timestamp >= from &&
         e.timestamp <= to,
     );
   }
 
   async getBalanceAt(accountId: string, at: Seconds): Promise<Wei> {
+    const lowerAccountId = accountId.toLowerCase();
     const events = this.data
-      .filter((e) => e.accountId === accountId && e.timestamp <= at)
+      .filter((e) => e.accountId.toLowerCase() === lowerAccountId && e.timestamp <= at)
       .sort((a, b) => Number(b.timestamp - a.timestamp));
     return events.length > 0 ? events[0].balance : wei(0n);
   }
@@ -191,19 +194,20 @@ class InMemoryDelegationRepository implements DelegationRepository {
     delegateIds: string[],
     at: Seconds,
   ): Promise<Delegation[]> {
-    const ids = new Set(delegateIds);
+    const ids = new Set(delegateIds.map((id) => id.toLowerCase()));
     // Find the latest delegation per delegator as of `at`
     const latestByDelegator = new Map<string, Delegation>();
     for (const d of this.delegationData) {
       if (d.timestamp > at) continue;
-      const existing = latestByDelegator.get(d.delegatorId);
+      const delegatorLower = d.delegatorId.toLowerCase();
+      const existing = latestByDelegator.get(delegatorLower);
       if (!existing || d.timestamp > existing.timestamp) {
-        latestByDelegator.set(d.delegatorId, d);
+        latestByDelegator.set(delegatorLower, d);
       }
     }
     // Only return delegations where the latest-as-of-at delegate is an active delegate
     return Array.from(latestByDelegator.values()).filter((d) =>
-      ids.has(d.delegateId),
+      ids.has(d.delegateId.toLowerCase()),
     );
   }
 

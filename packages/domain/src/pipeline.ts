@@ -265,6 +265,26 @@ export async function runDistributionPipeline(
     );
   }
 
+  // No duplicate addresses per role in direct payouts
+  const seenDelegates = new Set<string>();
+  const seenDelegators = new Set<string>();
+  for (const payout of directPayouts) {
+    const seen = payout.role === "delegate" ? seenDelegates : seenDelegators;
+    invariant(
+      !seen.has(payout.address),
+      `Duplicate ${payout.role} address in directPayouts: ${payout.address}`,
+    );
+    seen.add(payout.address);
+  }
+
+  // All direct payouts must have positive amounts
+  for (const payout of directPayouts) {
+    invariant(
+      payout.amount > 0n,
+      `${payout.role} ${payout.address} has non-positive payout amount: ${payout.amount}`,
+    );
+  }
+
   return {
     month,
     directPayouts,
