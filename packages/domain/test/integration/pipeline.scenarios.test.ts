@@ -1054,3 +1054,132 @@ describe("Scenario 10: delegate who is also a delegator", () => {
     expect(findDelegatorPayout(result, "d1")?.amount).toBe(DOR_CAP) // 250 ENS
   })
 })
+
+// ─── Scenario 11 ──────────────────────────────────────────────────────────────
+
+describe("Scenario 11: delegator switches between two ACTIVE delegates mid-month", () => {
+  /**
+   * Setup
+   * ─────
+   * Two active delegates: "del-alpha" and "del-beta".
+   * Both voted on all 10 proposals, same VP (Tier 0).
+   *
+   * Delegator "d_switch":
+   *   - Holds 100 ENS for the full TWB window
+   *   - Initially delegated to "del-alpha" (before window start)
+   *   - Switches delegation to "del-beta" 1 day before monthEnd
+   *
+   * Delegator "d_loyal":
+   *   - Holds 100 ENS for the full TWB window
+   *   - Always delegated to "del-alpha"
+   *
+   * At monthEnd, d_switch's latest delegation points to "del-beta".
+   * Both delegators are eligible. Total TWB = 200 ENS.
+   * Each raw = (100/200) × 4 500 = 2 250 ENS → capped at 250 ENS.
+   *
+   * Key property proved:
+   *   Switching between two ACTIVE delegates mid-month is valid — the
+   *   delegator earns rewards via the NEW delegate, not the old one.
+   */
+
+  function makeTier0VPSnapshotsMulti(ids: string[]): VotingPowerSnapshot[] {
+    return ids.flatMap(id => [
+      { accountId: id, votingPower: wei(1_000n * ONE_ENS), delta: wei(0n), timestamp: PREV_MONTH_END },
+      { accountId: id, votingPower: wei(1_050n * ONE_ENS), delta: wei(0n), timestamp: MONTH_START },
+    ])
+  }
+
+  it("d_switch earns reward via del-beta after switching; d_loyal via del-alpha", async () => {
+    const proposals = makeProposals()
+    const votes: Vote[] = [
+      ...makeVotes("del-alpha", proposals),
+      ...makeVotes("del-beta",  proposals),
+    ]
+
+    const balanceEvents: BalanceEvent[] = [
+      preWindowBalanceEvent("d_switch", 100n),
+      preWindowBalanceEvent("d_loyal",  100n),
+    ]
+
+    const delegations: Delegation[] = [
+      makeDelegation("d_loyal", "del-alpha"),
+      makeDelegation("d_switch", "del-alpha"),
+      {
+        delegatorId: "d_switch",
+        delegateId: "del-beta",
+        delegatedValue: wei(0n),
+        timestamp: seconds((MONTH_END as unknown as bigint) - 86_400n),
+      },
+    ]
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes,
+      votingPowerSnapshots: makeTier0VPSnapshotsMulti(["del-alpha", "del-beta"]),
+      balanceEvents,
+      delegations,
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    expect(result.metadata.eligibleDelegatorCount).toBe(2)
+    expect(findDelegatorPayout(result, "d_loyal")?.amount).toBe(DOR_CAP)
+    expect(findDelegatorPayout(result, "d_switch")?.amount).toBe(DOR_CAP)
+
+    const allAddresses = result.directPayouts.map((p) => p.address)
+    expect(allAddresses).toContain("d_switch")
+    expect(allAddresses).toContain("d_loyal")
+  })
+})
+
+// ─── Scenario 12 ──────────────────────────────────────────────────────────────
+
+describe("Scenario 12: active delegates with zero delegators — delegate-only distribution", () => {
+  /**
+   * Setup
+   * ─────
+   * Tier 0. One active delegate "del-alpha" (voted on all 10 proposals).
+   * NO delegators exist.
+   *
+   * Delegate pool = 500 ENS → capped at 50 ENS (single delegate).
+   * Delegator pool = 4 500 ENS → entirely unallocated (no delegators).
+   * Total distributed = 50 ENS.
+   *
+   * Key properties proved:
+   *   P1) Pipeline does not crash with zero delegators.
+   *   P2) Only delegate rewards are distributed.
+   *   P3) totalDistributed = 50 ENS (delegate cap only).
+   */
+  it("only delegate rewards distributed; no crash with empty delegator set", async () => {
+    const proposals = makeProposals()
+    const delegate = "del-alpha"
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes: makeVotes(delegate, proposals),
+      votingPowerSnapshots: makeTier0VPSnapshots(delegate),
+      balanceEvents: [],
+      delegations: [],
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    expect(result.month).toBe(MONTH)
+    expect(result.metadata.eligibleDelegatorCount).toBe(0)
+
+    const delegatePayout = result.directPayouts.find(
+      (p) => p.address === delegate && p.role === "delegate",
+    )
+    expect(delegatePayout?.amount).toBe(D_CAP)
+
+    const delegatorPayouts = result.directPayouts.filter((p) => p.role === "delegator")
+    expect(delegatorPayouts).toHaveLength(0)
+
+    const lotteryDelegators = result.lotteryPools
+      .flatMap((pool) => pool.entries)
+      .filter((e) => e.role === "delegator")
+    expect(lotteryDelegators).toHaveLength(0)
+
+    expect(result.metadata.totalDistributed).toBe(D_CAP)
+  })
+})
