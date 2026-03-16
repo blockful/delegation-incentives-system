@@ -833,3 +833,224 @@ describe("Scenario 7: partial-window holding — exact TWB for fractional durati
     expect(r_third * 3n).toBe(r_quarter * 4n) // 1/3 window : 1/4 window = 4:3
   })
 })
+
+// ─── Scenario 8 ───────────────────────────────────────────────────────────────
+
+describe("Scenario 8: whale-only delegator (no other delegators)", () => {
+  /**
+   * Setup
+   * ─────
+   * Tier 0 (same VP setup as scenario 1).
+   * Single delegator:
+   *   whale-solo: holds 10 000 ENS for the full TWB window → TWB = 10 000 ENS
+   *
+   * Total TWB = 10 000 ENS.
+   * Delegator pool = 4 500 ENS, delegatorCap = 250 ENS.
+   *
+   * whale-solo is the ONLY delegator → gets 100% of delegator pool.
+   * Raw share = (10 000 / 10 000) × 4 500 = 4 500 ENS → exceeds cap → capped at 250 ENS.
+   *
+   * No other delegators exist to absorb the excess.
+   * Remaining 4 250 ENS is unallocated (returned to treasury).
+   *
+   * Key properties proved:
+   *   P1) A single whale receives exactly the delegator cap (250 ENS), not more.
+   *   P2) Total delegator distribution = DOR_CAP when no one else can absorb excess.
+   *   P3) eligibleDelegatorCount = 1.
+   */
+  it("single whale gets exactly DOR_CAP; excess is unallocated", async () => {
+    const proposals = makeProposals()
+    const delegate = "del-alpha"
+
+    const balanceEvents: BalanceEvent[] = [
+      preWindowBalanceEvent("whale-solo", 10_000n),
+    ]
+
+    const delegations: Delegation[] = [
+      makeDelegation("whale-solo", delegate),
+    ]
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes: makeVotes(delegate, proposals),
+      votingPowerSnapshots: makeTier0VPSnapshots(delegate),
+      balanceEvents,
+      delegations,
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    // ── Whale gets exactly the delegator cap ──────────────────────────────
+    expect(findDelegatorPayout(result, "whale-solo")?.amount).toBe(DOR_CAP) // 250 ENS
+
+    // ── Only one eligible delegator ───────────────────────────────────────
+    expect(result.metadata.eligibleDelegatorCount).toBe(1)
+
+    // ── Total delegator distribution = DOR_CAP (excess is unallocated) ───
+    const delegatorTotal = result.directPayouts
+      .filter((p) => p.role === "delegator")
+      .reduce((sum, p) => sum + (p.amount as bigint), 0n)
+    expect(delegatorTotal).toBe(DOR_CAP) // 250 ENS, not 4 500 ENS
+  })
+})
+
+// ─── Scenario 9 ───────────────────────────────────────────────────────────────
+
+describe("Scenario 9: negative VP growth (decline) forces tier 0", () => {
+  /**
+   * Setup
+   * ─────
+   * Delegate "del-alpha" has VP snapshots showing decline:
+   *   prevVP = 2 000 ENS, curVP = 1 500 ENS
+   *   MoM growth = (1 500 − 2 000) × 10 000 / 2 000 = −2 500 bps = −25%
+   *
+   * Negative growth → below first tier boundary (0%) → Tier 0.
+   *   poolSize = 5 000 ENS, delegateCap = 50 ENS, delegatorCap = 250 ENS
+   *
+   * Delegator "d1" holds 100 ENS for the full window → TWB = 100 ENS.
+   * Delegator pool = 4 500 ENS.
+   * d1 raw = (100 / 100) × 4 500 = 4 500 ENS → capped at 250 ENS.
+   *
+   * Key properties proved:
+   *   P1) Negative VP growth results in tier 0 (the system doesn't crash).
+   *   P2) poolTier.poolSize = POOL (tier 0 pool).
+   *   P3) Rewards are still distributed (totalDistributed > 0).
+   */
+  it("declining VP produces tier 0 and rewards are still distributed", async () => {
+    const proposals = makeProposals()
+    const delegate = "del-alpha"
+
+    // VP decline: 2 000 → 1 500 ENS (−25%)
+    const vpSnapshots: VotingPowerSnapshot[] = [
+      { accountId: delegate, votingPower: wei(2_000n * ONE_ENS), delta: wei(0n), timestamp: PREV_MONTH_END },
+      { accountId: delegate, votingPower: wei(1_500n * ONE_ENS), delta: wei(0n), timestamp: MONTH_START },
+    ]
+
+    const balanceEvents: BalanceEvent[] = [
+      preWindowBalanceEvent("d1", 100n),
+    ]
+
+    const delegations: Delegation[] = [
+      makeDelegation("d1", delegate),
+    ]
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes: makeVotes(delegate, proposals),
+      votingPowerSnapshots: vpSnapshots,
+      balanceEvents,
+      delegations,
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    // ── Tier 0 is selected (negative growth falls below 0% boundary) ─────
+    expect(result.metadata.poolTier.poolSize).toBe(POOL) // 5 000 ENS
+
+    // ── Rewards are distributed despite negative growth ───────────────────
+    expect(result.metadata.totalDistributed).toBeGreaterThan(0n)
+
+    // ── d1 receives capped reward ─────────────────────────────────────────
+    expect(findDelegatorPayout(result, "d1")?.amount).toBe(DOR_CAP) // 250 ENS
+  })
+})
+
+// ─── Scenario 10 ──────────────────────────────────────────────────────────────
+
+describe("Scenario 10: delegate who is also a delegator", () => {
+  /**
+   * Setup
+   * ─────
+   * Two active delegates: "del-alpha" and "del-beta".
+   * Both voted on all 10 proposals (active).
+   * Both have VP: 1 000 → 1 050 ENS (5% MoM → Tier 0).
+   *
+   * Delegations:
+   *   "d1"        → "del-alpha"  (100 ENS, full window)
+   *   "del-alpha" → "del-beta"   (100 ENS, full window)  ← del-alpha is ALSO a delegator
+   *
+   * Delegate rewards (pool = 500 ENS, 2 active delegates):
+   *   Each delegate has equal AVP (1 050 ENS each).
+   *   raw per delegate = (1 050 / 2 100) × 500 = 250 ENS → capped at 50 ENS.
+   *
+   * Delegator rewards (pool = 4 500 ENS):
+   *   Delegators of del-alpha: "d1" with TWB = 100 ENS
+   *   Delegators of del-beta:  "del-alpha" with TWB = 100 ENS
+   *   Total TWB across ALL eligible delegators = 200 ENS.
+   *
+   *   d1 raw        = (100 / 200) × 4 500 = 2 250 ENS → capped at 250 ENS
+   *   del-alpha raw = (100 / 200) × 4 500 = 2 250 ENS → capped at 250 ENS
+   *
+   * Key properties proved:
+   *   P1) del-alpha appears as a delegate payout (role="delegate").
+   *   P2) del-alpha also appears as a delegator payout (role="delegator").
+   *   P3) Both rewards are present and independent.
+   */
+
+  function makeTier0VPSnapshotsMulti(delegateIds: string[]): VotingPowerSnapshot[] {
+    return delegateIds.flatMap(id => [
+      { accountId: id, votingPower: wei(1_000n * ONE_ENS), delta: wei(0n), timestamp: PREV_MONTH_END },
+      { accountId: id, votingPower: wei(1_050n * ONE_ENS), delta: wei(0n), timestamp: MONTH_START },
+    ])
+  }
+
+  it("del-alpha earns both a delegate reward and a delegator reward independently", async () => {
+    const proposals = makeProposals()
+    const delegates = ["del-alpha", "del-beta"]
+
+    // Both delegates vote on all 10 proposals
+    const votes: Vote[] = [
+      ...makeVotes("del-alpha", proposals),
+      ...makeVotes("del-beta",  proposals),
+    ]
+
+    const vpSnapshots = makeTier0VPSnapshotsMulti(delegates)
+
+    const balanceEvents: BalanceEvent[] = [
+      preWindowBalanceEvent("d1",        100n),
+      preWindowBalanceEvent("del-alpha", 100n),
+    ]
+
+    const delegations: Delegation[] = [
+      makeDelegation("d1",        "del-alpha"), // d1 delegates to del-alpha
+      makeDelegation("del-alpha", "del-beta"),  // del-alpha delegates to del-beta
+    ]
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes,
+      votingPowerSnapshots: vpSnapshots,
+      balanceEvents,
+      delegations,
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    // ── del-alpha receives a delegate reward (role="delegate") ────────────
+    const alphaDelegate = result.directPayouts.find(
+      (p) => p.address === "del-alpha" && p.role === "delegate",
+    )
+    expect(alphaDelegate).toBeDefined()
+    expect(alphaDelegate?.amount).toBe(D_CAP) // 50 ENS
+
+    // ── del-alpha ALSO receives a delegator reward (role="delegator") ─────
+    const alphaDelegator = result.directPayouts.find(
+      (p) => p.address === "del-alpha" && p.role === "delegator",
+    )
+    expect(alphaDelegator).toBeDefined()
+    expect(alphaDelegator?.amount).toBe(DOR_CAP) // 250 ENS
+
+    // ── Both rewards are present and independent ──────────────────────────
+    expect(alphaDelegate?.amount).not.toBe(alphaDelegator?.amount)
+
+    // ── del-beta also receives a delegate reward ──────────────────────────
+    const betaDelegate = result.directPayouts.find(
+      (p) => p.address === "del-beta" && p.role === "delegate",
+    )
+    expect(betaDelegate).toBeDefined()
+    expect(betaDelegate?.amount).toBe(D_CAP) // 50 ENS
+
+    // ── d1 receives a delegator reward ────────────────────────────────────
+    expect(findDelegatorPayout(result, "d1")?.amount).toBe(DOR_CAP) // 250 ENS
+  })
+})
