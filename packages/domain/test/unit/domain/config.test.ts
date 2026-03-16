@@ -7,6 +7,7 @@ import {
   LOTTERY_TARGET_POOL_SIZE,
 } from "@/config.js";
 import { ONE_ENS } from "@/types.js";
+import { applyBasisPoints } from "@/util/bigint-math.js";
 
 describe("config invariants", () => {
   it("pool split sums to 100%", () => {
@@ -72,5 +73,20 @@ describe("config invariants", () => {
 
   it("at least 2 tiers exist", () => {
     expect(POOL_TIERS.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("10%/90% pool split is exact (no rounding loss) for every tier", () => {
+    for (const tier of POOL_TIERS) {
+      const pool = tier.poolSize as bigint;
+      const delegatePool = applyBasisPoints(pool, DELEGATE_POOL_BPS);
+      const delegatorPool = applyBasisPoints(pool, DELEGATOR_POOL_BPS);
+      expect(delegatePool + delegatorPool).toBe(pool);
+    }
+  });
+
+  it("all pool sizes are divisible by ONE_ENS", () => {
+    for (const tier of POOL_TIERS) {
+      expect((tier.poolSize as bigint) % ONE_ENS).toBe(0n);
+    }
   });
 });

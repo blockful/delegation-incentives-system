@@ -1183,3 +1183,106 @@ describe("Scenario 12: active delegates with zero delegators — delegate-only d
     expect(result.metadata.totalDistributed).toBe(D_CAP)
   })
 })
+
+// ─── Scenario 13 ──────────────────────────────────────────────────────────────
+
+describe("Scenario 13: tier 6 (100%+ growth) — maximum pool size distribution", () => {
+  /**
+   * Setup
+   * ─────
+   * Delegate "del-alpha" has VP showing > 100% growth:
+   *   prevVP = 500 ENS, curVP = 1 050 ENS
+   *   MoM growth = (1050 − 500) × 10 000 / 500 = 11 000 bps = 110%
+   *
+   * 110% ≥ 100% → Tier 6:
+   *   poolSize     = 30 000 ENS
+   *   delegateCap  =    300 ENS
+   *   delegatorCap =  1 500 ENS
+   *   delegatePool = 30 000 × 10% = 3 000 ENS
+   *   delegatorPool= 30 000 × 90% = 27 000 ENS
+   *
+   * Single delegate → raw delegate reward = 3 000 ENS → capped at 300 ENS.
+   *
+   * Delegators:
+   *   d_big: 10 000 ENS for full window → TWB = 10 000 ENS
+   *   17 bg delegators × 1 000 ENS → TWB = 1 000 ENS each
+   *
+   * Total TWB = 10 000 + 17 × 1 000 = 27 000 ENS = delegatorPool.
+   * Each delegator reward = TWB (exact division, no capping):
+   *   d_big = 10 000 ENS → cap check: 10 000 > 1 500 → capped at 1 500 ENS
+   *
+   * After capping d_big at 1 500:
+   *   Remaining = 27 000 − 1 500 = 25 500 ENS
+   *   Active weight = 17 × 1 000 = 17 000 ENS
+   *   Each bg = (1 000 / 17 000) × 25 500 = 1 500 ENS → exactly at cap → final
+   *
+   * Total delegator = 1 500 + 17 × 1 500 = 1 500 + 25 500 = 27 000 ENS = delegatorPool ✓
+   *
+   * Key properties proved:
+   *   P1) Tier 6 is correctly selected for 110% growth.
+   *   P2) Maximum pool size (30 000 ENS) is correctly distributed.
+   *   P3) Delegate and delegator caps at tier 6 work correctly.
+   *   P4) Full pool utilization at the highest tier.
+   */
+  it("tier 6 with 110% growth distributes 30 000 ENS pool correctly", async () => {
+    const proposals = makeProposals()
+    const delegate = "del-alpha"
+
+    const TIER6_POOL = 30_000n * ONE_ENS
+    const TIER6_D_CAP = 300n * ONE_ENS
+    const TIER6_DOR_CAP = 1_500n * ONE_ENS
+
+    // VP snapshots: 500 → 1 050 ENS = 110% growth → tier 6
+    const vpSnapshots: VotingPowerSnapshot[] = [
+      { accountId: delegate, votingPower: wei(500n * ONE_ENS), delta: wei(0n), timestamp: PREV_MONTH_END },
+      { accountId: delegate, votingPower: wei(1_050n * ONE_ENS), delta: wei(0n), timestamp: MONTH_START },
+    ]
+
+    const bgIds = Array.from({ length: 17 }, (_, i) => `bg6-${i}`)
+    const balanceEvents: BalanceEvent[] = [
+      preWindowBalanceEvent("d_big", 10_000n),
+      ...bgIds.map((id) => preWindowBalanceEvent(id, 1_000n)),
+    ]
+
+    const delegatorIds = ["d_big", ...bgIds]
+    const delegations = delegatorIds.map((id) => makeDelegation(id, delegate))
+
+    const dataSource = new InMemoryDataSource({
+      proposals,
+      votes: makeVotes(delegate, proposals),
+      votingPowerSnapshots: vpSnapshots,
+      balanceEvents,
+      delegations,
+    })
+
+    const result = await runDistributionPipeline({ month: MONTH, dataSource })
+
+    // ── Tier 6 is selected ──────────────────────────────────────────────
+    expect(result.metadata.poolTier.poolSize).toBe(TIER6_POOL)
+    expect(result.metadata.poolTier.delegateCap).toBe(TIER6_D_CAP)
+    expect(result.metadata.poolTier.delegatorCap).toBe(TIER6_DOR_CAP)
+
+    // ── Delegate capped at 300 ENS ──────────────────────────────────────
+    const delegatePayout = result.directPayouts.find(
+      (p) => p.address === delegate && p.role === "delegate",
+    )
+    expect(delegatePayout?.amount).toBe(TIER6_D_CAP)
+
+    // ── d_big capped at 1 500 ENS ──────────────────────────────────────
+    expect(findDelegatorPayout(result, "d_big")?.amount).toBe(TIER6_DOR_CAP)
+
+    // ── Each bg delegator gets exactly 1 500 ENS (at cap) ──────────────
+    for (const id of bgIds) {
+      expect(findDelegatorPayout(result, id)?.amount).toBe(TIER6_DOR_CAP)
+    }
+
+    // ── Full delegator pool utilization ─────────────────────────────────
+    const delegatorTotal = result.directPayouts
+      .filter((p) => p.role === "delegator")
+      .reduce((sum, p) => sum + (p.amount as bigint), 0n)
+    expect(delegatorTotal).toBe(wei(27_000n * ONE_ENS)) // delegatorPool exactly
+
+    // ── Total distributed ───────────────────────────────────────────────
+    expect(result.metadata.totalDistributed).toBe(wei((300n + 27_000n) * ONE_ENS))
+  })
+})
