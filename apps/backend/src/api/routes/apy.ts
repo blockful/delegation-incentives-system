@@ -15,6 +15,7 @@ import {
   DELEGATE_POOL_BPS,
   DELEGATOR_POOL_BPS,
   TWB_WINDOW_SECONDS,
+  MIN_PAYOUT_THRESHOLD,
   computeTimeWeightedBalance,
   applyBasisPoints,
   mulDiv,
@@ -95,6 +96,7 @@ apyRouter.openapi(apyRoute, async (c) => {
           userShareWei: "0",
           totalShareWei: "0",
           currentBalanceEns: "0",
+          qualifiesForLottery: false,
         },
         200,
       )
@@ -125,6 +127,7 @@ apyRouter.openapi(apyRoute, async (c) => {
           userShareWei: userVP.toString(),
           totalShareWei: totalVP.toString(),
           currentBalanceEns: formatEns(userVP),
+          qualifiesForLottery: cappedReward > 0n && cappedReward < MIN_PAYOUT_THRESHOLD,
         },
         200,
       )
@@ -175,6 +178,7 @@ apyRouter.openapi(apyRoute, async (c) => {
         userShareWei: userTWB.toString(),
         totalShareWei: totalTWB.toString(),
         currentBalanceEns: formatEns(currentBalance),
+        qualifiesForLottery: cappedReward > 0n && cappedReward < MIN_PAYOUT_THRESHOLD,
       },
       200,
     )

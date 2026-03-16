@@ -1,19 +1,24 @@
-import { NavLink, Link } from 'react-router-dom'
-import styled from 'styled-components'
+import { useState, useCallback, useEffect } from 'react'
+import { NavLink, Link, useLocation } from 'react-router-dom'
+import styled, { css, keyframes } from 'styled-components'
 import { Button, EnsSVG, Profile, WalletSVG, ExitSVG } from '@ensdomains/thorin'
 import { useAccount, useEnsName, useEnsAvatar, useDisconnect } from 'wagmi'
 import { appKit } from '@/app/providers/AppKitProvider'
+import { tokens } from '@/styles/tokens'
 
 const StyledHeader = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid #E5E5E5;
-  background: #fff;
+  padding: 14px 20px;
+  border-bottom: 1px solid ${tokens.color.border};
+  background: ${tokens.color.surface};
+  position: sticky;
+  top: 0;
+  z-index: 100;
 
   @media (min-width: 768px) {
-    padding: 16px 40px;
+    padding: 14px 40px;
   }
 `
 
@@ -26,45 +31,163 @@ const Brand = styled(Link)`
 `
 
 const BrandText = styled.span`
-  font-weight: 700;
-  font-size: 15px;
-  color: #011A25;
+  font-weight: ${tokens.font.weight.bold};
+  font-size: 14px;
+  color: ${tokens.color.text};
   letter-spacing: -0.01em;
+  white-space: nowrap;
+
+  @media (min-width: 768px) {
+    font-size: 15px;
+  }
 `
 
-const Nav = styled.nav`
-  display: flex;
+const DesktopNav = styled.nav`
+  display: none;
   gap: 28px;
 
-  @media (max-width: 768px) {
-    display: none;
+  @media (min-width: 768px) {
+    display: flex;
+  }
+`
+
+const navLinkStyles = css`
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textMuted};
+  transition: color ${tokens.transition.fast};
+  letter-spacing: 0.01em;
+
+  &:hover {
+    color: ${tokens.color.text};
+  }
+
+  &.active {
+    color: ${tokens.color.text};
+    font-weight: ${tokens.font.weight.semibold};
   }
 `
 
 const StyledNavLink = styled(NavLink)`
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: #4A5C63;
-  transition: color 0.15s;
-  letter-spacing: 0.01em;
+  ${navLinkStyles}
+`
+
+const RightArea = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const ProfileScaler = styled.div`
+  zoom: 0.85;
+`
+
+/* ─── Mobile menu ─── */
+
+const HamburgerButton = styled.button<{ $open: boolean }>`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: ${tokens.radius.sm};
+  transition: background ${tokens.transition.fast};
 
   &:hover {
-    color: #011A25;
+    background: ${tokens.color.surfaceAlt};
+  }
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+
+  span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: ${tokens.color.text};
+    border-radius: 1px;
+    transition: transform 0.25s ease, opacity 0.2s ease;
+  }
+
+  ${({ $open }) =>
+    $open &&
+    css`
+      span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+      }
+      span:nth-child(2) {
+        opacity: 0;
+      }
+      span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+      }
+    `}
+`
+
+const slideIn = keyframes`
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+`
+
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  top: 57px;
+  background: rgba(1, 26, 37, 0.3);
+  z-index: 99;
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+`
+
+const MobileDrawer = styled.nav`
+  position: fixed;
+  top: 57px;
+  left: 0;
+  right: 0;
+  background: ${tokens.color.surface};
+  border-bottom: 1px solid ${tokens.color.border};
+  padding: 8px 0;
+  z-index: 100;
+  animation: ${slideIn} 0.2s ease;
+  box-shadow: ${tokens.shadow.lg};
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+`
+
+const MobileNavLink = styled(NavLink)`
+  display: flex;
+  align-items: center;
+  padding: 14px 24px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textMuted};
+  transition: background ${tokens.transition.fast}, color ${tokens.transition.fast};
+
+  &:hover {
+    background: ${tokens.color.surfaceAlt};
   }
 
   &.active {
-    color: #011A25;
-    font-weight: 600;
+    color: ${tokens.color.accent};
+    font-weight: ${tokens.font.weight.semibold};
+    background: rgba(0, 128, 188, 0.04);
   }
 `
 
-const WalletArea = styled.div`
-  display: flex;
-  align-items: center;
-`
-
 const navItems = [
+  { to: '/', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/delegates', label: 'Delegates' },
   { to: '/rounds', label: 'Rounds' },
@@ -72,56 +195,108 @@ const navItems = [
   { to: '/transparency', label: 'Transparency' },
 ] as const
 
+const desktopNavItems = navItems.filter((item) => item.to !== '/')
+
 function ConnectedAccount({ address }: { address: `0x${string}` }) {
   const { data: ensName } = useEnsName({ address })
   const { data: avatarUrl } = useEnsAvatar({ name: ensName ?? undefined })
   const { disconnect } = useDisconnect()
 
   return (
-    <Profile
-      address={address}
-      ensName={ensName ?? undefined}
-      avatar={avatarUrl ?? undefined}
-      size="small"
-      dropdownItems={[
-        { label: 'Account', onClick: () => appKit.open(), icon: <WalletSVG /> },
-        { label: 'Disconnect', onClick: () => disconnect(), color: 'red', icon: <ExitSVG /> },
-      ]}
-    />
+    <ProfileScaler>
+      <Profile
+        address={address}
+        ensName={ensName ?? undefined}
+        avatar={avatarUrl ?? undefined}
+        size="medium"
+        alignDropdown="right"
+        dropdownItems={[
+          { label: 'Account', onClick: () => appKit.open(), icon: <WalletSVG /> },
+          { label: 'Disconnect', onClick: () => disconnect(), color: 'red', icon: <ExitSVG /> },
+        ]}
+      />
+    </ProfileScaler>
   )
 }
 
 export function Header() {
   const { address, isConnected } = useAccount()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
+
+  const toggleMenu = useCallback(() => setMenuOpen((prev) => !prev), [])
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [menuOpen])
 
   return (
-    <StyledHeader>
-      <Brand to="/">
-        <EnsSVG style={{ width: 28, height: 28 }} />
-        <BrandText>Incentives Program</BrandText>
-      </Brand>
+    <>
+      <StyledHeader>
+        <Brand to="/">
+          <EnsSVG style={{ width: 28, height: 28 }} />
+          <BrandText>Incentives Program</BrandText>
+        </Brand>
 
-      <Nav>
-        {navItems.map(({ to, label }) => (
-          <StyledNavLink key={to} to={to}>
-            {label}
-          </StyledNavLink>
-        ))}
-      </Nav>
+        <DesktopNav>
+          {desktopNavItems.map(({ to, label }) => (
+            <StyledNavLink key={to} to={to}>
+              {label}
+            </StyledNavLink>
+          ))}
+        </DesktopNav>
 
-      <WalletArea>
-        {isConnected && address ? (
-          <ConnectedAccount address={address} />
-        ) : (
-          <Button
-            size="small"
-            colorStyle="bluePrimary"
-            onClick={() => appKit.open()}
+        <RightArea>
+          {isConnected && address ? (
+            <ConnectedAccount address={address} />
+          ) : (
+            <Button
+              size="small"
+              colorStyle="bluePrimary"
+              onClick={() => appKit.open()}
+            >
+              Connect Wallet
+            </Button>
+          )}
+          <HamburgerButton
+            $open={menuOpen}
+            onClick={toggleMenu}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
           >
-            Connect Wallet
-          </Button>
-        )}
-      </WalletArea>
-    </StyledHeader>
+            <span />
+            <span />
+            <span />
+          </HamburgerButton>
+        </RightArea>
+      </StyledHeader>
+
+      {menuOpen && (
+        <>
+          <MobileDrawer>
+            {navItems.map(({ to, label }) => (
+              <MobileNavLink key={to} to={to} end={to === '/'} onClick={closeMenu}>
+                {label}
+              </MobileNavLink>
+            ))}
+          </MobileDrawer>
+          <Overlay onClick={closeMenu} />
+        </>
+      )}
+    </>
   )
 }

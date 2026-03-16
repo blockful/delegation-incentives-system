@@ -64,6 +64,7 @@ export interface ApyEstimateResponse {
   userShareWei: string;
   totalShareWei: string;
   currentBalanceEns: string;
+  qualifiesForLottery: boolean;
 }
 
 export interface Payout {

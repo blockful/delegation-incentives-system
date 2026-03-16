@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { tokens } from '@/styles/tokens'
 
 interface TierDotsProps {
   tierIndex: number
@@ -7,7 +8,7 @@ interface TierDotsProps {
 
 const Wrapper = styled.div`
   display: flex;
-  gap: 4px;
+  gap: ${tokens.spacing.xs};
   align-items: center;
 `
 
@@ -15,7 +16,7 @@ const Dot = styled.div<{ $filled: boolean }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $filled }) => ($filled ? '#011A25' : '#E5E5E5')};
+  background: ${({ $filled }) => ($filled ? tokens.color.text : tokens.color.border)};
 `
 
 export function TierDots({ tierIndex, totalTiers = 7 }: TierDotsProps) {

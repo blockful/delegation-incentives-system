@@ -37,7 +37,8 @@ describe('RoundsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('1000 ENS')).toBeInTheDocument()
     })
-    expect(screen.getByText('12.40%')).toBeInTheDocument()
+    // currentTierIndex=1 → estimatedApyPct='8.64'
+    expect(screen.getByText('8.64%')).toBeInTheDocument()
     // "Tier #2" appears in both card and table — verify at least one exists
     expect(screen.getAllByText('Tier #2').length).toBeGreaterThanOrEqual(1)
   })

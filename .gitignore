@@ -7,3 +7,5 @@ coverage/
 generated/
 package-lock.json
 .worktrees/
+*.png
+test-results/

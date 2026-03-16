@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { Card, Tag } from '@ensdomains/thorin'
+import { tokens } from '@/styles'
 
 interface RoundCardProps {
   roundNumber: number
@@ -15,7 +16,7 @@ interface RoundCardProps {
 const StyledCard = styled(Card)`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: ${tokens.spacing.xl};
 `
 
 const Header = styled.div`
@@ -25,72 +26,77 @@ const Header = styled.div`
 `
 
 const RoundTitle = styled.h3`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
   margin: 0;
-  color: ${({ theme }) => theme.colors.text};
+  color: ${tokens.color.text};
 `
 
 const ProgressSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const ProgressLabel = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
 `
 
 const ProgressBarTrack = styled.div`
   height: 8px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.06);
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.surfaceAlt};
   overflow: hidden;
 `
 
 const ProgressBarFill = styled.div<{ $pct: number }>`
   height: 100%;
-  border-radius: 4px;
-  background: #0080BC;
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.accent};
   width: ${({ $pct }) => Math.min($pct, 100)}%;
-  transition: width 0.3s ease;
+  transition: width ${tokens.transition.slow};
 `
 
 const DateRow = styled.div`
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
 `
 
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const StatCard = styled.div`
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 12px;
-  padding: 16px;
+  background: ${tokens.color.surfaceAlt};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${tokens.spacing.xs};
 `
 
 const StatLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const StatValue = styled.span`
-  font-size: 18px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
+`
+
+const CompactTag = styled(Tag)`
+  padding: 2px 8px;
+  font-size: ${tokens.font.size.xs};
 `
 
 export function RoundCard({
@@ -107,13 +113,14 @@ export function RoundCard({
     <StyledCard>
       <Header>
         <RoundTitle>Round {roundNumber}</RoundTitle>
-        <Tag colorStyle="greenPrimary">In progress</Tag>
+        <CompactTag colorStyle="greenPrimary">Live</CompactTag>
       </Header>
 
       <ProgressSection>
         <ProgressLabel>
           {percentComplete}% complete · {timeLeft} left
         </ProgressLabel>
+
         <ProgressBarTrack>
           <ProgressBarFill $pct={percentComplete} />
         </ProgressBarTrack>

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
-import { tokens, Eyebrow, PageTitle, SectionSubheading, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, Eyebrow, PageTitle, SectionSubheading, LoadingWrapper, ErrorMessage } from '@/styles'
 import { DelegateCard } from './components/DelegateCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
@@ -15,6 +15,7 @@ const Page = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
+  animation: ${fadeInUp} 0.4s ease both;
 `
 
 const Grid = styled.div`
@@ -25,6 +26,14 @@ const Grid = styled.div`
   @media (min-width: 768px) {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  > * {
+    animation: ${fadeInUp} 0.35s ease both;
+  }
+
+  ${Array.from({ length: 12 }, (_, i) => `
+    > *:nth-child(${i + 1}) { animation-delay: ${i * 0.04}s; }
+  `).join('')}
 `
 
 const HeaderBlock = styled.div`

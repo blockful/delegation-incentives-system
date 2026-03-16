@@ -15,6 +15,13 @@ export const GlobalStyles = createGlobalStyle`
   body {
     color: ${tokens.color.text};
     background: ${tokens.color.surface};
+    /* ENS-style subtle radial gradient background */
+    background-image: radial-gradient(
+      ellipse 80% 60% at 50% -10%,
+      rgba(0, 128, 188, 0.04) 0%,
+      transparent 70%
+    );
+    background-attachment: fixed;
   }
 
   /* Tighten heading letter-spacing per ENS brand guidelines */
@@ -26,5 +33,18 @@ export const GlobalStyles = createGlobalStyle`
   .tabular-nums {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
+  }
+
+  /* Smooth scrolling */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Selection color matching ENS brand */
+  ::selection {
+    background: rgba(0, 128, 188, 0.15);
+    color: ${tokens.color.text};
   }
 `

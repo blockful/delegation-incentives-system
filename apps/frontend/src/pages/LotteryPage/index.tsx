@@ -1,115 +1,128 @@
 import styled from 'styled-components'
-import { Button, Spinner, Heading as ThorinHeading, Typography } from '@ensdomains/thorin'
+import { Button, Spinner } from '@ensdomains/thorin'
 import { useLottery } from '@/features/lottery/useLottery'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
+import { tokens, Eyebrow, SectionHeading } from '@/styles'
 
 const Page = styled.div`
   max-width: 720px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: ${tokens.spacing['3xl']};
 `
 
 const Hero = styled.div`
-  background: linear-gradient(135deg, #CEE1E8 0%, #C5DDCC 100%);
-  border-radius: 20px;
-  padding: 32px 24px;
+  background: linear-gradient(135deg, ${tokens.color.lightBlue} 0%, ${tokens.color.surface} 100%);
+  border-radius: ${tokens.radius.xl};
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']};
   text-align: center;
 `
 
+const HeroTitle = styled.h1`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.text};
+  line-height: 1.2;
+  margin: ${tokens.spacing.md} 0 0;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['4xl']};
+  }
+`
 
 const QualifyCard = styled.div`
-  background: #C5DDCC;
-  border-radius: 16px;
-  padding: 20px 24px;
+  background: ${tokens.color.lightBlue};
+  border-radius: ${tokens.radius.lg};
+  padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']};
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${tokens.spacing.sm};
 `
 
 const QualifyTitle = styled.span`
-  font-size: 15px;
-  font-weight: 700;
-  color: #007C23;
+  font-size: ${tokens.font.size.md};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positive};
 `
 
 const QualifyDetail = styled.span`
-  font-size: 13px;
-  color: #093C52;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.text};
 `
 
 const PrizeCard = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 24px;
+  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing['2xl']};
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  gap: ${tokens.spacing.md};
+  background: ${tokens.color.surface};
 `
 
 const TrophyIcon = styled.span`
   width: 48px;
   height: 48px;
-  border-radius: 16px;
-  background: #F8F6D6;
+  border-radius: ${tokens.radius.lg};
+  background: ${tokens.color.lightYellow};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: ${tokens.font.size['2xl']};
 `
 
 const PrizeLabel = styled.span`
-  font-size: 12px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const PrizeAmount = styled.span`
-  font-size: 36px;
-  font-weight: 800;
-  color: #007C23;
+  font-size: ${tokens.font.size['4xl']};
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.positive};
 `
 
 const PrizeStat = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
 `
 
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
+  padding-top: ${tokens.spacing.lg};
+  border-top: 1px solid ${tokens.color.border};
 `
-
 
 const StepList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
 `
 
 const Step = styled.div`
   display: flex;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
   align-items: flex-start;
 `
 
 const StepNumber = styled.div`
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  background: #093C52;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.accent};
+  color: ${tokens.color.surface};
+  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.base};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,21 +130,21 @@ const StepNumber = styled.div`
 `
 
 const StepText = styled.p`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.text};
   margin: 0;
   line-height: 1.5;
   padding-top: 3px;
 `
 
 const WinnerCard = styled.div`
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 20px 24px;
+  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.border};
+  padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']};
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  gap: ${tokens.spacing.md};
+  background: ${tokens.color.surface};
 `
 
 const WinnerInfo = styled.div`
@@ -142,26 +155,26 @@ const WinnerInfo = styled.div`
 `
 
 const WinnerLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textTertiary};
+  color: ${tokens.color.textMuted};
 `
 
 const WinnerAddress = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
 `
 
 const WinnerPrize = styled.span`
-  font-size: 18px;
-  font-weight: 700;
-  color: #007C23;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positive};
 `
 
-const LoadingWrapper = styled.div`
+const LoadingWrap = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
@@ -169,21 +182,21 @@ const LoadingWrapper = styled.div`
 `
 
 const ErrorCard = styled.div`
-  border-radius: 20px;
+  border-radius: ${tokens.radius.xl};
   background: linear-gradient(135deg, #FEE9F0 0%, #FDE8E8 100%);
   border: 1px solid #FBCDD8;
-  padding: 40px 32px;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing['3xl']};
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: ${tokens.spacing.lg};
   text-align: center;
 `
 
 const ErrorIcon = styled.div`
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: ${tokens.radius.pill};
   background: #FBCDD8;
   display: flex;
   align-items: center;
@@ -192,14 +205,14 @@ const ErrorIcon = styled.div`
 `
 
 const ErrorTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
   color: #93001A;
   margin: 0;
 `
 
 const ErrorDetail = styled.p`
-  font-size: 14px;
+  font-size: ${tokens.font.size.base};
   color: #C0365A;
   margin: 0;
   max-width: 340px;
@@ -207,13 +220,23 @@ const ErrorDetail = styled.p`
 `
 
 const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 48px 24px;
-  border-radius: 16px;
-  border: 1px dashed ${({ theme }) => theme.colors.border};
-  color: ${({ theme }) => theme.colors.textTertiary};
-  font-size: 15px;
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing['2xl']};
+  border-radius: ${tokens.radius.lg};
+  border: 1px dashed ${tokens.color.border};
+  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.md};
   line-height: 1.6;
+  gap: ${tokens.spacing.sm};
+`
+
+const EmptyIcon = styled.span`
+  font-size: ${tokens.font.size['4xl']};
+  opacity: 0.6;
 `
 
 const HOW_IT_WORKS_STEPS = [
@@ -228,9 +251,9 @@ export function LotteryPage() {
   if (loading) {
     return (
       <Page>
-        <LoadingWrapper>
+        <LoadingWrap>
           <Spinner />
-        </LoadingWrapper>
+        </LoadingWrap>
       </Page>
     )
   }
@@ -288,26 +311,16 @@ export function LotteryPage() {
     return (
       <Page>
         <Hero>
-          <Typography
-            fontVariant="label"
-            color="blue"
-            weight="bold"
-            style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-          >
-            Lottery
-          </Typography>
-          <div style={{ marginTop: 12 }}>
-            <ThorinHeading level="1" responsive>
-              Small balance? You still have a shot.
-            </ThorinHeading>
-          </div>
+          <Eyebrow>Lottery</Eyebrow>
+          <HeroTitle>Small balance? You still have a shot.</HeroTitle>
         </Hero>
         <EmptyState>
+          <EmptyIcon aria-hidden>🎲</EmptyIcon>
           <p>No rounds have been completed yet.</p>
           <p>Lottery results will appear here after the first round ends.</p>
         </EmptyState>
         <Section>
-          <ThorinHeading level="2">How the draw works</ThorinHeading>
+          <SectionHeading>How the draw works</SectionHeading>
           <StepList>
             {HOW_IT_WORKS_STEPS.map((text, i) => (
               <Step key={i}>
@@ -328,19 +341,8 @@ export function LotteryPage() {
   return (
     <Page>
       <Hero>
-        <Typography
-          fontVariant="label"
-          color="blue"
-          weight="bold"
-          style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-        >
-          Lottery
-        </Typography>
-        <div style={{ marginTop: 12 }}>
-          <ThorinHeading level="1" responsive>
-            Small balance? You still have a shot.
-          </ThorinHeading>
-        </div>
+        <Eyebrow>Lottery</Eyebrow>
+        <HeroTitle>Small balance? You still have a shot.</HeroTitle>
       </Hero>
 
       {pool && (
@@ -364,7 +366,7 @@ export function LotteryPage() {
       </PrizeCard>
 
       <Section>
-        <ThorinHeading level="2">How the draw works</ThorinHeading>
+        <SectionHeading>How the draw works</SectionHeading>
         <StepList>
           {HOW_IT_WORKS_STEPS.map((text, i) => (
             <Step key={i}>
@@ -377,7 +379,7 @@ export function LotteryPage() {
 
       {pool?.winner && (
         <Section>
-          <ThorinHeading level="2">Last Winner</ThorinHeading>
+          <SectionHeading>Last Winner</SectionHeading>
           <WinnerCard>
             <EnsAvatar address={pool.winner} size={40} />
             <WinnerInfo>

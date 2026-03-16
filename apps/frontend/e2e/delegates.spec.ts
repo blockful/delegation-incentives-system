@@ -12,16 +12,14 @@ test.describe('Delegates Page', () => {
   })
 
   test('renders sort controls', async ({ page }) => {
-    await expect(page.getByText('Voting Power')).toBeVisible()
-    await expect(page.getByText('Activity')).toBeVisible()
-    await expect(page.getByText('Random')).toBeVisible()
+    await expect(page.getByRole('button', { name: /Voting Power/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Activity/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Random/i })).toBeVisible()
   })
 
   test('renders delegate cards after loading', async ({ page }) => {
-    // Wait for loading to finish — cards contain ENS names or addresses
-    await expect(page.locator('[class*="Grid"] > div').first()).toBeVisible({
-      timeout: 15000,
-    })
+    // Wait for delegate cards to appear — they contain ENS names or addresses
+    await expect(page.getByText(/\.eth|0x/).first()).toBeVisible({ timeout: 15000 })
   })
 
   test('renders stats bar', async ({ page }) => {

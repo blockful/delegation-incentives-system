@@ -20,8 +20,8 @@ test.describe('Transparency Page', () => {
 
   test('renders verify links', async ({ page }) => {
     await expect(page.getByText('Verify Yourself')).toBeVisible()
-    await expect(page.getByText('GitHub')).toBeVisible()
-    await expect(page.getByText('Anticapture')).toBeVisible()
+    await expect(page.getByText('GitHub').first()).toBeVisible()
+    await expect(page.getByText('Anticapture').first()).toBeVisible()
     await expect(page.getByText('Dune Analytics')).toBeVisible()
   })
 

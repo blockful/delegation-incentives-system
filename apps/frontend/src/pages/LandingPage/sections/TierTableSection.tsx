@@ -1,20 +1,21 @@
 import styled from 'styled-components'
 import { CheckSVG, LockSVG } from '@ensdomains/thorin'
 import type { TierEntry } from '@/api/types'
+import { tokens } from '@/styles/tokens'
 
 interface TierTableSectionProps {
   tiers: TierEntry[]
 }
 
 const Section = styled.section`
-  padding: 64px 20px;
-  border-bottom: 1px solid #E5E5E5;
+  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
+  border-bottom: 1px solid ${tokens.color.border};
 
   @media (min-width: 768px) {
-    padding: 96px 40px;
+    padding: ${tokens.spacing['8xl']} ${tokens.spacing['4xl']};
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 80px;
+    gap: ${tokens.spacing['7xl']};
     align-items: center;
     max-width: 1120px;
     margin: 0 auto;
@@ -22,7 +23,7 @@ const Section = styled.section`
 `
 
 const CopyBlock = styled.div`
-  margin-bottom: 40px;
+  margin-bottom: ${tokens.spacing['4xl']};
 
   @media (min-width: 768px) {
     margin-bottom: 0;
@@ -31,61 +32,61 @@ const CopyBlock = styled.div`
 
 const Eyebrow = styled.span`
   display: block;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: #0080BC;
-  margin-bottom: 16px;
+  color: ${tokens.color.accent};
+  margin-bottom: ${tokens.spacing.lg};
 `
 
 const Heading = styled.h2`
-  font-size: 28px;
-  font-weight: 800;
-  color: #011A25;
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.extrabold};
+  color: ${tokens.color.text};
   line-height: 1.2;
-  margin: 0 0 16px;
+  margin: 0 0 ${tokens.spacing.lg};
 
   @media (min-width: 768px) {
-    font-size: 36px;
+    font-size: ${tokens.font.size['4xl']};
   }
 `
 
 const Description = styled.p`
-  font-family: 'EB Garamond', 'Georgia', serif;
+  font-family: ${tokens.font.serif};
   font-size: 17px;
   line-height: 1.6;
-  color: #4A5C63;
+  color: ${tokens.color.textMuted};
   margin: 0;
 `
 
 const Table = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${tokens.spacing.xs};
 `
 
 const TierRow = styled.div<{ $isCurrent: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  border-radius: 12px;
+  padding: 14px ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.md};
   background: ${({ $isCurrent }) =>
-    $isCurrent ? '#C5DDCC' : '#f6f6f6'};
-  transition: background 0.15s;
+    $isCurrent ? '#C5DDCC' : tokens.color.surfaceAlt};
+  transition: background ${tokens.transition.fast};
 `
 
 const TierLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${tokens.spacing.md};
 `
 
 const TierLabel = styled.span<{ $isCurrent: boolean }>`
-  font-size: 14px;
-  font-weight: ${({ $isCurrent }) => ($isCurrent ? 700 : 500)};
-  color: #011A25;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${({ $isCurrent }) => ($isCurrent ? tokens.font.weight.bold : tokens.font.weight.medium)};
+  color: ${tokens.color.text};
   min-width: 52px;
 `
 
@@ -99,8 +100,12 @@ const BarSegment = styled.div<{ $filled: boolean }>`
   width: 16px;
   height: 3px;
   border-radius: 1.5px;
-  background: ${({ $filled }) => ($filled ? '#011A25' : '#E5E5E5')};
-  transition: background 0.2s ease;
+  background: ${({ $filled }) => ($filled ? tokens.color.text : tokens.color.border)};
+  transition: background ${tokens.transition.base};
+
+  @media (max-width: 767px) {
+    width: ${tokens.spacing.xl};
+  }
 `
 
 const TierRight = styled.div`
@@ -110,16 +115,16 @@ const TierRight = styled.div`
 `
 
 const ApyText = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: #011A25;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.text};
   font-variant-numeric: tabular-nums;
 `
 
 const StatusIcon = styled.span<{ $unlocked: boolean }>`
   display: flex;
   align-items: center;
-  color: ${({ $unlocked }) => ($unlocked ? '#007C23' : '#C4C7C8')};
+  color: ${({ $unlocked }) => ($unlocked ? tokens.color.positive : tokens.color.textFaint)};
 
   svg {
     width: 14px;

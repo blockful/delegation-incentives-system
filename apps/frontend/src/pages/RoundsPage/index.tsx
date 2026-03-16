@@ -95,7 +95,7 @@ export function RoundsPage() {
     ? new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : ''
   const daysRemaining = round.data?.daysRemaining ?? 0
-  const timeLeft = `${daysRemaining}d left`
+  const timeLeft = `${daysRemaining}d`
 
   return (
     <Page>
@@ -121,7 +121,7 @@ export function RoundsPage() {
             timeLeft={timeLeft}
             poolSizeEns={poolSizeEns}
             currentTier={tierLabel}
-            currentApyPct={data.currentGrowthPct}
+            currentApyPct={currentTier?.estimatedApyPct ?? '0'}
           />
           <RoundHistoryTable entries={ROUND_HISTORY} />
         </LeftColumn>

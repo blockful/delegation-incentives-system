@@ -11,28 +11,28 @@ const CONNECTED_WALLET = {
 describe('DashboardPage', () => {
   it('does not render dashboard content when disconnected', () => {
     renderApp(<DashboardPage />)
-    expect(screen.queryByText('Your Earnings')).not.toBeInTheDocument()
+    expect(screen.queryByText(/% APY/)).not.toBeInTheDocument()
   })
 
   it('renders earnings when connected', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText('Your Earnings')).toBeInTheDocument()
+      expect(screen.getByText(/3\.95% APY/)).toBeInTheDocument()
     })
-    expect(screen.getByText(/\+16\.35/)).toBeInTheDocument()
+    expect(screen.getAllByText(/16\.35/).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows APY data', async () => {
+  it('shows round progress', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText(/5\.75% APY/)).toBeInTheDocument()
+      expect(screen.getByText(/Round \d+/)).toBeInTheDocument()
     })
   })
 
-  it('renders round progress card', async () => {
+  it('renders reward tiers table', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Round 2/ })).toBeInTheDocument()
+      expect(screen.getByText('Reward Tiers')).toBeInTheDocument()
     })
   })
 })
