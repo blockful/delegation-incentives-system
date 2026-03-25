@@ -59,7 +59,7 @@ const HeroEyebrow = styled.span`
 
 const Headline = styled.h1`
   font-size: 32px;
-  font-weight: ${tokens.font.weight.extrabold};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.surface};
   line-height: 1.15;
   margin: 0 auto ${tokens.spacing.lg};
@@ -93,7 +93,6 @@ const ApyValue = styled.span`
 `
 
 const Subtitle = styled.p`
-  font-family: ${tokens.font.serif};
   font-size: ${tokens.font.size.xl};
   line-height: 1.6;
   color: ${tokens.color.lightBlue};
@@ -131,8 +130,8 @@ export function HeroSection({ currentApyPct }: HeroSectionProps) {
           <ApyValue>{currentApyPct}% APY</ApyValue>
         </Headline>
         <Subtitle>
-          Delegate to an active voter. Earn rewards automatically.
-          Gas is sponsored — it costs nothing.
+        Help secure ENS governance by delegating to an active voter.
+        Rewards are automatic, gas is sponsored.
         </Subtitle>
         <Actions>
           <RouterLink to="/delegates">
