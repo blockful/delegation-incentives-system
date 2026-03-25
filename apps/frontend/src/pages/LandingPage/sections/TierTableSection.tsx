@@ -88,12 +88,9 @@ const TierCard = styled(Card)`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xs};
+  width: 100%;
   min-width: 0;
   box-shadow: ${tokens.shadow.sm};
-
-  @media (min-width: 768px) {
-    flex: 1;
-  }
 `
 
 const Separator = styled.div`
@@ -209,7 +206,8 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
         </div>
       </CopyBlock>
 
-      <TierCard data-testid="tier-table" ref={cardRef}>
+      <div ref={cardRef} style={{ flex: 1, minWidth: 0 }}>
+      <TierCard data-testid="tier-table">
         {tiers.map((tier, i) => {
           const isLocked = !tier.isUnlocked
           const apyLabel = tier.estimatedApyPct != null
@@ -246,6 +244,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
           )
         })}
       </TierCard>
+      </div>
       </Inner>
     </Section>
   )

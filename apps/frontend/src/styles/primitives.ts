@@ -115,7 +115,7 @@ export const cardStyles = css`
 
 export const cardHoverStyles = css`
   &:hover {
-    border-color: ${tokens.color.gray3};
+    border-color: ${tokens.color.gray};
     box-shadow: ${tokens.shadow.md};
     transform: translateY(-1px);
   }

@@ -264,7 +264,7 @@ export function LotteryPage() {
         <Hero>
           <Eyebrow>Lottery</Eyebrow>
           <div style={{ marginTop: 12 }}>
-            <PageTitle>Small balance? You still have a shot.</PageTitle>
+            <SectionHeading>Small balance? You still have a shot.</SectionHeading>
           </div>
         </Hero>
         <ErrorCard>
