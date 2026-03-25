@@ -10,7 +10,8 @@ const StyledHeader = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 0 20px;
+  height: 57px;
   border-bottom: 1px solid ${tokens.color.border};
   background: ${tokens.color.surface};
   position: sticky;
@@ -18,7 +19,8 @@ const StyledHeader = styled.header`
   z-index: 100;
 
   @media (min-width: 768px) {
-    padding: 14px 40px;
+    padding: 0 40px;
+    height: 72px;
   }
 `
 
@@ -28,44 +30,62 @@ const Brand = styled(Link)`
   gap: 10px;
   text-decoration: none;
   color: inherit;
+  flex-shrink: 0;
 `
 
 const BrandText = styled.span`
   font-weight: ${tokens.font.weight.bold};
-  font-size: 14px;
-  color: ${tokens.color.text};
-  letter-spacing: -0.01em;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkBlue};
   white-space: nowrap;
 
   @media (min-width: 768px) {
-    font-size: 15px;
+    font-size: ${tokens.font.size.lg};
   }
 `
 
 const DesktopNav = styled.nav`
   display: none;
-  gap: 28px;
+  gap: 32px;
 
   @media (min-width: 768px) {
     display: flex;
+    align-items: center;
   }
 `
 
 const navLinkStyles = css`
+  position: relative;
   text-decoration: none;
-  font-size: 13px;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.textMuted};
-  transition: color ${tokens.transition.fast};
-  letter-spacing: 0.01em;
+  color: ${tokens.color.darkGray};
+  transition: color ${tokens.transition.base};
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: ${tokens.color.blue};
+    border-radius: 1px;
+    transform: scaleX(0);
+    transition: transform ${tokens.transition.base};
+  }
 
   &:hover {
-    color: ${tokens.color.text};
+    color: ${tokens.color.darkBlue};
   }
 
   &.active {
-    color: ${tokens.color.text};
-    font-weight: ${tokens.font.weight.semibold};
+    color: ${tokens.color.blue};
+    font-weight: ${tokens.font.weight.bold};
+
+    &::after {
+      transform: scaleX(1);
+    }
   }
 `
 
@@ -153,6 +173,8 @@ const MobileDrawer = styled.nav`
   top: 57px;
   left: 0;
   right: 0;
+  left: 0;
+  right: 0;
   background: ${tokens.color.surface};
   border-bottom: 1px solid ${tokens.color.border};
   padding: 8px 0;
@@ -170,26 +192,27 @@ const MobileNavLink = styled(NavLink)`
   align-items: center;
   padding: 14px 24px;
   text-decoration: none;
-  font-size: 15px;
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.textMuted};
+  color: ${tokens.color.darkGray};
   transition: background ${tokens.transition.fast}, color ${tokens.transition.fast};
 
   &:hover {
     background: ${tokens.color.surfaceAlt};
+    color: ${tokens.color.darkBlue};
   }
 
   &.active {
-    color: ${tokens.color.accent};
-    font-weight: ${tokens.font.weight.semibold};
-    background: rgba(0, 128, 188, 0.04);
+    color: ${tokens.color.blue};
+    font-weight: ${tokens.font.weight.bold};
+    background: ${tokens.color.lightBlue};
   }
 `
 
 const navItems = [
   { to: '/', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/delegates', label: 'Delegates' },
+  { to: '/delegates', label: 'Active Delegates' },
   { to: '/rounds', label: 'Rounds' },
   { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },
