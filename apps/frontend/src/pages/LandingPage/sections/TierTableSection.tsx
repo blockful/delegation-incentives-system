@@ -1,8 +1,9 @@
-import React from 'react'
-import styled from 'styled-components'
+import React, { useEffect, useRef, useState } from 'react'
+import styled, { css } from 'styled-components'
 import { Button, Card, CheckSVG, LockSVG } from '@ensdomains/thorin'
 import type { TierEntry } from '@/api/types'
 import { tokens } from '@/styles/tokens'
+import { fadeInUp } from '@/styles/primitives'
 
 interface TierTableSectionProps {
   tiers: TierEntry[]
@@ -68,7 +69,7 @@ const Heading = styled.h2`
   margin: 0;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['4xl']};
+    font-size: ${tokens.font.size['5xl']};
   }
 `
 
@@ -88,6 +89,7 @@ const TierCard = styled(Card)`
   flex-direction: column;
   gap: ${tokens.spacing.xs};
   min-width: 0;
+  box-shadow: ${tokens.shadow.sm};
 
   @media (min-width: 768px) {
     flex: 1;
@@ -99,6 +101,16 @@ const Separator = styled.div`
   height: 1px;
   background: ${tokens.color.borderLight};
   flex-shrink: 0;
+`
+
+const AnimatedRow = styled.div<{ $index: number; $visible: boolean }>`
+  opacity: 0;
+  ${({ $visible, $index }) =>
+    $visible &&
+    css`
+      animation: ${fadeInUp} 0.4s ease both;
+      animation-delay: ${$index * 0.08}s;
+    `}
 `
 
 const TierRow = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
@@ -122,7 +134,7 @@ const TierLabel = styled.span`
 const TierRight = styled.div`
   display: flex;
   align-items: center;
-  gap: ${tokens.spacing.sm};
+  gap: ${tokens.spacing.md};
 `
 
 const Dots = styled.div`
@@ -146,7 +158,7 @@ const ApyText = styled.span<{ $isUnlocked: boolean }>`
   font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
   color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
-  width: 100px;
+  width: 120px;
   text-align: right;
   flex-shrink: 0;
   white-space: nowrap;
@@ -165,6 +177,20 @@ const StatusIcon = styled.span`
 `
 
 export function TierTableSection({ tiers }: TierTableSectionProps) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect() } },
+      { threshold: 0.15 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <Section>
       <Inner>
@@ -183,7 +209,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
         </div>
       </CopyBlock>
 
-      <TierCard data-testid="tier-table">
+      <TierCard data-testid="tier-table" ref={cardRef}>
         {tiers.map((tier, i) => {
           const isLocked = !tier.isUnlocked
           const apyLabel = tier.estimatedApyPct != null
@@ -192,6 +218,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
           return (
             <React.Fragment key={tier.index}>
               {i > 0 && <Separator />}
+              <AnimatedRow $index={i} $visible={visible}>
               <TierRow $isCurrent={tier.isCurrent} $isLocked={isLocked}>
                 <TierLabel>Tier #{tier.index + 1}</TierLabel>
                 <TierRight>
@@ -214,6 +241,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
                   </StatusIcon>
                 </TierRight>
               </TierRow>
+              </AnimatedRow>
             </React.Fragment>
           )
         })}

@@ -39,7 +39,7 @@ export function AppLayout() {
       <Main $fullWidth={isFullWidth}>
         <Outlet />
       </Main>
-      <Footer />
+      {!isFullWidth && <Footer />}
     </Wrapper>
   )
 }

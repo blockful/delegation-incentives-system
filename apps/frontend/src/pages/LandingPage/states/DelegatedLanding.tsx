@@ -4,6 +4,7 @@ import { RoundStatusBar } from '../sections/RoundStatusBar'
 import { TierTableSection } from '../sections/TierTableSection'
 import { HowItWorksSection } from '../sections/HowItWorksSection'
 import { CtaSection } from '../sections/CtaSection'
+import { Footer } from '../sections/Footer'
 
 interface DelegatedLandingProps {
   tierData: TierProgressionResponse
@@ -28,6 +29,7 @@ export function DelegatedLanding({ tierData, roundData }: DelegatedLandingProps)
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection />
       <CtaSection />
+      <Footer />
     </>
   )
 }

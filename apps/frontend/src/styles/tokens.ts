@@ -35,8 +35,12 @@ export const tokens = {
     positive: '#007C23',
     positiveEmphasis: '#1A7F37',
     accent: '#0080BC',
+    orange: '#BC4C00',
+    lightOrange: '#FFF1E5',
+    bgSubtle: '#F6F8FA',
     borderLight: '#EAEEF2',
     tierHighlight: '#DAFBE1',
+    textSubtle: '#8C959F',
   },
 
   radius: {

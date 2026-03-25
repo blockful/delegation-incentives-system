@@ -4,6 +4,7 @@ import { RoundStatusBar } from '../sections/RoundStatusBar'
 import { TierTableSection } from '../sections/TierTableSection'
 import { HowItWorksSection } from '../sections/HowItWorksSection'
 import { CtaSection } from '../sections/CtaSection'
+import { Footer } from '../sections/Footer'
 
 interface ConnectedLandingProps {
   tierData: TierProgressionResponse
@@ -28,6 +29,7 @@ export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps)
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection />
       <CtaSection />
+      <Footer />
     </>
   )
 }
