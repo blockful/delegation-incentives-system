@@ -8,11 +8,11 @@ interface TierTableSectionProps {
 }
 
 const Section = styled.section`
-  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
   border-bottom: 1px solid ${tokens.color.border};
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['8xl']} ${tokens.spacing['4xl']};
+    padding: ${tokens.spacing['5xl']} ${tokens.spacing['4xl']} ${tokens.spacing['8xl']};
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: ${tokens.spacing['7xl']};

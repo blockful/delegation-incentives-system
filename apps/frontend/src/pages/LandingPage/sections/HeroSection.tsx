@@ -13,31 +13,19 @@ interface HeroSectionProps {
 }
 
 const Section = styled.section`
-  background: ${tokens.color.darkBlue};
-  padding: 72px ${tokens.spacing.xl} ${tokens.spacing['6xl']};
+  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl};
   text-align: center;
   position: relative;
   overflow: hidden;
-
-  /* Subtle radial glow behind the headline */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 30%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 600px;
-    height: 400px;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(0, 128, 188, 0.12) 0%,
-      transparent 70%
-    );
-    pointer-events: none;
-  }
+  background: linear-gradient(
+    to bottom,
+    ${tokens.color.lightBlue},
+    ${tokens.color.white}
+  );
+  border-bottom: 1px solid ${tokens.color.middleGray};
 
   @media (min-width: 768px) {
-    padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['7xl']};
+    padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['9xl']};
   }
 `
 
@@ -51,8 +39,8 @@ const HeroEyebrow = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: ${tokens.color.accent};
+  letter-spacing: 0.2em;
+  color: ${tokens.color.darkGray};
   margin-bottom: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.5s ease both;
 `
@@ -60,7 +48,7 @@ const HeroEyebrow = styled.span`
 const Headline = styled.h1`
   font-size: 32px;
   font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.surface};
+  color: ${tokens.color.darkBlue};
   line-height: 1.15;
   margin: 0 auto ${tokens.spacing.lg};
   max-width: 640px;
@@ -78,32 +66,20 @@ const shimmer = keyframes`
 
 const ApyValue = styled.span`
   display: inline-block;
-  background: linear-gradient(
-    90deg,
-    ${tokens.color.accent} 0%,
-    #44B4E0 30%,
-    ${tokens.color.accent} 60%,
-    #44B4E0 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: ${shimmer} 4s linear infinite;
+  color: ${tokens.color.blue};
+  background: ${tokens.color.lightBlueOpacity};
+  padding:  ${tokens.spacing.xs} ${tokens.spacing.md};
+  border-radius: ${tokens.radius.md};
 `
 
 const Subtitle = styled.p`
   font-size: ${tokens.font.size.xl};
   line-height: 1.6;
-  color: ${tokens.color.lightBlue};
-  max-width: 440px;
+  color: ${tokens.color.darkGray};
+  max-width: ${tokens.maxWidth.md};
   margin: 0 auto ${tokens.spacing['4xl']};
   opacity: 0.75;
   animation: ${fadeInUp} 0.5s ease 0.2s both;
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size['2xl']};
-  }
 `
 
 const Actions = styled.div`
@@ -111,7 +87,7 @@ const Actions = styled.div`
   flex-direction: column;
   gap: ${tokens.spacing.md};
   max-width: 360px;
-  margin: 0 auto;
+  margin: 0 auto ${tokens.spacing['5xl']};
   animation: ${fadeInUp} 0.5s ease 0.3s both;
 
   @media (min-width: 768px) {

@@ -5,10 +5,14 @@
 export const tokens = {
   color: {
     // Primary
-    blue: '#0080BC',
-    lightBlue: '#CEE1E8',
-    darkBlue: '#011A25',
-    white: '#f6f6f6',
+    blue: '#5298FF',
+    lightBlue: '#EFF6FF',
+    lightBlueOpacity: 'rgb(81 153 255 / 12%)',
+    darkBlue: '#1F2328',
+    darkGray: '#57606A',
+    middleGray: '#D0D7DE',
+    gray: '#D0D7DE',
+    white: '#fff',
 
     // Extended
     green: '#007C23',
@@ -19,9 +23,6 @@ export const tokens = {
     lightMagenta: '#F2C4DA',
     lightYellow: '#F8F6D6',
     midnightBlue: '#093C52',
-    gray: '#4A5C63',
-    gray3: '#C4C7C8',
-    gray2: '#E5E5E5',
 
     // Semantic
     text: '#011A25',
@@ -71,6 +72,7 @@ export const tokens = {
       semibold: 600,
       bold: 700,
       extrabold: 800,
+      black: 900,
     },
   },
 
@@ -87,11 +89,23 @@ export const tokens = {
     '6xl': '64px',
     '7xl': '80px',
     '8xl': '96px',
+    '9xl': '112px',
   },
 
   transition: {
     fast: '0.15s ease',
     base: '0.2s ease',
     slow: '0.3s ease',
+  },
+
+  maxWidth: {
+    xs: '360px',
+    sm: '440px',
+    md: '520px',
+    lg: '640px',
+    xl: '768px',
+    '2xl': '960px',
+    '3xl': '1200px',
+    container: '1440px',
   },
 } as const
