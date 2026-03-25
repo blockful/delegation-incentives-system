@@ -262,18 +262,9 @@ export function LotteryPage() {
     return (
       <Page>
         <Hero>
-          <Typography
-            fontVariant="label"
-            color="blue"
-            weight="bold"
-            style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-          >
-            Lottery
-          </Typography>
+          <Eyebrow>Lottery</Eyebrow>
           <div style={{ marginTop: 12 }}>
-            <ThorinHeading level="1" responsive>
-              Small balance? You still have a shot.
-            </ThorinHeading>
+            <PageTitle>Small balance? You still have a shot.</PageTitle>
           </div>
         </Hero>
         <ErrorCard>
@@ -292,7 +283,7 @@ export function LotteryPage() {
           </Button>
         </ErrorCard>
         <Section>
-          <ThorinHeading level="2">How the draw works</ThorinHeading>
+          <SectionHeading>How the draw works</SectionHeading>
           <StepList>
             {HOW_IT_WORKS_STEPS.map((text, i) => (
               <Step key={i}>
