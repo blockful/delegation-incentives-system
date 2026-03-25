@@ -5,23 +5,87 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, LoadingWrapper, ErrorMessage } from '@/styles'
 import { useDashboardData } from './useDashboardData'
 import { EarningsStrip } from './sections/EarningsStrip'
-import { RoundTimeline } from './sections/RoundTimeline'
+import { RoundProgressCard } from './sections/RoundTimeline'
 import { RewardTiers } from './sections/RewardTiers'
-import { LotteryBanner } from './sections/LotteryBanner'
+import { LotteryCard } from './sections/LotteryBanner'
+import { formatShortDate } from '@/utils/dashboard'
 
 const Page = styled.div`
-  max-width: 720px;
+  max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.lg};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  gap: ${tokens.spacing['3xl']};
   animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
-    gap: ${tokens.spacing.xl};
+    padding: ${tokens.spacing['5xl']} ${tokens.spacing['4xl']};
   }
+`
+
+const MainGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing['3xl']};
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+`
+
+const Column = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xl};
+`
+
+const SectionLabel = styled.span`
+  display: block;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
+  margin-bottom: ${tokens.spacing.md};
+`
+
+const RoundDetailsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${tokens.spacing.md};
+`
+
+const RoundStatBox = styled.div`
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.surface};
+  box-shadow: ${tokens.shadow.sm};
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`
+
+const RoundStatLabel = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
+`
+
+const RoundStatValue = styled.span`
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.2;
+`
+
+const RoundStatSub = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
 `
 
 export function DashboardPage() {
@@ -45,35 +109,75 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   const currentTierIndex = tiers.currentTierIndex
   const delegatedTo = (apy.delegatedTo ?? address) as `0x${string}`
 
+  const balanceLabel = `${parseFloat(apy.currentBalanceEns).toFixed(2)} ENS`
+  const timeLeft = `${round.daysRemaining}d`
+  const roundEndFormatted = formatShortDate(round.endDate)
+  const poolLabel = `${Math.round(Number(tiers.tiers[currentTierIndex]?.poolSizeEns ?? 0) / 1000)}K ENS`
+
   return (
     <Page>
-      <EarningsStrip
-        earnedEns={apy.estimatedMonthlyRewardEns}
-        apyPct={apy.estimatedApyPct}
-        tierIndex={currentTierIndex}
-        delegatedTo={delegatedTo}
-        delegateEnsName={apy.delegatedToEnsName ?? undefined}
-        delegateAvatarUrl={apy.delegatedToAvatarUrl ?? undefined}
-        balanceEns={apy.currentBalanceEns}
-        roundStartDate={round.startDate}
-        roundEndDate={round.endDate}
-      />
-      <RoundTimeline
-        roundNumber={round.roundNumber}
-        startDate={round.startDate}
-        endDate={round.endDate}
-        daysRemaining={round.daysRemaining}
-        percentComplete={round.percentComplete}
-        expectedPayout={apy.estimatedMonthlyRewardEns}
-      />
+      <MainGrid>
+        <Column>
+          <div>
+            <SectionLabel>Your Earnings</SectionLabel>
+            <EarningsStrip
+              earnedEns={apy.estimatedMonthlyRewardEns}
+              apyPct={apy.estimatedApyPct}
+              tierIndex={currentTierIndex}
+              delegatedTo={delegatedTo}
+              delegateEnsName={apy.delegatedToEnsName ?? undefined}
+              delegateAvatarUrl={apy.delegatedToAvatarUrl ?? undefined}
+              balanceEns={apy.currentBalanceEns}
+              roundStartDate={round.startDate}
+              roundEndDate={round.endDate}
+              roundNumber={round.roundNumber}
+              daysRemaining={round.daysRemaining}
+            />
+          </div>
+        </Column>
+
+        <Column>
+          <div>
+            <SectionLabel>Round Details</SectionLabel>
+            <RoundDetailsGrid>
+              <RoundStatBox>
+                <RoundStatLabel>Balance</RoundStatLabel>
+                <RoundStatValue>{balanceLabel}</RoundStatValue>
+                <RoundStatSub>180-day avg</RoundStatSub>
+              </RoundStatBox>
+              <RoundStatBox>
+                <RoundStatLabel>Round Ends</RoundStatLabel>
+                <RoundStatValue>{timeLeft}</RoundStatValue>
+                <RoundStatSub>{roundEndFormatted}</RoundStatSub>
+              </RoundStatBox>
+              <RoundStatBox>
+                <RoundStatLabel>Pool</RoundStatLabel>
+                <RoundStatValue>{poolLabel}</RoundStatValue>
+                <RoundStatSub>reward pool</RoundStatSub>
+              </RoundStatBox>
+            </RoundDetailsGrid>
+          </div>
+
+          <div>
+            <SectionLabel>Share Your Earnings</SectionLabel>
+            <Column>
+              <RoundProgressCard
+                roundNumber={round.roundNumber}
+                percentComplete={round.percentComplete}
+              />
+              {apy.qualifiesForLottery && (
+                <LotteryCard expectedPayout={apy.estimatedMonthlyRewardEns} />
+              )}
+            </Column>
+          </div>
+        </Column>
+      </MainGrid>
+
       <RewardTiers
         tiers={tiers.tiers}
         currentTierIndex={currentTierIndex}
         userEstimatedReward={apy.estimatedMonthlyRewardEns}
       />
-      {apy.qualifiesForLottery && (
-        <LotteryBanner expectedPayout={apy.estimatedMonthlyRewardEns} />
-      )}
     </Page>
   )
 }

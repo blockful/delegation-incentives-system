@@ -9,7 +9,7 @@ import type {
   RoundInfoResponse,
 } from "./types";
 
-const BASE = "/api";
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? "") + "/api";
 
 class ApiClientError extends Error {
   constructor(

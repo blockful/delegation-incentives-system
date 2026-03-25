@@ -1,5 +1,4 @@
 import styled from 'styled-components'
-import { Card, Tag } from '@ensdomains/thorin'
 import { tokens } from '@/styles'
 
 interface RoundCardProps {
@@ -13,7 +12,12 @@ interface RoundCardProps {
   currentApyPct: string
 }
 
-const StyledCard = styled(Card)`
+const Card = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.sm};
+  padding: ${tokens.spacing['2xl']};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xl};
@@ -28,8 +32,19 @@ const Header = styled.div`
 const RoundTitle = styled.h3`
   font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
   margin: 0;
-  color: ${tokens.color.text};
+`
+
+const InProgressTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  background: ${tokens.color.lightBlueOpacity};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  padding: 3px 10px;
+  border-radius: ${tokens.radius.pill};
 `
 
 const ProgressSection = styled.div`
@@ -38,31 +53,26 @@ const ProgressSection = styled.div`
   gap: ${tokens.spacing.sm};
 `
 
-const ProgressLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-`
-
 const ProgressBarTrack = styled.div`
   height: 8px;
-  border-radius: ${tokens.radius.sm};
-  background: ${tokens.color.surfaceAlt};
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.borderLight};
   overflow: hidden;
 `
 
 const ProgressBarFill = styled.div<{ $pct: number }>`
   height: 100%;
-  border-radius: ${tokens.radius.sm};
-  background: ${tokens.color.accent};
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.blue};
   width: ${({ $pct }) => Math.min($pct, 100)}%;
   transition: width ${tokens.transition.slow};
 `
 
-const DateRow = styled.div`
+const ProgressMeta = styled.div`
   display: flex;
   justify-content: space-between;
   font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
+  color: ${tokens.color.darkGray};
 `
 
 const StatsGrid = styled.div`
@@ -71,8 +81,8 @@ const StatsGrid = styled.div`
   gap: ${tokens.spacing.md};
 `
 
-const StatCard = styled.div`
-  background: ${tokens.color.surfaceAlt};
+const StatBox = styled.div`
+  border: 1px solid ${tokens.color.gray};
   border-radius: ${tokens.radius.md};
   padding: ${tokens.spacing.lg};
   display: flex;
@@ -82,21 +92,20 @@ const StatCard = styled.div`
 
 const StatLabel = styled.span`
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.medium};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${tokens.color.textMuted};
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
 `
 
 const StatValue = styled.span`
-  font-size: ${tokens.font.size.xl};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
+  color: ${tokens.color.darkBlue};
 `
 
-const CompactTag = styled(Tag)`
-  padding: 2px 8px;
-  font-size: ${tokens.font.size.xs};
+const ApyValue = styled(StatValue)`
+  color: ${tokens.color.positiveEmphasis};
 `
 
 export function RoundCard({
@@ -110,41 +119,36 @@ export function RoundCard({
   currentApyPct,
 }: RoundCardProps) {
   return (
-    <StyledCard>
+    <Card>
       <Header>
         <RoundTitle>Round {roundNumber}</RoundTitle>
-        <CompactTag colorStyle="greenPrimary">Live</CompactTag>
+        <InProgressTag>In progress</InProgressTag>
       </Header>
 
       <ProgressSection>
-        <ProgressLabel>
-          {percentComplete}% complete · {timeLeft} left
-        </ProgressLabel>
-
         <ProgressBarTrack>
           <ProgressBarFill $pct={percentComplete} />
         </ProgressBarTrack>
+        <ProgressMeta>
+          <span>{startDate}</span>
+          <span>{timeLeft} left · ends {endDate}</span>
+        </ProgressMeta>
       </ProgressSection>
 
-      <DateRow>
-        <span>{startDate}</span>
-        <span>{endDate}</span>
-      </DateRow>
-
       <StatsGrid>
-        <StatCard>
+        <StatBox>
           <StatLabel>Pool</StatLabel>
           <StatValue>{poolSizeEns} ENS</StatValue>
-        </StatCard>
-        <StatCard>
+        </StatBox>
+        <StatBox>
           <StatLabel>Your Tier</StatLabel>
           <StatValue>{currentTier}</StatValue>
-        </StatCard>
-        <StatCard>
+        </StatBox>
+        <StatBox>
           <StatLabel>Current APY</StatLabel>
-          <StatValue>{currentApyPct}%</StatValue>
-        </StatCard>
+          <ApyValue>{currentApyPct}%</ApyValue>
+        </StatBox>
       </StatsGrid>
-    </StyledCard>
+    </Card>
   )
 }

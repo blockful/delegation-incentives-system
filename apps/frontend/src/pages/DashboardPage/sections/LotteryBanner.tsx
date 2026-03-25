@@ -2,49 +2,57 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { tokens } from '@/styles/tokens'
 
-interface LotteryBannerProps {
+interface LotteryCardProps {
   expectedPayout: string
 }
 
-const Banner = styled(Link)`
+const CardLink = styled(Link)`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.md};
   padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  border: 1px solid ${tokens.color.lightYellow};
-  border-radius: ${tokens.radius.lg};
-  background: linear-gradient(135deg, rgba(255, 247, 47, 0.05) 0%, ${tokens.color.surface} 100%);
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
+  background: ${tokens.color.surface};
   text-decoration: none;
-  color: inherit;
-  transition:
-    box-shadow ${tokens.transition.base},
-    transform ${tokens.transition.base};
+  box-shadow: ${tokens.shadow.sm};
+  transition: box-shadow ${tokens.transition.fast};
 
   &:hover {
     box-shadow: ${tokens.shadow.md};
-    transform: translateY(-1px);
   }
 `
 
-const Icon = styled.span`
-  font-size: 20px;
-  flex-shrink: 0;
-`
-
-const Text = styled.span`
+const CardBody = styled.div`
   flex: 1;
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.text};
-  line-height: 1.4;
-
-  strong {
-    font-weight: ${tokens.font.weight.semibold};
-  }
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
 `
 
-const Arrow = styled.span`
+const CardLabel = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
+`
+
+const CardTitle = styled.span`
   font-size: ${tokens.font.size.lg};
-  color: ${tokens.color.textFaint};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+`
+
+const CardSub = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+`
+
+const Chevron = styled.span`
+  font-size: ${tokens.font.size.xl};
+  color: ${tokens.color.darkGray};
+  flex-shrink: 0;
 `
 
 function formatPayout(ens: string): string {
@@ -53,15 +61,20 @@ function formatPayout(ens: string): string {
   return num.toFixed(4)
 }
 
-export function LotteryBanner({ expectedPayout }: LotteryBannerProps) {
+export function LotteryCard({ expectedPayout }: LotteryCardProps) {
+  const payout = parseFloat(expectedPayout)
+  const poolAccumulated = (payout * 10).toFixed(1)
+
   return (
-    <Banner to="/lottery">
-      <Icon aria-hidden>🎟️</Icon>
-      <Text>
-        Your <strong>{formatPayout(expectedPayout)} ENS</strong> payout is below the 1 ENS minimum.
-        It enters a <strong>10 ENS lottery pool</strong> drawn at round end.
-      </Text>
-      <Arrow aria-hidden>&rsaquo;</Arrow>
-    </Banner>
+    <CardLink to="/lottery">
+      <CardBody>
+        <CardLabel>Lottery</CardLabel>
+        <CardTitle>You're entered in the lottery</CardTitle>
+        <CardSub>
+          {poolAccumulated} / 10 ENS accumulated · {formatPayout(expectedPayout)} ENS payout
+        </CardSub>
+      </CardBody>
+      <Chevron>›</Chevron>
+    </CardLink>
   )
 }

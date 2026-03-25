@@ -29,6 +29,13 @@ export const GlobalStyles = createGlobalStyle`
     letter-spacing: -0.02em;
   }
 
+  /* Global link baseline */
+  a {
+    color: ${tokens.color.blue};
+    font-weight: ${tokens.font.weight.medium};
+    text-decoration: none;
+  }
+
   /* Tabular numbers for data-heavy interfaces */
   .tabular-nums {
     font-variant-numeric: tabular-nums;

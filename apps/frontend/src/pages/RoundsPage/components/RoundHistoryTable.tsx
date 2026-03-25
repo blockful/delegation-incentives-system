@@ -1,5 +1,4 @@
 import styled from 'styled-components'
-import { Tag } from '@ensdomains/thorin'
 import { tokens, Eyebrow } from '@/styles'
 
 export interface RoundHistoryEntry {
@@ -27,25 +26,38 @@ const Table = styled.table`
 const Th = styled.th`
   text-align: left;
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${tokens.color.textMuted};
+  letter-spacing: 0.1em;
+  color: ${tokens.color.darkGray};
   padding: ${tokens.spacing.sm} ${tokens.spacing.md};
-  border-bottom: 1px solid ${tokens.color.border};
+  border-bottom: 1px solid ${tokens.color.borderLight};
 `
 
 const Td = styled.td`
   font-size: ${tokens.font.size.base};
   padding: ${tokens.spacing.md};
-  color: ${tokens.color.text};
-  border-bottom: 1px solid ${tokens.color.surfaceAlt};
+  color: ${tokens.color.darkBlue};
+  border-bottom: 1px solid ${tokens.color.borderLight};
   white-space: nowrap;
 `
 
 const EarnedValue = styled.span`
-  color: ${tokens.color.positive};
+  color: ${tokens.color.positiveEmphasis};
   font-weight: ${tokens.font.weight.semibold};
+`
+
+const StatusPill = styled.span<{ $live: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  padding: 3px 10px;
+  border-radius: ${tokens.radius.pill};
+  background: ${({ $live }) =>
+    $live ? tokens.color.lightBlueOpacity : tokens.color.borderLight};
+  color: ${({ $live }) =>
+    $live ? tokens.color.blue : tokens.color.darkGray};
 `
 
 /**
@@ -85,13 +97,9 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
                 <EarnedValue>+{entry.earned} ENS</EarnedValue>
               </Td>
               <Td>
-                <Tag
-                  colorStyle={
-                    entry.status === 'live' ? 'greenPrimary' : 'greyPrimary'
-                  }
-                >
+                <StatusPill $live={entry.status === 'live'}>
                   {entry.status === 'live' ? 'Live' : 'Paid'}
-                </Tag>
+                </StatusPill>
               </Td>
             </tr>
           ))}

@@ -53,9 +53,9 @@ export const tokens = {
   },
 
   shadow: {
-    sm: '0 1px 4px rgba(1, 26, 37, 0.04)',
-    md: '0 2px 12px rgba(1, 26, 37, 0.08)',
-    lg: '0 8px 32px rgba(1, 26, 37, 0.12)',
+    sm: '0 1px 3px rgba(0, 0, 0, 0.06)',
+    md: '0 4px 16px rgba(0, 0, 0, 0.10)',
+    lg: '0 8px 32px rgba(0, 0, 0, 0.14)',
   },
 
   font: {

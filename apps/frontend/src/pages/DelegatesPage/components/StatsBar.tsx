@@ -8,35 +8,41 @@ interface StatsBarProps {
 }
 
 const Bar = styled.div`
-  display: flex;
-  border: 1px solid ${tokens.color.border};
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid ${tokens.color.gray};
   border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.sm};
+  background: ${tokens.color.surface};
   overflow: hidden;
+  min-width: 0;
 `
 
 const Cell = styled.div`
-  flex: 1;
-  padding: ${tokens.spacing.lg};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: ${tokens.spacing.xs};
+  text-align: center;
 
   &:not(:last-child) {
-    border-right: 1px solid ${tokens.color.border};
+    border-right: 1px solid ${tokens.color.borderLight};
   }
 `
 
 const CellValue = styled.span`
   font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  white-space: nowrap;
 `
 
 const CellLabel = styled.span`
   font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  text-transform: uppercase;
+  color: ${tokens.color.darkGray};
+  white-space: nowrap;
 `
 
 export function StatsBar({
@@ -48,15 +54,15 @@ export function StatsBar({
     <Bar>
       <Cell>
         <CellValue>{activeDelegates}</CellValue>
-        <CellLabel>Active Delegates</CellLabel>
+        <CellLabel>active delegates</CellLabel>
       </Cell>
       <Cell>
         <CellValue>{totalDelegated ?? '—'}</CellValue>
-        <CellLabel>ENS Delegated</CellLabel>
+        <CellLabel>ENS delegated</CellLabel>
       </Cell>
       <Cell>
         <CellValue>{holdersEarning ?? '—'}</CellValue>
-        <CellLabel>Holders Earning</CellLabel>
+        <CellLabel>holders earning</CellLabel>
       </Cell>
     </Bar>
   )

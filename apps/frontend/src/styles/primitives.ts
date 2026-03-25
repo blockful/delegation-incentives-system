@@ -27,11 +27,11 @@ export const fadeIn = keyframes`
 
 export const Eyebrow = styled.span`
   display: block;
-  font-size: ${tokens.font.size.xs};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: ${tokens.color.accent};
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
 `
 
 export const PageTitle = styled.h1`
@@ -105,8 +105,8 @@ export const SectionInner = styled.div`
 
 export const cardStyles = css`
   background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
   transition:
     border-color ${tokens.transition.fast},
     box-shadow ${tokens.transition.base},

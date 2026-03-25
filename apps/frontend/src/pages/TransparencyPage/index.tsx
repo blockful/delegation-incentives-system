@@ -8,14 +8,114 @@ import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles/tokens'
 import {
   Eyebrow,
-  PageTitle,
-  SectionSubheading,
   PageContainer,
   cardStyles,
   cardHoverStyles,
 } from '@/styles/primitives'
 
+import { CURRENT_ROUND } from '@/config/round'
+
+/* ─── Page wrapper ─── */
+
 const Page = styled(PageContainer)``
+
+/* ─── Hero ─── */
+
+const HeroBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+`
+
+const HeroTitle = styled.h1`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['5xl']};
+  }
+`
+
+const HeroDesc = styled.p`
+  font-size: ${tokens.font.size.xl};
+  color: ${tokens.color.darkGray};
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+`
+
+/* ─── Link cards row ─── */
+
+const LinkCardsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+`
+
+const LinkCard = styled.a`
+  ${cardStyles}
+  ${cardHoverStyles}
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  text-decoration: none;
+  color: inherit;
+  box-shadow: ${tokens.shadow.sm};
+`
+
+const LinkIconBox = styled.span`
+  width: 40px;
+  height: 40px;
+  border-radius: ${tokens.radius.md};
+  background: ${tokens.color.darkBlue};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+`
+
+const LinkContent = styled.span`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+`
+
+const LinkTitle = styled.span`
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const LinkDesc = styled.span`
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const ChevronIcon = styled.span`
+  font-size: ${tokens.font.size.xl};
+  color: ${tokens.color.textFaint};
+  flex-shrink: 0;
+`
+
+/* ─── Two-column grid ─── */
 
 const Grid = styled.div`
   display: grid;
@@ -39,55 +139,17 @@ const Section = styled.div`
   gap: ${tokens.spacing.lg};
 `
 
+/* ─── Section labels (small-caps style) ─── */
+
 const SectionLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: ${tokens.color.accent};
+  color: ${tokens.color.darkGray};
 `
 
-const SectionTitle = styled.h2`
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
-  margin: 0;
-`
-
-const LinkCard = styled.a`
-  ${cardStyles}
-  ${cardHoverStyles}
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-  text-decoration: none;
-  color: inherit;
-`
-
-const LinkIcon = styled.span`
-  width: 36px;
-  height: 36px;
-  border-radius: ${tokens.radius.sm};
-  background: ${tokens.color.lightBlue};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: ${tokens.font.size.lg};
-  flex-shrink: 0;
-`
-
-const LinkTitle = styled.span`
-  flex: 1;
-  font-size: ${tokens.font.size.md};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
-`
-
-const ChevronIcon = styled.span`
-  font-size: ${tokens.font.size.xl};
-  color: ${tokens.color.textFaint};
-`
+/* ─── Contract rows ─── */
 
 const ContractRow = styled.div`
   ${cardStyles}
@@ -102,12 +164,13 @@ const ContractInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 `
 
 const ContractName = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
 `
 
 const ContractAddress = styled.span`
@@ -127,6 +190,8 @@ const ExternalLink = styled.a`
   }
 `
 
+/* ─── Stat grid ─── */
+
 const StatGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -136,6 +201,7 @@ const StatGrid = styled.div`
 const StatCard = styled.div`
   border-radius: ${tokens.radius.md};
   background: ${tokens.color.surfaceAlt};
+  border: 1px solid ${tokens.color.gray};
   padding: ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
@@ -144,22 +210,24 @@ const StatCard = styled.div`
 
 const StatLabel = styled.span`
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.medium};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${tokens.color.textMuted};
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
 `
 
 const StatValue = styled.span`
   font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
+  color: ${tokens.color.darkBlue};
 `
+
+/* ─── Right column: how rewards steps ─── */
 
 const StepList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  gap: ${tokens.spacing.xl};
 `
 
 const Step = styled.div`
@@ -172,23 +240,38 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.accent};
+  background: ${tokens.color.blue};
   color: ${tokens.color.surface};
   font-weight: ${tokens.font.weight.bold};
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.sm};
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-top: 2px;
 `
 
-const StepText = styled.p`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.text};
-  margin: 0;
-  line-height: 1.5;
-  padding-top: 3px;
+const StepBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `
+
+const StepTitle = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.4;
+`
+
+const StepDesc = styled.p`
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  margin: 0;
+  line-height: 1.55;
+`
+
+/* ─── Loading ─── */
 
 const LoadingWrapper = styled.div`
   display: flex;
@@ -197,26 +280,25 @@ const LoadingWrapper = styled.div`
   min-height: 200px;
 `
 
-const HeroBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.sm};
-`
+/* ─── Data ─── */
 
 const VERIFY_LINKS = [
   {
     icon: '📂',
     title: 'GitHub',
+    desc: 'Open source contracts & scripts',
     href: 'https://github.com/blockful-io/delegation-incentives-system',
   },
   {
     icon: '🛡️',
     title: 'Anticapture',
+    desc: 'Delegate activity & governance health',
     href: 'https://anticapture.xyz',
   },
   {
     icon: '📊',
     title: 'Dune Analytics',
+    desc: 'Live round data & payout breakdown',
     href: 'https://dune.com',
   },
 ]
@@ -228,12 +310,21 @@ const CONTRACT_ENTRIES = [
 ] as const
 
 const HOW_REWARDS_STEPS = [
-  'We measure the aggregate voting power delegated to active delegates over a 180-day moving average.',
-  'Month-over-month growth determines the reward tier — higher growth unlocks larger reward pools.',
-  'Individual rewards are proportional to your share of the pool, capped per-address to ensure fair distribution.',
+  {
+    title: 'Balance snapshot',
+    desc: 'Your share is based on the average of your daily ENS balance over the last 180 days — not just your current balance.',
+  },
+  {
+    title: 'Tier assignment',
+    desc: 'Tiers unlock as total delegated VP grows. Your tier is set at round start and determines your APY for the full 30-day round.',
+  },
+  {
+    title: 'Payout at round end',
+    desc: 'ENS is sent directly to your wallet. No claiming needed. Sub-1 ENS amounts enter the lottery pool instead.',
+  },
 ]
 
-import { CURRENT_ROUND } from '@/config/round'
+/* ─── Component ─── */
 
 export function TransparencyPage() {
   const fetchStatus = useCallback(() => api.status(), [])
@@ -245,33 +336,40 @@ export function TransparencyPage() {
 
   return (
     <Page>
+      {/* Hero */}
       <HeroBlock>
         <Eyebrow>Transparency</Eyebrow>
-        <PageTitle>Verify everything on-chain</PageTitle>
-        <SectionSubheading>
+        <HeroTitle>Verify everything on-chain</HeroTitle>
+        <HeroDesc>
           Every calculation is public. Every payout is verifiable. No trust
-          required.
-        </SectionSubheading>
+          required, check it yourself.
+        </HeroDesc>
       </HeroBlock>
 
-      <Grid>
-        <LeftColumn>
-          <Section>
-            <SectionLabel>Verify Yourself</SectionLabel>
-            {VERIFY_LINKS.map((link) => (
-              <LinkCard
-                key={link.title}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <LinkIcon aria-hidden>{link.icon}</LinkIcon>
-                <LinkTitle>{link.title}</LinkTitle>
-                <ChevronIcon aria-hidden>›</ChevronIcon>
-              </LinkCard>
-            ))}
-          </Section>
+      {/* 3-column link cards row */}
+      <LinkCardsRow>
+        {VERIFY_LINKS.map((link) => (
+          <LinkCard
+            key={link.title}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <LinkIconBox aria-hidden>{link.icon}</LinkIconBox>
+            <LinkContent>
+              <LinkTitle>{link.title}</LinkTitle>
+              <LinkDesc>{link.desc}</LinkDesc>
+            </LinkContent>
+            <ChevronIcon aria-hidden>›</ChevronIcon>
+          </LinkCard>
+        ))}
+      </LinkCardsRow>
 
+      {/* Two-column grid */}
+      <Grid>
+        {/* Left column */}
+        <LeftColumn>
+          {/* Smart Contracts */}
           <Section>
             <SectionLabel>Smart Contracts</SectionLabel>
             {CONTRACT_ENTRIES.map((contract) => (
@@ -282,7 +380,7 @@ export function TransparencyPage() {
                     {truncateAddress(contract.address)}
                   </ContractAddress>
                 </ContractInfo>
-                <Tag colorStyle="greenPrimary">Verified</Tag>
+                <Tag colorStyle="greenSecondary">Verified</Tag>
                 <ExternalLink
                   href={`https://etherscan.io/address/${contract.address}`}
                   target="_blank"
@@ -294,6 +392,7 @@ export function TransparencyPage() {
             ))}
           </Section>
 
+          {/* Live data stats */}
           {loading ? (
             <LoadingWrapper>
               <Spinner />
@@ -307,22 +406,22 @@ export function TransparencyPage() {
                 </SectionLabel>
                 <StatGrid>
                   <StatCard>
-                    <StatLabel>Active Delegates</StatLabel>
+                    <StatLabel>Snapshot Block</StatLabel>
+                    <StatValue>—</StatValue>
+                  </StatCard>
+                  <StatCard>
+                    <StatLabel>Total Delegated</StatLabel>
                     <StatValue>{status.data.activeDelegateCount}</StatValue>
                   </StatCard>
                   <StatCard>
-                    <StatLabel>Proposals</StatLabel>
+                    <StatLabel>Eligible Holders</StatLabel>
                     <StatValue>{status.data.proposalCount}</StatValue>
                   </StatCard>
                   <StatCard>
-                    <StatLabel>Current Tier</StatLabel>
+                    <StatLabel>Reward Pool</StatLabel>
                     <StatValue>
                       Tier {tiers.data.currentTierIndex + 1}
                     </StatValue>
-                  </StatCard>
-                  <StatCard>
-                    <StatLabel>Growth</StatLabel>
-                    <StatValue>{tiers.data.currentGrowthPct}%</StatValue>
                   </StatCard>
                 </StatGrid>
               </Section>
@@ -330,13 +429,17 @@ export function TransparencyPage() {
           )}
         </LeftColumn>
 
+        {/* Right column */}
         <Section>
-          <SectionTitle>How rewards are calculated</SectionTitle>
+          <SectionLabel>How rewards are calculated</SectionLabel>
           <StepList>
-            {HOW_REWARDS_STEPS.map((text, i) => (
+            {HOW_REWARDS_STEPS.map((step, i) => (
               <Step key={i}>
                 <StepNumber>{i + 1}</StepNumber>
-                <StepText>{text}</StepText>
+                <StepBody>
+                  <StepTitle>{step.title}</StepTitle>
+                  <StepDesc>{step.desc}</StepDesc>
+                </StepBody>
               </Step>
             ))}
           </StepList>

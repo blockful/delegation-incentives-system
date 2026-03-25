@@ -39,7 +39,7 @@ const Content = styled.div`
 
 const HeroEyebrow = styled.span`
   display: inline-block;
-  font-size: ${tokens.font.size.xs};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.2em;
