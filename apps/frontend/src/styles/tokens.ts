@@ -33,11 +33,15 @@ export const tokens = {
     surfaceAlt: '#f6f6f6',
     negative: '#F53293',
     positive: '#007C23',
+    positiveEmphasis: '#1A7F37',
     accent: '#0080BC',
+    borderLight: '#EAEEF2',
+    tierHighlight: '#DAFBE1',
   },
 
   radius: {
     sm: '8px',
+    card: '10px',
     md: '12px',
     lg: '16px',
     xl: '20px',
@@ -65,6 +69,7 @@ export const tokens = {
       '3xl': '28px',
       '4xl': '36px',
       '5xl': '48px',
+      '6xl': '52px',
     },
     weight: {
       normal: 400,
@@ -106,6 +111,7 @@ export const tokens = {
     xl: '768px',
     '2xl': '960px',
     '3xl': '1200px',
+    section: '1120px',
     container: '1440px',
   },
 } as const

@@ -32,6 +32,8 @@ const Section = styled.section`
 const Content = styled.div`
   position: relative;
   z-index: 1;
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
 `
 
 const HeroEyebrow = styled.span`
@@ -46,16 +48,17 @@ const HeroEyebrow = styled.span`
 `
 
 const Headline = styled.h1`
-  font-size: 32px;
-  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size['4xl']};
+  font-weight: ${tokens.font.weight.black};
   color: ${tokens.color.darkBlue};
-  line-height: 1.15;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   margin: 0 auto ${tokens.spacing.lg};
   max-width: 640px;
   animation: ${fadeInUp} 0.5s ease 0.1s both;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
+    font-size: ${tokens.font.size['6xl']};
   }
 `
 
@@ -80,13 +83,32 @@ const Subtitle = styled.p`
   margin: 0 auto ${tokens.spacing['4xl']};
   opacity: 0.75;
   animation: ${fadeInUp} 0.5s ease 0.2s both;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['2xl']};
+  }
+`
+
+const FreeBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(246, 248, 250, 0.2);
+  border: 1px solid rgba(208, 215, 222, 0.2);
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  color: white;
+  margin-left: ${tokens.spacing.sm};
+  vertical-align: middle;
 `
 
 const Actions = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: ${tokens.spacing.md};
-  max-width: 360px;
   margin: 0 auto ${tokens.spacing['5xl']};
   animation: ${fadeInUp} 0.5s ease 0.3s both;
 
@@ -112,7 +134,7 @@ export function HeroSection({ currentApyPct }: HeroSectionProps) {
         <Actions>
           <RouterLink to="/delegates">
             <Button colorStyle="bluePrimary">
-              Delegate Now &rarr;
+              Delegate Now &rarr;<FreeBadge>Free</FreeBadge>
             </Button>
           </RouterLink>
           <RouterLink to="/rounds">

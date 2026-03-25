@@ -18,7 +18,7 @@ const Section = styled.section`
 `
 
 const Inner = styled.div`
-  max-width: 1120px;
+  max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
 `
 

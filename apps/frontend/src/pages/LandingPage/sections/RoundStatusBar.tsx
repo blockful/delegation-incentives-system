@@ -36,6 +36,10 @@ const Tagline = styled.span`
   color: #1a7f37;
   text-align: center;
   width: 100%;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.base};
+  }
 `
 
 const DataRow = styled.div`
@@ -66,6 +70,10 @@ const ColLabel = styled.span`
   display: flex;
   align-items: center;
   gap: 6px;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.lg};
+  }
 `
 
 const ColSub = styled.span`
@@ -73,6 +81,10 @@ const ColSub = styled.span`
   font-weight: ${tokens.font.weight.normal};
   color: #57606a;
   line-height: 16px;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.base};
+  }
 `
 
 const LiveDot = styled.span`
@@ -88,6 +100,10 @@ const GrowthLabel = styled.span<{ $negative?: boolean }>`
   font-weight: ${tokens.font.weight.bold};
   color: ${({ $negative }) => ($negative ? tokens.color.negative : '#1a7f37')};
   line-height: 18px;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.lg};
+  }
 `
 
 export function RoundStatusBar({

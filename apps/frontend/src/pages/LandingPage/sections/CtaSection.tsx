@@ -17,6 +17,11 @@ const Section = styled.section`
   }
 `
 
+const Inner = styled.div`
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+`
+
 const Heading = styled.h2`
   font-size: ${tokens.spacing['3xl']};
   font-weight: ${tokens.font.weight.extrabold};
@@ -95,6 +100,7 @@ const checkItems = [
 export function CtaSection() {
   return (
     <Section data-testid="cta-section">
+      <Inner>
       <Heading>
         Earn ENS rewards.<br />
         Strengthen governance.
@@ -122,6 +128,7 @@ export function CtaSection() {
           </Check>
         ))}
       </Checks>
+      </Inner>
     </Section>
   )
 }
