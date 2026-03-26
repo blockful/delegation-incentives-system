@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import { Button, EnsSVG } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
@@ -7,6 +6,16 @@ import { fadeInUp } from '@/styles/primitives'
 
 const RouterLink = styled(Link)`
   text-decoration: none;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    display: block;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `
 
 interface HeroSectionProps {
@@ -14,7 +23,7 @@ interface HeroSectionProps {
 }
 
 const Section = styled.section`
-  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -149,14 +158,17 @@ const FreeBadge = styled.span`
 const Actions = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: ${tokens.spacing.md};
   margin: 0 auto ${tokens.spacing['5xl']};
+  width: 100%;
   animation: ${fadeInUp} 0.5s ease 0.3s both;
 
   @media (min-width: 768px) {
     flex-direction: row;
     justify-content: center;
+    width: auto;
+    align-items: center;
   }
 `
 
@@ -184,25 +196,11 @@ const PARTICLE_CONFIGS = [
 ]
 
 export function HeroSection({ currentApyPct }: HeroSectionProps) {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [playing, setPlaying] = useState(false)
-
-  useEffect(() => {
-    const el = sectionRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setPlaying(true); observer.disconnect() } },
-      { threshold: 0.1 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
   return (
-    <Section ref={sectionRef}>
+    <Section>
       <ParticlesLayer>
         {PARTICLE_CONFIGS.map(p => (
-          <Particle key={p.id} $left={p.left} $size={p.size} $duration={p.duration} $delay={p.delay} $playing={playing}>
+          <Particle key={p.id} $left={p.left} $size={p.size} $duration={p.duration} $delay={p.delay} $playing={true}>
             <EnsSVG />
           </Particle>
         ))}

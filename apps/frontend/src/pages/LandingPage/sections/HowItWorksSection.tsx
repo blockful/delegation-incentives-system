@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
-import { Card } from '@ensdomains/thorin'
+import { Button, Card } from '@ensdomains/thorin'
+import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 
 const Section = styled.section`
-  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   background: ${tokens.color.surfaceAlt};
 
   @media (min-width: 768px) {
@@ -68,7 +69,7 @@ const StepsGrid = styled.div`
   }
 `
 
-const StepCardWrapper = styled.div<{ $index: number; $visible: boolean }>`
+const StepCardWrapper = styled.div<{ $index: number; $visible: boolean; $desktopOnly?: boolean }>`
   opacity: 0;
   ${({ $visible, $index }) =>
     $visible &&
@@ -76,6 +77,30 @@ const StepCardWrapper = styled.div<{ $index: number; $visible: boolean }>`
       animation: ${fadeInUp} 0.5s ease both;
       animation-delay: ${$index * 0.12}s;
     `}
+
+  ${({ $desktopOnly }) =>
+    $desktopOnly &&
+    css`
+      display: none;
+
+      @media (min-width: 768px) {
+        display: block;
+      }
+    `}
+`
+
+const MobileOnlyWrapper = styled.div<{ $index: number; $visible: boolean }>`
+  opacity: 0;
+  ${({ $visible, $index }) =>
+    $visible &&
+    css`
+      animation: ${fadeInUp} 0.5s ease both;
+      animation-delay: ${$index * 0.12}s;
+    `}
+
+  @media (min-width: 768px) {
+    display: none;
+  }
 `
 
 const StepCard = styled(Card)`
@@ -84,8 +109,11 @@ const StepCard = styled(Card)`
   gap: ${tokens.spacing.md};
   padding: ${tokens.spacing.lg};
   position: relative;
-  min-height: 260px;
   box-shadow: ${tokens.shadow.sm};
+
+  @media (min-width: 768px) {
+    min-height: 260px;
+  }
 `
 
 const IconBox = styled.div<{ $bg: string }>`
@@ -135,6 +163,54 @@ const TagPill = styled.span<{ $bg: string; $color: string }>`
   color: ${({ $color }) => $color};
 `
 
+const OrDivider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.sm} 0 0;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.gray};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: ${tokens.color.borderLight};
+  }
+`
+
+const CtaRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+  margin-top: ${tokens.spacing['2xl']};
+
+  a {
+    text-decoration: none;
+    display: block;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+
+    a {
+      display: inline-flex;
+
+      button {
+        width: auto;
+      }
+    }
+  }
+`
+
 type Step = {
   number: string
   iconBg: string
@@ -170,7 +246,7 @@ const steps: Step[] = [
     tagColor: tokens.color.blue,
     title: 'Your share grows with time',
     desc: 'Rewards are based on your average ENS balance over the last 180 days, not just your current balance. Longer holding means a bigger share.',
-    tag: 'No claiming needed',
+    tag: 'No claiming needed — sent to your wallet',
     viewBox: '0 0 640 640',
     svgPath:
       'M160 96C142.3 96 128 110.3 128 128C128 145.7 142.3 160 160 160L178.7 160L73.4 265.4C60.9 277.9 60.9 298.2 73.4 310.7C85.9 323.2 106.2 323.2 118.7 310.7L224 205.3L224 224C224 241.7 238.3 256 256 256C273.7 256 288 241.7 288 224L288 128C288 110.3 273.7 96 256 96L160 96zM467.8 134.1C467.8 155.1 484.9 172.2 505.9 172.2C526.9 172.2 544 155.1 544 134.1C544 113.1 526.9 96 505.9 96C484.9 96 467.8 113.1 467.8 134.1zM343.7 258.2C343.7 279.2 360.8 296.3 381.8 296.3C402.8 296.3 419.9 279.2 419.9 258.2C419.9 237.2 402.8 220.1 381.8 220.1C360.8 220.1 343.7 237.2 343.7 258.2zM505.9 220.1C484.9 220.1 467.8 237.2 467.8 258.2C467.8 279.2 484.9 296.3 505.9 296.3C526.9 296.3 544 279.2 544 258.2C544 237.2 526.9 220.1 505.9 220.1zM220.2 381.8C220.2 402.8 237.3 419.9 258.3 419.9C279.3 419.9 296.4 402.8 296.4 381.8C296.4 360.8 279.3 343.7 258.3 343.7C237.3 343.7 220.2 360.8 220.2 381.8zM381.8 343.7C360.8 343.7 343.7 360.8 343.7 381.8C343.7 402.8 360.8 419.9 381.8 419.9C402.8 419.9 419.9 402.8 419.9 381.8C419.9 360.8 402.8 343.7 381.8 343.7zM467.9 381.8C467.9 402.8 485 419.9 506 419.9C527 419.9 544.1 402.8 544.1 381.8C544.1 360.8 527 343.7 506 343.7C485 343.7 467.9 360.8 467.9 381.8zM134.1 467.8C113.1 467.8 96 484.9 96 505.9C96 526.9 113.1 544 134.1 544C155.1 544 172.2 526.9 172.2 505.9C172.2 484.9 155.1 467.8 134.1 467.8zM220.2 505.9C220.2 526.9 237.3 544 258.3 544C279.3 544 296.4 526.9 296.4 505.9C296.4 484.9 279.3 467.8 258.3 467.8C237.3 467.8 220.2 484.9 220.2 505.9zM381.8 467.8C360.8 467.8 343.7 484.9 343.7 505.9C343.7 526.9 360.8 544 381.8 544C402.8 544 419.9 526.9 419.9 505.9C419.9 484.9 402.8 467.8 381.8 467.8zM467.9 505.9C467.9 526.9 485 544 506 544C527 544 544.1 526.9 544.1 505.9C544.1 484.9 527 467.8 506 467.8C485 467.8 467.9 484.9 467.9 505.9z',
@@ -203,6 +279,19 @@ const steps: Step[] = [
   },
 ]
 
+const step3a = steps[2]
+const step3b = steps[3]
+
+function StepIcon({ step }: { step: Step }) {
+  return (
+    <IconBox $bg={step.iconBg}>
+      <svg width="24" height="24" viewBox={step.viewBox} fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d={step.svgPath} fill={step.iconColor} />
+      </svg>
+    </IconBox>
+  )
+}
+
 export function HowItWorksSection() {
   const gridRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -233,30 +322,58 @@ export function HowItWorksSection() {
         </Header>
 
         <StepsGrid ref={gridRef}>
-          {steps.map((step, i) => (
+          {/* Steps 1 and 2 — always visible */}
+          {steps.slice(0, 2).map((step, i) => (
             <StepCardWrapper key={step.number} $index={i} $visible={visible}>
-            <StepCard>
-              <IconBox $bg={step.iconBg}>
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox={step.viewBox}
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d={step.svgPath} fill={step.iconColor} />
-                </svg>
-              </IconBox>
-              <StepNumber>{step.number}</StepNumber>
-              <StepTitle>{step.title}</StepTitle>
-              <StepDesc>{step.desc}</StepDesc>
-              <TagPill $bg={step.tagBg} $color={step.tagColor}>
-                {step.tag}
-              </TagPill>
-            </StepCard>
+              <StepCard>
+                <StepIcon step={step} />
+                <StepNumber>{step.number}</StepNumber>
+                <StepTitle>{step.title}</StepTitle>
+                <StepDesc>{step.desc}</StepDesc>
+                <TagPill $bg={step.tagBg} $color={step.tagColor}>{step.tag}</TagPill>
+              </StepCard>
             </StepCardWrapper>
           ))}
+
+          {/* Steps 3a and 3b — desktop only, shown as separate cards */}
+          {steps.slice(2).map((step, i) => (
+            <StepCardWrapper key={step.number} $index={i + 2} $visible={visible} $desktopOnly>
+              <StepCard>
+                <StepIcon step={step} />
+                <StepNumber>{step.number}</StepNumber>
+                <StepTitle>{step.title}</StepTitle>
+                <StepDesc>{step.desc}</StepDesc>
+                <TagPill $bg={step.tagBg} $color={step.tagColor}>{step.tag}</TagPill>
+              </StepCard>
+            </StepCardWrapper>
+          ))}
+
+          {/* Step 3 combined — mobile only */}
+          <MobileOnlyWrapper $index={2} $visible={visible}>
+            <StepCard>
+              <StepIcon step={step3a} />
+              <StepNumber>3</StepNumber>
+              <StepTitle>{step3a.title}</StepTitle>
+              <StepDesc>{step3a.desc}</StepDesc>
+              <TagPill $bg={step3a.tagBg} $color={step3a.tagColor}>{step3a.tag}</TagPill>
+
+              <OrDivider>OR</OrDivider>
+
+              <StepTitle>{step3b.title}</StepTitle>
+              <StepDesc>{step3b.desc}</StepDesc>
+              <TagPill $bg={step3b.tagBg} $color={step3b.tagColor}>{step3b.tag}</TagPill>
+            </StepCard>
+          </MobileOnlyWrapper>
         </StepsGrid>
+
+        <CtaRow>
+          <Link to="/rounds">
+            <Button colorStyle="bluePrimary">Round breakdown &rarr;</Button>
+          </Link>
+          <Link to="/lottery">
+            <Button colorStyle="blueSecondary">Check lottery status</Button>
+          </Link>
+        </CtaRow>
       </Inner>
     </Section>
   )

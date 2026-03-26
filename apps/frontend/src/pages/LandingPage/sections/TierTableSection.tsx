@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
-import { Button, Card, CheckSVG, LockSVG } from '@ensdomains/thorin'
+import { Button, CheckSVG, LockSVG } from '@ensdomains/thorin'
 import type { TierEntry } from '@/api/types'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
@@ -10,11 +10,14 @@ interface TierTableSectionProps {
 }
 
 const Section = styled.section`
-  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   border-bottom: 1px solid ${tokens.color.borderLight};
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
+  }
+    @media (max-width: 480px) {
+    padding-top: 0;
   }
 `
 
@@ -30,6 +33,9 @@ const Inner = styled.div`
     align-items: center;
     gap: ${tokens.spacing['4xl']};
   }
+    @media (max-width: 480px) {
+      gap: ${tokens.spacing['3xl']};
+    }
 `
 
 const CopyBlock = styled.div`
@@ -84,13 +90,26 @@ const Description = styled.p`
   }
 `
 
-const TierCard = styled(Card)`
+const TierCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xs};
   width: 100%;
   min-width: 0;
   box-shadow: ${tokens.shadow.sm};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.card};
+  background: ${tokens.color.surface};
+  padding: ${tokens.spacing.md};
+  overflow: hidden;
+
+    @media (max-width: 480px) {
+      border: 1px solid transparent;
+      background: transparent;
+       border-radius: none;
+       box-shadow: none;
+       padding: 0;
+  }
 `
 
 const Separator = styled.div`
@@ -162,6 +181,25 @@ const ApyText = styled.span<{ $isUnlocked: boolean }>`
   font-variant-numeric: tabular-nums;
 `
 
+const CtaWrap = styled.div`
+  display: block;
+  width: 100%;
+
+  button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  @media (min-width: 768px) {
+    display: inline-flex;
+    width: auto;
+
+    button {
+      width: auto;
+    }
+  }
+`
+
 const StatusIcon = styled.span`
   display: flex;
   align-items: center;
@@ -201,9 +239,9 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             bring in increases everyone's earnings.
           </Description>
         </TitleBlock>
-        <div style={{ display: 'inline-flex' }}>
+        <CtaWrap>
           <Button colorStyle="bluePrimary">Share &amp; Grow the Pool</Button>
-        </div>
+        </CtaWrap>
       </CopyBlock>
 
       <div ref={cardRef} style={{ flex: 1, minWidth: 0 }}>

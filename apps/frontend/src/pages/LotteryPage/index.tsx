@@ -17,7 +17,7 @@ const HeroSection = styled.section`
   width: 100%;
   background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.white});
   border-bottom: 1px solid ${tokens.color.middleGray};
-  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -65,13 +65,14 @@ const HeroDescription = styled.p`
 const ContentColumn = styled.div`
   max-width: 680px;
   margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl} ${tokens.spacing['7xl']};
+  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['4xl']};
+  gap: ${tokens.spacing['3xl']};
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['5xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
+    gap: ${tokens.spacing['4xl']};
   }
 `
 
@@ -244,7 +245,7 @@ const HowItWorksBox = styled.div`
 `
 
 const HowItWorksTitle = styled.h2`
-  font-size: ${tokens.font.size['2xl']};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   margin: 0;
@@ -352,12 +353,24 @@ const WinnerMeta = styled.span`
   color: ${tokens.color.darkGray};
 `
 
-const WinnerPrize = styled.span`
+const WinnerPrize = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  white-space: nowrap;
+`
+
+const WinnerPrizeAmount = styled.span`
   font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.orange};
-  white-space: nowrap;
-  flex-shrink: 0;
+`
+
+const WinnerPrizeLabel = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.orange};
+  font-weight: ${tokens.font.weight.medium};
 `
 
 const ViewAllLink = styled.a`
@@ -453,9 +466,9 @@ const EmptyIcon = styled.span`
 /* ─── Static content ─── */
 
 const HOW_IT_WORKS_STEPS = [
-  'Small balances that fall below the minimum payout threshold are pooled together into a lottery.',
-  'At the end of each round, a verifiable random draw selects a winner from the pool.',
-  'The winner receives the entire pooled amount — giving small holders a real shot at meaningful rewards.',
+  'Sub-1 ENS payouts grouped into pools approaching 10 ENS each.',
+  'Odds are proportional to calculated payout — bigger balance means better odds.',
+  'Winner drawn using RANDAO (last block of the round) — publicly verifiable.',
 ]
 
 /* ─── Sub-components ─── */
@@ -630,7 +643,10 @@ export function LotteryPage() {
                   Pool #{poolNumber} · Jan 15, 2025
                 </WinnerMeta>
               </WinnerInfo>
-              <WinnerPrize>{prizeEns} ENS won</WinnerPrize>
+              <WinnerPrize>
+                <WinnerPrizeAmount>{prizeEns} ENS</WinnerPrizeAmount>
+                <WinnerPrizeLabel>won</WinnerPrizeLabel>
+              </WinnerPrize>
             </WinnerCard>
             <ViewAllLink href="#" onClick={(e) => e.preventDefault()}>
               View all past winners →

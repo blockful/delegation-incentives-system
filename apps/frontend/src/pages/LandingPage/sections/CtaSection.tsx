@@ -3,13 +3,27 @@ import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
 
-const RouterLink = styled(Link)`
+const RouterLink = styled(Link)<{ $fullWidthMobile?: boolean }>`
   text-decoration: none;
+
+  ${({ $fullWidthMobile }) =>
+    $fullWidthMobile &&
+    `
+    @media (max-width: 767px) {
+      display: block;
+      width: 100%;
+
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  `}
 `
 
 const Section = styled.section`
   background: ${tokens.color.darkBlue};
-  padding: ${tokens.spacing['7xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
@@ -54,9 +68,15 @@ const Subtitle = styled.p`
 
 const Actions = styled.div`
   display: flex;
-  justify-content: center;
-  gap: ${tokens.spacing.sm};
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+  width: 100%;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: center;
+    width: auto;
+  }
 `
 
 const Checks = styled.div`
@@ -102,20 +122,16 @@ export function CtaSection() {
           {'Delegate in under a minute.\nGas is sponsored. Rewards are automatic.'}
         </Subtitle>
         <Actions>
-          <div style={{ display: 'inline-flex' }}>
-            <RouterLink to="/delegates">
-              <Button colorStyle="bluePrimary">
-                Delegate to an Active Delegate &rarr;
-              </Button>
-            </RouterLink>
-          </div>
-          <div style={{ display: 'inline-flex' }}>
-            <RouterLink to="/rounds">
-              <Button colorStyle="blueSecondary">
-                View Live Round Progress
-              </Button>
-            </RouterLink>
-          </div>
+          <RouterLink to="/delegates" $fullWidthMobile>
+            <Button colorStyle="bluePrimary">
+              Delegate to an Active Delegate &rarr;
+            </Button>
+          </RouterLink>
+          <RouterLink to="/rounds" $fullWidthMobile>
+            <Button colorStyle="blueSecondary">
+              View Live Round Progress
+            </Button>
+          </RouterLink>
         </Actions>
         <Checks>
           {checkItems.map((item) => (

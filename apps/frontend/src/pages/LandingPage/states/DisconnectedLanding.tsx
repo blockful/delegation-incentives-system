@@ -4,7 +4,6 @@ import { RoundStatusBar } from '../sections/RoundStatusBar'
 import { TierTableSection } from '../sections/TierTableSection'
 import { HowItWorksSection } from '../sections/HowItWorksSection'
 import { CtaSection } from '../sections/CtaSection'
-import { Footer } from '../sections/Footer'
 
 interface DisconnectedLandingProps {
   tierData: TierProgressionResponse
@@ -29,7 +28,6 @@ export function DisconnectedLanding({ tierData, roundData }: DisconnectedLanding
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection />
       <CtaSection />
-      <Footer />
     </>
   )
 }

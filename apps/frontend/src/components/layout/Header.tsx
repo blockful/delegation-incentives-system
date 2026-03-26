@@ -292,7 +292,7 @@ export function Header() {
               colorStyle="bluePrimary"
               onClick={() => appKit.open()}
             >
-              Connect Wallet
+              Connect
             </Button>
           )}
           <HamburgerButton
