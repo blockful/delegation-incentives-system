@@ -80,11 +80,15 @@ export const gradientTextStyles = css`
 export const PageContainer = styled.div`
   max-width: 1120px;
   margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
   animation: ${fadeInUp} 0.4s ease both;
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+  }
 `
 
 export const SectionContainer = styled.section<{ $background?: string }>`
@@ -115,7 +119,7 @@ export const cardStyles = css`
 
 export const cardHoverStyles = css`
   &:hover {
-    border-color: ${tokens.color.gray};
+    border-color: ${tokens.color.blue};
     box-shadow: ${tokens.shadow.md};
     transform: translateY(-1px);
   }

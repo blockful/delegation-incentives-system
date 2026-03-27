@@ -47,7 +47,7 @@ const StyledCard = styled.div`
     box-shadow ${tokens.transition.base};
 
   &:hover {
-    border-color: ${tokens.color.darkGray};
+    border-color: ${tokens.color.blue};
     box-shadow: ${tokens.shadow.md};
   }
 `
@@ -142,12 +142,16 @@ const DelegatedButton = styled.button<{ $delegated: boolean }>`
 
 const ProfileLink = styled.a`
   font-size: ${tokens.font.size.base};
-  color: ${tokens.color.accent};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
   text-decoration: none;
   text-align: center;
   display: block;
+  padding: ${tokens.spacing.xs} 0;
+  transition: color ${tokens.transition.fast};
 
   &:hover {
+    color: ${tokens.color.blue};
     text-decoration: underline;
   }
 `

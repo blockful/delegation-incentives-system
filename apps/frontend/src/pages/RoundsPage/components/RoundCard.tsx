@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { tokens } from '@/styles'
+import { StatCard } from '@/components/shared/StatCard'
 
 interface RoundCardProps {
   roundNumber: number
@@ -77,35 +78,12 @@ const ProgressMeta = styled.div`
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: ${tokens.spacing.md};
-`
 
-const StatBox = styled.div`
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  padding: ${tokens.spacing.lg};
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xs};
-`
-
-const StatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${tokens.color.darkGray};
-`
-
-const StatValue = styled.span`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-`
-
-const ApyValue = styled(StatValue)`
-  color: ${tokens.color.positiveEmphasis};
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 `
 
 export function RoundCard({
@@ -136,18 +114,9 @@ export function RoundCard({
       </ProgressSection>
 
       <StatsGrid>
-        <StatBox>
-          <StatLabel>Pool</StatLabel>
-          <StatValue>{poolSizeEns} ENS</StatValue>
-        </StatBox>
-        <StatBox>
-          <StatLabel>Your Tier</StatLabel>
-          <StatValue>{currentTier}</StatValue>
-        </StatBox>
-        <StatBox>
-          <StatLabel>Current APY</StatLabel>
-          <ApyValue>{currentApyPct}%</ApyValue>
-        </StatBox>
+        <StatCard label="Pool" value={`${poolSizeEns} ENS`} />
+        <StatCard label="Your Tier" value={currentTier} />
+        <StatCard label="Current APY" value={`${currentApyPct}%`} valueColor={tokens.color.positiveEmphasis} />
       </StatsGrid>
     </Card>
   )

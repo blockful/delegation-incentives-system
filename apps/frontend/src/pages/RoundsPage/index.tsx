@@ -15,11 +15,15 @@ import {
 const Page = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
   animation: ${fadeInUp} 0.4s ease both;
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+  }
 `
 
 const HeaderBlock = styled.div`

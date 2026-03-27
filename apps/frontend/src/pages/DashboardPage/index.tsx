@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, LoadingWrapper, ErrorMessage } from '@/styles'
+import { StatCard } from '@/components/shared/StatCard'
 import { useDashboardData } from './useDashboardData'
 import { EarningsStrip } from './sections/EarningsStrip'
 import { RoundProgressCard } from './sections/RoundTimeline'
@@ -57,36 +58,6 @@ const RoundDetailsGrid = styled.div`
   gap: ${tokens.spacing.md};
 `
 
-const RoundStatBox = styled.div`
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  padding: ${tokens.spacing.lg};
-  background: ${tokens.color.surface};
-  box-shadow: ${tokens.shadow.sm};
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-`
-
-const RoundStatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${tokens.color.darkGray};
-`
-
-const RoundStatValue = styled.span`
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.2;
-`
-
-const RoundStatSub = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-`
 
 export function DashboardPage() {
   const wallet = useWalletState()
@@ -140,21 +111,9 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           <div>
             <SectionLabel>Round Details</SectionLabel>
             <RoundDetailsGrid>
-              <RoundStatBox>
-                <RoundStatLabel>Balance</RoundStatLabel>
-                <RoundStatValue>{balanceLabel}</RoundStatValue>
-                <RoundStatSub>180-day avg</RoundStatSub>
-              </RoundStatBox>
-              <RoundStatBox>
-                <RoundStatLabel>Round Ends</RoundStatLabel>
-                <RoundStatValue>{timeLeft}</RoundStatValue>
-                <RoundStatSub>{roundEndFormatted}</RoundStatSub>
-              </RoundStatBox>
-              <RoundStatBox>
-                <RoundStatLabel>Pool</RoundStatLabel>
-                <RoundStatValue>{poolLabel}</RoundStatValue>
-                <RoundStatSub>reward pool</RoundStatSub>
-              </RoundStatBox>
+              <StatCard label="Balance" value={balanceLabel} sub="180-day avg" />
+              <StatCard label="Round Ends" value={timeLeft} sub={roundEndFormatted} />
+              <StatCard label="Pool" value={poolLabel} sub="reward pool" />
             </RoundDetailsGrid>
           </div>
 

@@ -1,7 +1,11 @@
-import styled from 'styled-components'
+import { useEffect, useRef, useState } from 'react'
+import styled, { keyframes } from 'styled-components'
 import { Button, Spinner } from '@ensdomains/thorin'
+import { fadeInUp } from '@/styles'
 import { useLottery } from '@/features/lottery/useLottery'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { StepList } from '@/components/shared/StepList'
+import { TrophyIcon } from '@/components/shared/icons/TrophyIcon'
 import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles/tokens'
 
@@ -16,16 +20,16 @@ import { tokens } from '@/styles/tokens'
 const HeroSection = styled.section`
   width: 100%;
   background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.white});
-  border-bottom: 1px solid ${tokens.color.middleGray};
-  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: ${tokens.spacing.lg};
+  animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
-    padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['7xl']};
+    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['7xl']};
   }
 `
 
@@ -65,13 +69,14 @@ const HeroDescription = styled.p`
 const ContentColumn = styled.div`
   max-width: 680px;
   margin: 0 auto;
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
+  animation: ${fadeInUp} 0.4s ease 0.1s both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['5xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
+    padding: ${tokens.spacing['2xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
     gap: ${tokens.spacing['4xl']};
   }
 `
@@ -79,13 +84,13 @@ const ContentColumn = styled.div`
 /* ─── Qualify card ─── */
 
 const QualifyCard = styled.div`
-  background: ${tokens.color.tierHighlight};
-  border: 1px solid ${tokens.color.positiveEmphasis};
-  border-radius: ${tokens.radius.lg};
-  padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']};
+  background: #F0FFF4;
+  border: 1.5px solid ${tokens.color.middleGray};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  gap: ${tokens.spacing.md};
 `
 
 const QualifyHeader = styled.div`
@@ -93,50 +98,54 @@ const QualifyHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: ${tokens.spacing.md};
-  flex-wrap: wrap;
 `
 
 const QualifyTitle = styled.span`
-  font-size: ${tokens.font.size.md};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.positiveEmphasis};
 `
 
 const PoolPill = styled.span`
   font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.positiveEmphasis};
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.positiveEmphasis};
+  background: ${tokens.color.tierHighlight};
   border-radius: ${tokens.radius.pill};
-  padding: 2px ${tokens.spacing.md};
+  padding: 3px 10px;
   white-space: nowrap;
 `
 
 const QualifyStats = styled.div`
   display: flex;
-  gap: ${tokens.spacing.xl};
-  flex-wrap: wrap;
-
-  @media (min-width: 480px) {
-    gap: ${tokens.spacing['3xl']};
-  }
+  width: 100%;
+  justify-content: space-between;
+  gap: ${tokens.spacing['3xl']};
 `
 
-const QualifyStat = styled.div`
+const statEnter = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+`
+
+const QualifyStat = styled.div<{ $index: number }>`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  opacity: 0;
+  animation: ${statEnter} 0.35s ease forwards;
+  animation-delay: ${({ $index }) => $index * 80}ms;
 `
 
 const QualifyStatValue = styled.span`
-  font-size: ${tokens.font.size.md};
-  font-weight: ${tokens.font.weight.semibold};
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
+  letter-spacing: -0.02em;
 `
 
 const QualifyStatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.xs};
   color: ${tokens.color.darkGray};
 `
 
@@ -144,13 +153,13 @@ const QualifyStatLabel = styled.span`
 
 const PrizeCard = styled.div`
   border-radius: ${tokens.radius.lg};
-  border: 1px solid ${tokens.color.borderLight};
+  border: 1px solid ${tokens.color.gray};
   padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']};
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${tokens.spacing.lg};
+  gap: ${tokens.spacing.xs};
   background: ${tokens.color.surface};
   box-shadow: ${tokens.shadow.sm};
 `
@@ -174,6 +183,7 @@ const PrizeLabel = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: ${tokens.color.darkGray};
+    padding-top: ${tokens.spacing.md};
 `
 
 const PrizeAmount = styled.span`
@@ -187,14 +197,9 @@ const PrizeAmount = styled.span`
 const PrizeSubtitle = styled.span`
   font-size: ${tokens.font.size.base};
   color: ${tokens.color.darkGray};
+  padding-bottom: ${tokens.spacing['3xl']};
 `
 
-const PrizeDivider = styled.div`
-  width: 100%;
-  height: 1px;
-  background: ${tokens.color.borderLight};
-  margin-top: ${tokens.spacing.sm};
-`
 
 const PrizeStatRow = styled.div`
   display: flex;
@@ -208,7 +213,7 @@ const PrizeStatRow = styled.div`
 
 const PrizeStatBox = styled.div`
   flex: 1;
-  border: 1px solid ${tokens.color.borderLight};
+  border: 1px solid ${tokens.color.gray};
   border-radius: ${tokens.radius.md};
   padding: ${tokens.spacing.lg} ${tokens.spacing.md};
   display: flex;
@@ -234,7 +239,7 @@ const PrizeStatBoxLabel = styled.span`
 /* ─── How it works ─── */
 
 const HowItWorksBox = styled.div`
-  border: 1px solid ${tokens.color.borderLight};
+  border: 1px solid ${tokens.color.gray};
   border-radius: ${tokens.radius.lg};
   padding: ${tokens.spacing['2xl']};
   background: ${tokens.color.surface};
@@ -251,52 +256,16 @@ const HowItWorksTitle = styled.h2`
   margin: 0;
 `
 
-const StepList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xl};
-`
-
-const Step = styled.div`
-  display: flex;
-  gap: ${tokens.spacing.lg};
-  align-items: flex-start;
-`
-
-const StepNumber = styled.div`
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  font-weight: ${tokens.font.weight.bold};
-  font-size: ${tokens.font.size.sm};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
-`
-
-const StepText = styled.p`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkGray};
-  margin: 0;
-  line-height: 1.6;
-  padding-top: 3px;
-`
 
 const MethodologyLink = styled.a`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.blue};
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding-top: ${tokens.spacing.sm};
-  border-top: 1px solid ${tokens.color.borderLight};
 
   &:hover {
     text-decoration: underline;
@@ -341,7 +310,7 @@ const WinnerInfo = styled.div`
 
 const WinnerName = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   white-space: nowrap;
   overflow: hidden;
@@ -350,6 +319,7 @@ const WinnerName = styled.span`
 
 const WinnerMeta = styled.span`
   font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
 `
 
@@ -370,12 +340,12 @@ const WinnerPrizeAmount = styled.span`
 const WinnerPrizeLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.orange};
-  font-weight: ${tokens.font.weight.medium};
+  font-weight: ${tokens.font.weight.normal};
 `
 
 const ViewAllLink = styled.a`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.blue};
   text-decoration: none;
   display: inline-flex;
@@ -463,6 +433,36 @@ const EmptyIcon = styled.span`
   opacity: 0.6;
 `
 
+/* ─── Odds counter ─── */
+
+function useCountUp(target: number, duration = 800) {
+  const [value, setValue] = useState(0)
+  const raf = useRef<number>(0)
+
+  useEffect(() => {
+    const start = performance.now()
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
+      setValue(target * eased)
+      if (progress < 1) raf.current = requestAnimationFrame(tick)
+    }
+    raf.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf.current)
+  }, [target, duration])
+
+  return value
+}
+
+function OddsCounter({ value }: { value: string }) {
+  const match = value.match(/^~?([\d.]+)%$/)
+  const numeric = match ? parseFloat(match[1]) : null
+  const animated = useCountUp(numeric ?? 0)
+
+  if (numeric === null) return <>{value}</>
+  return <>~{animated.toFixed(1)}%</>
+}
+
 /* ─── Static content ─── */
 
 const HOW_IT_WORKS_STEPS = [
@@ -489,14 +489,7 @@ function HowItWorksSection() {
   return (
     <HowItWorksBox>
       <HowItWorksTitle>How the draw works</HowItWorksTitle>
-      <StepList>
-        {HOW_IT_WORKS_STEPS.map((text, i) => (
-          <Step key={i}>
-            <StepNumber>{i + 1}</StepNumber>
-            <StepText>{text}</StepText>
-          </Step>
-        ))}
-      </StepList>
+      <StepList steps={HOW_IT_WORKS_STEPS} />
       <MethodologyLink href="#" onClick={(e) => e.preventDefault()}>
         View randomness methodology →
       </MethodologyLink>
@@ -594,15 +587,15 @@ export function LotteryPage() {
               <PoolPill>Pool #{poolNumber}</PoolPill>
             </QualifyHeader>
             <QualifyStats>
-              <QualifyStat>
-                <QualifyStatValue>{oddsDisplay}</QualifyStatValue>
+              <QualifyStat $index={0}>
+                <QualifyStatValue><OddsCounter value={oddsDisplay} /></QualifyStatValue>
                 <QualifyStatLabel>your odds</QualifyStatLabel>
               </QualifyStat>
-              <QualifyStat>
+              <QualifyStat $index={1}>
                 <QualifyStatValue>{accumulatedDisplay}</QualifyStatValue>
                 <QualifyStatLabel>pool accumulated</QualifyStatLabel>
               </QualifyStat>
-              <QualifyStat>
+              <QualifyStat $index={2}>
                 <QualifyStatValue>{roundEndDisplay}</QualifyStatValue>
                 <QualifyStatLabel>until draw</QualifyStatLabel>
               </QualifyStat>
@@ -611,11 +604,12 @@ export function LotteryPage() {
         )}
 
         <PrizeCard>
-          <TrophyCircle aria-hidden>🏆</TrophyCircle>
+          <TrophyCircle>
+            <TrophyIcon size={24} color={tokens.color.positiveEmphasis} />
+          </TrophyCircle>
           <PrizeLabel>Prize Per Pool</PrizeLabel>
           <PrizeAmount>{prizeEns} ENS</PrizeAmount>
           <PrizeSubtitle>Sent directly to your wallet at round end</PrizeSubtitle>
-          <PrizeDivider />
           <PrizeStatRow>
             <PrizeStatBox>
               <PrizeStatBoxValue>{entryCount.toLocaleString()}</PrizeStatBoxValue>

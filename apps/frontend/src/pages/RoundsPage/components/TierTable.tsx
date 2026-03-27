@@ -15,12 +15,6 @@ const Container = styled.div`
   gap: ${tokens.spacing.lg};
 `
 
-const Description = styled.p`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkGray};
-  margin: 0;
-  line-height: 1.5;
-`
 
 const TierCard = styled(Card)`
   display: flex;
@@ -98,11 +92,7 @@ export function TierTable({ tiers, currentTierIndex }: TierTableProps) {
   return (
     <Container>
       <Eyebrow>APY Tiers</Eyebrow>
-      <Description>
-        Higher tiers unlock as more ENS gets delegated. Earn better APY the
-        further you progress.
-      </Description>
-      <TierCard data-testid="tier-table">
+<TierCard data-testid="tier-table">
         {tiers.map((tier, i) => {
           const isLocked = !tier.isUnlocked
           const isCurrent = tier.index === currentTierIndex

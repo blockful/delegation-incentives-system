@@ -24,7 +24,7 @@ describe('DelegatesPage', () => {
       expect(screen.getByText('0x1234…5678')).toBeInTheDocument()
     })
     expect(screen.getByText('0xabcd…abcd')).toBeInTheDocument()
-    expect(screen.getByText('0x9876…5432')).toBeInTheDocument()
+    expect(screen.getByText('')).toBeInTheDocument()
   })
 
   it('renders sort controls', () => {

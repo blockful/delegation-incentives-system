@@ -85,6 +85,9 @@ const Checks = styled.div`
   gap: ${tokens.spacing['2xl']};
   flex-wrap: wrap;
   justify-content: center;
+    @media (max-width: 480px) {
+    gap: ${tokens.spacing.md};
+  }
 `
 
 const CheckItem = styled.span`

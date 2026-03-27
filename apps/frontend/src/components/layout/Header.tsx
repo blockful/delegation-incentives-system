@@ -46,7 +46,7 @@ const BrandText = styled.span`
 
 const DesktopNav = styled.nav`
   display: none;
-  gap: 32px;
+  gap: 20px;
 
   @media (min-width: 768px) {
     display: flex;
@@ -81,7 +81,7 @@ const navLinkStyles = css`
 
   &.active {
     color: ${tokens.color.blue};
-    font-weight: ${tokens.font.weight.bold};
+    font-weight: ${tokens.font.weight.medium};
 
     &::after {
       transform: scaleX(1);
@@ -101,6 +101,20 @@ const RightArea = styled.div`
 
 const ProfileScaler = styled.div`
   zoom: 0.85;
+`
+
+const MobileOnly = styled.span`
+  @media (min-width: 768px) {
+    display: none;
+  }
+`
+
+const DesktopOnly = styled.span`
+  display: none;
+
+  @media (min-width: 768px) {
+    display: inline;
+  }
 `
 
 /* ─── Mobile menu ─── */
@@ -204,21 +218,22 @@ const MobileNavLink = styled(NavLink)`
 
   &.active {
     color: ${tokens.color.blue};
-    font-weight: ${tokens.font.weight.bold};
+    font-weight: ${tokens.font.weight.medium};
     background: ${tokens.color.lightBlue};
   }
 `
 
-const navItems = [
+const publicNavItems = [
   { to: '/', label: 'Home' },
-  { to: '/dashboard', label: 'Dashboard' },
   { to: '/delegates', label: 'Active Delegates' },
   { to: '/rounds', label: 'Rounds' },
   { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },
 ] as const
 
-const desktopNavItems = navItems.filter((item) => item.to !== '/')
+const walletNavItems = [
+  { to: '/dashboard', label: 'Dashboard' },
+] as const
 
 function ConnectedAccount({ address }: { address: `0x${string}` }) {
   const { data: ensName } = useEnsName({ address })
@@ -276,7 +291,12 @@ export function Header() {
         </Brand>
 
         <DesktopNav>
-          {desktopNavItems.map(({ to, label }) => (
+          {publicNavItems.filter((item) => item.to !== '/').map(({ to, label }) => (
+            <StyledNavLink key={to} to={to}>
+              {label}
+            </StyledNavLink>
+          ))}
+          {isConnected && walletNavItems.map(({ to, label }) => (
             <StyledNavLink key={to} to={to}>
               {label}
             </StyledNavLink>
@@ -291,8 +311,10 @@ export function Header() {
               size="small"
               colorStyle="bluePrimary"
               onClick={() => appKit.open()}
+              prefix={<WalletSVG />}
             >
-              Connect
+              <MobileOnly>Connect</MobileOnly>
+              <DesktopOnly>Connect wallet</DesktopOnly>
             </Button>
           )}
           <HamburgerButton
@@ -311,8 +333,13 @@ export function Header() {
       {menuOpen && (
         <>
           <MobileDrawer>
-            {navItems.map(({ to, label }) => (
+            {publicNavItems.map(({ to, label }) => (
               <MobileNavLink key={to} to={to} end={to === '/'} onClick={closeMenu}>
+                {label}
+              </MobileNavLink>
+            ))}
+            {isConnected && walletNavItems.map(({ to, label }) => (
+              <MobileNavLink key={to} to={to} onClick={closeMenu}>
                 {label}
               </MobileNavLink>
             ))}
