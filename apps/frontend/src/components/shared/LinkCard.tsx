@@ -39,6 +39,8 @@ const IconBox = styled.span`
   font-size: 18px;
   flex-shrink: 0;
   overflow: hidden;
+  padding: 6px;
+  box-sizing: border-box;
 `
 
 const Content = styled.span`
@@ -107,7 +109,7 @@ export function LinkCard({ item }: LinkCardProps) {
       {(item.icon || item.iconSrc) && (
         <IconBox aria-hidden>
           {item.iconSrc
-            ? <img src={item.iconSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ? <img src={item.iconSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', margin: 'auto' }} />
             : item.icon}
         </IconBox>
       )}
