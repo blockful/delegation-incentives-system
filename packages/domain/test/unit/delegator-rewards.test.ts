@@ -1,0 +1,185 @@
+import { describe, it, expect } from "vitest";
+import { computeDelegatorRewards } from "../../src/delegator-rewards.js";
+import type { Address, Wei } from "../../src/types.js";
+import { wei } from "../../src/types.js";
+import { applyBps } from "../../src/util/bigint-math.js";
+import { DELEGATOR_POOL_BPS, DELEGATOR_CAP_BPS } from "../../src/config.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const ENS = 10n ** 18n;
+
+function totalRewards(allocations: { reward: Wei }[]): bigint {
+  return allocations.reduce((acc, a) => acc + (a.reward as bigint), 0n);
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+describe("computeDelegatorRewards", () => {
+  it("returns empty array for empty input", () => {
+    const result = computeDelegatorRewards(new Map(), wei(1000n * ENS));
+    expect(result).toEqual([]);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Proportional allocation without caps
+  // ---------------------------------------------------------------------------
+  it("allocates proportionally when no delegator exceeds the cap", () => {
+    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000 ENS.
+    // 30 equal delegators -> each gets 30_000 ENS (below 50_000 cap).
+    const poolSize = wei(1_000_000n * ENS);
+    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS); // 900_000 ENS
+    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS); // 50_000 ENS
+
+    expect(delegatorPool).toBe(900_000n * ENS);
+    expect(delegatorCap).toBe(50_000n * ENS);
+
+    const twbs = new Map<Address, Wei>();
+    for (let i = 0; i < 30; i++) {
+      const addr = `0x${i.toString(16).padStart(4, "0")}` as Address;
+      twbs.set(addr, wei(100n * ENS));
+    }
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+
+    expect(result).toHaveLength(30);
+    expect(totalRewards(result)).toBe(delegatorPool);
+
+    for (const r of result) {
+      expect(r.reward as bigint).toBeLessThanOrEqual(delegatorCap as bigint);
+      expect(r.reward).toBe(30_000n * ENS);
+    }
+  });
+
+  it("allocates proportionally with different weights", () => {
+    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000 ENS.
+    // Three delegators: 10, 20, 30 weight -> total 60.
+    // Raw: 150_000, 300_000, 450_000.
+    // All exceed cap, so redistribution will run.
+    const poolSize = wei(1_000_000n * ENS);
+    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS);
+
+    const twbs = new Map<Address, Wei>([
+      ["0xaaaa", wei(10n * ENS)],
+      ["0xbbbb", wei(20n * ENS)],
+      ["0xcccc", wei(30n * ENS)],
+    ]);
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+
+    expect(totalRewards(result)).toBe(delegatorPool);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cap enforcement
+  // ---------------------------------------------------------------------------
+  it("enforces per-delegator cap and redistributes excess", () => {
+    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000.
+    // One whale with 90% weight, others share 10%.
+    // Whale raw = 810_000 ENS >> cap of 50_000.
+    const poolSize = wei(1_000_000n * ENS);
+    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS);
+
+    const twbs = new Map<Address, Wei>([
+      ["0xaaaa", wei(9_000n * ENS)], // 90%
+      ["0xbbbb", wei(500n * ENS)], // 5%
+      ["0xcccc", wei(500n * ENS)], // 5%
+    ]);
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+
+    expect(result).toHaveLength(3);
+    expect(totalRewards(result)).toBe(900_000n * ENS);
+
+    const byAddr = new Map(result.map((r) => [r.address, r.reward]));
+    // The whale (0xaaaa) should be at cap.
+    expect(byAddr.get("0xaaaa")! as bigint).toBeGreaterThanOrEqual(
+      delegatorCap as bigint,
+    );
+  });
+
+  it("caps correctly with many small delegators and one whale", () => {
+    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000.
+    // 1 whale (weight 95), 19 smalls (weight 5/19 ~= 0.26 each).
+    const poolSize = wei(1_000_000n * ENS);
+    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS);
+    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS);
+
+    const twbs = new Map<Address, Wei>();
+    twbs.set("0x0000", wei(9_500n * ENS)); // whale
+    for (let i = 1; i < 20; i++) {
+      const addr = `0x${i.toString(16).padStart(4, "0")}` as Address;
+      twbs.set(addr, wei(500n * ENS / 19n));
+    }
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+
+    expect(totalRewards(result)).toBe(delegatorPool);
+    // Whale should be capped.
+    const whaleReward = result.find((r) => r.address === "0x0000")!.reward;
+    expect(whaleReward as bigint).toBeLessThanOrEqual(
+      (delegatorCap as bigint) + (delegatorPool as bigint), // capped + possible dust
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pool size invariant
+  // ---------------------------------------------------------------------------
+  it("sum of rewards equals delegator pool exactly", () => {
+    // Use prime numbers to maximize rounding issues.
+    const poolSize = wei(777_773n * ENS);
+    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS);
+
+    const twbs = new Map<Address, Wei>([
+      ["0x1111", wei(7n * ENS)],
+      ["0x2222", wei(11n * ENS)],
+      ["0x3333", wei(13n * ENS)],
+      ["0x4444", wei(17n * ENS)],
+      ["0x5555", wei(19n * ENS)],
+      ["0x6666", wei(23n * ENS)],
+      ["0x7777", wei(29n * ENS)],
+      ["0x8888", wei(31n * ENS)],
+    ]);
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+    expect(totalRewards(result)).toBe(delegatorPool);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Output is sorted by address
+  // ---------------------------------------------------------------------------
+  it("returns results sorted by address", () => {
+    const poolSize = wei(1_000_000n * ENS);
+    const twbs = new Map<Address, Wei>([
+      ["0xcccc", wei(100n * ENS)],
+      ["0xaaaa", wei(200n * ENS)],
+      ["0xbbbb", wei(300n * ENS)],
+    ]);
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+    expect(result.map((r) => r.address)).toEqual([
+      "0xaaaa",
+      "0xbbbb",
+      "0xcccc",
+    ]);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Single delegator
+  // ---------------------------------------------------------------------------
+  it("single delegator gets entire delegator pool", () => {
+    const poolSize = wei(1_000_000n * ENS);
+    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS); // 900_000 ENS
+
+    const twbs = new Map<Address, Wei>([["0xaaaa", wei(1_000n * ENS)]]);
+
+    const result = computeDelegatorRewards(twbs, poolSize);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].reward).toBe(delegatorPool);
+    expect(totalRewards(result)).toBe(delegatorPool);
+  });
+});
