@@ -1,66 +1,55 @@
 /**
- * BigInt arithmetic utilities.
- * All functions are pure. No floating point anywhere.
+ * Pure BigInt arithmetic utilities for incentive calculations.
  */
 
-/** (a * b) / denominator — safe since JS BigInt has arbitrary precision */
+/** Sum all values in the array. Returns 0n for an empty array. */
+export function sum(values: bigint[]): bigint {
+  let total = 0n;
+  for (const v of values) {
+    total += v;
+  }
+  return total;
+}
+
+/** (a * b) / denominator, truncating toward zero. */
 export function mulDiv(a: bigint, b: bigint, denominator: bigint): bigint {
-  if (denominator === 0n) throw new Error("Division by zero");
   return (a * b) / denominator;
 }
 
-/** (a * b + denominator - 1) / denominator — rounds up */
-export function mulDivRoundUp(
-  a: bigint,
-  b: bigint,
-  denominator: bigint,
+/**
+ * Apply a basis-point multiplier: (value * bps) / base.
+ * Default base is 10_000n (100% = 10 000 bps).
+ */
+export function applyBps(
+  value: bigint,
+  bps: bigint,
+  base: bigint = 10_000n,
 ): bigint {
-  if (denominator === 0n) throw new Error("Division by zero");
-  return (a * b + denominator - 1n) / denominator;
-}
-
-/** value * bps / 10000 */
-export function applyBasisPoints(value: bigint, bps: bigint): bigint {
-  return mulDiv(value, bps, 10000n);
+  return (value * bps) / base;
 }
 
 /**
- * Compute month-over-month growth as basis points: ((current - previous) * 10000) / previous.
+ * Percentage growth expressed in basis points:
+ *   ((after - before) * 10_000n) / before
  *
- * Returns a **signed** value — negative when current < previous (VP declined).
- * `determinePoolTier` treats negative values as lowest-tier (tier 0).
- *
- * Special case: returns 10000 bps (100%) when previous is 0 and current > 0;
- * returns 0 when both are 0. Callers should guard against the previous === 0
- * case before using this for tier selection (see pipeline.ts bootstrap guard).
+ * Returns 0n when before is 0n (avoids division by zero).
  */
-export function percentageGrowthBps(
-  current: bigint,
-  previous: bigint,
-): bigint {
-  if (previous === 0n) {
-    return current > 0n ? 100_00n : 0n; // 100% = 10000 bps, or 0 if both zero
-  }
-  return ((current - previous) * 10000n) / previous;
+export function percentageGrowthBps(before: bigint, after: bigint): bigint {
+  if (before === 0n) return 0n;
+  return ((after - before) * 10_000n) / before;
 }
 
+/** Absolute value of a bigint. */
+export function abs(n: bigint): bigint {
+  return n < 0n ? -n : n;
+}
+
+/** Smaller of two bigints. */
 export function min(a: bigint, b: bigint): bigint {
   return a < b ? a : b;
 }
 
+/** Larger of two bigints. */
 export function max(a: bigint, b: bigint): bigint {
   return a > b ? a : b;
-}
-
-export function abs(a: bigint): bigint {
-  return a < 0n ? -a : a;
-}
-
-export function sum(values: bigint[]): bigint {
-  return values.reduce((acc, v) => acc + v, 0n);
-}
-
-/** Clamp value to [lower, upper] */
-export function clamp(value: bigint, lower: bigint, upper: bigint): bigint {
-  return max(lower, min(value, upper));
 }

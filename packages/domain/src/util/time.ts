@@ -1,32 +1,53 @@
-import { type Seconds, seconds } from "../types.js";
+/**
+ * Calendar-month helpers for incentive periods.
+ * All timestamps are Unix seconds (bigint). No external dependencies.
+ */
 
-/** Get the first second of a month (UTC) */
-export function monthStartTimestamp(year: number, month: number): Seconds {
-  return seconds(BigInt(Date.UTC(year, month - 1, 1) / 1000));
+/**
+ * Parse a "YYYY-MM" string into its numeric parts.
+ * Throws on invalid format.
+ */
+export function parseMonth(month: string): { year: number; month: number } {
+  const match = month.match(/^(\d{4})-(\d{2})$/);
+  if (!match) {
+    throw new Error(`Invalid month format: "${month}" (expected YYYY-MM)`);
+  }
+  const year = Number(match[1]);
+  const m = Number(match[2]);
+  if (m < 1 || m > 12) {
+    throw new Error(`Month out of range: ${m}`);
+  }
+  return { year, month: m };
 }
 
-/** Get the last second of a month (UTC) */
-export function monthEndTimestamp(year: number, month: number): Seconds {
-  // First second of next month minus 1
-  return seconds(BigInt(Date.UTC(year, month, 1) / 1000 - 1));
+/**
+ * Unix timestamp (seconds) for the first second of the month (00:00:00 UTC on day 1).
+ */
+export function monthStartTimestamp(month: string): bigint {
+  const { year, month: m } = parseMonth(month);
+  return BigInt(Math.floor(Date.UTC(year, m - 1, 1, 0, 0, 0, 0) / 1000));
 }
 
-/** Parse "YYYY-MM" into {year, month} */
-export function parseMonth(monthStr: string): { year: number; month: number } {
-  const match = monthStr.match(/^(\d{4})-(\d{2})$/);
-  if (!match) throw new Error(`Invalid month format: ${monthStr}. Expected YYYY-MM`);
-  return { year: parseInt(match[1], 10), month: parseInt(match[2], 10) };
+/**
+ * Unix timestamp (seconds) for the last second of the month (23:59:59 UTC on the last day).
+ */
+export function monthEndTimestamp(month: string): bigint {
+  const { year, month: m } = parseMonth(month);
+  // Day 0 of the *next* month gives the last day of this month.
+  const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+  return BigInt(
+    Math.floor(Date.UTC(year, m - 1, lastDay, 23, 59, 59, 0) / 1000),
+  );
 }
 
-/** Get previous month as "YYYY-MM" */
-export function previousMonth(monthStr: string): string {
-  const { year, month } = parseMonth(monthStr);
-  if (month === 1) return `${year - 1}-12`;
-  return `${year}-${String(month - 1).padStart(2, "0")}`;
-}
-
-/** Get the current UTC month as "YYYY-MM" */
-export function currentMonth(): string {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+/**
+ * Return the YYYY-MM string for the month preceding the given one.
+ * Handles January → December of the previous year.
+ */
+export function previousMonth(month: string): string {
+  const { year, month: m } = parseMonth(month);
+  if (m === 1) {
+    return `${year - 1}-12`;
+  }
+  return `${year}-${String(m - 1).padStart(2, "0")}`;
 }

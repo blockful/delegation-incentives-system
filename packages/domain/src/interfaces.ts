@@ -1,111 +1,163 @@
-import {
-  type Proposal,
-  type Vote,
-  type VotingPowerSnapshot,
-  type BalanceEvent,
-  type Delegation,
-  type AccountBalance,
-  type ProtocolMapping,
-  type WalletAlias,
-  type Wei,
-  type Seconds,
-  type DistributionResult,
+import type {
+  Address,
+  BalanceEvent,
+  BlockNumber,
+  Delegation,
+  Erc1155BalanceEvent,
+  MultiDelegatePosition,
+  Proposal,
+  Seconds,
+  VestingNftOwnership,
+  VestingPlan,
+  Vote,
+  VotingPowerEvent,
+  WalletAlias,
+  Wei,
 } from "./types.js";
 
+// ──────────────────────────────────────────────────────────
+// Repository interfaces — data-source contracts
+// ──────────────────────────────────────────────────────────
+
 export interface ProposalRepository {
-  /** Get the N most recent on-chain proposals */
-  getRecentProposals(count: number): Promise<Proposal[]>;
+  /**
+   * Return finalized proposals whose status-changing event occurred before
+   * `beforeTimestamp`, ordered by that timestamp descending, capped at `limit`.
+   */
+  getFinalizedProposals(
+    beforeTimestamp: Seconds,
+    limit: number,
+  ): Promise<readonly Proposal[]>;
 }
 
 export interface VoteRepository {
-  /** Get all votes for the given proposal IDs */
-  getVotesForProposals(proposalIds: string[]): Promise<Vote[]>;
-
-  /** Get the earliest vote timestamp per voter (keyed by lowercase voter ID) */
-  getEarliestVoteTimestamps(voterIds: string[]): Promise<Map<string, Seconds>>;
+  /** Return all votes cast on the given proposals. */
+  getVotesForProposals(
+    proposalIds: readonly string[],
+  ): Promise<readonly Vote[]>;
 }
 
 export interface VotingPowerRepository {
-  /** Get voting power history for accounts within a time range */
-  getVotingPowerHistory(
-    accountIds: string[],
+  /** All DelegateVotesChanged events for `delegate` in [from, to]. */
+  getVpEventsInRange(
+    delegate: Address,
     from: Seconds,
     to: Seconds,
-  ): Promise<VotingPowerSnapshot[]>;
+  ): Promise<readonly VotingPowerEvent[]>;
 
-  /**
-   * Get the aggregate point-in-time voting power for the given delegates at `at`.
-   * For each delegate, takes the latest snapshot with timestamp <= at, then sums.
-   * Used for tier/MoM-growth determination (not TWAP — that is only for reward shares).
-   */
-  getAggregateVotingPowerAt(
-    delegateIds: string[],
-    at: Seconds,
+  /** Most recent VP for `delegate` at or before `timestamp`. */
+  getVpAtTimestamp(
+    delegate: Address,
+    timestamp: Seconds,
   ): Promise<Wei>;
 
-  /** Get the current voting power for specific accounts */
-  getVotingPower(accountIds: string[]): Promise<Map<string, Wei>>;
+  /**
+   * Sum of VP across all `delegates` at or before `timestamp`.
+   * Each delegate contributes their most recent DelegateVotesChanged.newBalance.
+   */
+  getAggregateVpAtTimestamp(
+    delegates: readonly Address[],
+    timestamp: Seconds,
+  ): Promise<Wei>;
 }
 
 export interface BalanceRepository {
-  /** Get balance change events for accounts within a time range */
-  getBalanceHistory(
-    accountIds: string[],
+  /** All Transfer-derived balance events for `account` in [from, to]. */
+  getBalanceEventsInRange(
+    account: Address,
     from: Seconds,
     to: Seconds,
-  ): Promise<BalanceEvent[]>;
+  ): Promise<readonly BalanceEvent[]>;
 
-  /** Get the balance of an account at a specific point in time */
-  getBalanceAt(accountId: string, at: Seconds): Promise<Wei>;
+  /** Most recent balance for `account` at or before `timestamp`. */
+  getBalanceAtTimestamp(
+    account: Address,
+    timestamp: Seconds,
+  ): Promise<Wei>;
 }
 
 export interface DelegationRepository {
   /**
-   * Get all active delegations to the given delegate IDs
-   * at a specific point in time.
+   * All delegations pointing to any address in `delegates` at `timestamp`.
+   * Returns the delegator-side of each delegation mapping.
    */
-  getActiveDelegations(
-    delegateIds: string[],
-    at: Seconds,
-  ): Promise<Delegation[]>;
-
-  /** Get all account balances with their delegate assignments */
-  getAccountBalances(): Promise<AccountBalance[]>;
+  getDelegationsToAtTimestamp(
+    delegates: readonly Address[],
+    timestamp: Seconds,
+  ): Promise<readonly Delegation[]>;
 }
 
-export interface ProtocolMappingRepository {
-  /** Get known protocol mappings (vesting NFT, multi-delegate, etc.) */
-  getMappings(): Promise<ProtocolMapping[]>;
+export interface MultiDelegateRepository {
+  /**
+   * All ERC1155 positions (balance > 0) whose delegate is in `delegates`
+   * at `timestamp`.
+   */
+  getPositionsAtTimestamp(
+    delegates: readonly Address[],
+    timestamp: Seconds,
+  ): Promise<readonly MultiDelegatePosition[]>;
+
+  /** ERC1155 balance-change events for (holder, delegate) in [from, to]. */
+  getErc1155BalanceEventsInRange(
+    holder: Address,
+    delegate: Address,
+    from: Seconds,
+    to: Seconds,
+  ): Promise<readonly Erc1155BalanceEvent[]>;
+
+  /** Most recent ERC1155 balance for (holder, delegate) at or before `timestamp`. */
+  getErc1155BalanceAtTimestamp(
+    holder: Address,
+    delegate: Address,
+    timestamp: Seconds,
+  ): Promise<Wei>;
 }
 
-export interface WalletAliasRepository {
-  /** Get known wallet aliases (same entity, multiple addresses) */
-  getAliases(): Promise<WalletAlias[]>;
+export interface VestingRepository {
+  /** All known Hedgey vesting contract addresses. */
+  getVestingContractAddresses(): Promise<readonly Address[]>;
+
+  /** The NFT owner for a given planId at `timestamp`. */
+  getNftOwnerAtTimestamp(
+    planId: string,
+    timestamp: Seconds,
+  ): Promise<Address>;
+
+  /** All vesting plans associated with the given contract addresses. */
+  getPlansForContracts(
+    contractAddresses: readonly Address[],
+  ): Promise<readonly VestingPlan[]>;
 }
 
 export interface BlockRepository {
-  /** Get the RANDAO value from the last block of a given date (UTC) */
-  getRandaoForDate(date: string): Promise<bigint>;
+  /** Return the block number closest to but not after `timestamp`. */
+  getBlockForTimestamp(timestamp: Seconds): Promise<BlockNumber>;
+
+  /** Return the RANDAO value from a specific block. */
+  getRandaoValue(block: BlockNumber): Promise<string>;
 }
 
-export interface DistributionRepository {
-  save(month: string, result: DistributionResult): Promise<void>;
-  load(month: string): Promise<DistributionResult | null>;
-  list(): Promise<string[]>;
+export interface WalletAliasRepository {
+  /** Return all configured wallet aliases. */
+  getAliases(): Promise<readonly WalletAlias[]>;
 }
+
+// ──────────────────────────────────────────────────────────
+// Composite data source
+// ──────────────────────────────────────────────────────────
 
 /**
- * Aggregate data source interface.
- * Implementations can back this with PostgreSQL (Drizzle), GraphQL, or in-memory data.
+ * Aggregates every repository the incentives pipeline depends on.
+ * Implementations may compose separate repository instances or provide
+ * a single backing store.
  */
-export interface IncentivesDataSource {
-  proposals: ProposalRepository;
-  votes: VoteRepository;
-  votingPower: VotingPowerRepository;
-  balances: BalanceRepository;
-  delegations: DelegationRepository;
-  protocolMappings: ProtocolMappingRepository;
-  walletAliases: WalletAliasRepository;
-  blocks: BlockRepository;
-  distributions: DistributionRepository;
-}
+export interface IncentivesDataSource
+  extends ProposalRepository,
+    VoteRepository,
+    VotingPowerRepository,
+    BalanceRepository,
+    DelegationRepository,
+    MultiDelegateRepository,
+    VestingRepository,
+    BlockRepository,
+    WalletAliasRepository {}

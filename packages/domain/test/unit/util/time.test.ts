@@ -1,83 +1,115 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect } from "vitest";
 import {
+  parseMonth,
   monthStartTimestamp,
   monthEndTimestamp,
-  parseMonth,
   previousMonth,
-  currentMonth,
-} from "@/util/time.js"
+} from "../../../src/util/time.js";
 
-describe("monthStartTimestamp", () => {
-  it("returns the start of 2025-03 in seconds UTC", () => {
-    const expected = BigInt(new Date("2025-03-01T00:00:00Z").getTime() / 1000)
-    expect(BigInt(monthStartTimestamp(2025, 3))).toBe(expected)
-  })
-
-  it("returns the start of 2026-01 in seconds UTC", () => {
-    const expected = BigInt(new Date("2026-01-01T00:00:00Z").getTime() / 1000)
-    expect(BigInt(monthStartTimestamp(2026, 1))).toBe(expected)
-  })
-})
-
-describe("monthEndTimestamp", () => {
-  it("returns the last second of 2025-03 in seconds UTC", () => {
-    const expected = BigInt(new Date("2025-04-01T00:00:00Z").getTime() / 1000) - 1n
-    expect(BigInt(monthEndTimestamp(2025, 3))).toBe(expected)
-  })
-
-  it("returns the correct end of December (tests Dec→Jan year boundary)", () => {
-    const expected = BigInt(new Date("2026-01-01T00:00:00Z").getTime() / 1000) - 1n
-    expect(BigInt(monthEndTimestamp(2025, 12))).toBe(expected)
-  })
-
-  it("returns the last second of February 2024 (leap year)", () => {
-    const expected = BigInt(new Date("2024-03-01T00:00:00Z").getTime() / 1000) - 1n
-    expect(BigInt(monthEndTimestamp(2024, 2))).toBe(expected)
-  })
-})
-
+// ---------------------------------------------------------------------------
+// parseMonth
+// ---------------------------------------------------------------------------
 describe("parseMonth", () => {
-  it("parses '2026-03' correctly", () => {
-    expect(parseMonth("2026-03")).toEqual({ year: 2026, month: 3 })
-  })
+  it("parses a valid month string", () => {
+    expect(parseMonth("2026-05")).toEqual({ year: 2026, month: 5 });
+  });
 
-  it("parses '2026-12' correctly", () => {
-    expect(parseMonth("2026-12")).toEqual({ year: 2026, month: 12 })
-  })
+  it("parses January", () => {
+    expect(parseMonth("2026-01")).toEqual({ year: 2026, month: 1 });
+  });
 
-  it("parses '2025-01' correctly", () => {
-    expect(parseMonth("2025-01")).toEqual({ year: 2025, month: 1 })
-  })
+  it("parses December", () => {
+    expect(parseMonth("2025-12")).toEqual({ year: 2025, month: 12 });
+  });
 
-  it("throws for 'invalid'", () => {
-    expect(() => parseMonth("invalid")).toThrow()
-  })
+  it("throws on invalid format (missing leading zero)", () => {
+    expect(() => parseMonth("2026-5")).toThrow("Invalid month format");
+  });
 
-  it("throws for wrong format '2026-3'", () => {
-    expect(() => parseMonth("2026-3")).toThrow()
-  })
-})
+  it("throws on out-of-range month", () => {
+    expect(() => parseMonth("2026-13")).toThrow("Month out of range");
+  });
 
+  it("throws on garbage input", () => {
+    expect(() => parseMonth("not-a-month")).toThrow("Invalid month format");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// monthStartTimestamp
+// ---------------------------------------------------------------------------
+describe("monthStartTimestamp", () => {
+  it("returns the correct timestamp for January 2026", () => {
+    // 2026-01-01 00:00:00 UTC
+    const expected = BigInt(Date.UTC(2026, 0, 1, 0, 0, 0, 0) / 1000);
+    expect(monthStartTimestamp("2026-01")).toBe(expected);
+  });
+
+  it("returns the correct timestamp for May 2026", () => {
+    // 2026-05-01 00:00:00 UTC  →  1777593600
+    const expected = BigInt(Date.UTC(2026, 4, 1, 0, 0, 0, 0) / 1000);
+    expect(monthStartTimestamp("2026-05")).toBe(expected);
+  });
+
+  it("returns a value smaller than monthEndTimestamp for the same month", () => {
+    const start = monthStartTimestamp("2026-03");
+    const end = monthEndTimestamp("2026-03");
+    expect(start < end).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// monthEndTimestamp
+// ---------------------------------------------------------------------------
+describe("monthEndTimestamp", () => {
+  it("handles February in a non-leap year (28 days)", () => {
+    // 2026 is not a leap year → Feb has 28 days
+    // 2026-02-28 23:59:59 UTC
+    const expected = BigInt(Date.UTC(2026, 1, 28, 23, 59, 59, 0) / 1000);
+    expect(monthEndTimestamp("2026-02")).toBe(expected);
+  });
+
+  it("handles February in a leap year (29 days)", () => {
+    // 2028 is a leap year → Feb has 29 days
+    const expected = BigInt(Date.UTC(2028, 1, 29, 23, 59, 59, 0) / 1000);
+    expect(monthEndTimestamp("2028-02")).toBe(expected);
+  });
+
+  it("handles December (31 days)", () => {
+    const expected = BigInt(Date.UTC(2025, 11, 31, 23, 59, 59, 0) / 1000);
+    expect(monthEndTimestamp("2025-12")).toBe(expected);
+  });
+
+  it("handles April (30 days)", () => {
+    const expected = BigInt(Date.UTC(2026, 3, 30, 23, 59, 59, 0) / 1000);
+    expect(monthEndTimestamp("2026-04")).toBe(expected);
+  });
+
+  it("end timestamp is exactly (days_in_month * 86400 - 1) seconds after start", () => {
+    const start = monthStartTimestamp("2026-01");
+    const end = monthEndTimestamp("2026-01");
+    // January has 31 days → 31 * 86400 - 1 seconds span
+    expect(end - start).toBe(BigInt(31 * 86400 - 1));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// previousMonth
+// ---------------------------------------------------------------------------
 describe("previousMonth", () => {
-  it("returns '2026-02' for '2026-03'", () => {
-    expect(previousMonth("2026-03")).toBe("2026-02")
-  })
+  it("returns the preceding month", () => {
+    expect(previousMonth("2026-05")).toBe("2026-04");
+  });
 
-  it("returns '2025-12' for '2026-01' (year boundary)", () => {
-    expect(previousMonth("2026-01")).toBe("2025-12")
-  })
+  it("wraps January to December of the previous year", () => {
+    expect(previousMonth("2026-01")).toBe("2025-12");
+  });
 
-  it("returns '2026-10' for '2026-11'", () => {
-    expect(previousMonth("2026-11")).toBe("2026-10")
-  })
+  it("handles March (no year wrap)", () => {
+    expect(previousMonth("2026-03")).toBe("2026-02");
+  });
 
-  it("returns '2025-09' for '2025-10'", () => {
-    expect(previousMonth("2025-10")).toBe("2025-09")
-  })
-})
-
-describe("currentMonth", () => {
-  it("returns a string matching YYYY-MM format", () => {
-    expect(currentMonth()).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/)
-  })
-})
+  it("preserves zero-padding for single-digit months", () => {
+    expect(previousMonth("2026-02")).toBe("2026-01");
+  });
+});

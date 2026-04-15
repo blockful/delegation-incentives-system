@@ -143,7 +143,8 @@ export const governanceProposal = onchainTable("governance_proposal", (t) => ({
   endBlock: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
   description: t.text().notNull(),
-  status: t.text().notNull(),           // "active" | "executed" | "defeated" | "canceled"
+  status: t.text().notNull(),           // "active" | "executed" | "defeated" | "canceled" | "succeeded" | "queued" | "expired"
+  finalizedTimestamp: t.bigint(),       // timestamp of status-changing event (null while active/pending)
 }), (table) => ({
   statusIdx: index().on(table.status),
   timestampIdx: index().on(table.timestamp),

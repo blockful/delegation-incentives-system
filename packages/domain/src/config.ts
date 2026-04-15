@@ -1,49 +1,78 @@
-import {
-  type PoolTier,
-  type Wei,
-  type BasisPoints,
-  wei,
-  basisPoints,
-  ONE_ENS,
-} from "./types.js";
+import type { BasisPoints, PoolTier, Wei } from "./types.js";
+import { bps, wei } from "./types.js";
 
-// --- Pool tier table ---
+// ──────────────────────────────────────────────────────────
+// Activity thresholds
+// ──────────────────────────────────────────────────────────
+
+/** Minimum votes in the proposal window to qualify as an active delegate. */
+export const ACTIVE_THRESHOLD = 7;
+
+/** Number of recent finalized proposals considered for activity. */
+export const PROPOSAL_WINDOW = 10;
+
+// ──────────────────────────────────────────────────────────
+// Pool split (basis points, 10 000 = 100%)
+// ──────────────────────────────────────────────────────────
+
+export const BPS_BASE: BasisPoints = bps(10_000n);
+
+/** 10% of monthly pool goes to delegates. */
+export const DELEGATE_POOL_BPS: BasisPoints = bps(1_000n);
+
+/** 90% of monthly pool goes to delegators. */
+export const DELEGATOR_POOL_BPS: BasisPoints = bps(9_000n);
+
+/** Per-delegate cap = 1% of pool. */
+export const DELEGATE_CAP_BPS: BasisPoints = bps(100n);
+
+/** Per-delegator cap = 5% of pool. */
+export const DELEGATOR_CAP_BPS: BasisPoints = bps(500n);
+
+// ──────────────────────────────────────────────────────────
+// Time-Weighted Balance window
+// ──────────────────────────────────────────────────────────
+
+/** 180 days in seconds (180 * 24 * 3600 = 15 552 000). */
+export const TWB_WINDOW_SECONDS = 15_552_000;
+
+// ──────────────────────────────────────────────────────────
+// Payout thresholds
+// ──────────────────────────────────────────────────────────
+
+const ENS = 10n ** 18n;
+
+/** Minimum combined reward for a direct payout (1 ENS). */
+export const MIN_PAYOUT: Wei = wei(1n * ENS);
+
+/** Target size for lottery buckets (10 ENS). */
+export const LOTTERY_BUCKET_TARGET: Wei = wei(10n * ENS);
+
+// ──────────────────────────────────────────────────────────
+// Pool tier table
+// ──────────────────────────────────────────────────────────
 
 function tier(
-  momGrowthMinPct: number,
-  momGrowthMaxPct: number,
+  minGrowthPct: number,
+  maxGrowthPct: number,
   poolEns: bigint,
-  delegateCapEns: bigint,
-  delegatorCapEns: bigint,
 ): PoolTier {
-  return {
-    momGrowthMinBps: basisPoints(BigInt(momGrowthMinPct * 100)),
-    momGrowthMaxBps: basisPoints(BigInt(momGrowthMaxPct * 100)),
-    poolSize: wei(poolEns * ONE_ENS),
-    delegateCap: wei(delegateCapEns * ONE_ENS),
-    delegatorCap: wei(delegatorCapEns * ONE_ENS),
-  };
+  const poolSize = wei(poolEns * ENS);
+  const delegateCap = wei((poolEns * ENS) / 100n);
+  const delegatorCap = wei((poolEns * ENS * 5n) / 100n);
+  return { minGrowthPct, maxGrowthPct, poolSize, delegateCap, delegatorCap };
 }
 
+/**
+ * Seven tiers mapping VP growth to pool size.
+ * Negative growth maps to the first tier (0-10%).
+ */
 export const POOL_TIERS: readonly PoolTier[] = [
-  tier(0, 10, 5_000n, 50n, 250n),
-  tier(10, 20, 8_000n, 80n, 400n),
-  tier(20, 30, 10_000n, 100n, 500n),
-  tier(30, 50, 15_000n, 150n, 750n),
-  tier(50, 75, 20_000n, 200n, 1_000n),
-  tier(75, 100, 25_000n, 250n, 1_250n),
-  tier(100, 1_000_000, 30_000n, 300n, 1_500n), // 100%+ (effectively infinite upper bound)
-];
-
-/** Delegate pool is 10% of monthly pool */
-export const DELEGATE_POOL_BPS = basisPoints(1000n); // 10%
-
-/** Delegator pool is 90% of monthly pool */
-export const DELEGATOR_POOL_BPS = basisPoints(9000n); // 90%
-
-/** Minimum payout threshold before entering lottery (1 ENS) */
-export const MIN_PAYOUT_THRESHOLD: Wei = ONE_ENS;
-
-/** Target lottery pool size (~10 ENS) */
-export const LOTTERY_TARGET_POOL_SIZE: Wei = wei(10n * ONE_ENS);
-
+  tier(0, 10, 5_000n),
+  tier(10, 20, 8_000n),
+  tier(20, 30, 10_000n),
+  tier(30, 50, 15_000n),
+  tier(50, 75, 20_000n),
+  tier(75, 100, 25_000n),
+  tier(100, Infinity, 30_000n),
+] as const;
