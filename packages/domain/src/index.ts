@@ -9,3 +9,8 @@ export * from "./combine-rewards.js";
 export * from "./cap-redistribution.js";
 export * from "./delegate-rewards.js";
 export * from "./delegator-rewards.js";
+export * from "./active-delegates.js";
+export * from "./pool-sizing.js";
+export * from "./pipeline.js";
+export * from "./util/time.js";
+export * from "./util/bigint-math.js";
