@@ -65,7 +65,7 @@ export async function handlePlanRedeemed(event: any, context: any) {
 
   // Insert redemption event record
   await db.insert(vestingRedemption).values({
-    id: `${id}-${event.block.number}`,
+    id: `${id}-${event.block.number}-${event.log.logIndex}`,
     planId: id,
     amountRedeemed,
     planRemainder,
