@@ -46,11 +46,21 @@ export function computeTimeWeightedBalance(
 
   const windowDuration = (windowEnd as bigint) - (windowStart as bigint);
 
+  // Sort defensively — callers should provide sorted events, but unsorted
+  // input would silently produce incorrect TWB via negative time deltas.
+  const sorted =
+    events.length <= 1
+      ? events
+      : [...events].sort(
+          (a, b) =>
+            Number((a.timestamp as bigint) - (b.timestamp as bigint)),
+        );
+
   let accumulated = 0n;
   let currentBalance: bigint = initialBalance as bigint;
   let lastTimestamp: bigint = windowStart as bigint;
 
-  for (const event of events) {
+  for (const event of sorted) {
     const ts = event.timestamp as bigint;
 
     // Defensively skip events outside the window.
