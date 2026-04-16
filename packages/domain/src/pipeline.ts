@@ -119,8 +119,8 @@ export async function runDistributionPipeline(
     }
   }
 
-  // Get plans for matching vesting contracts
-  const nftOwnerMap = new Map<Address, Address>();
+  // Get plans for matching vesting contracts — collect all owners per contract
+  const nftOwnerMap = new Map<Address, Address[]>();
   if (matchingContracts.size > 0) {
     const vestingPlans = await dataSource.getPlansForContracts([
       ...matchingContracts,
@@ -130,7 +130,9 @@ export async function runDistributionPipeline(
         plan.planId,
         monthEnd,
       );
-      nftOwnerMap.set(plan.contractAddress, owner);
+      const owners = nftOwnerMap.get(plan.contractAddress) ?? [];
+      owners.push(owner);
+      nftOwnerMap.set(plan.contractAddress, owners);
     }
   }
 
@@ -148,7 +150,7 @@ export async function runDistributionPipeline(
 
   // ── Step 10: Compute TWB per delegator ───────────────────
   const twbWindowStart = seconds(
-    (monthEnd as bigint) - BigInt(TWB_WINDOW_SECONDS),
+    (monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint),
   );
   const delegatorTWBs = new Map<Address, Wei>();
 
@@ -337,7 +339,7 @@ function emptyResult(
 function buildDeduplicationLog(
   eligible: readonly EligibleDelegator[],
   aliases: readonly WalletAlias[],
-  nftOwnerMap: ReadonlyMap<Address, Address>,
+  _nftOwnerMap: ReadonlyMap<Address, readonly Address[]>,
 ): DeduplicationLog {
   // MultiDelegate entries
   const multiDelegate = eligible

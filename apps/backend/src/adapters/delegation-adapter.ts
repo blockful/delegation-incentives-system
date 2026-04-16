@@ -1,6 +1,6 @@
 import type { db as PonderDb } from "ponder:api";
-import { inArray } from "drizzle-orm";
-import { ensDelegation } from "ponder:schema";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { ensDelegationEvent } from "ponder:schema";
 import type { DelegationRepository } from "@ens-dis/domain";
 import type { Address, Seconds, Delegation } from "@ens-dis/domain";
 import { seconds, blockNumber } from "@ens-dis/domain";
@@ -11,26 +11,58 @@ export function createDelegationAdapter(db: Db): DelegationRepository {
   return {
     async getDelegationsToAtTimestamp(
       delegates: readonly Address[],
-      _timestamp: Seconds,
+      timestamp: Seconds,
     ): Promise<readonly Delegation[]> {
       if (delegates.length === 0) return [];
 
-      // The ensDelegation table reflects the current indexed chain state.
-      // The timestamp parameter exists for interface consistency but Ponder
-      // tables always reflect the latest indexed block.
       const lowerDelegates = delegates.map((d) => d.toLowerCase());
 
-      const rows = await db
-        .select()
-        .from(ensDelegation)
-        .where(inArray(ensDelegation.delegateId, lowerDelegates));
+      // Find the latest delegation event per delegator before the timestamp,
+      // then filter to those whose toDelegateId is in the target set.
+      const latestTs = db
+        .select({
+          delegatorId: ensDelegationEvent.delegatorId,
+          maxTs: sql<bigint>`MAX(${ensDelegationEvent.timestamp})`.as("max_ts"),
+        })
+        .from(ensDelegationEvent)
+        .where(lte(ensDelegationEvent.timestamp, timestamp))
+        .groupBy(ensDelegationEvent.delegatorId)
+        .as("latest_ts");
 
-      return rows.map((row) => ({
-        delegator: row.id as Address,
-        delegate: row.delegateId as Address,
-        // Current state — use 0n as sentinel for "latest indexed"
-        timestamp: seconds(0n),
-        blockNumber: blockNumber(BigInt(row.lastUpdatedBlock)),
+      const rows = await db
+        .select({
+          delegatorId: ensDelegationEvent.delegatorId,
+          toDelegateId: ensDelegationEvent.toDelegateId,
+          timestamp: ensDelegationEvent.timestamp,
+          blockNumber: ensDelegationEvent.blockNumber,
+        })
+        .from(ensDelegationEvent)
+        .innerJoin(
+          latestTs,
+          and(
+            eq(ensDelegationEvent.delegatorId, latestTs.delegatorId),
+            eq(ensDelegationEvent.timestamp, latestTs.maxTs),
+          ),
+        )
+        .where(inArray(ensDelegationEvent.toDelegateId, lowerDelegates));
+
+      // Deduplicate same-timestamp ties: keep highest blockNumber per delegator
+      const deduped = new Map<string, (typeof rows)[0]>();
+      for (const row of rows) {
+        const existing = deduped.get(row.delegatorId);
+        if (
+          !existing ||
+          BigInt(row.blockNumber) > BigInt(existing.blockNumber)
+        ) {
+          deduped.set(row.delegatorId, row);
+        }
+      }
+
+      return [...deduped.values()].map((row) => ({
+        delegator: row.delegatorId as Address,
+        delegate: row.toDelegateId as Address,
+        timestamp: seconds(BigInt(row.timestamp)),
+        blockNumber: blockNumber(BigInt(row.blockNumber)),
       }));
     },
   };

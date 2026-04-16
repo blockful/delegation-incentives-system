@@ -108,21 +108,34 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
     async getErc1155BalanceAtTimestamp(
       holder: Address,
       delegate: Address,
-      _timestamp: Seconds,
+      timestamp: Seconds,
     ): Promise<Wei> {
-      // Current position from the multiDelegatePosition table
+      // Reconstruct historical balance from transfer events up to timestamp.
       const lowerHolder = holder.toLowerCase();
       const lowerDelegate = delegate.toLowerCase();
-      const posId = `${lowerHolder}-${lowerDelegate}`;
 
       const rows = await db
         .select()
-        .from(multiDelegatePosition)
-        .where(eq(multiDelegatePosition.id, posId))
-        .limit(1);
+        .from(multiDelegateTransfer)
+        .where(
+          and(
+            eq(multiDelegateTransfer.delegate, lowerDelegate),
+            lte(multiDelegateTransfer.timestamp, timestamp),
+            or(
+              eq(multiDelegateTransfer.from, lowerHolder),
+              eq(multiDelegateTransfer.to, lowerHolder),
+            ),
+          ),
+        );
 
-      if (rows.length === 0) return wei(0n);
-      return wei(BigInt(rows[0].amount));
+      let balance = 0n;
+      for (const row of rows) {
+        const amount = BigInt(row.amount);
+        if (row.to.toLowerCase() === lowerHolder) balance += amount;
+        if (row.from.toLowerCase() === lowerHolder) balance -= amount;
+      }
+
+      return wei(balance < 0n ? 0n : balance);
     },
   };
 }
