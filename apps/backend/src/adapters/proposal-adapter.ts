@@ -14,7 +14,7 @@ import {
 
 type Db = typeof PonderDb;
 
-const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES] as string[];
+const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES];
 
 export function createProposalAdapter(db: Db): ProposalRepository {
   return {

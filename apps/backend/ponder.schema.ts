@@ -1,4 +1,4 @@
-import { onchainTable, index } from "ponder";
+import { onchainTable, onchainEnum, index } from "ponder";
 
 // ─── ERC20MultiDelegate tables ──────────────────────────────────────────────
 
@@ -136,6 +136,17 @@ export const ensVotingPowerSnapshot = onchainTable("ens_voting_power_snapshot", 
 
 // ─── ENS Governor tables ─────────────────────────────────────────────────────
 
+export const proposalStatusEnum = onchainEnum("proposal_status", [
+  "pending",
+  "active",
+  "canceled",
+  "defeated",
+  "succeeded",
+  "queued",
+  "expired",
+  "executed",
+]);
+
 export const governanceProposal = onchainTable("governance_proposal", (t) => ({
   id: t.text().primaryKey(),            // BigInt(proposalId).toString()
   proposer: t.text().notNull(),         // lowercase 0x address
@@ -143,7 +154,7 @@ export const governanceProposal = onchainTable("governance_proposal", (t) => ({
   endBlock: t.bigint().notNull(),
   timestamp: t.bigint().notNull(),
   description: t.text().notNull(),
-  status: t.text().notNull(),           // "active" | "executed" | "defeated" | "canceled" | "succeeded" | "queued" | "expired"
+  status: proposalStatusEnum("status").notNull(),
   finalizedTimestamp: t.bigint(),       // timestamp of status-changing event (null while active/pending)
 }), (table) => ({
   statusIdx: index().on(table.status),
