@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 import { db } from "ponder:api";
-import { ensDelegation, multiDelegatePosition } from "ponder:schema";
+import { ensDelegation, multiDelegatePosition, vestingPlan } from "ponder:schema";
 import { eq, and, sql } from "drizzle-orm";
 import { fetchActiveDelegates, normalizeAddress } from "../helpers.js";
+
+const HEDGEY_VESTING_ADDRESS = "0x2cde9919e81b20b4b33dd562a48a84b54c48f00c";
 
 const app = new Hono();
 
@@ -61,6 +63,35 @@ app.get("/api/eligibility/:address", async (c) => {
           delegateIsActive: true,
           source: "multidelegate",
         });
+      }
+    }
+
+    // 3. Check Hedgey vesting — user holds a vesting NFT whose contract
+    //    delegates to an active delegate
+    const vestingPlans = await db
+      .select({ id: vestingPlan.id })
+      .from(vestingPlan)
+      .where(eq(vestingPlan.recipient, address))
+      .limit(1);
+
+    if (vestingPlans.length > 0) {
+      // Check if the Hedgey vesting contract delegates to an active delegate
+      const vestingDelegation = await db
+        .select({ delegateId: ensDelegation.delegateId })
+        .from(ensDelegation)
+        .where(eq(ensDelegation.id, HEDGEY_VESTING_ADDRESS))
+        .limit(1);
+
+      if (vestingDelegation.length > 0) {
+        const vestingDelegate = vestingDelegation[0].delegateId;
+        if (activeDelegates.has(vestingDelegate as `0x${string}`)) {
+          return c.json({
+            eligible: true,
+            delegateTo: vestingDelegate,
+            delegateIsActive: true,
+            source: "hedgey_vesting",
+          });
+        }
       }
     }
 

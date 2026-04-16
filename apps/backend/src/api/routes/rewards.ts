@@ -76,35 +76,8 @@ app.get("/api/rewards/estimate/:address", async (c) => {
       const delegate = delegationRows[0].delegateId as Address;
       if (activeDelegates.has(delegate)) {
         delegatingToActive = true;
-      }
-    }
 
-    // Check multi-delegate positions if not already found
-    if (!delegatingToActive) {
-      const multiPositions = await db
-        .select({
-          delegate: multiDelegatePosition.delegate,
-          amount: multiDelegatePosition.amount,
-        })
-        .from(multiDelegatePosition)
-        .where(
-          and(
-            eq(multiDelegatePosition.owner, address),
-            sql`${multiDelegatePosition.amount} > 0`,
-          ),
-        );
-
-      for (const pos of multiPositions) {
-        if (activeDelegates.has(pos.delegate as Address)) {
-          delegatingToActive = true;
-          myBalance += BigInt(pos.amount);
-        }
-      }
-    }
-
-    if (delegatingToActive) {
-      // Get balance if not already set from multi-delegate
-      if (myBalance === 0n) {
+        // For direct delegation, balance is the user's ENS token balance
         const balanceRows = await db
           .select({ balance: ensBalance.balance })
           .from(ensBalance)
@@ -113,13 +86,34 @@ app.get("/api/rewards/estimate/:address", async (c) => {
 
         myBalance = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
       }
+    }
 
-      if (myBalance > 0n && totalVp > 0n) {
-        const delegatorPool = (tier.poolSize * DELEGATOR_POOL_BPS) / BPS_BASE;
-        const rawReward = (delegatorPool * myBalance) / totalVp;
-        const cap = tier.delegatorCap;
-        delegatorReward = rawReward < cap ? rawReward : cap;
+    // Always check multi-delegate positions (user can have both direct + multi)
+    const multiPositions = await db
+      .select({
+        delegate: multiDelegatePosition.delegate,
+        amount: multiDelegatePosition.amount,
+      })
+      .from(multiDelegatePosition)
+      .where(
+        and(
+          eq(multiDelegatePosition.owner, address),
+          sql`${multiDelegatePosition.amount} > 0`,
+        ),
+      );
+
+    for (const pos of multiPositions) {
+      if (activeDelegates.has(pos.delegate as Address)) {
+        delegatingToActive = true;
+        myBalance += BigInt(pos.amount);
       }
+    }
+
+    if (delegatingToActive && myBalance > 0n && totalVp > 0n) {
+      const delegatorPool = (tier.poolSize * DELEGATOR_POOL_BPS) / BPS_BASE;
+      const rawReward = (delegatorPool * myBalance) / totalVp;
+      const cap = tier.delegatorCap;
+      delegatorReward = rawReward < cap ? rawReward : cap;
     }
 
     const combinedReward = delegateReward + delegatorReward;
