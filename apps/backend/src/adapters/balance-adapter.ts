@@ -48,7 +48,7 @@ export function createBalanceAdapter(db: Db): BalanceRepository {
             lte(ensBalanceEvent.timestamp, timestamp),
           ),
         )
-        .orderBy(desc(ensBalanceEvent.timestamp))
+        .orderBy(desc(ensBalanceEvent.timestamp), desc(ensBalanceEvent.blockNumber))
         .limit(1);
 
       if (rows.length === 0) return wei(0n);

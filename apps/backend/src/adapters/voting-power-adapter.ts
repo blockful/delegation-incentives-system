@@ -47,7 +47,7 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
             lte(ensVotingPowerSnapshot.timestamp, timestamp),
           ),
         )
-        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .orderBy(desc(ensVotingPowerSnapshot.timestamp), desc(ensVotingPowerSnapshot.blockNumber))
         .limit(1);
 
       if (rows.length === 0) return wei(0n);
