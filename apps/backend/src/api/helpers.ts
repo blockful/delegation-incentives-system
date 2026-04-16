@@ -31,7 +31,9 @@ const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES];
 export async function fetchActiveDelegates(database: Db): Promise<{
   activeDelegates: Set<Address>;
   proposals: Proposal[];
+  proposalIds: string[];
   voteCounts: Map<Address, number>;
+  voterProposals: Map<Address, Set<string>>;
 }> {
   // 1. Get finalized proposals
   const proposalRows = await database
@@ -87,7 +89,7 @@ export async function fetchActiveDelegates(database: Db): Promise<{
     }
   }
 
-  return { activeDelegates, proposals: windowProposals, voteCounts };
+  return { activeDelegates, proposals: windowProposals, proposalIds, voteCounts, voterProposals };
 }
 
 /** Fetch current VP growth (estimates start-of-current-month to now). */

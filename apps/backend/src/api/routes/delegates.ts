@@ -1,25 +1,64 @@
-import { Hono } from "hono";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { ensVotingPowerSnapshot, ensDelegation } from "ponder:schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { ensVotingPowerSnapshot, ensDelegation, governanceVote } from "ponder:schema";
+import { eq, asc, desc, sql } from "drizzle-orm";
+import type { Address } from "@ens-dis/domain";
 import { fetchActiveDelegates } from "../helpers.js";
 
-const app = new Hono();
+const DelegateSchema = z.object({
+  address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+  votingPower: z.string().openapi({ example: "1000000000000000000000" }),
+  votesInLast10: z.number().openapi({ example: 8 }),
+  last10ProposalsVoted: z
+    .array(z.boolean())
+    .openapi({
+      description: "Per-proposal voting record for the last 10 finalized proposals (most recent first)",
+      example: [true, true, true, false, true, true, true, true, false, true],
+    }),
+  delegatorCount: z.number().openapi({ example: 42 }),
+  activeSince: z
+    .string()
+    .nullable()
+    .openapi({ description: "ISO 8601 timestamp of the delegate's earliest vote", example: "2024-01-15T00:00:00.000Z" }),
+});
 
-app.get("/api/delegates/active", async (c) => {
+const route = createRoute({
+  method: "get",
+  path: "/delegates/active",
+  tags: ["Delegates"],
+  summary: "List active delegates",
+  description:
+    "Returns delegates who meet the voting activity threshold, sorted by voting power descending.",
+  responses: {
+    200: {
+      description: "Active delegates list",
+      content: {
+        "application/json": {
+          schema: z.object({ delegates: z.array(DelegateSchema) }),
+        },
+      },
+    },
+    500: {
+      description: "Internal server error",
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
+    },
+  },
+});
+
+const app = new OpenAPIHono();
+
+app.openapi(route, async (c) => {
   try {
-    const { activeDelegates, voteCounts } = await fetchActiveDelegates(db);
+    const { activeDelegates, proposalIds, voteCounts, voterProposals } =
+      await fetchActiveDelegates(db);
 
-    const delegates: {
-      address: string;
-      votingPower: string;
-      votesInLast10: number;
-      isActive: boolean;
-      delegatorCount: number;
-    }[] = [];
+    const delegates: z.infer<typeof DelegateSchema>[] = [];
 
     for (const addr of activeDelegates) {
-      // Get current VP (most recent snapshot)
       const vpRows = await db
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
@@ -27,26 +66,40 @@ app.get("/api/delegates/active", async (c) => {
         .orderBy(desc(ensVotingPowerSnapshot.timestamp))
         .limit(1);
 
-      const votingPower = vpRows.length > 0 ? BigInt(vpRows[0].votingPower).toString() : "0";
+      const votingPower =
+        vpRows.length > 0 ? BigInt(vpRows[0].votingPower).toString() : "0";
 
-      // Count delegators pointing to this delegate
       const countRows = await db
         .select({ count: sql<number>`count(*)` })
         .from(ensDelegation)
         .where(eq(ensDelegation.delegateId, addr.toLowerCase()));
 
-      const delegatorCount = countRows[0]?.count ?? 0;
+      const voted = voterProposals.get(addr as Address) ?? new Set<string>();
+      const last10ProposalsVoted = proposalIds.map((pid) => voted.has(pid));
+
+      // Earliest vote timestamp
+      const earliestVoteRows = await db
+        .select({ timestamp: governanceVote.timestamp })
+        .from(governanceVote)
+        .where(eq(governanceVote.voter, addr.toLowerCase()))
+        .orderBy(asc(governanceVote.timestamp))
+        .limit(1);
+
+      const activeSince =
+        earliestVoteRows.length > 0
+          ? new Date(Number(earliestVoteRows[0].timestamp) * 1000).toISOString()
+          : null;
 
       delegates.push({
         address: addr,
         votingPower,
         votesInLast10: voteCounts.get(addr) ?? 0,
-        isActive: true,
-        delegatorCount: Number(delegatorCount),
+        last10ProposalsVoted,
+        delegatorCount: Number(countRows[0]?.count ?? 0),
+        activeSince,
       });
     }
 
-    // Sort by VP descending
     delegates.sort((a, b) => {
       const vpA = BigInt(a.votingPower);
       const vpB = BigInt(b.votingPower);
@@ -55,7 +108,7 @@ app.get("/api/delegates/active", async (c) => {
       return 0;
     });
 
-    return c.json({ delegates });
+    return c.json({ delegates }, 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);

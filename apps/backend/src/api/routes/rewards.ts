@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
 import {
   ensVotingPowerSnapshot,
@@ -22,11 +22,49 @@ import {
   getActiveVpTotal,
 } from "../helpers.js";
 
-const app = new Hono();
+const AddressParam = z.object({
+  address: z
+    .string()
+    .openapi({ param: { name: "address", in: "path" }, example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+});
 
-app.get("/api/rewards/estimate/:address", async (c) => {
+const RewardsResponse = z.object({
+  delegateReward: z.string().openapi({ example: "500000000000000000000" }),
+  delegatorReward: z.string().openapi({ example: "150000000000000000000" }),
+  combinedReward: z.string().openapi({ example: "650000000000000000000" }),
+  aboveThreshold: z.boolean(),
+  currentTier: z.number().openapi({ example: 1 }),
+});
+
+const route = createRoute({
+  method: "get",
+  path: "/rewards/estimate/{address}",
+  tags: ["Rewards"],
+  summary: "Estimate rewards for an address",
+  description:
+    "Estimates delegate and delegator rewards for the current month based on current VP, delegation state, and tier.",
+  request: { params: AddressParam },
+  responses: {
+    200: {
+      description: "Reward estimate",
+      content: { "application/json": { schema: RewardsResponse } },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
+
+const app = new OpenAPIHono();
+
+app.openapi(route, async (c) => {
   try {
-    const rawAddress = c.req.param("address");
+    const { address: rawAddress } = c.req.valid("param");
     const address = normalizeAddress(rawAddress);
 
     if (!address) {
@@ -34,17 +72,20 @@ app.get("/api/rewards/estimate/:address", async (c) => {
     }
 
     const { activeDelegates } = await fetchActiveDelegates(db);
-    const { tier, growthPct } = await fetchCurrentVpGrowth(db, activeDelegates, activeDelegates);
+    const { tier, growthPct } = await fetchCurrentVpGrowth(
+      db,
+      activeDelegates,
+      activeDelegates,
+    );
     const totalVp = await getActiveVpTotal(db, activeDelegates);
 
     let delegateReward = 0n;
     let delegatorReward = 0n;
 
-    // --- Delegate reward estimate ---
+    // --- Delegate reward ---
     if (activeDelegates.has(address)) {
       const delegatePool = (tier.poolSize * DELEGATE_POOL_BPS) / BPS_BASE;
 
-      // Get this delegate's VP
       const vpRows = await db
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
@@ -56,16 +97,14 @@ app.get("/api/rewards/estimate/:address", async (c) => {
 
       if (totalVp > 0n) {
         const rawReward = (delegatePool * myVp) / totalVp;
-        const cap = tier.delegateCap;
-        delegateReward = rawReward < cap ? rawReward : cap;
+        delegateReward = rawReward < tier.delegateCap ? rawReward : tier.delegateCap;
       }
     }
 
-    // --- Delegator reward estimate ---
+    // --- Delegator reward ---
     let delegatingToActive = false;
     let myBalance = 0n;
 
-    // Check direct delegation
     const delegationRows = await db
       .select({ delegateId: ensDelegation.delegateId })
       .from(ensDelegation)
@@ -77,18 +116,17 @@ app.get("/api/rewards/estimate/:address", async (c) => {
       if (activeDelegates.has(delegate)) {
         delegatingToActive = true;
 
-        // For direct delegation, balance is the user's ENS token balance
         const balanceRows = await db
           .select({ balance: ensBalance.balance })
           .from(ensBalance)
           .where(eq(ensBalance.id, address))
           .limit(1);
 
-        myBalance = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
+        myBalance =
+          balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
       }
     }
 
-    // Always check multi-delegate positions (user can have both direct + multi)
     const multiPositions = await db
       .select({
         delegate: multiDelegatePosition.delegate,
@@ -112,21 +150,22 @@ app.get("/api/rewards/estimate/:address", async (c) => {
     if (delegatingToActive && myBalance > 0n && totalVp > 0n) {
       const delegatorPool = (tier.poolSize * DELEGATOR_POOL_BPS) / BPS_BASE;
       const rawReward = (delegatorPool * myBalance) / totalVp;
-      const cap = tier.delegatorCap;
-      delegatorReward = rawReward < cap ? rawReward : cap;
+      delegatorReward =
+        rawReward < tier.delegatorCap ? rawReward : tier.delegatorCap;
     }
 
     const combinedReward = delegateReward + delegatorReward;
-    const aboveThreshold = combinedReward >= MIN_PAYOUT;
-    const currentTier = findTierIndex(growthPct);
 
-    return c.json({
-      delegateReward: delegateReward.toString(),
-      delegatorReward: delegatorReward.toString(),
-      combinedReward: combinedReward.toString(),
-      aboveThreshold,
-      currentTier,
-    });
+    return c.json(
+      {
+        delegateReward: delegateReward.toString(),
+        delegatorReward: delegatorReward.toString(),
+        combinedReward: combinedReward.toString(),
+        aboveThreshold: combinedReward >= MIN_PAYOUT,
+        currentTier: findTierIndex(growthPct),
+      },
+      200,
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);

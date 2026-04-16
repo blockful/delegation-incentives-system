@@ -1,15 +1,10 @@
-import { Hono } from "hono";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
 import { distributionResult } from "ponder:schema";
 import { eq, desc } from "drizzle-orm";
 import type { DistributionResult } from "@ens-dis/domain";
 import { distributionToCsv } from "../../output/csv-writer.js";
 
-/**
- * Revive BigInt strings from stored JSON back into BigInts.
- * The stored JSON has bigints serialized as decimal strings.
- * For CSV export, we need them back as bigints so distributionToCsv works.
- */
 function reviveBigInts(obj: any): DistributionResult {
   return {
     metadata: {
@@ -44,34 +39,114 @@ function reviveBigInts(obj: any): DistributionResult {
   } as unknown as DistributionResult;
 }
 
-const app = new Hono();
+const MonthParam = z.object({
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .openapi({ param: { name: "month", in: "path" }, example: "2026-03" }),
+});
 
-// GET /api/distributions -- List past months
-app.get("/api/distributions", async (c) => {
+// --- List months ---
+
+const listRoute = createRoute({
+  method: "get",
+  path: "/distributions",
+  tags: ["Distributions"],
+  summary: "List distribution months",
+  description: "Returns an array of YYYY-MM month strings for which distributions have been computed, most recent first.",
+  responses: {
+    200: {
+      description: "Month list",
+      content: {
+        "application/json": {
+          schema: z.array(z.string().openapi({ example: "2026-03" })),
+        },
+      },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
+
+// --- Get distribution JSON ---
+
+const getRoute = createRoute({
+  method: "get",
+  path: "/distributions/{month}",
+  tags: ["Distributions"],
+  summary: "Get distribution for a month",
+  description: "Returns the full distribution result JSON for the requested month.",
+  request: { params: MonthParam },
+  responses: {
+    200: {
+      description: "Distribution result",
+      content: { "application/json": { schema: z.object({}).passthrough() } },
+    },
+    400: {
+      description: "Invalid month format",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    404: {
+      description: "Distribution not found",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
+
+// --- CSV export ---
+
+const csvRoute = createRoute({
+  method: "get",
+  path: "/distributions/{month}/csv",
+  tags: ["Distributions"],
+  summary: "Download distribution CSV",
+  description: "Returns the distribution for the requested month as a downloadable CSV file.",
+  request: { params: MonthParam },
+  responses: {
+    200: {
+      description: "CSV file",
+      content: { "text/csv": { schema: z.string() } },
+    },
+    400: {
+      description: "Invalid month format",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    404: {
+      description: "Distribution not found",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
+
+const app = new OpenAPIHono();
+
+app.openapi(listRoute, async (c) => {
   try {
     const rows = await db
-      .select({
-        month: distributionResult.month,
-        computedAt: distributionResult.computedAt,
-      })
+      .select({ month: distributionResult.month })
       .from(distributionResult)
       .orderBy(desc(distributionResult.month));
 
-    return c.json(rows.map((row) => row.month));
+    return c.json(rows.map((row) => row.month), 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);
   }
 });
 
-// GET /api/distributions/:month -- Full JSON for a month
-app.get("/api/distributions/:month", async (c) => {
+app.openapi(getRoute, async (c) => {
   try {
-    const month = c.req.param("month");
-
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      return c.json({ error: "Invalid month format. Use YYYY-MM." }, 400);
-    }
+    const { month } = c.req.valid("param");
 
     const rows = await db
       .select()
@@ -83,22 +158,16 @@ app.get("/api/distributions/:month", async (c) => {
       return c.json({ error: `No distribution found for month ${month}` }, 404);
     }
 
-    const result = JSON.parse(rows[0].resultJson);
-    return c.json(result);
+    return c.json(JSON.parse(rows[0].resultJson), 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);
   }
 });
 
-// GET /api/distributions/:month/csv -- CSV export
-app.get("/api/distributions/:month/csv", async (c) => {
+app.openapi(csvRoute, async (c) => {
   try {
-    const month = c.req.param("month");
-
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      return c.json({ error: "Invalid month format. Use YYYY-MM." }, 400);
-    }
+    const { month } = c.req.valid("param");
 
     const rows = await db
       .select()
@@ -110,8 +179,7 @@ app.get("/api/distributions/:month/csv", async (c) => {
       return c.json({ error: `No distribution found for month ${month}` }, 404);
     }
 
-    const parsed = JSON.parse(rows[0].resultJson);
-    const result = reviveBigInts(parsed);
+    const result = reviveBigInts(JSON.parse(rows[0].resultJson));
     const csv = distributionToCsv(result);
 
     return c.text(csv, 200, {

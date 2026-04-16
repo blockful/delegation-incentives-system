@@ -14,6 +14,7 @@
     "@ens-dis/domain": "workspace:*",
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.2.2",
+    "@scalar/hono-api-reference": "^0.10.8",
     "csv-stringify": "^6.6.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.41.0",

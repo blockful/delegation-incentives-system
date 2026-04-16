@@ -1,9 +1,7 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 
-const app = new Hono();
-
-app.get("/api/health", (c) => {
-  return c.json({ status: "ok", timestamp: Date.now() });
-});
+// Ponder reserves /health, /status, /ready, /metrics, /client.
+// Use Ponder's built-in /health for liveness checks.
+const app = new OpenAPIHono();
 
 export default app;
