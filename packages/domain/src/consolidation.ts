@@ -21,7 +21,7 @@ export function resolveEligibleDelegators(
   directDelegations: readonly Delegation[],
   multiDelegatePositions: readonly MultiDelegatePosition[],
   vestingContractAddresses: ReadonlySet<Address>,
-  vestingNftOwners: ReadonlyMap<Address, Address>,
+  vestingNftOwners: ReadonlyMap<Address, readonly Address[]>,
   activeDelegates: ReadonlySet<Address>,
 ): EligibleDelegator[] {
   const results: EligibleDelegator[] = [];
@@ -31,15 +31,17 @@ export function resolveEligibleDelegators(
     if (!activeDelegates.has(d.delegate)) continue;
 
     if (vestingContractAddresses.has(d.delegator)) {
-      // Hedgey: resolve vesting contract to NFT owner
-      const nftOwner = vestingNftOwners.get(d.delegator);
-      if (nftOwner === undefined) continue; // skip if no owner found
-      results.push({
-        resolvedAddress: nftOwner,
-        originalAddress: d.delegator,
-        delegateAddress: d.delegate,
-        source: "hedgey",
-      });
+      // Hedgey: resolve vesting contract to NFT owner(s) — one entry per plan
+      const nftOwners = vestingNftOwners.get(d.delegator);
+      if (!nftOwners || nftOwners.length === 0) continue;
+      for (const nftOwner of nftOwners) {
+        results.push({
+          resolvedAddress: nftOwner,
+          originalAddress: d.delegator,
+          delegateAddress: d.delegate,
+          source: "hedgey",
+        });
+      }
     } else {
       // Regular direct delegation
       results.push({

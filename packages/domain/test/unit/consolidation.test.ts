@@ -118,8 +118,8 @@ describe("resolveEligibleDelegators", () => {
   it("resolves Hedgey vesting contract to NFT owner", () => {
     const delegations = [makeDelegation(vestingContract, delegate1)];
     const vestingAddresses = new Set<Address>([vestingContract]);
-    const nftOwners = new Map<Address, Address>([
-      [vestingContract, alice],
+    const nftOwners = new Map<Address, readonly Address[]>([
+      [vestingContract, [alice]],
     ]);
     const activeDelegates = new Set<Address>([delegate1]);
 
@@ -143,7 +143,7 @@ describe("resolveEligibleDelegators", () => {
   it("skips Hedgey delegation when NFT owner is not found", () => {
     const delegations = [makeDelegation(vestingContract, delegate1)];
     const vestingAddresses = new Set<Address>([vestingContract]);
-    const nftOwners = new Map<Address, Address>(); // no mapping
+    const nftOwners = new Map<Address, readonly Address[]>(); // no mapping
     const activeDelegates = new Set<Address>([delegate1]);
 
     const result = resolveEligibleDelegators(
@@ -164,8 +164,8 @@ describe("resolveEligibleDelegators", () => {
     ];
     const positions = [makeMultiDelegatePosition(alice, delegate2)];
     const vestingAddresses = new Set<Address>([vestingContract]);
-    const nftOwners = new Map<Address, Address>([
-      [vestingContract, alice],
+    const nftOwners = new Map<Address, readonly Address[]>([
+      [vestingContract, [alice]],
     ]);
     const activeDelegates = new Set<Address>([delegate1, delegate2]);
 
@@ -218,9 +218,9 @@ describe("resolveEligibleDelegators", () => {
       vestingContract,
       vestingContract2,
     ]);
-    const nftOwners = new Map<Address, Address>([
-      [vestingContract, alice],
-      [vestingContract2, bob],
+    const nftOwners = new Map<Address, readonly Address[]>([
+      [vestingContract, [alice]],
+      [vestingContract2, [bob]],
     ]);
     const activeDelegates = new Set<Address>([delegate1]);
 
