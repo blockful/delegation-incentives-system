@@ -1,5 +1,5 @@
-import type { BasisPoints, PoolTier, Wei } from "./types.js";
-import { bps, wei } from "./types.js";
+import type { BasisPoints, PoolTier, Seconds, Wei } from "./types.js";
+import { bps, seconds, wei } from "./types.js";
 
 // ──────────────────────────────────────────────────────────
 // Activity thresholds
@@ -34,7 +34,7 @@ export const DELEGATOR_CAP_BPS: BasisPoints = bps(500n);
 // ──────────────────────────────────────────────────────────
 
 /** 180 days in seconds (180 * 24 * 3600 = 15 552 000). */
-export const TWB_WINDOW_SECONDS = 15_552_000;
+export const TWB_WINDOW_SECONDS: Seconds = seconds(15_552_000n);
 
 // ──────────────────────────────────────────────────────────
 // Payout thresholds
