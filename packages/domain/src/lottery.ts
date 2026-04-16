@@ -61,7 +61,7 @@ function selectWinner(
     0n,
   );
 
-  if (bucketEntries.length === 1) {
+  if (bucketEntries.length === 1 || bucketTotal === 0n) {
     return { winner: bucketEntries[0].address, bucketTotal };
   }
 
@@ -112,7 +112,7 @@ export function runLottery(
     );
 
     const lotteryEntries: LotteryEntry[] = bucketEntries.map((e) => {
-      const probabilityBps = (e.amount as bigint) * 10000n / bucketTotal;
+      const probabilityBps = bucketTotal === 0n ? 0n : (e.amount as bigint) * 10000n / bucketTotal;
       return {
         address: e.address,
         amount: e.amount,
