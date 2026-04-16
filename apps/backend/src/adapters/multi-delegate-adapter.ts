@@ -1,6 +1,6 @@
 import type { db as PonderDb } from "ponder:api";
-import { eq, and, lte, gte, inArray, asc, desc, or } from "drizzle-orm";
-import { multiDelegatePosition, multiDelegateTransfer } from "ponder:schema";
+import { eq, and, lte, gte, inArray, asc, or } from "drizzle-orm";
+import { multiDelegateTransfer } from "ponder:schema";
 import type { MultiDelegateRepository } from "@ens-dis/domain";
 import type {
   Address,
@@ -19,28 +19,70 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
   return {
     async getPositionsAtTimestamp(
       delegates: readonly Address[],
-      _timestamp: Seconds,
+      timestamp: Seconds,
     ): Promise<readonly MultiDelegatePosition[]> {
       if (delegates.length === 0) return [];
 
-      // multiDelegatePosition reflects current indexed state.
-      // Only return positions with amount > 0.
       const lowerDelegates = delegates.map((d) => d.toLowerCase());
 
+      // Reconstruct historical positions from transfer events up to timestamp.
       const rows = await db
         .select()
-        .from(multiDelegatePosition)
-        .where(inArray(multiDelegatePosition.delegate, lowerDelegates));
+        .from(multiDelegateTransfer)
+        .where(
+          and(
+            inArray(multiDelegateTransfer.delegate, lowerDelegates),
+            lte(multiDelegateTransfer.timestamp, timestamp),
+          ),
+        );
 
-      return rows
-        .filter((row) => BigInt(row.amount) > 0n)
-        .map((row) => ({
-          holder: row.owner as Address,
-          delegate: row.delegate as Address,
-          balance: wei(BigInt(row.amount)),
-          timestamp: seconds(0n),
-          blockNumber: blockNumber(BigInt(row.lastUpdatedBlock)),
-        }));
+      // Aggregate balances per (owner, delegate) pair.
+      const balances = new Map<string, { owner: string; delegate: string; balance: bigint; maxBlock: bigint }>();
+
+      for (const row of rows) {
+        const fromAddr = row.from.toLowerCase();
+        const toAddr = row.to.toLowerCase();
+        const amount = BigInt(row.amount);
+        const block = BigInt(row.blockNumber);
+
+        // Credit the receiver (skip zero address — mints have from=zero)
+        if (toAddr !== ZERO_ADDRESS) {
+          const key = `${toAddr}-${row.delegate}`;
+          const existing = balances.get(key);
+          if (existing) {
+            existing.balance += amount;
+            if (block > existing.maxBlock) existing.maxBlock = block;
+          } else {
+            balances.set(key, { owner: toAddr, delegate: row.delegate, balance: amount, maxBlock: block });
+          }
+        }
+
+        // Debit the sender (skip zero address — burns have to=zero)
+        if (fromAddr !== ZERO_ADDRESS) {
+          const key = `${fromAddr}-${row.delegate}`;
+          const existing = balances.get(key);
+          if (existing) {
+            existing.balance -= amount;
+            if (block > existing.maxBlock) existing.maxBlock = block;
+          } else {
+            balances.set(key, { owner: fromAddr, delegate: row.delegate, balance: -amount, maxBlock: block });
+          }
+        }
+      }
+
+      const results: MultiDelegatePosition[] = [];
+      for (const entry of balances.values()) {
+        if (entry.balance > 0n) {
+          results.push({
+            holder: entry.owner as Address,
+            delegate: entry.delegate as Address,
+            balance: wei(entry.balance),
+            timestamp: seconds(0n),
+            blockNumber: blockNumber(entry.maxBlock),
+          });
+        }
+      }
+      return results;
     },
 
     async getErc1155BalanceEventsInRange(
