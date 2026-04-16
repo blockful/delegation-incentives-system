@@ -38,10 +38,12 @@ export async function runDistributionPipeline(
   const proposalsAtStart = await dataSource.getFinalizedProposals(
     monthStart,
     PROPOSAL_WINDOW,
+    startBlock,
   );
   const proposalsAtEnd = await dataSource.getFinalizedProposals(
     monthEnd,
     PROPOSAL_WINDOW,
+    endBlock,
   );
 
   // ── Step 3: Determine active delegates ───────────────────

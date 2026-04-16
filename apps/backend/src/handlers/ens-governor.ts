@@ -5,7 +5,7 @@ import { governanceProposal, governanceVote } from "ponder:schema";
 
 export async function handleProposalCreated(event: any, context: any) {
   const { db } = context;
-  const { proposalId, proposer, voteStart, voteEnd, description } = event.args;
+  const { proposalId, proposer, startBlock, endBlock, description } = event.args;
   const id = BigInt(proposalId).toString();
 
   await db
@@ -13,8 +13,8 @@ export async function handleProposalCreated(event: any, context: any) {
     .values({
       id,
       proposer: proposer.toLowerCase(),
-      startBlock: voteStart,
-      endBlock: voteEnd,
+      startBlock,
+      endBlock,
       timestamp: event.block.timestamp,
       description: description.slice(0, 500),
       status: "active",
@@ -60,12 +60,6 @@ ponder.on("ENSGovernor:VoteCast", async ({ event, context }) => {
   await handleVoteCast(event, context);
 });
 
-// ─── VoteCastWithParams (same logic, extra params field ignored) ────────────
-
-ponder.on("ENSGovernor:VoteCastWithParams", async ({ event, context }) => {
-  await handleVoteCast(event, context);
-});
-
 // ─── ProposalExecuted ───────────────────────────────────────────────────────
 
 export async function handleProposalExecuted(event: any, context: any) {
@@ -84,24 +78,6 @@ ponder.on("ENSGovernor:ProposalExecuted", async ({ event, context }) => {
   await handleProposalExecuted(event, context);
 });
 
-// ─── ProposalDefeated ───────────────────────────────────────────────────────
-
-export async function handleProposalDefeated(event: any, context: any) {
-  const { db } = context;
-  const { proposalId } = event.args;
-
-  await db
-    .update(governanceProposal, { id: BigInt(proposalId).toString() })
-    .set({
-      status: "defeated",
-      finalizedTimestamp: event.block.timestamp,
-    });
-}
-
-ponder.on("ENSGovernor:ProposalDefeated", async ({ event, context }) => {
-  await handleProposalDefeated(event, context);
-});
-
 // ─── ProposalCanceled ───────────────────────────────────────────────────────
 
 export async function handleProposalCanceled(event: any, context: any) {
@@ -118,6 +94,24 @@ export async function handleProposalCanceled(event: any, context: any) {
 
 ponder.on("ENSGovernor:ProposalCanceled", async ({ event, context }) => {
   await handleProposalCanceled(event, context);
+});
+
+// ─── ProposalQueued ─────────────────────────────────────────────────────────
+
+export async function handleProposalQueued(event: any, context: any) {
+  const { db } = context;
+  const { proposalId } = event.args;
+
+  await db
+    .update(governanceProposal, { id: BigInt(proposalId).toString() })
+    .set({
+      status: "queued",
+      finalizedTimestamp: event.block.timestamp,
+    });
+}
+
+ponder.on("ENSGovernor:ProposalQueued", async ({ event, context }) => {
+  await handleProposalQueued(event, context);
 });
 
 /**

@@ -3,8 +3,8 @@ import {
   handleProposalCreated,
   handleVoteCast,
   handleProposalExecuted,
-  handleProposalDefeated,
   handleProposalCanceled,
+  handleProposalQueued,
 } from "../../src/handlers/ensGovernor.js"
 
 // ─── Fake DB ─────────────────────────────────────────────────────────────────
@@ -100,8 +100,8 @@ describe("ENSGovernor:ProposalCreated", () => {
         values: [],
         signatures: [],
         calldatas: [],
-        voteStart: 14000000n,
-        voteEnd: 14050000n,
+        startBlock: 14000000n,
+        endBlock: 14050000n,
         description: "Proposal to do something",
       },
       block: { timestamp: 1680000000n },
@@ -131,8 +131,8 @@ describe("ENSGovernor:ProposalCreated", () => {
         values: [],
         signatures: [],
         calldatas: [],
-        voteStart: 14000000n,
-        voteEnd: 14050000n,
+        startBlock: 14000000n,
+        endBlock: 14050000n,
         description: "Test proposal",
       },
       block: { timestamp: 1680000000n },
@@ -245,32 +245,6 @@ describe("ENSGovernor:VoteCast", () => {
   })
 })
 
-// ─── VoteCastWithParams ───────────────────────────────────────────────────────
-
-describe("ENSGovernor:VoteCastWithParams", () => {
-  it("inserts a governance_vote row (identical structure to VoteCast)", async () => {
-    const store = makeFakeDb()
-    const event = {
-      args: {
-        voter: "0x5555555555555555555555555555555555555555",
-        proposalId: 77n,
-        support: 1,
-        weight: 300n,
-        reason: "",
-        params: "0x",
-      },
-      block: { timestamp: 99n },
-    }
-
-    // handleVoteCast is reused for VoteCastWithParams
-    await handleVoteCast(event as any, makeContext(store.db))
-
-    expect(store.votes.size).toBe(1)
-    const row = store.votes.get(`77-0x5555555555555555555555555555555555555555`)
-    expect(row.weight).toBe("300")
-  })
-})
-
 // ─── Status updates ───────────────────────────────────────────────────────────
 
 describe("ENSGovernor:ProposalExecuted", () => {
@@ -286,18 +260,6 @@ describe("ENSGovernor:ProposalExecuted", () => {
   })
 })
 
-describe("ENSGovernor:ProposalDefeated", () => {
-  it("updates governance_proposal.status to 'defeated'", async () => {
-    const store = makeFakeDb()
-    store.proposals.set("43", { id: "43", status: "active" })
-
-    const event = { args: { proposalId: 43n }, block: { timestamp: 0n } }
-    await handleProposalDefeated(event as any, makeContext(store.db))
-
-    expect(store.proposals.get("43").status).toBe("defeated")
-  })
-})
-
 describe("ENSGovernor:ProposalCanceled", () => {
   it("updates governance_proposal.status to 'canceled'", async () => {
     const store = makeFakeDb()
@@ -307,6 +269,19 @@ describe("ENSGovernor:ProposalCanceled", () => {
     await handleProposalCanceled(event as any, makeContext(store.db))
 
     expect(store.proposals.get("44").status).toBe("canceled")
+  })
+})
+
+describe("ENSGovernor:ProposalQueued", () => {
+  it("updates governance_proposal.status to 'queued'", async () => {
+    const store = makeFakeDb()
+    store.proposals.set("45", { id: "45", status: "active" })
+
+    const event = { args: { proposalId: 45n, eta: 1700000000n }, block: { timestamp: 1699000000n } }
+    await handleProposalQueued(event as any, makeContext(store.db))
+
+    expect(store.proposals.get("45").status).toBe("queued")
+    expect(store.proposals.get("45").finalizedTimestamp).toBe(1699000000n)
   })
 })
 
