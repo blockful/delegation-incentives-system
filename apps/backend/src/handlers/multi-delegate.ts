@@ -107,15 +107,15 @@ export async function processMultiDelegateTransfer(params: {
         lastUpdatedBlock: blockNumber,
       }));
 
-    // Look up proxy to use as childAddress (falls back to delegate)
-    const proxy = await db.find(multiDelegateProxy, { id: delegate });
-    const childAddress = proxy?.id ?? delegate;
-
+    // Record protocol mapping for deduplication tracking.
+    // The delegate address is used as childAddress — proxy lookup is not
+    // possible here because multiDelegateProxy is keyed by proxyAddress
+    // and Ponder handlers only support primary-key lookups.
     await db
       .insert(protocolMapping)
       .values({
         id: `multi_delegate-${posId}`,
-        childAddress,
+        childAddress: delegate,
         operatorAddress: toAddr,
         protocol: "multi_delegate",
       })
