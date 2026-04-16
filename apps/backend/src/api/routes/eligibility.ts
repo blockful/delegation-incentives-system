@@ -33,8 +33,8 @@ app.get("/api/eligibility/:address", async (c) => {
       if (delegateIsActive) {
         return c.json({
           eligible: true,
-          delegateTo,
-          delegateIsActive: true,
+          delegatedTo: delegateTo,
+          isDelegatorToActiveDelegate: true,
           source: "direct",
         });
       }
@@ -59,8 +59,8 @@ app.get("/api/eligibility/:address", async (c) => {
       if (activeDelegates.has(pos.delegate as `0x${string}`)) {
         return c.json({
           eligible: true,
-          delegateTo: pos.delegate,
-          delegateIsActive: true,
+          delegatedTo: pos.delegate,
+          isDelegatorToActiveDelegate: true,
           source: "multidelegate",
         });
       }
@@ -87,8 +87,8 @@ app.get("/api/eligibility/:address", async (c) => {
         if (activeDelegates.has(vestingDelegate as `0x${string}`)) {
           return c.json({
             eligible: true,
-            delegateTo: vestingDelegate,
-            delegateIsActive: true,
+            delegatedTo: vestingDelegate,
+            isDelegatorToActiveDelegate: true,
             source: "hedgey_vesting",
           });
         }
@@ -98,8 +98,8 @@ app.get("/api/eligibility/:address", async (c) => {
     // No eligible delegation found
     return c.json({
       eligible: false,
-      delegateTo: null,
-      delegateIsActive: false,
+      delegatedTo: null,
+      isDelegatorToActiveDelegate: false,
       source: null,
     });
   } catch (err) {

@@ -57,12 +57,7 @@ app.get("/api/distributions", async (c) => {
       .from(distributionResult)
       .orderBy(desc(distributionResult.month));
 
-    const distributions = rows.map((row) => ({
-      month: row.month,
-      computedAt: row.computedAt.toString(),
-    }));
-
-    return c.json({ distributions });
+    return c.json(rows.map((row) => row.month));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);

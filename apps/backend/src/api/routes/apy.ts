@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { db } from "ponder:api";
-import { ensBalance } from "ponder:schema";
-import { eq } from "drizzle-orm";
+import { ensBalance, ensVotingPowerSnapshot } from "ponder:schema";
+import { eq, desc } from "drizzle-orm";
 import {
   POOL_TIERS,
   DELEGATOR_POOL_BPS,
+  DELEGATE_POOL_BPS,
   BPS_BASE,
+  type Address,
 } from "@ens-dis/domain";
 import {
   fetchActiveDelegates,
@@ -18,7 +20,7 @@ import {
 
 const app = new Hono();
 
-app.get("/api/apy/estimate/:address", async (c) => {
+app.get("/api/apy/:address", async (c) => {
   try {
     const rawAddress = c.req.param("address");
     const address = normalizeAddress(rawAddress);
@@ -32,29 +34,41 @@ app.get("/api/apy/estimate/:address", async (c) => {
     const currentTierIndex = findTierIndex(growthPct);
     const totalVp = await getActiveVpTotal(db, activeDelegates);
 
-    // Get the address's current balance
-    const balanceRows = await db
-      .select({ balance: ensBalance.balance })
-      .from(ensBalance)
-      .where(eq(ensBalance.id, address))
-      .limit(1);
+    const isDelegate = activeDelegates.has(address as Address);
 
-    const balance = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
+    // For delegates, use their VP; for delegators, use their wallet balance
+    let stake = 0n;
+    if (isDelegate) {
+      const vpRows = await db
+        .select({ votingPower: ensVotingPowerSnapshot.votingPower })
+        .from(ensVotingPowerSnapshot)
+        .where(eq(ensVotingPowerSnapshot.accountId, address))
+        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .limit(1);
+      stake = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
+    } else {
+      const balanceRows = await db
+        .select({ balance: ensBalance.balance })
+        .from(ensBalance)
+        .where(eq(ensBalance.id, address))
+        .limit(1);
+      stake = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
+    }
 
     // Compute estimated APY per tier
     const tiers = POOL_TIERS.map((tier) => {
       let estimatedApy = "0";
 
-      if (balance > 0n && totalVp > 0n) {
-        const delegatorPool = (tier.poolSize * DELEGATOR_POOL_BPS) / BPS_BASE;
-        const monthlyReward = (delegatorPool * balance) / totalVp;
+      if (stake > 0n && totalVp > 0n) {
+        const poolBps = isDelegate ? DELEGATE_POOL_BPS : DELEGATOR_POOL_BPS;
+        const pool = (tier.poolSize * poolBps) / BPS_BASE;
+        const monthlyReward = (pool * stake) / totalVp;
 
-        // Cap at delegator cap
-        const cappedReward = monthlyReward < tier.delegatorCap ? monthlyReward : tier.delegatorCap;
+        const cap = isDelegate ? tier.delegateCap : tier.delegatorCap;
+        const cappedReward = monthlyReward < cap ? monthlyReward : cap;
 
-        // APY = (monthlyReward / balance) * 12 * 100
-        // Scaled: (cappedReward * 1200 * 100) / balance gives basis points
-        const apyBps = (cappedReward * 1200n * 100n) / balance;
+        // APY = (cappedReward / stake) * 12 * 100
+        const apyBps = (cappedReward * 1200n * 100n) / stake;
         const apyWhole = Number(apyBps) / 100;
         estimatedApy = apyWhole.toFixed(2);
       }
