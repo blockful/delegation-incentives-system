@@ -97,8 +97,7 @@ app.get("/api/rewards/estimate/:address", async (c) => {
       for (const pos of multiPositions) {
         if (activeDelegates.has(pos.delegate as Address)) {
           delegatingToActive = true;
-          myBalance = BigInt(pos.amount);
-          break;
+          myBalance += BigInt(pos.amount);
         }
       }
     }

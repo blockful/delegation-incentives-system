@@ -21,7 +21,7 @@ import {
   wei,
   blockNumber,
 } from "@ens-dis/domain";
-import { eq, desc, inArray } from "drizzle-orm";
+import { and, eq, desc, inArray, lte } from "drizzle-orm";
 
 type Db = typeof db;
 
@@ -101,13 +101,7 @@ export async function fetchCurrentVpGrowth(
   growthPct: number;
   tier: PoolTier;
 }> {
-  // Get aggregate VP for active delegates.
-  // Since Ponder only has "current" state, we approximate:
-  // vpEnd = sum of current VP across active delegates at end
-  // vpStart = sum of current VP across active delegates at start
-  // For a live API estimate with same delegate set, growth will be 0%.
-  // Real pipeline uses exact historical snapshots.
-
+  // vpEnd: latest VP snapshot per delegate (current state)
   const endDelegates = [...activeDelegatesEnd];
   let vpEnd = 0n;
   for (const delegate of endDelegates) {
@@ -122,13 +116,23 @@ export async function fetchCurrentVpGrowth(
     }
   }
 
+  // vpStart: latest VP snapshot at or before month start
+  const monthStr = getCurrentMonth();
+  const [year, monthNum] = monthStr.split("-").map(Number);
+  const monthStartTs = BigInt(Math.floor(Date.UTC(year, monthNum - 1, 1) / 1000));
+
   const startDelegates = [...activeDelegatesStart];
   let vpStart = 0n;
   for (const delegate of startDelegates) {
     const rows = await database
       .select({ votingPower: ensVotingPowerSnapshot.votingPower })
       .from(ensVotingPowerSnapshot)
-      .where(eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()))
+      .where(
+        and(
+          eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()),
+          lte(ensVotingPowerSnapshot.timestamp, monthStartTs),
+        ),
+      )
       .orderBy(desc(ensVotingPowerSnapshot.timestamp))
       .limit(1);
     if (rows.length > 0) {

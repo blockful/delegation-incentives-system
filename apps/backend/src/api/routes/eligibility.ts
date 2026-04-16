@@ -28,12 +28,15 @@ app.get("/api/eligibility/:address", async (c) => {
       const delegateTo = delegationRows[0].delegateId;
       const delegateIsActive = activeDelegates.has(delegateTo as `0x${string}`);
 
-      return c.json({
-        eligible: delegateIsActive,
-        delegateTo,
-        delegateIsActive,
-        source: "direct",
-      });
+      if (delegateIsActive) {
+        return c.json({
+          eligible: true,
+          delegateTo,
+          delegateIsActive: true,
+          source: "direct",
+        });
+      }
+      // Direct delegate is inactive — fall through to check multi-delegate
     }
 
     // 2. Check multi-delegate positions
