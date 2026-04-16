@@ -25,7 +25,7 @@ import { and, eq, desc, inArray, lte } from "drizzle-orm";
 
 type Db = typeof db;
 
-const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES] as string[];
+const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES];
 
 /** Fetch active delegates from the current indexed state. */
 export async function fetchActiveDelegates(database: Db): Promise<{

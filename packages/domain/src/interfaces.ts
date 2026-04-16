@@ -23,10 +23,14 @@ export interface ProposalRepository {
   /**
    * Return finalized proposals whose status-changing event occurred before
    * `beforeTimestamp`, ordered by that timestamp descending, capped at `limit`.
+   *
+   * `beforeBlock` (optional) is used to detect implicitly defeated proposals
+   * whose voting period (endBlock) has passed without an explicit status event.
    */
   getFinalizedProposals(
     beforeTimestamp: Seconds,
     limit: number,
+    beforeBlock?: BlockNumber,
   ): Promise<readonly Proposal[]>;
 }
 

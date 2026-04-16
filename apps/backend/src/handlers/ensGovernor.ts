@@ -3,7 +3,7 @@ export {
   handleProposalCreated,
   handleVoteCast,
   handleProposalExecuted,
-  handleProposalDefeated,
   handleProposalCanceled,
+  handleProposalQueued,
   registerEnsGovernorHandlers,
 } from "./ens-governor.js";

@@ -129,8 +129,8 @@ const ensGovernorAbi = [
       { name: "values", type: "uint256[]", indexed: false },
       { name: "signatures", type: "string[]", indexed: false },
       { name: "calldatas", type: "bytes[]", indexed: false },
-      { name: "voteStart", type: "uint256", indexed: false },
-      { name: "voteEnd", type: "uint256", indexed: false },
+      { name: "startBlock", type: "uint256", indexed: false },
+      { name: "endBlock", type: "uint256", indexed: false },
       { name: "description", type: "string", indexed: false },
     ],
   },
@@ -146,24 +146,7 @@ const ensGovernorAbi = [
     ],
   },
   {
-    name: "VoteCastWithParams",
-    type: "event",
-    inputs: [
-      { name: "voter", type: "address", indexed: true },
-      { name: "proposalId", type: "uint256", indexed: false },
-      { name: "support", type: "uint8", indexed: false },
-      { name: "weight", type: "uint256", indexed: false },
-      { name: "reason", type: "string", indexed: false },
-      { name: "params", type: "bytes", indexed: false },
-    ],
-  },
-  {
     name: "ProposalExecuted",
-    type: "event",
-    inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
-  },
-  {
-    name: "ProposalDefeated",
     type: "event",
     inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
   },
@@ -171,6 +154,14 @@ const ensGovernorAbi = [
     name: "ProposalCanceled",
     type: "event",
     inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
+  },
+  {
+    name: "ProposalQueued",
+    type: "event",
+    inputs: [
+      { name: "proposalId", type: "uint256", indexed: false },
+      { name: "eta", type: "uint256", indexed: false },
+    ],
   },
 ] as const;
 
