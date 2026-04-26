@@ -7,7 +7,9 @@ import { fetchActiveDelegates } from "../helpers.js";
 
 const DelegateSchema = z.object({
   address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
-  votingPower: z.string().openapi({ example: "1000000000000000000000" }),
+  ensName: z.string().nullable().openapi({ example: null }),
+  avatarUrl: z.string().nullable().openapi({ example: null }),
+  votingPower: z.string().nullable().openapi({ example: "1000000000000000000000" }),
   votesInLast10: z.number().openapi({ example: 8 }),
   last10ProposalsVoted: z
     .array(z.boolean())
@@ -15,7 +17,7 @@ const DelegateSchema = z.object({
       description: "Per-proposal voting record for the last 10 finalized proposals (most recent first)",
       example: [true, true, true, false, true, true, true, true, false, true],
     }),
-  delegatorCount: z.number().openapi({ example: 42 }),
+  delegatorCount: z.number().nullable().openapi({ example: 42 }),
   activeSince: z
     .string()
     .nullable()
@@ -34,7 +36,7 @@ const route = createRoute({
       description: "Active delegates list",
       content: {
         "application/json": {
-          schema: z.object({ delegates: z.array(DelegateSchema) }),
+          schema: z.object({ count: z.number(), delegates: z.array(DelegateSchema) }),
         },
       },
     },
@@ -92,6 +94,8 @@ app.openapi(route, async (c) => {
 
       delegates.push({
         address: addr,
+        ensName: null,    // ENS resolution handled client-side
+        avatarUrl: null,  // ENS resolution handled client-side
         votingPower,
         votesInLast10: voteCounts.get(addr) ?? 0,
         last10ProposalsVoted,
@@ -108,7 +112,7 @@ app.openapi(route, async (c) => {
       return 0;
     });
 
-    return c.json({ delegates }, 200);
+    return c.json({ count: delegates.length, delegates }, 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);

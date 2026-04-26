@@ -7,23 +7,21 @@ import { CtaSection } from '../sections/CtaSection'
 
 interface DisconnectedLandingProps {
   tierData: TierProgressionResponse
-  roundData?: RoundInfoResponse
+  roundData: RoundInfoResponse
 }
 
 export function DisconnectedLanding({ tierData, roundData }: DisconnectedLandingProps) {
-  const currentTier = tierData.tiers[tierData.currentTierIndex]
   const currentApyPct = tierData.maxDelegatorApyPct
-  const poolSizeEns = currentTier?.poolSizeEns ?? '0'
 
   return (
     <>
       <HeroSection currentApyPct={currentApyPct} />
       <RoundStatusBar
-        currentGrowthPct={tierData.currentGrowthPct}
-        currentTierIndex={tierData.currentTierIndex}
-        poolSizeEns={poolSizeEns}
-        roundNumber={roundData?.roundNumber}
-        roundTimeLeft={roundData ? `${roundData.daysRemaining}d left` : undefined}
+        currentGrowthPct={roundData.vpGrowthPct}
+        currentTierIndex={roundData.tierIndex}
+        poolSizeEns={roundData.poolSizeEns}
+        roundNumber={roundData.roundNumber}
+        roundEndDate={roundData.endDate}
       />
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection />

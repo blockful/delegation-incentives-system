@@ -13,9 +13,13 @@ const AddressParam = z.object({
 });
 
 const EligibilityResponse = z.object({
+  address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+  ensName: z.string().nullable(),
+  isActiveDelegate: z.boolean(),
+  isDelegatorToActiveDelegate: z.boolean(),
   eligible: z.boolean(),
   delegatedTo: z.string().nullable().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
-  isDelegatorToActiveDelegate: z.boolean(),
+  delegatedToEnsName: z.string().nullable(),
   source: z
     .enum(["direct", "multidelegate", "hedgey_vesting"])
     .nullable()
@@ -58,6 +62,7 @@ app.openapi(route, async (c) => {
     }
 
     const { activeDelegates } = await fetchActiveDelegates(db);
+    const isActiveDelegate = activeDelegates.has(address as `0x${string}`);
 
     // 1. Direct delegation
     const delegationRows = await db
@@ -70,7 +75,7 @@ app.openapi(route, async (c) => {
       const delegateTo = delegationRows[0].delegateId;
       if (activeDelegates.has(delegateTo as `0x${string}`)) {
         return c.json(
-          { eligible: true, delegatedTo: delegateTo, isDelegatorToActiveDelegate: true, source: "direct" as const },
+          { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: delegateTo, delegatedToEnsName: null, source: "direct" as const },
           200,
         );
       }
@@ -85,7 +90,7 @@ app.openapi(route, async (c) => {
     for (const pos of multiPositions) {
       if (activeDelegates.has(pos.delegate as `0x${string}`)) {
         return c.json(
-          { eligible: true, delegatedTo: pos.delegate, isDelegatorToActiveDelegate: true, source: "multidelegate" as const },
+          { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: pos.delegate, delegatedToEnsName: null, source: "multidelegate" as const },
           200,
         );
       }
@@ -109,7 +114,7 @@ app.openapi(route, async (c) => {
         const vestingDelegate = vestingDelegation[0].delegateId;
         if (activeDelegates.has(vestingDelegate as `0x${string}`)) {
           return c.json(
-            { eligible: true, delegatedTo: vestingDelegate, isDelegatorToActiveDelegate: true, source: "hedgey_vesting" as const },
+            { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: vestingDelegate, delegatedToEnsName: null, source: "hedgey_vesting" as const },
             200,
           );
         }
@@ -117,7 +122,7 @@ app.openapi(route, async (c) => {
     }
 
     return c.json(
-      { eligible: false, delegatedTo: null, isDelegatorToActiveDelegate: false, source: null },
+      { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: false, eligible: isActiveDelegate, delegatedTo: null, delegatedToEnsName: null, source: null },
       200,
     );
   } catch (err) {

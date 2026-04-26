@@ -8,4 +8,5 @@ export const roundInfoFixture: RoundInfoResponse = {
   daysRemaining: 16,
   poolSizeEns: '5000',
   tierIndex: 0,
+  vpGrowthPct: '12.40',
 }

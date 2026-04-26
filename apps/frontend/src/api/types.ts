@@ -136,4 +136,5 @@ export interface RoundInfoResponse {
   daysRemaining: number;
   poolSizeEns: string;
   tierIndex: number;
+  vpGrowthPct: string;
 }

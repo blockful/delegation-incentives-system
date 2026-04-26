@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi'
 import { useEnsName } from 'wagmi'
 import { mainnet } from 'viem/chains'
 import { useAsync } from '@/hooks/useAsync'
-import { api } from '@/api/client'
+import { api } from '@/api'
 import type { AppWalletState } from './wallet.types'
 
 export const WalletStateContext = createContext<AppWalletState>({

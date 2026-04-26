@@ -14,65 +14,104 @@ function delay<T>(value: T, ms = 400): Promise<T> {
 }
 
 const MOCK_TIERS: TierProgressionResponse = {
-  currentAVP: '1200000000000000000000000',
-  previousAVP: '1100000000000000000000000',
-  currentGrowthBps: '909',
-  currentGrowthPct: '9.09',
+  currentAVP: '1250000000000000000000000',
+  previousAVP: '1112000000000000000000000',
+  currentGrowthBps: '1240',
+  currentGrowthPct: '12.40',
   currentTierIndex: 1,
-  activeDelegateCount: 38,
-  maxDelegatorApyPct: '5.75',
+  activeDelegateCount: 47,
+  maxDelegatorApyPct: '120.00',
   tiers: [
     {
       index: 0,
       momGrowthMinPct: '0',
-      momGrowthMaxPct: '5',
-      poolSizeEns: '500',
+      momGrowthMaxPct: '10',
+      poolSizeEns: '5000',
       delegateCapEns: '50',
-      delegatorCapEns: '10',
+      delegatorCapEns: '250',
       isCurrent: false,
       isUnlocked: true,
       additionalVPNeeded: '0',
-      requiredAVP: '0',
-      estimatedApyPct: '3.20',
+      requiredAVP: '1112000000000000000000000',
+      estimatedApyPct: '4.80',
     },
     {
       index: 1,
-      momGrowthMinPct: '5',
-      momGrowthMaxPct: '10',
-      poolSizeEns: '1000',
+      momGrowthMinPct: '10',
+      momGrowthMaxPct: '20',
+      poolSizeEns: '8000',
       delegateCapEns: '80',
-      delegatorCapEns: '15',
+      delegatorCapEns: '400',
       isCurrent: true,
       isUnlocked: true,
       additionalVPNeeded: '0',
-      requiredAVP: '1000000000000000000000000',
-      estimatedApyPct: '5.75',
+      requiredAVP: '1223200000000000000000000',
+      estimatedApyPct: '8.64',
     },
     {
       index: 2,
-      momGrowthMinPct: '10',
-      momGrowthMaxPct: '20',
-      poolSizeEns: '2000',
-      delegateCapEns: '120',
-      delegatorCapEns: '20',
+      momGrowthMinPct: '20',
+      momGrowthMaxPct: '30',
+      poolSizeEns: '10000',
+      delegateCapEns: '100',
+      delegatorCapEns: '500',
       isCurrent: false,
       isUnlocked: false,
-      additionalVPNeeded: '500000000000000000000000',
-      requiredAVP: '1500000000000000000000000',
-      estimatedApyPct: '8.40',
+      additionalVPNeeded: '84200000000000000000000',
+      requiredAVP: '1334400000000000000000000',
+      estimatedApyPct: '15.65',
     },
     {
       index: 3,
-      momGrowthMinPct: '20',
-      momGrowthMaxPct: '40',
-      poolSizeEns: '4000',
-      delegateCapEns: '200',
-      delegatorCapEns: '30',
+      momGrowthMinPct: '30',
+      momGrowthMaxPct: '50',
+      poolSizeEns: '15000',
+      delegateCapEns: '150',
+      delegatorCapEns: '750',
       isCurrent: false,
       isUnlocked: false,
-      additionalVPNeeded: '1200000000000000000000000',
-      requiredAVP: '2500000000000000000000000',
-      estimatedApyPct: '12.00',
+      additionalVPNeeded: '195400000000000000000000',
+      requiredAVP: '1445600000000000000000000',
+      estimatedApyPct: '27.00',
+    },
+    {
+      index: 4,
+      momGrowthMinPct: '50',
+      momGrowthMaxPct: '75',
+      poolSizeEns: '20000',
+      delegateCapEns: '200',
+      delegatorCapEns: '1000',
+      isCurrent: false,
+      isUnlocked: false,
+      additionalVPNeeded: '418000000000000000000000',
+      requiredAVP: '1668000000000000000000000',
+      estimatedApyPct: '46.29',
+    },
+    {
+      index: 5,
+      momGrowthMinPct: '75',
+      momGrowthMaxPct: '100',
+      poolSizeEns: '25000',
+      delegateCapEns: '250',
+      delegatorCapEns: '1250',
+      isCurrent: false,
+      isUnlocked: false,
+      additionalVPNeeded: '696000000000000000000000',
+      requiredAVP: '1946000000000000000000000',
+      estimatedApyPct: '80.00',
+    },
+    {
+      index: 6,
+      momGrowthMinPct: '100',
+      momGrowthMaxPct: 'Infinity',
+      poolSizeEns: '30000',
+      delegateCapEns: '300',
+      delegatorCapEns: '1500',
+      isCurrent: false,
+      isUnlocked: false,
+      additionalVPNeeded: '974000000000000000000000',
+      requiredAVP: '2224000000000000000000000',
+      estimatedApyPct: '120.00',
     },
   ],
 }
@@ -137,14 +176,25 @@ const MOCK_DELEGATES: ActiveDelegatesResponse = {
   ],
 }
 
-const MOCK_ROUND: RoundInfoResponse = {
-  roundNumber: 4,
-  startDate: '2026-03-01T00:00:00Z',
-  endDate: '2026-03-31T23:59:59Z',
-  percentComplete: 87,
-  daysRemaining: 4,
-  poolSizeEns: '1000',
-  tierIndex: 1,
+function createMockRound(): RoundInfoResponse {
+  const now = new Date()
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth()
+  const startDate = new Date(Date.UTC(year, month, 1)).toISOString()
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const endDate = new Date(Date.UTC(year, month, lastDay, 23, 59, 59, 999)).toISOString()
+  const currentDay = now.getUTCDate()
+
+  return {
+    roundNumber: 4,
+    startDate,
+    endDate,
+    percentComplete: Math.round((currentDay / lastDay) * 100),
+    daysRemaining: lastDay - currentDay,
+    poolSizeEns: '8000',
+    tierIndex: 1,
+    vpGrowthPct: '12.40',
+  }
 }
 
 const MOCK_DISTRIBUTION: DistributionResponse = {
@@ -246,5 +296,5 @@ export const mockApi = {
 
   distribution: (_month: string) => delay(MOCK_DISTRIBUTION),
 
-  currentRound: () => delay(MOCK_ROUND),
+  currentRound: () => delay(createMockRound()),
 } as const

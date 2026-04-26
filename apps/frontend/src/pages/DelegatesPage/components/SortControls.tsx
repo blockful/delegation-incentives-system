@@ -17,6 +17,7 @@ interface SortControlsProps {
 const fields: { value: SortField; label: string }[] = [
   { value: 'votingPower', label: 'Voting Power' },
   { value: 'activity', label: 'Activity' },
+  { value: 'activeSince', label: 'First Active' },
   { value: 'random', label: 'Random' },
 ]
 
@@ -75,7 +76,8 @@ export function SortControls({ value, onChange, onShuffle }: SortControlsProps) 
     if (value.field === field) {
       onChange({ field, direction: value.direction === 'desc' ? 'asc' : 'desc' })
     } else {
-      onChange({ field, direction: 'desc' })
+      const defaultDir = field === 'activeSince' ? 'asc' : 'desc'
+      onChange({ field, direction: defaultDir })
     }
   }
 

@@ -1,18 +1,24 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { ensBalance, ensVotingPowerSnapshot } from "ponder:schema";
-import { eq, desc } from "drizzle-orm";
+import {
+  ensBalance,
+  ensVotingPowerSnapshot,
+  ensDelegation,
+  multiDelegatePosition,
+} from "ponder:schema";
+import { eq, desc, and, sql } from "drizzle-orm";
 import {
   POOL_TIERS,
   DELEGATOR_POOL_BPS,
   DELEGATE_POOL_BPS,
   BPS_BASE,
+  MIN_PAYOUT,
   type Address,
 } from "@ens-dis/domain";
 import {
   fetchActiveDelegates,
   fetchCurrentVpGrowth,
-  formatGrowthRange,
+  formatEns,
   normalizeAddress,
   findTierIndex,
   getActiveVpTotal,
@@ -24,30 +30,34 @@ const AddressParam = z.object({
     .openapi({ param: { name: "address", in: "path" }, example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
 });
 
-const TierApySchema = z.object({
-  growthRange: z.string().openapi({ example: "0-5%" }),
-  poolSize: z.string().openapi({ example: "50000000000000000000000" }),
-  delegateCap: z.string(),
-  delegatorCap: z.string(),
-  estimatedApy: z.string().openapi({ example: "12.50" }),
-});
-
 const ApyResponse = z.object({
-  currentTierApy: z.string().openapi({ example: "15.33" }),
-  tiers: z.array(TierApySchema),
+  address: z.string(),
+  ensName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  role: z.enum(["delegate", "delegator", "ineligible"]),
+  delegatedTo: z.string().nullable(),
+  delegatedToEnsName: z.string().nullable(),
+  delegatedToAvatarUrl: z.string().nullable(),
+  poolSizeEns: z.string(),
+  estimatedMonthlyRewardEns: z.string(),
+  estimatedApyPct: z.string(),
+  userShareWei: z.string(),
+  totalShareWei: z.string(),
+  currentBalanceEns: z.string(),
+  qualifiesForLottery: z.boolean(),
 });
 
 const route = createRoute({
   method: "get",
   path: "/apy/{address}",
   tags: ["APY"],
-  summary: "Estimate APY for an address",
+  summary: "Estimate APY and rewards for an address",
   description:
-    "Calculates estimated annualized yield for each tier. Uses voting power for delegates and token balance for delegators.",
+    "Returns role, delegation info, estimated monthly reward, APY, and lottery qualification for the given address.",
   request: { params: AddressParam },
   responses: {
     200: {
-      description: "APY estimates per tier",
+      description: "APY estimate",
       content: { "application/json": { schema: ApyResponse } },
     },
     400: {
@@ -79,54 +89,108 @@ app.openapi(route, async (c) => {
       activeDelegates,
     );
     const currentTierIndex = findTierIndex(growthPct);
+    const tier = POOL_TIERS[currentTierIndex];
     const totalVp = await getActiveVpTotal(db, activeDelegates);
 
     const isDelegate = activeDelegates.has(address as Address);
 
-    let stake = 0n;
-    if (isDelegate) {
+    // Get user's ENS token balance
+    const balanceRows = await db
+      .select({ balance: ensBalance.balance })
+      .from(ensBalance)
+      .where(eq(ensBalance.id, address))
+      .limit(1);
+    const userBalance = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
+
+    // Determine delegation target
+    let delegatedTo: string | null = null;
+    let isDelegatorToActive = false;
+
+    // Direct delegation
+    const delegationRows = await db
+      .select({ delegateId: ensDelegation.delegateId })
+      .from(ensDelegation)
+      .where(eq(ensDelegation.id, address))
+      .limit(1);
+
+    if (delegationRows.length > 0) {
+      const delegate = delegationRows[0].delegateId;
+      if (activeDelegates.has(delegate as Address)) {
+        delegatedTo = delegate;
+        isDelegatorToActive = true;
+      }
+    }
+
+    // Multi-delegate fallback
+    if (!isDelegatorToActive) {
+      const multiPositions = await db
+        .select({ delegate: multiDelegatePosition.delegate, amount: multiDelegatePosition.amount })
+        .from(multiDelegatePosition)
+        .where(and(eq(multiDelegatePosition.owner, address), sql`${multiDelegatePosition.amount} > 0`));
+
+      for (const pos of multiPositions) {
+        if (activeDelegates.has(pos.delegate as Address)) {
+          delegatedTo = pos.delegate;
+          isDelegatorToActive = true;
+          break;
+        }
+      }
+    }
+
+    // Determine role
+    let role: "delegate" | "delegator" | "ineligible" = "ineligible";
+    if (isDelegate) role = "delegate";
+    else if (isDelegatorToActive) role = "delegator";
+
+    // Compute reward estimate
+    let monthlyReward = 0n;
+    let userShare = 0n;
+
+    if (role === "delegate" && totalVp > 0n) {
       const vpRows = await db
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
         .where(eq(ensVotingPowerSnapshot.accountId, address))
         .orderBy(desc(ensVotingPowerSnapshot.timestamp))
         .limit(1);
-      stake = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
-    } else {
-      const balanceRows = await db
-        .select({ balance: ensBalance.balance })
-        .from(ensBalance)
-        .where(eq(ensBalance.id, address))
-        .limit(1);
-      stake = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
+      userShare = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
+
+      const delegatePool = (tier.poolSize * (DELEGATE_POOL_BPS as bigint)) / (BPS_BASE as bigint);
+      const raw = totalVp > 0n ? (delegatePool * userShare) / totalVp : 0n;
+      monthlyReward = raw < tier.delegateCap ? raw : (tier.delegateCap as bigint);
+    } else if (role === "delegator" && totalVp > 0n) {
+      userShare = userBalance;
+      const delegatorPool = (tier.poolSize * (DELEGATOR_POOL_BPS as bigint)) / (BPS_BASE as bigint);
+      const raw = totalVp > 0n ? (delegatorPool * userBalance) / totalVp : 0n;
+      monthlyReward = raw < tier.delegatorCap ? raw : (tier.delegatorCap as bigint);
     }
 
-    const tiers = POOL_TIERS.map((tier) => {
-      let estimatedApy = "0";
+    // APY: (monthlyReward * 12 / userShare) * 100
+    let estimatedApyPct = "0.00";
+    if (userShare > 0n && monthlyReward > 0n) {
+      const apyBps = (monthlyReward * 1200n * 100n) / userShare;
+      estimatedApyPct = (Number(apyBps) / 100).toFixed(2);
+    }
 
-      if (stake > 0n && totalVp > 0n) {
-        const poolBps = isDelegate ? DELEGATE_POOL_BPS : DELEGATOR_POOL_BPS;
-        const pool = (tier.poolSize * poolBps) / BPS_BASE;
-        const monthlyReward = (pool * stake) / totalVp;
-
-        const cap = isDelegate ? tier.delegateCap : tier.delegatorCap;
-        const cappedReward = monthlyReward < cap ? monthlyReward : cap;
-
-        const apyBps = (cappedReward * 1200n * 100n) / stake;
-        estimatedApy = (Number(apyBps) / 100).toFixed(2);
-      }
-
-      return {
-        growthRange: formatGrowthRange(tier),
-        poolSize: tier.poolSize.toString(),
-        delegateCap: tier.delegateCap.toString(),
-        delegatorCap: tier.delegatorCap.toString(),
-        estimatedApy,
-      };
-    });
+    const qualifiesForLottery = monthlyReward > 0n && monthlyReward < (MIN_PAYOUT as bigint);
 
     return c.json(
-      { currentTierApy: tiers[currentTierIndex]?.estimatedApy ?? "0", tiers },
+      {
+        address,
+        ensName: null,      // ENS resolution handled client-side
+        avatarUrl: null,     // ENS resolution handled client-side
+        role,
+        delegatedTo,
+        delegatedToEnsName: null,     // ENS resolution handled client-side
+        delegatedToAvatarUrl: null,   // ENS resolution handled client-side
+        poolSizeEns: formatEns(tier.poolSize as bigint),
+        estimatedMonthlyRewardEns: formatEns(monthlyReward),
+        estimatedApyPct,
+        userShareWei: userShare.toString(),
+        totalShareWei: totalVp.toString(),
+        currentBalanceEns: formatEns(userBalance),
+        qualifiesForLottery,
+      },
       200,
     );
   } catch (err) {

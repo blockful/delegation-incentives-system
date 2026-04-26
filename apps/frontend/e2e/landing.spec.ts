@@ -8,13 +8,13 @@ test.describe('Landing Page', () => {
 
   test('renders tier table', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('Tier 1').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Tier 7')).toBeVisible()
+    await expect(page.getByText('Tier #1').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Tier #7')).toBeVisible()
   })
 
   test('renders how it works section', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText(/Three steps to earn/)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/Simple to join/)).toBeVisible({ timeout: 10000 })
   })
 
   test('renders footer', async ({ page }) => {

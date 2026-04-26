@@ -11,7 +11,7 @@ import {
 } from './fixtures'
 
 export const handlers = [
-  http.get('/api/status', () => HttpResponse.json(statusFixture)),
+  http.get('/api/stats', () => HttpResponse.json(statusFixture)),
 
   http.get('/api/delegates/active', () =>
     HttpResponse.json(delegatesFixture),

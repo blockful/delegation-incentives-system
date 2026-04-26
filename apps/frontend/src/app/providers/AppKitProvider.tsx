@@ -4,8 +4,9 @@ import { createAppKit } from '@reown/appkit/react'
 import { mainnet } from '@reown/appkit/networks'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { env } from '@/config/env'
 
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID ?? ''
+const projectId = env.reownProjectId
 const queryClient = new QueryClient()
 const wagmiAdapter = new WagmiAdapter({ networks: [mainnet], projectId })
 

@@ -1,12 +1,13 @@
 import styled from 'styled-components'
 import { tokens } from '@/styles/tokens'
+import { formatEnsWhole, formatTimeLeft } from '@/utils/format'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
   currentTierIndex: number
   poolSizeEns: string
-  roundNumber?: number
-  roundTimeLeft?: string
+  roundNumber: number
+  roundEndDate: string
 }
 
 const Wrapper = styled.div`
@@ -111,14 +112,15 @@ export function RoundStatusBar({
   currentTierIndex,
   poolSizeEns,
   roundNumber,
-  roundTimeLeft,
+  roundEndDate,
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
   const growthPrefix = isNegative ? '\u2013' : '+'
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
-  const displayRound = roundNumber ?? 1
-  const displayTimeLeft = roundTimeLeft ?? ''
+  const displayRound = roundNumber
+  const displayTimeLeft = formatTimeLeft(roundEndDate)
+  const displayPoolSizeEns = formatEnsWhole(poolSizeEns)
 
   return (
     <Wrapper>
@@ -140,7 +142,7 @@ export function RoundStatusBar({
           </Col>
           <Col $align="right">
             <ColLabel>Tier {currentTierIndex + 1}</ColLabel>
-            <ColSub>{poolSizeEns} ENS pool</ColSub>
+            <ColSub>{displayPoolSizeEns} ENS pool</ColSub>
           </Col>
         </DataRow>
       </Card>

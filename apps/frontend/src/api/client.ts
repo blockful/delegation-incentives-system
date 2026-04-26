@@ -1,3 +1,4 @@
+import { env } from '@/config/env'
 import type {
   HealthResponse,
   StatusResponse,
@@ -9,7 +10,7 @@ import type {
   RoundInfoResponse,
 } from "./types";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? "") + "/api";
+const BASE = env.apiBaseUrl;
 
 class ApiClientError extends Error {
   constructor(
@@ -33,7 +34,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<HealthResponse>("/health"),
 
-  status: () => request<StatusResponse>("/status"),
+  status: () => request<StatusResponse>("/stats"),
 
   activeDelegates: () => request<ActiveDelegatesResponse>("/delegates/active"),
 

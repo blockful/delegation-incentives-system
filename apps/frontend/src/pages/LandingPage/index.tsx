@@ -42,14 +42,16 @@ export function LandingPage() {
     return <ErrorMessage>Failed to load tier data: {tiers.error}</ErrorMessage>
   }
 
-  const roundData = round.data ?? undefined
+  if (round.error || !round.data) {
+    return <ErrorMessage>Failed to load current round data: {round.error}</ErrorMessage>
+  }
 
   switch (walletState.status) {
     case 'connected':
-      return <ConnectedLanding tierData={tiers.data} roundData={roundData} />
+      return <ConnectedLanding tierData={tiers.data} roundData={round.data} />
     case 'delegated':
-      return <DelegatedLanding tierData={tiers.data} roundData={roundData} />
+      return <DelegatedLanding tierData={tiers.data} roundData={round.data} />
     default:
-      return <DisconnectedLanding tierData={tiers.data} roundData={roundData} />
+      return <DisconnectedLanding tierData={tiers.data} roundData={round.data} />
   }
 }

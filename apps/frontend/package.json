@@ -23,7 +23,8 @@
     "react-router-dom": "^7.6.1",
     "styled-components": "^6.3.11",
     "viem": "^2.47.0",
-    "wagmi": "^3.5.0"
+    "wagmi": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

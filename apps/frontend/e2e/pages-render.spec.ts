@@ -7,9 +7,8 @@ test.describe('All pages render on mobile', () => {
     await page.goto('/')
     await expect(page.getByText('% APY')).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('link', { name: /Delegate Now/i }).first()).toBeVisible()
-    await expect(page.getByText('Reward Tiers')).toBeVisible()
-    // "Three steps to earn" heading is in the How It Works section
-    const stepsHeading = page.getByRole('heading', { name: /Three steps to earn/ })
+    await expect(page.getByText(/The more people join/i)).toBeVisible()
+    const stepsHeading = page.getByRole('heading', { name: /Simple to join/i })
     await stepsHeading.scrollIntoViewIfNeeded()
     await expect(stepsHeading).toBeVisible()
   })
@@ -22,7 +21,7 @@ test.describe('All pages render on mobile', () => {
 
   test('landing page shows tier table with 7 tiers', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('Tier 7')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Tier #7')).toBeVisible({ timeout: 10000 })
   })
 
   test('delegates page renders header and cards', async ({ page }) => {

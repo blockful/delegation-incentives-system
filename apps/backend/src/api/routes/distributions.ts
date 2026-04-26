@@ -2,8 +2,9 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
 import { distributionResult } from "ponder:schema";
 import { eq, desc } from "drizzle-orm";
-import type { DistributionResult } from "@ens-dis/domain";
+import { POOL_TIERS, MIN_PAYOUT, type DistributionResult } from "@ens-dis/domain";
 import { distributionToCsv } from "../../output/csv-writer.js";
+import { formatEns } from "../helpers.js";
 
 function reviveBigInts(obj: any): DistributionResult {
   return {
@@ -37,6 +38,84 @@ function reviveBigInts(obj: any): DistributionResult {
     },
     deduplication: obj.deduplication,
   } as unknown as DistributionResult;
+}
+
+/** Transform raw DistributionResult into the FE-expected shape. */
+function toApiResponse(result: DistributionResult) {
+  const meta = result.metadata;
+  const tierConfig = POOL_TIERS[meta.tier] ?? POOL_TIERS[0];
+
+  // Direct payouts: rewards above MIN_PAYOUT threshold
+  const minPayout = MIN_PAYOUT as bigint;
+  const directPayouts = result.rewards
+    .filter((r) => (r.total as bigint) >= minPayout)
+    .map((r) => {
+      const role: "delegate" | "delegator" =
+        (r.delegateReward as bigint) > 0n ? "delegate" : "delegator";
+      return {
+        address: r.address,
+        ensName: null as string | null,
+        amount: (r.total as bigint).toString(),
+        amountEns: formatEns(r.total as bigint),
+        role,
+      };
+    });
+
+  // Lottery pools from buckets
+  const lotteryPools = result.lottery.buckets.map((bucket) => ({
+    totalPrize: (bucket.prize as bigint).toString(),
+    totalPrizeEns: formatEns(bucket.prize as bigint),
+    winner: bucket.winner,
+    winnerEnsName: null as string | null,
+    entries: bucket.entries.map((e) => ({
+      address: e.address,
+      ensName: null as string | null,
+      originalAmount: (e.amount as bigint).toString(),
+      role: "delegator" as const,
+    })),
+  }));
+
+  // Total distributed: sum of direct payouts + lottery prizes
+  let totalDistributed = 0n;
+  for (const r of result.rewards) {
+    if ((r.total as bigint) >= minPayout) totalDistributed += r.total as bigint;
+  }
+  for (const b of result.lottery.buckets) {
+    totalDistributed += b.prize as bigint;
+  }
+
+  // Eligible delegator count
+  const eligibleDelegatorCount = result.rewards.filter(
+    (r) => (r.delegatorReward as bigint) > 0n,
+  ).length;
+
+  // MoM growth in basis points
+  const growthPct = parseFloat(meta.vpGrowthPct);
+  const momGrowthBps = Math.round(growthPct * 100).toString();
+
+  return {
+    month: meta.month,
+    metadata: {
+      totalDistributed: totalDistributed.toString(),
+      totalDistributedEns: formatEns(totalDistributed),
+      poolTier: {
+        momGrowthMinBps: (tierConfig.minGrowthPct * 100).toString(),
+        momGrowthMaxBps: tierConfig.maxGrowthPct === Infinity
+          ? "Infinity"
+          : (tierConfig.maxGrowthPct * 100).toString(),
+        poolSize: (tierConfig.poolSize as bigint).toString(),
+        delegateCap: (tierConfig.delegateCap as bigint).toString(),
+        delegatorCap: (tierConfig.delegatorCap as bigint).toString(),
+      },
+      momGrowthBps,
+      activeDelegateCount: meta.activeDelegateCount,
+      eligibleDelegatorCount,
+      computedAt: new Date().toISOString(),
+      randaoSeed: meta.randaoValue,
+    },
+    directPayouts,
+    lotteryPools,
+  };
 }
 
 const MonthParam = z.object({
@@ -77,7 +156,7 @@ const getRoute = createRoute({
   path: "/distributions/{month}",
   tags: ["Distributions"],
   summary: "Get distribution for a month",
-  description: "Returns the full distribution result JSON for the requested month.",
+  description: "Returns the curated distribution result for the requested month.",
   request: { params: MonthParam },
   responses: {
     200: {
@@ -158,7 +237,8 @@ app.openapi(getRoute, async (c) => {
       return c.json({ error: `No distribution found for month ${month}` }, 404);
     }
 
-    return c.json(JSON.parse(rows[0].resultJson), 200);
+    const result = reviveBigInts(JSON.parse(rows[0].resultJson));
+    return c.json(toApiResponse(result), 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);

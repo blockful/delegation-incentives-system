@@ -1,25 +1,22 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
+import { POOL_TIERS } from "@ens-dis/domain";
 import {
   fetchActiveDelegates,
   fetchCurrentVpGrowth,
-  getCurrentMonth,
-  getDaysRemainingInMonth,
   findTierIndex,
+  formatEns,
 } from "../helpers.js";
 
 const RoundResponse = z.object({
-  month: z.string().openapi({ example: "2026-04" }),
+  roundNumber: z.number().openapi({ description: "Sequential round number (months since program start)", example: 3 }),
+  startDate: z.string().openapi({ description: "ISO 8601 start of the round", example: "2026-04-01T00:00:00.000Z" }),
+  endDate: z.string().openapi({ description: "ISO 8601 end of the round", example: "2026-04-30T23:59:59.999Z" }),
+  percentComplete: z.number().openapi({ description: "Percentage of round elapsed (0-100)", example: 53 }),
   daysRemaining: z.number().openapi({ example: 14 }),
-  vpStart: z
-    .string()
-    .openapi({ description: "Active VP at the start of the round", example: "100000000000000000000000" }),
-  vpCurrent: z
-    .string()
-    .openapi({ description: "Active VP now", example: "107230000000000000000000" }),
-  vpGrowthSoFar: z.string().openapi({ example: "7.23" }),
-  currentTier: z.number().openapi({ example: 1 }),
-  activeDelegateCount: z.number().openapi({ example: 25 }),
+  poolSizeEns: z.string().openapi({ description: "Current tier pool size in ENS", example: "5000.000000000000000000" }),
+  tierIndex: z.number().openapi({ example: 1 }),
+  vpGrowthPct: z.string().openapi({ description: "Month-over-month active VP growth percentage", example: "9.09" }),
 });
 
 const route = createRoute({
@@ -28,7 +25,7 @@ const route = createRoute({
   tags: ["Rounds"],
   summary: "Current incentive round",
   description:
-    "Returns the current calendar month, VP at round start and now, growth so far, active tier, and days remaining.",
+    "Returns the current round info: dates, progress, pool size, and active tier index.",
   responses: {
     200: {
       description: "Current round info",
@@ -41,26 +38,58 @@ const route = createRoute({
   },
 });
 
+/** Parse ROUND_MONTHS env var into sorted list. */
+function getRoundMonths(): string[] {
+  const raw = process.env.ROUND_MONTHS ?? "";
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => /^\d{4}-\d{2}$/.test(s))
+    .sort();
+}
+
 const app = new OpenAPIHono();
 
 app.openapi(route, async (c) => {
   try {
     const { activeDelegates } = await fetchActiveDelegates(db);
-    const { vpStart, vpEnd, growthPct } = await fetchCurrentVpGrowth(
+    const { growthPct } = await fetchCurrentVpGrowth(
       db,
       activeDelegates,
       activeDelegates,
     );
 
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth(); // 0-based
+    const currentMonth = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    // Round number: 1-based index into ROUND_MONTHS
+    const roundMonths = getRoundMonths();
+    const roundIndex = roundMonths.indexOf(currentMonth);
+    const roundNumber = roundIndex >= 0 ? roundIndex + 1 : 1;
+
+    const startDate = new Date(Date.UTC(year, month, 1)).toISOString();
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const endDate = new Date(Date.UTC(year, month, lastDay, 23, 59, 59, 999)).toISOString();
+
+    const currentDay = now.getUTCDate();
+    const daysRemaining = lastDay - currentDay;
+    const percentComplete = Math.round((currentDay / lastDay) * 100);
+
+    const tierIndex = findTierIndex(growthPct);
+    const poolSizeEns = formatEns(POOL_TIERS[tierIndex].poolSize as bigint);
+
     return c.json(
       {
-        month: getCurrentMonth(),
-        daysRemaining: getDaysRemainingInMonth(),
-        vpStart: (vpStart as bigint).toString(),
-        vpCurrent: (vpEnd as bigint).toString(),
-        vpGrowthSoFar: growthPct.toFixed(2),
-        currentTier: findTierIndex(growthPct),
-        activeDelegateCount: activeDelegates.size,
+        roundNumber,
+        startDate,
+        endDate,
+        percentComplete,
+        daysRemaining,
+        poolSizeEns,
+        tierIndex,
+        vpGrowthPct: growthPct.toFixed(2),
       },
       200,
     );

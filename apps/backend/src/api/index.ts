@@ -8,6 +8,7 @@ import apy from "./routes/apy.js";
 import rounds from "./routes/rounds.js";
 import tiers from "./routes/tiers.js";
 import distributions from "./routes/distributions.js";
+import stats from "./routes/stats.js";
 
 const app = new OpenAPIHono();
 
@@ -19,6 +20,7 @@ app.route("/", apy);
 app.route("/", rounds);
 app.route("/", tiers);
 app.route("/", distributions);
+app.route("/", stats);
 
 app.doc("/openapi.json", {
   openapi: "3.0.0",
