@@ -183,22 +183,19 @@ export default createConfig({
       chain: "mainnet",
       abi: hedgeyVestingAbi,
       address: "0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C",
-      startBlock: 18506969,
+      startBlock: 18466404,
     },
     ENSToken: {
       chain: "mainnet",
       abi: ensTokenAbi,
       address: "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72",
-      // Start block covers ~12 months before the program launch (Feb 2026).
-      // Provides ample margin beyond the 180-day TWB window.
-      // Adjust if the program timeline shifts.
-      startBlock: 21000000,
+      startBlock: 13533418,
     },
     ENSGovernor: {
       chain: "mainnet",
       abi: ensGovernorAbi,
       address: "0x323a76393544d5ecca80cd6ef2a560c6a395b7e3",
-      startBlock: 13533800,
+      startBlock: 13533772,
     },
   },
 });
