@@ -148,13 +148,11 @@ export function DelegatesPage() {
         </HeaderBlock>
 
         <StatsBarWrapper>
-          {stats && (
-            <StatsBar
-              activeDelegateCount={stats.activeDelegateCount}
-              totalDelegatedEns={stats.totalDelegatedEns}
-              holdersEarning={stats.holdersEarning}
-            />
-          )}
+          <StatsBar
+            activeDelegateCount={stats?.activeDelegateCount}
+            totalDelegatedEns={stats?.totalDelegatedEns}
+            holdersEarning={stats?.holdersEarning}
+          />
         </StatsBarWrapper>
       </TopSection>
 

@@ -3,9 +3,9 @@ import { tokens } from '@/styles'
 import { formatEnsCompact } from '@/utils/format'
 
 interface StatsBarProps {
-  activeDelegateCount: number
-  totalDelegatedEns: string
-  holdersEarning: number
+  activeDelegateCount?: number
+  totalDelegatedEns?: string
+  holdersEarning?: number
 }
 
 const Bar = styled.div`
@@ -54,15 +54,15 @@ export function StatsBar({
   return (
     <Bar>
       <Cell>
-        <CellValue>{activeDelegateCount}</CellValue>
+        <CellValue>{activeDelegateCount ?? '—'}</CellValue>
         <CellLabel>active delegates</CellLabel>
       </Cell>
       <Cell>
-        <CellValue>{formatEnsCompact(totalDelegatedEns)}</CellValue>
+        <CellValue>{totalDelegatedEns ? formatEnsCompact(totalDelegatedEns) : '—'}</CellValue>
         <CellLabel>ENS delegated</CellLabel>
       </Cell>
       <Cell>
-        <CellValue>{holdersEarning}</CellValue>
+        <CellValue>{holdersEarning ?? '—'}</CellValue>
         <CellLabel>holders earning</CellLabel>
       </Cell>
     </Bar>
