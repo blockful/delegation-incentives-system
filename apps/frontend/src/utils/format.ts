@@ -12,6 +12,21 @@ export function formatEnsWhole(value: string | number | bigint): string {
   }
 }
 
+export function formatEnsCompact(value: string): string {
+  const whole = Number(value.split('.')[0] || '0')
+  if (whole >= 1_000_000) {
+    const m = whole / 1_000_000
+    const rounded = Math.round(m * 10) / 10
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}M`
+  }
+  if (whole >= 1_000) {
+    const k = whole / 1_000
+    const rounded = Math.round(k * 10) / 10
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K`
+  }
+  return `${whole}`
+}
+
 export function formatTimeLeft(endDate: string, now = new Date()): string {
   const endMs = Date.parse(endDate)
   if (Number.isNaN(endMs)) return ''

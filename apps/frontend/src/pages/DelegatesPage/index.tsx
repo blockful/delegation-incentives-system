@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
+import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, Eyebrow, LoadingWrapper, ErrorMessage } from '@/styles'
 import { DelegateCard } from './components/DelegateCard'
 import { SortControls, type SortState } from './components/SortControls'
@@ -98,13 +99,9 @@ function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
   return copy
 }
 
-function activityScore(d: DelegateDetail): number {
-  if (!d.last10ProposalsVoted) return 0
-  return d.last10ProposalsVoted.filter(Boolean).length
-}
-
 export function DelegatesPage() {
-  const { data, loading, error, count } = useDelegates()
+  const { data, loading, error } = useDelegates()
+  const { data: stats } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
 
@@ -120,12 +117,12 @@ export function DelegatesPage() {
 
     if (sort.field === 'votingPower') {
       sorted.sort((a, b) => {
-        const aVp = Number(a.votingPower ?? '0')
-        const bVp = Number(b.votingPower ?? '0')
+        const aVp = Number(a.votingPower)
+        const bVp = Number(b.votingPower)
         return (aVp - bVp) * dir
       })
     } else if (sort.field === 'activity') {
-      sorted.sort((a, b) => (activityScore(a) - activityScore(b)) * dir)
+      sorted.sort((a, b) => (a.votesInLast10 - b.votesInLast10) * dir)
     } else if (sort.field === 'activeSince') {
       sorted.sort((a, b) => {
         const aTime = a.activeSince ? new Date(a.activeSince).getTime() : 0
@@ -151,7 +148,13 @@ export function DelegatesPage() {
         </HeaderBlock>
 
         <StatsBarWrapper>
-          <StatsBar activeDelegates={count} />
+          {stats && (
+            <StatsBar
+              activeDelegateCount={stats.activeDelegateCount}
+              totalDelegatedEns={stats.totalDelegatedEns}
+              holdersEarning={stats.holdersEarning}
+            />
+          )}
         </StatsBarWrapper>
       </TopSection>
 

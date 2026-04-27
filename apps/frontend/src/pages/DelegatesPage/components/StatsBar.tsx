@@ -1,10 +1,11 @@
 import styled from 'styled-components'
 import { tokens } from '@/styles'
+import { formatEnsCompact } from '@/utils/format'
 
 interface StatsBarProps {
-  activeDelegates: number
-  totalDelegated?: string
-  holdersEarning?: number
+  activeDelegateCount: number
+  totalDelegatedEns: string
+  holdersEarning: number
 }
 
 const Bar = styled.div`
@@ -46,22 +47,22 @@ const CellLabel = styled.span`
 `
 
 export function StatsBar({
-  activeDelegates,
-  totalDelegated,
+  activeDelegateCount,
+  totalDelegatedEns,
   holdersEarning,
 }: StatsBarProps) {
   return (
     <Bar>
       <Cell>
-        <CellValue>{activeDelegates}</CellValue>
+        <CellValue>{activeDelegateCount}</CellValue>
         <CellLabel>active delegates</CellLabel>
       </Cell>
       <Cell>
-        <CellValue>{totalDelegated ?? '—'}</CellValue>
+        <CellValue>{formatEnsCompact(totalDelegatedEns)}</CellValue>
         <CellLabel>ENS delegated</CellLabel>
       </Cell>
       <Cell>
-        <CellValue>{holdersEarning ?? '—'}</CellValue>
+        <CellValue>{holdersEarning}</CellValue>
         <CellLabel>holders earning</CellLabel>
       </Cell>
     </Bar>

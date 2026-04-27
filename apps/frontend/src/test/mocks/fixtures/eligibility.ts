@@ -8,6 +8,7 @@ export const eligibleDelegateFixture: EligibilityResponse = {
   eligible: true,
   delegatedTo: null,
   delegatedToEnsName: null,
+  source: null,
 }
 
 export const eligibleDelegatorFixture: EligibilityResponse = {
@@ -18,6 +19,7 @@ export const eligibleDelegatorFixture: EligibilityResponse = {
   eligible: true,
   delegatedTo: '0x1234567890abcdef1234567890abcdef12345678',
   delegatedToEnsName: null,
+  source: 'direct',
 }
 
 export const ineligibleFixture: EligibilityResponse = {
@@ -28,4 +30,5 @@ export const ineligibleFixture: EligibilityResponse = {
   eligible: false,
   delegatedTo: null,
   delegatedToEnsName: null,
+  source: null,
 }

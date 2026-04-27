@@ -188,35 +188,27 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
         </IdentityInfo>
       </IdentityRow>
 
-      {delegate.last10ProposalsVoted && (
-        <ProposalSection>
-          <ProposalLabel>Last 10 proposals</ProposalLabel>
-          <ProposalBar votes={delegate.last10ProposalsVoted} />
-        </ProposalSection>
-      )}
+      <ProposalSection>
+        <ProposalLabel>Last 10 proposals</ProposalLabel>
+        <ProposalBar votes={delegate.last10ProposalsVoted} />
+      </ProposalSection>
 
-      {(delegate.votingPower || delegate.delegatorCount != null || delegate.activeSince) && (
-        <StatsRow>
-          {delegate.votingPower && (
-            <Stat>
-              <StatValue>{formatVotingPower(delegate.votingPower)}</StatValue>
-              <StatLabel>Voting Power</StatLabel>
-            </Stat>
-          )}
-          {delegate.delegatorCount != null && (
-            <Stat>
-              <StatValue>{delegate.delegatorCount}</StatValue>
-              <StatLabel>Delegators</StatLabel>
-            </Stat>
-          )}
-          {delegate.activeSince && (
-            <Stat>
-              <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
-              <StatLabel>Active since</StatLabel>
-            </Stat>
-          )}
-        </StatsRow>
-      )}
+      <StatsRow>
+        <Stat>
+          <StatValue>{formatVotingPower(delegate.votingPower)}</StatValue>
+          <StatLabel>Voting Power</StatLabel>
+        </Stat>
+        <Stat>
+          <StatValue>{delegate.delegatorCount}</StatValue>
+          <StatLabel>Delegators</StatLabel>
+        </Stat>
+        {delegate.activeSince && (
+          <Stat>
+            <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
+            <StatLabel>Active since</StatLabel>
+          </Stat>
+        )}
+      </StatsRow>
 
       <ActionsBlock>
         <DelegatedButton $delegated={isDelegated} disabled={isDelegated}>
