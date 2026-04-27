@@ -6,11 +6,12 @@
   "description": "ENS Delegation Incentives — Frontend Dashboard",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "pnpm codegen && tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm codegen && tsc --noEmit",
+    "codegen": "pnpm --filter @ens-dis/backend openapi:gen && openapi-typescript ./openapi.json -o src/api/schema.gen.ts"
   },
   "dependencies": {
     "@ensdomains/thorin": "^0.6.50",
@@ -36,6 +37,7 @@
     "@vitejs/plugin-react": "^4.5.2",
     "jsdom": "^26.1.0",
     "msw": "^2.12.10",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.9.3",
     "vite": "^6.3.5",
     "vitest": "^4.0.18"

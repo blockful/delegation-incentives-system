@@ -1,72 +1,34 @@
-/** API response types matching the backend OpenAPI schema. */
+/**
+ * API response types derived from the backend OpenAPI schema.
+ * Regenerate via `pnpm --filter @ens-dis/frontend codegen` after backend schema changes.
+ */
+import type { paths } from "./schema.gen";
 
+type GetJson<P extends keyof paths, S extends number = 200> =
+  paths[P] extends { get: { responses: infer R } }
+    ? R extends Record<S, { content: { "application/json": infer J } }>
+      ? J
+      : never
+    : never;
+
+// /health is reserved by Ponder and not declared in our OpenAPI spec.
 export interface HealthResponse {
   status: "ok";
 }
+export type StatusResponse = GetJson<"/stats">;
+export type ActiveDelegatesResponse = GetJson<"/delegates/active">;
+export type EligibilityResponse = GetJson<"/eligibility/{address}">;
+export type TierProgressionResponse = GetJson<"/tiers/progression">;
+export type ApyEstimateResponse = GetJson<"/apy/{address}">;
+export type RoundInfoResponse = GetJson<"/rounds/current">;
 
-export interface StatusResponse {
-  activeDelegateCount: number;
-  proposalCount: number;
-  cachedDistributions: string[];
-}
+export type DelegateDetail = ActiveDelegatesResponse["delegates"][number];
+export type TierEntry = TierProgressionResponse["tiers"][number];
 
-export interface ActiveDelegatesResponse {
-  count: number;
-  delegates: DelegateDetail[];
-}
-
-export interface EligibilityResponse {
-  address: string;
-  ensName: string | null;
-  isActiveDelegate: boolean;
-  isDelegatorToActiveDelegate: boolean;
-  eligible: boolean;
-  delegatedTo: string | null;
-  delegatedToEnsName: string | null;
-}
-
-export interface TierEntry {
-  index: number;
-  momGrowthMinPct: string;
-  momGrowthMaxPct: string;
-  poolSizeEns: string;
-  delegateCapEns: string;
-  delegatorCapEns: string;
-  isCurrent: boolean;
-  isUnlocked: boolean;
-  additionalVPNeeded: string;
-  requiredAVP: string;
-  estimatedApyPct: string;
-}
-
-export interface TierProgressionResponse {
-  currentAVP: string;
-  previousAVP: string;
-  currentGrowthBps: string;
-  currentGrowthPct: string;
-  currentTierIndex: number;
-  activeDelegateCount: number;
-  maxDelegatorApyPct: string;
-  tiers: TierEntry[];
-}
-
-export interface ApyEstimateResponse {
-  address: string;
-  ensName: string | null;
-  avatarUrl: string | null;
-  role: "delegate" | "delegator" | "ineligible";
-  delegatedTo: string | null;
-  delegatedToEnsName: string | null;
-  delegatedToAvatarUrl: string | null;
-  poolSizeEns: string;
-  estimatedMonthlyRewardEns: string;
-  estimatedApyPct: string;
-  userShareWei: string;
-  totalShareWei: string;
-  currentBalanceEns: string;
-  qualifiesForLottery: boolean;
-}
-
+/**
+ * Distribution endpoint returns an opaque object in the schema (passthrough),
+ * so we keep the curated response shape declared here.
+ */
 export interface Payout {
   address: string;
   ensName: string | null;
@@ -114,27 +76,6 @@ export interface DistributionResponse {
   lotteryPools: LotteryPool[];
 }
 
-export interface DelegateDetail {
-  address: string;
-  ensName: string | null;
-  avatarUrl: string | null;
-  votingPower: string | null;
-  delegatorCount: number | null;
-  activeSince: string | null;
-  last10ProposalsVoted: boolean[] | null;
-}
-
 export interface ApiError {
   error: string;
-}
-
-export interface RoundInfoResponse {
-  roundNumber: number;
-  startDate: string;
-  endDate: string;
-  percentComplete: number;
-  daysRemaining: number;
-  poolSizeEns: string;
-  tierIndex: number;
-  vpGrowthPct: string;
 }

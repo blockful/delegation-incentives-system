@@ -1,0 +1,1039 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ENS Delegation Incentives API",
+    "version": "1.0.0",
+    "description": "API for the ENS delegation incentives system — active delegates, eligibility, reward estimates, APY, tiers, rounds, and distribution history."
+  },
+  "components": {
+    "schemas": {},
+    "parameters": {}
+  },
+  "paths": {
+    "/delegates/active": {
+      "get": {
+        "tags": [
+          "Delegates"
+        ],
+        "summary": "List active delegates",
+        "description": "Returns delegates who meet the voting activity threshold, sorted by voting power descending.",
+        "responses": {
+          "200": {
+            "description": "Active delegates list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "number"
+                    },
+                    "delegates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "string",
+                            "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                          },
+                          "ensName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "example": null
+                          },
+                          "avatarUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "example": null
+                          },
+                          "votingPower": {
+                            "type": "string",
+                            "example": "1000000000000000000000"
+                          },
+                          "votesInLast10": {
+                            "type": "number",
+                            "example": 8
+                          },
+                          "last10ProposalsVoted": {
+                            "type": "array",
+                            "items": {
+                              "type": "boolean"
+                            },
+                            "description": "Per-proposal voting record for the last 10 finalized proposals (most recent first)",
+                            "example": [
+                              true,
+                              true,
+                              true,
+                              false,
+                              true,
+                              true,
+                              true,
+                              true,
+                              false,
+                              true
+                            ]
+                          },
+                          "delegatorCount": {
+                            "type": "number",
+                            "example": 42
+                          },
+                          "activeSince": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ISO 8601 timestamp of the delegate's earliest vote",
+                            "example": "2024-01-15T00:00:00.000Z"
+                          }
+                        },
+                        "required": [
+                          "address",
+                          "ensName",
+                          "avatarUrl",
+                          "votingPower",
+                          "votesInLast10",
+                          "last10ProposalsVoted",
+                          "delegatorCount",
+                          "activeSince"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "delegates"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eligibility/{address}": {
+      "get": {
+        "tags": [
+          "Eligibility"
+        ],
+        "summary": "Check delegation eligibility",
+        "description": "Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active delegate.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                    },
+                    "ensName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActiveDelegate": {
+                      "type": "boolean"
+                    },
+                    "isDelegatorToActiveDelegate": {
+                      "type": "boolean"
+                    },
+                    "eligible": {
+                      "type": "boolean"
+                    },
+                    "delegatedTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                    },
+                    "delegatedToEnsName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "source": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "direct",
+                        "multidelegate",
+                        "hedgey_vesting",
+                        null
+                      ],
+                      "example": "direct"
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "ensName",
+                    "isActiveDelegate",
+                    "isDelegatorToActiveDelegate",
+                    "eligible",
+                    "delegatedTo",
+                    "delegatedToEnsName",
+                    "source"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rewards/estimate/{address}": {
+      "get": {
+        "tags": [
+          "Rewards"
+        ],
+        "summary": "Estimate rewards for an address",
+        "description": "Estimates delegate and delegator rewards for the current month based on current VP, delegation state, and tier.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward estimate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "delegateReward": {
+                      "type": "string",
+                      "example": "500000000000000000000"
+                    },
+                    "delegatorReward": {
+                      "type": "string",
+                      "example": "150000000000000000000"
+                    },
+                    "combinedReward": {
+                      "type": "string",
+                      "example": "650000000000000000000"
+                    },
+                    "aboveThreshold": {
+                      "type": "boolean"
+                    },
+                    "currentTier": {
+                      "type": "number",
+                      "example": 1
+                    }
+                  },
+                  "required": [
+                    "delegateReward",
+                    "delegatorReward",
+                    "combinedReward",
+                    "aboveThreshold",
+                    "currentTier"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apy/{address}": {
+      "get": {
+        "tags": [
+          "APY"
+        ],
+        "summary": "Estimate APY and rewards for an address",
+        "description": "Returns role, delegation info, estimated monthly reward, APY, and lottery qualification for the given address.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "APY estimate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string"
+                    },
+                    "ensName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "delegate",
+                        "delegator",
+                        "ineligible"
+                      ]
+                    },
+                    "delegatedTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "delegatedToEnsName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "delegatedToAvatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "poolSizeEns": {
+                      "type": "string"
+                    },
+                    "estimatedMonthlyRewardEns": {
+                      "type": "string"
+                    },
+                    "estimatedApyPct": {
+                      "type": "string"
+                    },
+                    "userShareWei": {
+                      "type": "string"
+                    },
+                    "totalShareWei": {
+                      "type": "string"
+                    },
+                    "currentBalanceEns": {
+                      "type": "string"
+                    },
+                    "qualifiesForLottery": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "ensName",
+                    "avatarUrl",
+                    "role",
+                    "delegatedTo",
+                    "delegatedToEnsName",
+                    "delegatedToAvatarUrl",
+                    "poolSizeEns",
+                    "estimatedMonthlyRewardEns",
+                    "estimatedApyPct",
+                    "userShareWei",
+                    "totalShareWei",
+                    "currentBalanceEns",
+                    "qualifiesForLottery"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rounds/current": {
+      "get": {
+        "tags": [
+          "Rounds"
+        ],
+        "summary": "Current incentive round",
+        "description": "Returns the current round info: dates, progress, pool size, and active tier index.",
+        "responses": {
+          "200": {
+            "description": "Current round info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roundNumber": {
+                      "type": "number",
+                      "description": "Sequential round number (months since program start)",
+                      "example": 3
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "description": "ISO 8601 start of the round",
+                      "example": "2026-04-01T00:00:00.000Z"
+                    },
+                    "endDate": {
+                      "type": "string",
+                      "description": "ISO 8601 end of the round",
+                      "example": "2026-04-30T23:59:59.999Z"
+                    },
+                    "percentComplete": {
+                      "type": "number",
+                      "description": "Percentage of round elapsed (0-100)",
+                      "example": 53
+                    },
+                    "daysRemaining": {
+                      "type": "number",
+                      "example": 14
+                    },
+                    "poolSizeEns": {
+                      "type": "string",
+                      "description": "Current tier pool size in ENS",
+                      "example": "5000.000000000000000000"
+                    },
+                    "tierIndex": {
+                      "type": "number",
+                      "example": 1
+                    },
+                    "vpGrowthPct": {
+                      "type": "string",
+                      "description": "Month-over-month active VP growth percentage",
+                      "example": "9.09"
+                    }
+                  },
+                  "required": [
+                    "roundNumber",
+                    "startDate",
+                    "endDate",
+                    "percentComplete",
+                    "daysRemaining",
+                    "poolSizeEns",
+                    "tierIndex",
+                    "vpGrowthPct"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tiers/progression": {
+      "get": {
+        "tags": [
+          "Tiers"
+        ],
+        "summary": "Tier progression and current VP growth",
+        "description": "Returns all tier definitions with current unlock state, VP thresholds, estimated APY, and overall VP growth.",
+        "responses": {
+          "200": {
+            "description": "Tier progression data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "currentAVP": {
+                      "type": "string",
+                      "description": "Current active VP (wei)",
+                      "example": "107230000000000000000000"
+                    },
+                    "previousAVP": {
+                      "type": "string",
+                      "description": "Active VP at month start (wei)",
+                      "example": "100000000000000000000000"
+                    },
+                    "currentGrowthBps": {
+                      "type": "string",
+                      "example": "723"
+                    },
+                    "currentGrowthPct": {
+                      "type": "string",
+                      "example": "7.23"
+                    },
+                    "currentTierIndex": {
+                      "type": "number",
+                      "example": 0
+                    },
+                    "activeDelegateCount": {
+                      "type": "number",
+                      "example": 25
+                    },
+                    "maxDelegatorApyPct": {
+                      "type": "string",
+                      "description": "Highest estimated delegator APY across all tiers",
+                      "example": "54.00"
+                    },
+                    "tiers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {
+                            "type": "number",
+                            "example": 0
+                          },
+                          "momGrowthMinPct": {
+                            "type": "string",
+                            "example": "0"
+                          },
+                          "momGrowthMaxPct": {
+                            "type": "string",
+                            "example": "10"
+                          },
+                          "poolSizeEns": {
+                            "type": "string",
+                            "example": "5000.000000000000000000"
+                          },
+                          "delegateCapEns": {
+                            "type": "string",
+                            "example": "50.000000000000000000"
+                          },
+                          "delegatorCapEns": {
+                            "type": "string",
+                            "example": "250.000000000000000000"
+                          },
+                          "isCurrent": {
+                            "type": "boolean"
+                          },
+                          "isUnlocked": {
+                            "type": "boolean"
+                          },
+                          "additionalVPNeeded": {
+                            "type": "string",
+                            "description": "Wei needed above current VP to reach this tier",
+                            "example": "0"
+                          },
+                          "requiredAVP": {
+                            "type": "string",
+                            "description": "VP threshold to enter this tier (wei)",
+                            "example": "110000000000000000000000"
+                          },
+                          "estimatedApyPct": {
+                            "type": "string",
+                            "description": "Estimated delegator APY at this tier",
+                            "example": "12.50"
+                          }
+                        },
+                        "required": [
+                          "index",
+                          "momGrowthMinPct",
+                          "momGrowthMaxPct",
+                          "poolSizeEns",
+                          "delegateCapEns",
+                          "delegatorCapEns",
+                          "isCurrent",
+                          "isUnlocked",
+                          "additionalVPNeeded",
+                          "requiredAVP",
+                          "estimatedApyPct"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "currentAVP",
+                    "previousAVP",
+                    "currentGrowthBps",
+                    "currentGrowthPct",
+                    "currentTierIndex",
+                    "activeDelegateCount",
+                    "maxDelegatorApyPct",
+                    "tiers"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/distributions": {
+      "get": {
+        "tags": [
+          "Distributions"
+        ],
+        "summary": "List distribution months",
+        "description": "Returns an array of YYYY-MM month strings for which distributions have been computed, most recent first.",
+        "responses": {
+          "200": {
+            "description": "Month list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "example": "2026-03"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/distributions/{month}": {
+      "get": {
+        "tags": [
+          "Distributions"
+        ],
+        "summary": "Get distribution for a month",
+        "description": "Returns the curated distribution result for the requested month.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-03"
+            },
+            "required": true,
+            "name": "month",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Distribution result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid month format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Distribution not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/distributions/{month}/csv": {
+      "get": {
+        "tags": [
+          "Distributions"
+        ],
+        "summary": "Download distribution CSV",
+        "description": "Returns the distribution for the requested month as a downloadable CSV file.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-03"
+            },
+            "required": true,
+            "name": "month",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid month format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Distribution not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "System statistics",
+        "description": "Returns active delegate count, total indexed proposals, and available distribution months.",
+        "responses": {
+          "200": {
+            "description": "System stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "activeDelegateCount": {
+                      "type": "number",
+                      "example": 25
+                    },
+                    "proposalCount": {
+                      "type": "number",
+                      "example": 142
+                    },
+                    "cachedDistributions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "2026-03",
+                        "2026-02"
+                      ]
+                    },
+                    "totalDelegatedEns": {
+                      "type": "string",
+                      "description": "Total ENS held by active delegates (sum of latest VP snapshots), formatted as ENS string",
+                      "example": "1250000.000000000000000000"
+                    },
+                    "holdersEarning": {
+                      "type": "number",
+                      "description": "Count of unique addresses earning rewards (active delegates plus unique direct delegators to active delegates)",
+                      "example": 412
+                    }
+                  },
+                  "required": [
+                    "activeDelegateCount",
+                    "proposalCount",
+                    "cachedDistributions",
+                    "totalDelegatedEns",
+                    "holdersEarning"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
