@@ -9,7 +9,7 @@ const DelegateSchema = z.object({
   address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
   ensName: z.string().nullable().openapi({ example: null }),
   avatarUrl: z.string().nullable().openapi({ example: null }),
-  votingPower: z.string().nullable().openapi({ example: "1000000000000000000000" }),
+  votingPower: z.string().openapi({ example: "1000000000000000000000" }),
   votesInLast10: z.number().openapi({ example: 8 }),
   last10ProposalsVoted: z
     .array(z.boolean())
@@ -17,7 +17,7 @@ const DelegateSchema = z.object({
       description: "Per-proposal voting record for the last 10 finalized proposals (most recent first)",
       example: [true, true, true, false, true, true, true, true, false, true],
     }),
-  delegatorCount: z.number().nullable().openapi({ example: 42 }),
+  delegatorCount: z.number().openapi({ example: 42 }),
   activeSince: z
     .string()
     .nullable()
