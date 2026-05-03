@@ -108,13 +108,21 @@ async function storeDistributionResult(
 ): Promise<void> {
   const writeSql = getDistributionWriteSql();
 
-  await writeSql`
-    insert into distribution_result (month, result_json, computed_at)
-    values (${month}, ${resultJson}, ${computedAt.toString()})
-    on conflict (month) do update
-      set result_json = excluded.result_json,
-          computed_at = excluded.computed_at
-  `;
+  await writeSql.begin(async (tx) => {
+    await tx.unsafe(`
+      create temp table live_query_tables (
+        table_name text primary key
+      ) on commit drop
+    `);
+
+    await tx.unsafe(`
+      insert into distribution_result (month, result_json, computed_at)
+      values ($1, $2, $3)
+      on conflict (month) do update
+        set result_json = excluded.result_json,
+            computed_at = excluded.computed_at
+    `, [month, resultJson, computedAt.toString()]);
+  });
 }
 
 function getDistributionWriteSql(): ReturnType<typeof postgres> {
