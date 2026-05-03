@@ -37,6 +37,9 @@ importers:
       ponder:
         specifier: ^0.16.3
         version: 0.16.4(@opentelemetry/api@1.9.0)(@types/node@22.19.15)(bufferutil@4.1.0)(hono@4.12.5)(postgres@3.4.8)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.47.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(zod@4.3.6)
+      postgres:
+        specifier: 3.4.8
+        version: 3.4.8
       viem:
         specifier: ^2.47.0
         version: 2.47.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)
@@ -7957,8 +7960,7 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  postgres@3.4.8:
-    optional: true
+  postgres@3.4.8: {}
 
   preact@10.24.2:
     optional: true

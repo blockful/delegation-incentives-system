@@ -1,7 +1,7 @@
 import { runDistributionPipeline } from "@ens-dis/domain";
 import { db, publicClients } from "ponder:api";
 import { distributionResult } from "ponder:schema";
-import { sql } from "drizzle-orm";
+import postgres from "postgres";
 import { createDataSource } from "../adapters/data-source.js";
 import { distributionToJson } from "../output/json-writer.js";
 import {
@@ -45,6 +45,7 @@ export class DistributionComputeError extends Error {
 }
 
 const inFlightComputations = new Map<string, Promise<ComputeDistributionResponse>>();
+let distributionWriteSql: ReturnType<typeof postgres> | null = null;
 
 export async function computeAndStoreDistribution(
   month: string,
@@ -87,13 +88,7 @@ async function doComputeAndStoreDistribution(
   const resultJson = distributionToJson(result);
   const computedAt = BigInt(Math.floor(options.now.getTime() / 1000));
 
-  await db.execute(sql`
-    insert into distribution_result (month, result_json, computed_at)
-    values (${month}, ${resultJson}, ${computedAt.toString()})
-    on conflict (month) do update
-      set result_json = excluded.result_json,
-          computed_at = excluded.computed_at
-  `);
+  await storeDistributionResult(month, resultJson, computedAt);
 
   return computeResponse(
     "computed",
@@ -104,6 +99,37 @@ async function doComputeAndStoreDistribution(
 async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
   const rows = await db.select().from(distributionResult);
   return rows as DistributionStorageRow[];
+}
+
+async function storeDistributionResult(
+  month: string,
+  resultJson: string,
+  computedAt: bigint,
+): Promise<void> {
+  const writeSql = getDistributionWriteSql();
+
+  await writeSql`
+    insert into distribution_result (month, result_json, computed_at)
+    values (${month}, ${resultJson}, ${computedAt.toString()})
+    on conflict (month) do update
+      set result_json = excluded.result_json,
+          computed_at = excluded.computed_at
+  `;
+}
+
+function getDistributionWriteSql(): ReturnType<typeof postgres> {
+  if (distributionWriteSql) return distributionWriteSql;
+
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new DistributionComputeError(
+      500,
+      "DATABASE_URL is required to store distribution results",
+    );
+  }
+
+  distributionWriteSql = postgres(databaseUrl, { max: 1 });
+  return distributionWriteSql;
 }
 
 function validateComputableMonth(month: string, now: Date): void {
