@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { DelegatesPage } from '@/pages/DelegatesPage'
+import { DelegateProfilePage } from '@/pages/DelegateProfilePage'
 import { RoundsPage } from '@/pages/RoundsPage'
 import { LotteryPage } from '@/pages/LotteryPage'
 import { TransparencyPage } from '@/pages/TransparencyPage'
@@ -29,6 +30,7 @@ export function Router() {
         <Route path="dashboard-3" element={<Suspense fallback={<LazyFallback />}><Dashboard3 /></Suspense>} />
         <Route path="dashboard-4" element={<Suspense fallback={<LazyFallback />}><Dashboard4 /></Suspense>} />
         <Route path="delegates" element={<DelegatesPage />} />
+        <Route path="delegates/:address" element={<DelegateProfilePage />} />
         <Route path="rounds" element={<RoundsPage />} />
         <Route path="lottery" element={<LotteryPage />} />
         <Route path="transparency" element={<TransparencyPage />} />

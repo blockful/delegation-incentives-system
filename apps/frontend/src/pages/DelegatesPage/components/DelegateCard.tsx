@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
+import { Link } from 'react-router-dom'
 import type { DelegateDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -140,7 +141,7 @@ const DelegatedButton = styled.button<{ $delegated: boolean }>`
   }
 `
 
-const ProfileLink = styled.a`
+const ProfileLink = styled(Link)`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.blue};
@@ -214,12 +215,8 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
         <DelegatedButton $delegated={isDelegated} disabled={isDelegated}>
           {isDelegated ? 'Delegated ✓' : 'Delegate'}
         </DelegatedButton>
-        <ProfileLink
-          href={`https://anticapture.com/ens/holders-and-delegates?tab=delegates&drawerAddress=${delegate.address}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Full profile ↗
+        <ProfileLink to={`/delegates/${delegate.address}`}>
+          Profile →
         </ProfileLink>
       </ActionsBlock>
     </StyledCard>
