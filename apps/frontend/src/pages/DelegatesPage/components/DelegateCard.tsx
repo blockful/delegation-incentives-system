@@ -215,7 +215,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
         <DelegatedButton $delegated={isDelegated} disabled={isDelegated}>
           {isDelegated ? 'Delegated ✓' : 'Delegate'}
         </DelegatedButton>
-        <ProfileLink to={`/delegates/${delegate.address}`}>
+        <ProfileLink to={`/delegates/${ensName ?? delegate.address}`}>
           Profile →
         </ProfileLink>
       </ActionsBlock>
