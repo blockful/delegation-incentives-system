@@ -223,11 +223,20 @@ describe('RoundDetailPage', () => {
     expect(screen.getByText('Direct Payout Holders')).toBeInTheDocument()
     expect(screen.getByText('Delegate Rewards')).toBeInTheDocument()
     expect(screen.getByText('Token Holder Rewards')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Previous round' })).toHaveAttribute(
+      'href',
+      `/rounds/1?address=${WALLET}`,
+    )
+    expect(screen.getByRole('link', { name: 'Next round' })).toHaveAttribute(
+      'href',
+      `/rounds/3?address=${WALLET}`,
+    )
     expect(screen.getByText('delegate.eth')).toBeInTheDocument()
     expect(screen.getByText('rank-eleven.eth')).toBeInTheDocument()
     expect(screen.getByText('holder-eleven.eth')).toBeInTheDocument()
     expect(screen.getAllByText('2 recipients')).toHaveLength(2)
-    expect(screen.getByText('Direct + lottery')).toBeInTheDocument()
+    expect(screen.queryByText('Type')).not.toBeInTheDocument()
+    expect(screen.queryByText('Metadata')).not.toBeInTheDocument()
   })
 
   it('renders clean empty states on a round without distribution data', async () => {

@@ -50,6 +50,8 @@ test.describe('Rounds Page', () => {
     await expect(page).toHaveURL(/\/rounds\/3/)
     await expect(page.getByText('Round Details')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Round 3', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Previous round' })).toBeVisible()
+    await expect(page.getByText('Next round')).toBeVisible()
     await expect(page.getByText('Delegate Rewards')).toBeVisible()
     await expect(page.getByText('Token Holder Rewards')).toBeVisible()
     await expect(page.getByText(/No distribution data|#1/).first()).toBeVisible()

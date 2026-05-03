@@ -48,6 +48,56 @@ const BackLink = styled(Link)`
   }
 `
 
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+`
+
+const RoundNav = styled.nav`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
+`
+
+const RoundNavButton = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 ${tokens.spacing.md};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.sm};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+  }
+`
+
+const DisabledRoundNavButton = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 ${tokens.spacing.md};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.sm};
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  opacity: 0.55;
+  white-space: nowrap;
+`
+
 const TitleRow = styled.div`
   display: flex;
   align-items: center;
@@ -123,6 +173,8 @@ const SectionHeader = styled.div`
   justify-content: space-between;
   gap: ${tokens.spacing.md};
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 680px;
 `
 
 const RowCount = styled.span`
@@ -139,6 +191,11 @@ const Table = styled.table`
   @media (max-width: 720px) {
     display: block;
   }
+`
+
+const TableWrap = styled.div`
+  width: 100%;
+  max-width: 680px;
 `
 
 const Thead = styled.thead`
@@ -256,16 +313,11 @@ function formatAddressReward(reward: AddressRoundReward | null): string {
   return formatEns(reward.totalRewardEns, '0 ENS')
 }
 
-function formatRankRole(rank: RewardRank): string {
-  return rank.role === 'delegate' ? 'Delegate' : 'Token holder'
-}
-
-function formatRankMeta(rank: RewardRank): string {
-  if (rank.votingPower) return `${formatEns(rank.votingPower, '0 ENS', 0)} VP`
-  if (rank.delegationCount != null) return `${rank.delegationCount} delegations`
-  if (rank.source === 'lottery') return 'Lottery'
-  if (rank.source === 'combined') return 'Direct + lottery'
-  return 'Direct'
+function buildRoundPath(roundNumber: number, activeAddress: string, activeAddressValid: boolean): string {
+  const addressQuery = activeAddress && activeAddressValid
+    ? `?address=${encodeURIComponent(activeAddress)}`
+    : ''
+  return `/rounds/${roundNumber}${addressQuery}`
 }
 
 function RankingTable({ rows }: { rows: RewardRank[] }) {
@@ -274,39 +326,35 @@ function RankingTable({ rows }: { rows: RewardRank[] }) {
   }
 
   return (
-    <Table>
-      <colgroup>
-        <col style={{ width: '10%' }} />
-        <col style={{ width: '34%' }} />
-        <col style={{ width: '18%' }} />
-        <col style={{ width: '20%' }} />
-        <col style={{ width: '18%' }} />
-      </colgroup>
-      <Thead>
-        <tr>
-          <Th>Rank</Th>
-          <Th>Address</Th>
-          <Th>Type</Th>
-          <Th>Reward</Th>
-          <Th>Metadata</Th>
-        </tr>
-      </Thead>
-      <Tbody>
-        {rows.map((rank) => (
-          <Row key={`${rank.role}-${rank.rank}-${rank.address}`}>
-            <Td data-label="Rank">#{rank.rank}</Td>
-            <Td data-label="Address">
-              <AddressText>{rank.ensName ?? truncateAddress(rank.address)}</AddressText>
-            </Td>
-            <Td data-label="Type">{formatRankRole(rank)}</Td>
-            <Td data-label="Reward">
-              <RewardValue>{formatEns(rank.rewardEns)}</RewardValue>
-            </Td>
-            <Td data-label="Metadata">{formatRankMeta(rank)}</Td>
-          </Row>
-        ))}
-      </Tbody>
-    </Table>
+    <TableWrap>
+      <Table>
+        <colgroup>
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '56%' }} />
+          <col style={{ width: '28%' }} />
+        </colgroup>
+        <Thead>
+          <tr>
+            <Th>Rank</Th>
+            <Th>Address</Th>
+            <Th>Reward</Th>
+          </tr>
+        </Thead>
+        <Tbody>
+          {rows.map((rank) => (
+            <Row key={`${rank.role}-${rank.rank}-${rank.address}`}>
+              <Td data-label="Rank">#{rank.rank}</Td>
+              <Td data-label="Address">
+                <AddressText>{rank.ensName ?? truncateAddress(rank.address)}</AddressText>
+              </Td>
+              <Td data-label="Reward">
+                <RewardValue>{formatEns(rank.rewardEns)}</RewardValue>
+              </Td>
+            </Row>
+          ))}
+        </Tbody>
+      </Table>
+    </TableWrap>
   )
 }
 
@@ -353,6 +401,17 @@ export function RoundDetailPage() {
     [roundNumber, activeAddress, activeAddressValid],
   )
   const round = useAsync(fetchRound, Number.isInteger(roundNumber) && roundNumber > 0)
+  const fetchRoundList = useCallback(async () => {
+    try {
+      return await api.rounds()
+    } catch (error) {
+      if (!isLegacyEndpointError(error)) throw error
+
+      const currentRound = await api.currentRound()
+      return buildRoundListFromCurrentRound(currentRound)
+    }
+  }, [])
+  const roundList = useAsync(fetchRoundList, Number.isInteger(roundNumber) && roundNumber > 0)
 
   useEffect(() => {
     setAddressInput(activeAddress)
@@ -368,6 +427,17 @@ export function RoundDetailPage() {
   const backTo = activeAddressValid
     ? `/rounds?address=${encodeURIComponent(activeAddress)}`
     : '/rounds'
+  const availableRoundNumbers = useMemo(
+    () => (roundList.data?.rounds ?? [])
+      .map((candidate) => candidate.roundNumber)
+      .sort((a, b) => a - b),
+    [roundList.data],
+  )
+  const previousRoundNumber = availableRoundNumbers
+    .filter((candidate) => candidate < roundNumber)
+    .at(-1) ?? null
+  const nextRoundNumber = availableRoundNumbers
+    .find((candidate) => candidate > roundNumber) ?? null
 
   function handleAddressSubmit() {
     const nextAddress = addressInput.trim()
@@ -426,7 +496,25 @@ export function RoundDetailPage() {
   return (
     <Page>
       <Header>
-        <BackLink to={backTo}>Back to rounds</BackLink>
+        <HeaderActions>
+          <BackLink to={backTo}>Back to rounds</BackLink>
+          <RoundNav aria-label="Round navigation">
+            {previousRoundNumber == null ? (
+              <DisabledRoundNavButton aria-disabled="true">Previous round</DisabledRoundNavButton>
+            ) : (
+              <RoundNavButton to={buildRoundPath(previousRoundNumber, activeAddress, activeAddressValid)}>
+                Previous round
+              </RoundNavButton>
+            )}
+            {nextRoundNumber == null ? (
+              <DisabledRoundNavButton aria-disabled="true">Next round</DisabledRoundNavButton>
+            ) : (
+              <RoundNavButton to={buildRoundPath(nextRoundNumber, activeAddress, activeAddressValid)}>
+                Next round
+              </RoundNavButton>
+            )}
+          </RoundNav>
+        </HeaderActions>
         <TitleRow>
           <div>
             <Eyebrow>Round Details</Eyebrow>
