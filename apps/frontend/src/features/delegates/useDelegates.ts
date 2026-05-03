@@ -1,14 +1,16 @@
-import { useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/api'
-import { useAsync } from '@/hooks/useAsync'
 
 export function useDelegates() {
-  const fetchDelegates = useCallback(() => api.activeDelegates(), [])
-  const { data, loading, error } = useAsync(fetchDelegates)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['delegates', 'active'],
+    queryFn: () => api.activeDelegates(),
+    staleTime: 60_000,
+  })
 
   return {
-    loading,
-    error,
+    loading: isLoading,
+    error: error ? error.message : null,
     data: data?.delegates ?? null,
     count: data?.count ?? 0,
   }
