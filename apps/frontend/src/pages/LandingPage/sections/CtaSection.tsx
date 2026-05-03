@@ -79,41 +79,6 @@ const Actions = styled.div`
   }
 `
 
-const Checks = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing['2xl']};
-  flex-wrap: wrap;
-  justify-content: center;
-    @media (max-width: 480px) {
-    gap: ${tokens.spacing.md};
-  }
-`
-
-const CheckItem = styled.span`
-  display: flex;
-  flex-direction: row;
-  gap: ${tokens.spacing.xs};
-  align-items: center;
-`
-
-const CheckMark = styled.span`
-  color: ${tokens.color.positiveEmphasis};
-  font-size: ${tokens.font.size.lg};
-  font-weight: bold;
-`
-
-const CheckText = styled.span`
-  color: ${tokens.color.middleGray};
-  font-size: ${tokens.font.size.md};
-`
-
-const checkItems = [
-  'Gas sponsored via delegateBySig',
-  'No tokens locked, delegate anytime',
-  'Rewards sent automatically',
-]
-
 export function CtaSection() {
   return (
     <Section data-testid="cta-section">
@@ -136,14 +101,6 @@ export function CtaSection() {
             </Button>
           </RouterLink>
         </Actions>
-        <Checks>
-          {checkItems.map((item) => (
-            <CheckItem key={item}>
-              <CheckMark>✓</CheckMark>
-              <CheckText>{item}</CheckText>
-            </CheckItem>
-          ))}
-        </Checks>
       </Inner>
     </Section>
   )
