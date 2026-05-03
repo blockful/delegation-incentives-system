@@ -1,10 +1,17 @@
-import { useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/api'
-import { useAsync } from '@/hooks/useAsync'
 
 export function useStats() {
-  const fetchStats = useCallback(() => api.status(), [])
-  const { data, loading, error } = useAsync(fetchStats)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['stats'],
+    queryFn: () => api.status(),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  })
 
-  return { data, loading, error }
+  return {
+    data: data ?? null,
+    loading: isLoading,
+    error: error ? error.message : null,
+  }
 }
