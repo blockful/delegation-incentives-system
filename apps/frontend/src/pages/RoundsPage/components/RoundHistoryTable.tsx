@@ -1,15 +1,13 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { tokens, Eyebrow } from '@/styles'
-import type { RoundStatus } from '@/api/types'
 
 export interface RoundHistoryEntry {
   roundNumber: number
   dates: string
   pool: string
-  tier: string
-  distributed: string
-  status: RoundStatus
+  vpGrowth: string
+  yourRewards: string
   to: string
 }
 
@@ -115,44 +113,24 @@ const MutedValue = styled.span`
   white-space: nowrap;
 `
 
+const RewardValue = styled.span`
+  color: ${tokens.color.positiveEmphasis};
+  font-weight: ${tokens.font.weight.bold};
+  white-space: nowrap;
+`
+
 const EmptyState = styled.p`
   margin: 0;
   color: ${tokens.color.darkGray};
 `
 
-const StatusPill = styled.span<{ $status: RoundStatus }>`
-  display: inline-flex;
-  justify-self: start;
-  align-items: center;
-  white-space: nowrap;
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  padding: 3px 10px;
-  border-radius: ${tokens.radius.pill};
-  background: ${({ $status }) =>
-    $status === 'live'
-      ? tokens.color.lightBlueOpacity
-      : $status === 'paid'
-        ? tokens.color.tierHighlight
-        : tokens.color.borderLight};
-  color: ${({ $status }) =>
-    $status === 'live'
-      ? tokens.color.blue
-      : $status === 'paid'
-        ? tokens.color.positiveEmphasis
-        : tokens.color.darkGray};
-`
-
-function statusLabel(status: RoundStatus): string {
-  if (status === 'live') return 'Live'
-  if (status === 'paid') return 'Paid'
-  if (status === 'pending') return 'Pending'
-  return 'Ended'
-}
-
 function renderValue(value: string) {
-  if (value === 'Unavailable' || value === 'Pending') {
+  if (value === 'Unavailable' || value === 'Pending' || value === 'No address' || value === 'Loading') {
     return <MutedValue>{value}</MutedValue>
+  }
+
+  if (value.startsWith('+')) {
+    return <RewardValue>{value}</RewardValue>
   }
 
   return <ValueText>{value}</ValueText>
@@ -173,21 +151,19 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
       <Eyebrow>Round History</Eyebrow>
       <Table>
         <colgroup>
-          <col style={{ width: '15%' }} />
-          <col style={{ width: '23%' }} />
           <col style={{ width: '16%' }} />
-          <col style={{ width: '14%' }} />
+          <col style={{ width: '29%' }} />
           <col style={{ width: '18%' }} />
-          <col style={{ width: '14%' }} />
+          <col style={{ width: '17%' }} />
+          <col style={{ width: '20%' }} />
         </colgroup>
         <Thead>
           <tr>
             <Th>Round</Th>
             <Th>Dates</Th>
             <Th>Pool</Th>
-            <Th>Tier</Th>
-            <Th>Distributed</Th>
-            <Th>Status</Th>
+            <Th>VP growth</Th>
+            <Th>Your rewards</Th>
           </tr>
         </Thead>
         <Tbody>
@@ -198,11 +174,8 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
               </Td>
               <Td data-label="Dates">{entry.dates}</Td>
               <Td data-label="Pool">{renderValue(entry.pool)}</Td>
-              <Td data-label="Tier">{renderValue(entry.tier)}</Td>
-              <Td data-label="Distributed">{renderValue(entry.distributed)}</Td>
-              <Td data-label="Status">
-                <StatusPill $status={entry.status}>{statusLabel(entry.status)}</StatusPill>
-              </Td>
+              <Td data-label="VP growth">{renderValue(entry.vpGrowth)}</Td>
+              <Td data-label="Your rewards">{renderValue(entry.yourRewards)}</Td>
             </Row>
           ))}
         </Tbody>

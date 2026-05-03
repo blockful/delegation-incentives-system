@@ -49,8 +49,11 @@ describe('RoundsPage', () => {
     expect(within(currentRoundRow!).getByText('May 1–31, 2026')).toBeInTheDocument()
     expect(within(currentRoundRow!).queryByText('Apr 30')).not.toBeInTheDocument()
     expect(within(currentRoundRow!).getByText('5,000 ENS')).toBeInTheDocument()
-    expect(within(currentRoundRow!).getByText('Pending')).toBeInTheDocument()
-    expect(within(currentRoundRow!).getByText('Live')).toBeInTheDocument()
+    expect(within(currentRoundRow!).getByText('0%')).toBeInTheDocument()
+    expect(within(currentRoundRow!).getByText('No address')).toBeInTheDocument()
+    expect(within(history).queryByText('Distributed')).not.toBeInTheDocument()
+    expect(within(history).queryByText('Tier')).not.toBeInTheDocument()
+    expect(within(history).queryByText('Status')).not.toBeInTheDocument()
 
     expect(within(history).getByText('Apr 1–30, 2026')).toBeInTheDocument()
     expect(within(history).getByText('Mar 1–31, 2026')).toBeInTheDocument()
@@ -92,14 +95,14 @@ describe('RoundsPage', () => {
       walletState: { status: 'connected', address: WALLET },
     })
 
-    const rewards = await findSection('Address Rewards')
+    const history = await findSection('Round History')
     await waitFor(() => {
-      expect(within(rewards).getByText(WALLET)).toBeInTheDocument()
+      expect(within(history).getByText('+35 ENS')).toBeInTheDocument()
     })
 
-    expect(within(rewards).getByText('+35 ENS')).toBeInTheDocument()
-    expect(within(rewards).getByText('Apr 1–30, 2026')).toBeInTheDocument()
-    expect(within(rewards).getAllByText('Pending').length).toBeGreaterThan(0)
+    expect(within(history).getByText('Apr 1–30, 2026')).toBeInTheDocument()
+    expect(within(history).getAllByText('Pending').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Address Rewards')).not.toBeInTheDocument()
   })
 
   it('allows inspecting an entered address without a connected wallet', async () => {
@@ -108,9 +111,9 @@ describe('RoundsPage', () => {
     await userEvent.type(await screen.findByLabelText('Wallet address'), WALLET)
     await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
 
-    const rewards = await findSection('Address Rewards')
+    const history = await findSection('Round History')
     await waitFor(() => {
-      expect(within(rewards).getByText('+35 ENS')).toBeInTheDocument()
+      expect(within(history).getByText('+35 ENS')).toBeInTheDocument()
     })
   })
 
@@ -135,9 +138,9 @@ describe('RoundsPage', () => {
       walletState: { status: 'connected', address: WALLET },
     })
 
-    const rewards = await findSection('Address Rewards')
+    const history = await findSection('Round History')
     await waitFor(() => {
-      expect(within(rewards).getAllByText('Unavailable').length).toBeGreaterThan(0)
+      expect(within(history).getAllByText('Unavailable').length).toBeGreaterThan(0)
     })
     expect(screen.queryByText('+35 ENS')).not.toBeInTheDocument()
   })
@@ -176,7 +179,7 @@ describe('RoundsPage', () => {
     expect(screen.queryByText('In progress')).not.toBeInTheDocument()
   })
 
-  it('shows an address reward empty state for an empty address history', async () => {
+  it('falls back to truthful row states for an empty address history', async () => {
     server.use(
       http.get('/api/distributions', () =>
         HttpResponse.json({
@@ -190,7 +193,11 @@ describe('RoundsPage', () => {
       walletState: { status: 'connected', address: WALLET },
     })
 
-    expect(await screen.findByText('No reward history.')).toBeInTheDocument()
+    const history = await findSection('Round History')
+    await waitFor(() => {
+      expect(within(history).getByText('Pending')).toBeInTheDocument()
+    })
+    expect(within(history).getAllByText('Unavailable').length).toBeGreaterThan(0)
   })
 })
 
@@ -210,6 +217,7 @@ describe('RoundDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Round 2' })).toBeInTheDocument()
     expect(screen.getByText('Apr 1–30, 2026')).toBeInTheDocument()
     expect(screen.getByText('8,000 ENS')).toBeInTheDocument()
+    expect(screen.getByText('+20%')).toBeInTheDocument()
     expect(screen.getByText('155 ENS')).toBeInTheDocument()
     expect(screen.getAllByText('35 ENS').length).toBeGreaterThan(0)
     expect(screen.getByText('delegate.eth')).toBeInTheDocument()

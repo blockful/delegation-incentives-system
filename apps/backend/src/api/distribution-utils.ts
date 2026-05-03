@@ -15,6 +15,7 @@ export interface ParsedDistribution {
 export interface DistributionSnapshot {
   month: string;
   tierIndex: number;
+  vpGrowthPct: string;
   poolSize: string;
   poolSizeEns: string;
   totalDistributed: string;
@@ -181,6 +182,7 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
   return {
     month: meta.month,
     tierIndex: meta.tier,
+    vpGrowthPct: meta.vpGrowthPct,
     poolSize: (meta.poolSize as bigint).toString(),
     poolSizeEns: formatEns(meta.poolSize as bigint),
     totalDistributed: totalDistributed.toString(),

@@ -4,7 +4,7 @@ import styled, { keyframes } from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
 import { api, ApiClientError } from '@/api'
-import type { RoundStatus, RoundSummary } from '@/api/types'
+import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -16,7 +16,6 @@ import {
   RoundHistoryTable,
   type RoundHistoryEntry,
 } from './components/RoundHistoryTable'
-import { AddressRewardsTable } from './components/AddressRewardsTable'
 import { AddressLookupForm } from './components/AddressLookupForm'
 import {
   buildRoundListFromCurrentRound,
@@ -147,33 +146,76 @@ function formatEnsCell(value: string | null, emptyValue: string, maximumFraction
   return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
 }
 
-function getDistributionEmptyValue(round: RoundSummary): string {
-  if (round.distributionDataStatus === 'in_progress') return 'Pending'
-  if (round.distributionDataStatus === 'not_started') return 'Pending'
-  return 'Unavailable'
-}
-
 function buildRoundHistory(
   rounds: RoundSummary[],
   activeAddress: string,
+  addressRounds: AddressDistributionRound[] | null,
+  addressLoading: boolean,
+  addressError: string | null,
 ): RoundHistoryEntry[] {
   const addressQuery = activeAddress && isAddress(activeAddress)
     ? `?address=${encodeURIComponent(activeAddress)}`
     : ''
+  const rewardsByRound = new Map(
+    (addressRounds ?? []).map((round) => [round.roundNumber, round]),
+  )
 
   return rounds.map((round) => ({
     roundNumber: round.roundNumber,
     dates: formatUtcMonthRange(round.startDate, round.endDate),
     pool: formatEnsCell(round.poolSizeEns, 'Unavailable', 0),
-    tier: round.tierLabel ?? 'Unavailable',
-    distributed: formatEnsCell(
-      round.totalDistributedEns,
-      getDistributionEmptyValue(round),
-      4,
-    ),
-    status: round.status,
+    vpGrowth: formatVpGrowth(round.vpGrowthPct),
+    yourRewards: formatRewardCell({
+      activeAddress,
+      addressRound: rewardsByRound.get(round.roundNumber) ?? null,
+      addressLoading,
+      addressError,
+      fallbackStatus: round.distributionDataStatus,
+    }),
     to: `/rounds/${round.roundNumber}${addressQuery}`,
   }))
+}
+
+function formatVpGrowth(value: string | null): string {
+  if (value == null) return 'Unavailable'
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 'Unavailable'
+  if (numericValue > 0) return `+${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+  return `${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+}
+
+function formatRewardCell({
+  activeAddress,
+  addressRound,
+  addressLoading,
+  addressError,
+  fallbackStatus,
+}: {
+  activeAddress: string
+  addressRound: AddressDistributionRound | null
+  addressLoading: boolean
+  addressError: string | null
+  fallbackStatus: RoundSummary['distributionDataStatus']
+}): string {
+  if (!activeAddress || !isAddress(activeAddress)) return 'No address'
+  if (addressLoading) return 'Loading'
+  if (addressError) return 'Unavailable'
+  if (!addressRound) {
+    return fallbackStatus === 'in_progress' || fallbackStatus === 'not_started'
+      ? 'Pending'
+      : 'Unavailable'
+  }
+
+  if (addressRound.rewardStatus === 'pending') return 'Pending'
+  if (addressRound.rewardStatus === 'unavailable') return 'Unavailable'
+  if (addressRound.rewardStatus === 'not_eligible' || addressRound.rewardStatus === 'no_reward') {
+    return '0 ENS'
+  }
+
+  return `${formatEnsAmount(addressRound.totalRewardEns, {
+    maximumFractionDigits: 4,
+    signDisplay: 'exceptZero',
+  })} ENS`
 }
 
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
@@ -254,8 +296,14 @@ export function RoundsPage() {
   }, [roundList.data])
 
   const roundHistory = useMemo(
-    () => buildRoundHistory(roundList.data?.rounds ?? [], activeAddress),
-    [roundList.data, activeAddress],
+    () => buildRoundHistory(
+      roundList.data?.rounds ?? [],
+      activeAddress,
+      addressHistory.data?.rounds ?? null,
+      addressHistory.loading,
+      addressHistory.error,
+    ),
+    [roundList.data, activeAddress, addressHistory.data, addressHistory.loading, addressHistory.error],
   )
 
   function handleAddressSubmit() {
@@ -367,12 +415,6 @@ export function RoundsPage() {
             currentApyPct={currentTier?.estimatedApyPct ?? '0'}
           />
           <RoundHistoryTable entries={roundHistory} />
-          <AddressRewardsTable
-            address={activeAddressValid ? activeAddress : ''}
-            rounds={addressHistory.data?.rounds ?? null}
-            loading={addressHistory.loading}
-            error={addressHistory.error}
-          />
         </LeftColumn>
         <TierTable tiers={tierData.tiers} currentTierIndex={currentTierIndex} />
       </Grid>

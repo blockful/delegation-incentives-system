@@ -227,6 +227,14 @@ function formatEns(value: string | null, empty = 'Unavailable', maximumFractionD
   return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
 }
 
+function formatVpGrowth(value: string | null): string {
+  if (value == null) return 'Unavailable'
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 'Unavailable'
+  if (numericValue > 0) return `+${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+  return `${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+}
+
 function formatAddressReward(reward: AddressRoundReward | null): string {
   if (!reward) return 'No address'
   if (reward.rewardStatus === 'pending') return 'Pending'
@@ -425,6 +433,10 @@ export function RoundDetailPage() {
         <SummaryItem>
           <SummaryLabel>Tier</SummaryLabel>
           <SummaryValue>{round.data.tierLabel ?? 'Unavailable'}</SummaryValue>
+        </SummaryItem>
+        <SummaryItem>
+          <SummaryLabel>VP Growth</SummaryLabel>
+          <SummaryValue>{formatVpGrowth(round.data.vpGrowthPct)}</SummaryValue>
         </SummaryItem>
         <SummaryItem>
           <SummaryLabel>Pool</SummaryLabel>

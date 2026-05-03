@@ -674,6 +674,12 @@
                               "null"
                             ]
                           },
+                          "vpGrowthPct": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "poolSize": {
                             "type": [
                               "string",
@@ -729,6 +735,7 @@
                           "daysRemaining",
                           "tierIndex",
                           "tierLabel",
+                          "vpGrowthPct",
                           "poolSize",
                           "poolSizeEns",
                           "totalDistributed",
@@ -859,6 +866,12 @@
                       ]
                     },
                     "tierLabel": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "vpGrowthPct": {
                       "type": [
                         "string",
                         "null"
@@ -1104,6 +1117,7 @@
                     "daysRemaining",
                     "tierIndex",
                     "tierLabel",
+                    "vpGrowthPct",
                     "poolSize",
                     "poolSizeEns",
                     "totalDistributed",
@@ -1271,6 +1285,12 @@
                         "null"
                       ]
                     },
+                    "vpGrowthPct": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "poolSize": {
                       "type": [
                         "string",
@@ -1511,6 +1531,7 @@
                     "daysRemaining",
                     "tierIndex",
                     "tierLabel",
+                    "vpGrowthPct",
                     "poolSize",
                     "poolSizeEns",
                     "totalDistributed",

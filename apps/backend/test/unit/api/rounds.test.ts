@@ -153,6 +153,7 @@ describe("round reward responses", () => {
       status: "live",
       distributionDataStatus: "in_progress",
       poolSizeEns: "5000.000000000000000000",
+      vpGrowthPct: "0.00",
       totalDistributedEns: null,
     });
     expect(body.rounds[1]).toMatchObject({
@@ -180,6 +181,7 @@ describe("round reward responses", () => {
       status: "paid",
       distributionDataStatus: "available",
       tierIndex: 1,
+      vpGrowthPct: "20.00",
       poolSizeEns: "8000.000000000000000000",
       totalDistributedEns: "155.000000000000000000",
     });

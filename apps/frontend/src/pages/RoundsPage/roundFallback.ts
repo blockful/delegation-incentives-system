@@ -31,6 +31,7 @@ export function buildRoundListFromCurrentRound(current: RoundInfoResponse): Roun
       daysRemaining: offset === 0 ? current.daysRemaining : 0,
       tierIndex: offset === 0 ? current.tierIndex : null,
       tierLabel: offset === 0 ? `Tier #${current.tierIndex + 1}` : null,
+      vpGrowthPct: offset === 0 ? current.vpGrowthPct : null,
       poolSize: null,
       poolSizeEns: offset === 0 ? current.poolSizeEns : null,
       totalDistributed: null,

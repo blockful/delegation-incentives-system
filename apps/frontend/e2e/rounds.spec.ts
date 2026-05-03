@@ -25,16 +25,15 @@ test.describe('Rounds Page', () => {
     expect(roundName).toBeTruthy()
 
     const currentRoundRow = page.getByRole('row').filter({ has: page.getByRole('link', { name: roundName! }) }).first()
-    await expect(currentRoundRow).toContainText(/Live/i)
-    await expect(currentRoundRow).not.toContainText(/Paid/i)
     await expect(currentRoundRow).toContainText('May 1–31, 2026')
     await expect(currentRoundRow).not.toContainText('Apr 30')
     await expect(currentRoundRow).toContainText('5,000 ENS')
-    await expect(currentRoundRow).toContainText(/Pending|Unavailable/i)
+    await expect(currentRoundRow).toContainText(/0%|Unavailable/)
+    await expect(currentRoundRow).toContainText('No address')
+    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Your rewards')
 
     await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 2' }) }).first()).toContainText('Apr 1–30, 2026')
     await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 1' }) }).first()).toContainText('Mar 1–31, 2026')
-    await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 1' }) }).first()).toContainText(/Ended|Paid/i)
     await expect(page.getByText('+12.3456 ENS')).toHaveCount(0)
   })
 
@@ -44,7 +43,8 @@ test.describe('Rounds Page', () => {
     await page.getByLabel('Wallet address').fill(address)
     await page.getByRole('button', { name: 'Inspect' }).click()
     await expect(page).toHaveURL(/address=/)
-    await expect(page.getByText(address).first()).toBeVisible()
+    await expect(page.getByLabel('Wallet address')).toHaveValue(address)
+    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText(/Pending|Unavailable|\+/)
 
     await page.locator('section').filter({ hasText: 'Round History' }).getByRole('link', { name: 'Round 3' }).click()
     await expect(page).toHaveURL(/\/rounds\/3/)

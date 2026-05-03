@@ -54,6 +54,7 @@ const RoundSummarySchema = z.object({
   daysRemaining: z.number().nullable(),
   tierIndex: z.number().nullable(),
   tierLabel: z.string().nullable(),
+  vpGrowthPct: z.string().nullable(),
   poolSize: z.string().nullable(),
   poolSizeEns: z.string().nullable(),
   totalDistributed: z.string().nullable(),
@@ -403,6 +404,9 @@ function buildRoundSummary({
   const poolSizeEns = snapshot?.poolSizeEns ?? (
     isCurrentWithoutDistribution ? currentTierSnapshot.poolSizeEns : null
   );
+  const vpGrowthPct = snapshot?.vpGrowthPct ?? (
+    isCurrentWithoutDistribution ? currentTierSnapshot.vpGrowthPct : null
+  );
   const tierConfig = tierIndex == null ? null : POOL_TIERS[tierIndex];
 
   return {
@@ -417,6 +421,7 @@ function buildRoundSummary({
     daysRemaining: timing.daysRemaining,
     tierIndex,
     tierLabel: tierIndex == null ? null : `Tier #${tierIndex + 1}`,
+    vpGrowthPct,
     poolSize: snapshot?.poolSize ?? (
       isCurrentWithoutDistribution && tierConfig
         ? (tierConfig.poolSize as bigint).toString()

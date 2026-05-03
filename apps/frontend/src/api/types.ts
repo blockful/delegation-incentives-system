@@ -92,6 +92,7 @@ export interface RoundSummary {
   daysRemaining: number | null
   tierIndex: number | null
   tierLabel: string | null
+  vpGrowthPct: string | null
   poolSize: string | null
   poolSizeEns: string | null
   totalDistributed: string | null
