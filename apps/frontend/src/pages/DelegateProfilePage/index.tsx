@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
-import { useEnsName } from 'wagmi'
+import { useEnsName, useEnsAddress } from 'wagmi'
 import { useDelegate } from '@/features/delegates/useDelegate'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -163,16 +163,30 @@ const ExternalLink = styled.a`
   }
 `
 
+function isAddress(value: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(value)
+}
+
 export function DelegateProfilePage() {
-  const { address } = useParams<{ address: string }>()
-  const { delegate, loading, error } = useDelegate(address ?? '')
+  const { address: param } = useParams<{ address: string }>()
+  const rawParam = param ?? ''
+  const isEnsParam = !isAddress(rawParam)
+
+  const { data: resolvedAddress, isLoading: ensLoading } = useEnsAddress({
+    name: rawParam,
+    query: { enabled: isEnsParam },
+  })
+
+  const resolvedAddr = isEnsParam ? (resolvedAddress ?? '') : rawParam
+  const { delegate, loading, error } = useDelegate(resolvedAddr)
   const walletState = useWalletState()
 
   const { data: resolvedEnsName } = useEnsName({
-    address: (address ?? '') as `0x${string}`,
+    address: resolvedAddr as `0x${string}`,
+    query: { enabled: !!resolvedAddr && !isEnsParam },
   })
 
-  if (loading) {
+  if (loading || ensLoading) {
     return (
       <Page>
         <LoadingWrapper><Spinner /></LoadingWrapper>
@@ -191,7 +205,7 @@ export function DelegateProfilePage() {
     )
   }
 
-  const ensName = delegate.ensName ?? resolvedEnsName ?? null
+  const ensName = delegate.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === delegate.address.toLowerCase()
