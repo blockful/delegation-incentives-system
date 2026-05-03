@@ -76,6 +76,81 @@ export interface DistributionResponse {
   lotteryPools: LotteryPool[];
 }
 
+export type RoundStatus = 'live' | 'ended' | 'pending' | 'paid'
+export type DistributionDataStatus = 'available' | 'in_progress' | 'missing' | 'not_started'
+export type RewardStatus = 'paid' | 'no_reward' | 'not_eligible' | 'pending' | 'unavailable'
+
+export interface RoundSummary {
+  roundNumber: number
+  month: string
+  startDate: string
+  endDate: string
+  status: RoundStatus
+  distributionDataStatus: DistributionDataStatus
+  isCurrent: boolean
+  percentComplete: number | null
+  daysRemaining: number | null
+  tierIndex: number | null
+  tierLabel: string | null
+  poolSize: string | null
+  poolSizeEns: string | null
+  totalDistributed: string | null
+  totalDistributedEns: string | null
+  activeDelegateCount: number | null
+  eligibleDelegatorCount: number | null
+  computedAt: string | null
+}
+
+export interface RoundListResponse {
+  currentRoundNumber: number | null
+  rounds: RoundSummary[]
+}
+
+export interface RewardRank {
+  rank: number
+  address: string
+  ensName: string | null
+  role: 'delegate' | 'token_holder'
+  reward: string
+  rewardEns: string
+  source: 'direct' | 'lottery' | 'combined'
+  votingPower: string | null
+  delegationCount: number | null
+}
+
+export interface AddressRoundReward {
+  address: string
+  rewardStatus: RewardStatus
+  delegateReward: string
+  delegateRewardEns: string
+  tokenHolderReward: string
+  tokenHolderRewardEns: string
+  lotteryReward: string
+  lotteryRewardEns: string
+  totalReward: string
+  totalRewardEns: string
+}
+
+export interface RoundDetailResponse extends RoundSummary {
+  addressReward: AddressRoundReward | null
+  topDelegateRewards: RewardRank[]
+  topTokenHolderRewards: RewardRank[]
+}
+
+export interface AddressDistributionRound extends AddressRoundReward {
+  roundNumber: number
+  month: string
+  startDate: string
+  endDate: string
+  roundStatus: RoundStatus
+  distributionDataStatus: DistributionDataStatus
+}
+
+export interface AddressDistributionHistoryResponse {
+  address: string
+  rounds: AddressDistributionRound[]
+}
+
 export interface ApiError {
   error: string;
 }

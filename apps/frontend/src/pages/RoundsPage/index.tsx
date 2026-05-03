@@ -1,16 +1,27 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
+import { isAddress } from 'viem'
 import { api } from '@/api'
+import type { RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
+import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, Eyebrow, PageTitle, LoadingWrapper, ErrorMessage } from '@/styles'
+import { formatEnsAmount, formatUtcDate, formatUtcMonthRange } from '@/utils/format'
 import { TierTable } from './components/TierTable'
 import { RoundCard } from './components/RoundCard'
 import {
   RoundHistoryTable,
   type RoundHistoryEntry,
 } from './components/RoundHistoryTable'
+import { AddressRewardsTable } from './components/AddressRewardsTable'
+import { AddressLookupForm } from './components/AddressLookupForm'
+import {
+  buildRoundListFromCurrentRound,
+  buildUnavailableAddressHistory,
+} from './roundFallback'
 
 const Page = styled.div`
   max-width: ${tokens.maxWidth.section};
@@ -29,7 +40,8 @@ const Page = styled.div`
 const HeaderBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.sm};
+  gap: ${tokens.spacing.lg};
+  min-width: 0;
 `
 
 const HeadingRow = styled.div`
@@ -63,7 +75,7 @@ const LiveBadge = styled.span`
   font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.black};
   padding: 6px 18px 6px 12px;
-  border-radius: ${tokens.radius.md};
+  border-radius: ${tokens.radius.sm};
   line-height: 1.2;
 
   @media (min-width: 768px) {
@@ -86,20 +98,14 @@ const LiveDot = styled.span`
   }
 `
 
-const PageDescription = styled.p`
-  font-size: ${tokens.font.size.xl};
-  color: ${tokens.color.darkGray};
-  margin: 0;
-  line-height: 1.6;
-`
-
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: ${tokens.spacing['3xl']};
+  min-width: 0;
 
-  @media (min-width: 768px) {
-    grid-template-columns: 2fr 1fr;
+  @media (min-width: 1024px) {
+    grid-template-columns: 2fr minmax(280px, 1fr);
   }
 `
 
@@ -107,22 +113,144 @@ const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
+  min-width: 0;
 `
 
-// Hardcoded mock data — needs API wiring when round history endpoint is available.
-const ROUND_HISTORY: RoundHistoryEntry[] = [
-  { round: 4, dates: 'Mar 1 – Mar 31', earned: '0.0000', status: 'live' },
-  { round: 3, dates: 'Feb 1 – Feb 28', earned: '12.3456', status: 'paid' },
-  { round: 2, dates: 'Jan 1 – Jan 31', earned: '8.7654', status: 'paid' },
-  { round: 1, dates: 'Dec 1 – Dec 31', earned: '5.4321', status: 'paid' },
-]
+const AddressPanel = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+  min-width: 0;
+`
+
+function formatDaysRemaining(daysRemaining: number | null): string {
+  if (daysRemaining == null) return 'Pending'
+  if (daysRemaining === 1) return '1 day'
+  return `${daysRemaining} days`
+}
+
+function formatEnsCell(value: string | null, emptyValue: string, maximumFractionDigits = 4): string {
+  if (value == null) return emptyValue
+  return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
+}
+
+function getDistributionEmptyValue(round: RoundSummary): string {
+  if (round.distributionDataStatus === 'in_progress') return 'Pending'
+  if (round.distributionDataStatus === 'not_started') return 'Pending'
+  return 'Unavailable'
+}
+
+function buildRoundHistory(
+  rounds: RoundSummary[],
+  activeAddress: string,
+): RoundHistoryEntry[] {
+  const addressQuery = activeAddress && isAddress(activeAddress)
+    ? `?address=${encodeURIComponent(activeAddress)}`
+    : ''
+
+  return rounds.map((round) => ({
+    roundNumber: round.roundNumber,
+    dates: formatUtcMonthRange(round.startDate, round.endDate),
+    pool: formatEnsCell(round.poolSizeEns, 'Unavailable', 0),
+    tier: round.tierLabel ?? 'Unavailable',
+    distributed: formatEnsCell(
+      round.totalDistributedEns,
+      getDistributionEmptyValue(round),
+      4,
+    ),
+    status: round.status,
+    to: `/rounds/${round.roundNumber}${addressQuery}`,
+  }))
+}
+
+function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
+  if (walletState.status === 'disconnected') return ''
+  return walletState.address
+}
 
 export function RoundsPage() {
-  const { data, loading, error } = useRounds()
-  const fetchRound = useCallback(() => api.currentRound(), [])
-  const round = useAsync(fetchRound)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const walletState = useWalletState()
+  const walletAddress = getWalletAddress(walletState)
+  const searchedAddress = searchParams.get('address') ?? ''
+  const activeAddress = searchedAddress || walletAddress
+  const [addressInput, setAddressInput] = useState(activeAddress)
+  const [inputError, setInputError] = useState<string | null>(null)
 
-  if (loading) {
+  const { data: tierData, loading: tiersLoading, error: tiersError } = useRounds()
+  const fetchRounds = useCallback(async () => {
+    try {
+      return await api.rounds()
+    } catch {
+      const currentRound = await api.currentRound()
+      return buildRoundListFromCurrentRound(currentRound)
+    }
+  }, [])
+  const roundList = useAsync(fetchRounds)
+
+  const activeAddressValid = activeAddress ? isAddress(activeAddress) : false
+  const fetchAddressHistory = useCallback(
+    async () => {
+      try {
+        const history = await api.distributionsForAddress(activeAddress)
+        if (!('rounds' in history)) {
+          return buildUnavailableAddressHistory(activeAddress, roundList.data?.rounds ?? [])
+        }
+        return history
+      } catch {
+        return buildUnavailableAddressHistory(activeAddress, roundList.data?.rounds ?? [])
+      }
+    },
+    [activeAddress, roundList.data],
+  )
+  const addressHistory = useAsync(
+    fetchAddressHistory,
+    Boolean(activeAddress && activeAddressValid && roundList.data),
+  )
+
+  useEffect(() => {
+    setAddressInput(activeAddress)
+    setInputError(null)
+  }, [activeAddress])
+
+  const currentRound = useMemo(() => {
+    const rounds = roundList.data?.rounds ?? []
+    return rounds.find((round) => round.isCurrent) ?? rounds[0] ?? null
+  }, [roundList.data])
+
+  const roundHistory = useMemo(
+    () => buildRoundHistory(roundList.data?.rounds ?? [], activeAddress),
+    [roundList.data, activeAddress],
+  )
+
+  function handleAddressSubmit() {
+    const nextAddress = addressInput.trim()
+    if (!nextAddress) {
+      handleAddressClear()
+      return
+    }
+
+    if (!isAddress(nextAddress)) {
+      setInputError('Invalid address')
+      return
+    }
+
+    setSearchParams((next) => {
+      next.set('address', nextAddress)
+      return next
+    })
+  }
+
+  function handleAddressClear() {
+    setSearchParams((next) => {
+      next.delete('address')
+      return next
+    })
+    setAddressInput(walletAddress)
+    setInputError(null)
+  }
+
+  if (tiersLoading || roundList.loading) {
     return (
       <Page>
         <LoadingWrapper>
@@ -132,63 +260,73 @@ export function RoundsPage() {
     )
   }
 
-  if (error) {
+  if (tiersError || roundList.error) {
     return (
       <Page>
-        <ErrorMessage>Failed to load rounds data: {error}</ErrorMessage>
+        <ErrorMessage>Failed to load rounds data: {tiersError ?? roundList.error}</ErrorMessage>
       </Page>
     )
   }
 
-  if (!data) return null
+  if (!tierData || !roundList.data || !currentRound) return null
 
-  const currentTier = data.tiers[data.currentTierIndex]
-  const poolSizeEns = currentTier?.poolSizeEns ?? '0'
-  const tierLabel = `Tier #${data.currentTierIndex + 1}`
-
-  const roundNumber = round.data?.roundNumber ?? 1
-  const percentComplete = round.data?.percentComplete ?? 0
-  const startDate = round.data?.startDate
-    ? new Date(round.data.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : ''
-  const endDate = round.data?.endDate
-    ? new Date(round.data.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : ''
-  const daysRemaining = round.data?.daysRemaining ?? 0
-  const timeLeft = `${daysRemaining}d`
+  const currentTierIndex = currentRound.tierIndex ?? tierData.currentTierIndex
+  const currentTier = tierData.tiers[currentTierIndex] ?? tierData.tiers[tierData.currentTierIndex]
+  const sourceLabel = searchedAddress
+    ? 'Searched address'
+    : walletAddress
+      ? 'Connected wallet'
+      : 'No address selected'
+  const addressError = inputError || (activeAddress && !activeAddressValid ? 'Invalid address' : null)
 
   return (
     <Page>
       <HeaderBlock>
         <Eyebrow>Rounds</Eyebrow>
         <HeadingRow>
-          <RoundsPageTitle>Round {roundNumber} is</RoundsPageTitle>
-          <LiveBadge>
+          <RoundsPageTitle aria-label={`Round ${currentRound.roundNumber} is ${currentRound.status}`}>
+            Round {currentRound.roundNumber} is
+          </RoundsPageTitle>
+          <LiveBadge aria-hidden="true">
             <LiveDot />
-            live
+            {currentRound.status}
           </LiveBadge>
         </HeadingRow>
-        <PageDescription>
-          Incentive rounds run for 30 days. Rewards are distributed at the end
-          of each round based on your tier.
-        </PageDescription>
+        <AddressPanel>
+          <Eyebrow>Inspect Address</Eyebrow>
+          <AddressLookupForm
+            value={addressInput}
+            activeAddress={activeAddress}
+            sourceLabel={sourceLabel}
+            error={addressError}
+            onChange={setAddressInput}
+            onSubmit={handleAddressSubmit}
+            onClear={handleAddressClear}
+          />
+        </AddressPanel>
       </HeaderBlock>
 
       <Grid>
         <LeftColumn>
           <RoundCard
-            roundNumber={roundNumber}
-            percentComplete={percentComplete}
-            startDate={startDate}
-            endDate={endDate}
-            timeLeft={timeLeft}
-            poolSizeEns={poolSizeEns}
-            currentTier={tierLabel}
+            roundNumber={currentRound.roundNumber}
+            percentComplete={currentRound.percentComplete ?? 0}
+            startDate={formatUtcDate(currentRound.startDate, { year: 'numeric' })}
+            endDate={formatUtcDate(currentRound.endDate, { year: 'numeric' })}
+            timeLeft={formatDaysRemaining(currentRound.daysRemaining)}
+            poolSizeEns={currentRound.poolSizeEns ?? '0'}
+            currentTier={currentRound.tierLabel ?? `Tier #${currentTierIndex + 1}`}
             currentApyPct={currentTier?.estimatedApyPct ?? '0'}
           />
-          <RoundHistoryTable entries={ROUND_HISTORY} />
+          <RoundHistoryTable entries={roundHistory} />
+          <AddressRewardsTable
+            address={activeAddressValid ? activeAddress : ''}
+            rounds={addressHistory.data?.rounds ?? null}
+            loading={addressHistory.loading}
+            error={addressHistory.error}
+          />
         </LeftColumn>
-        <TierTable tiers={data.tiers} currentTierIndex={data.currentTierIndex} />
+        <TierTable tiers={tierData.tiers} currentTierIndex={currentTierIndex} />
       </Grid>
     </Page>
   )

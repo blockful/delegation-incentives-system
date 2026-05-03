@@ -1,6 +1,7 @@
 import styled from 'styled-components'
 import { tokens } from '@/styles'
 import { StatCard } from '@/components/shared/StatCard'
+import { formatEnsAmount } from '@/utils/format'
 
 interface RoundCardProps {
   roundNumber: number
@@ -28,6 +29,8 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
 `
 
 const RoundTitle = styled.h3`
@@ -65,26 +68,37 @@ const ProgressBarFill = styled.div<{ $pct: number }>`
   height: 100%;
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.blue};
-  width: ${({ $pct }) => Math.min($pct, 100)}%;
+  width: ${({ $pct }) => $pct}%;
   transition: width ${tokens.transition.slow};
 `
 
 const ProgressMeta = styled.div`
   display: flex;
   justify-content: space-between;
+  gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
 `
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: ${tokens.spacing.md};
 
   @media (min-width: 640px) {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 `
+
+function clampPercent(percent: number): number {
+  return Math.min(Math.max(percent, 0), 100)
+}
 
 export function RoundCard({
   roundNumber,
@@ -96,16 +110,31 @@ export function RoundCard({
   currentTier,
   currentApyPct,
 }: RoundCardProps) {
+  const progressPercent = clampPercent(percentComplete)
+  const poolDisplay = formatEnsAmount(poolSizeEns, { maximumFractionDigits: 0 })
+
   return (
     <Card>
       <Header>
         <RoundTitle>Round {roundNumber}</RoundTitle>
-        <InProgressTag>In progress</InProgressTag>
+        <InProgressTag
+          role="status"
+          aria-live="polite"
+          aria-label={`Round ${roundNumber} is in progress`}
+        >
+          In progress
+        </InProgressTag>
       </Header>
 
       <ProgressSection>
-        <ProgressBarTrack>
-          <ProgressBarFill $pct={percentComplete} />
+        <ProgressBarTrack
+          role="progressbar"
+          aria-label={`Round ${roundNumber} progress`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progressPercent)}
+        >
+          <ProgressBarFill $pct={progressPercent} aria-hidden="true" />
         </ProgressBarTrack>
         <ProgressMeta>
           <span>{startDate}</span>
@@ -114,9 +143,13 @@ export function RoundCard({
       </ProgressSection>
 
       <StatsGrid>
-        <StatCard label="Pool" value={`${poolSizeEns} ENS`} />
-        <StatCard label="Your Tier" value={currentTier} />
-        <StatCard label="Current APY" value={`${currentApyPct}%`} valueColor={tokens.color.positiveEmphasis} />
+        <StatCard label="Pool" value={`${poolDisplay} ENS`} />
+        <StatCard label="Current Round Tier" value={currentTier} />
+        <StatCard
+          label="Current APY"
+          value={`${currentApyPct}%`}
+          valueColor={tokens.color.positiveEmphasis}
+        />
       </StatsGrid>
     </Card>
   )

@@ -1,122 +1,24 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
 import { distributionResult } from "ponder:schema";
-import { eq, desc } from "drizzle-orm";
-import { POOL_TIERS, MIN_PAYOUT, type DistributionResult } from "@ens-dis/domain";
+import { desc } from "drizzle-orm";
 import { distributionToCsv } from "../../output/csv-writer.js";
-import { formatEns } from "../helpers.js";
-
-function reviveBigInts(obj: any): DistributionResult {
-  return {
-    metadata: {
-      ...obj.metadata,
-      monthStart: BigInt(obj.metadata.monthStart),
-      monthEnd: BigInt(obj.metadata.monthEnd),
-      startBlock: BigInt(obj.metadata.startBlock),
-      endBlock: BigInt(obj.metadata.endBlock),
-      vpStart: BigInt(obj.metadata.vpStart),
-      vpEnd: BigInt(obj.metadata.vpEnd),
-      poolSize: BigInt(obj.metadata.poolSize),
-      delegateCap: BigInt(obj.metadata.delegateCap),
-      delegatorCap: BigInt(obj.metadata.delegatorCap),
-    },
-    rewards: obj.rewards.map((r: any) => ({
-      ...r,
-      delegateReward: BigInt(r.delegateReward),
-      delegatorReward: BigInt(r.delegatorReward),
-      total: BigInt(r.total),
-    })),
-    lottery: {
-      buckets: obj.lottery.buckets.map((b: any) => ({
-        ...b,
-        prize: BigInt(b.prize),
-        entries: b.entries.map((e: any) => ({
-          ...e,
-          amount: BigInt(e.amount),
-        })),
-      })),
-    },
-    deduplication: obj.deduplication,
-  } as unknown as DistributionResult;
-}
-
-/** Transform raw DistributionResult into the FE-expected shape. */
-function toApiResponse(result: DistributionResult) {
-  const meta = result.metadata;
-  const tierConfig = POOL_TIERS[meta.tier] ?? POOL_TIERS[0];
-
-  // Direct payouts: rewards above MIN_PAYOUT threshold
-  const minPayout = MIN_PAYOUT as bigint;
-  const directPayouts = result.rewards
-    .filter((r) => (r.total as bigint) >= minPayout)
-    .map((r) => {
-      const role: "delegate" | "delegator" =
-        (r.delegateReward as bigint) > 0n ? "delegate" : "delegator";
-      return {
-        address: r.address,
-        ensName: null as string | null,
-        amount: (r.total as bigint).toString(),
-        amountEns: formatEns(r.total as bigint),
-        role,
-      };
-    });
-
-  // Lottery pools from buckets
-  const lotteryPools = result.lottery.buckets.map((bucket) => ({
-    totalPrize: (bucket.prize as bigint).toString(),
-    totalPrizeEns: formatEns(bucket.prize as bigint),
-    winner: bucket.winner,
-    winnerEnsName: null as string | null,
-    entries: bucket.entries.map((e) => ({
-      address: e.address,
-      ensName: null as string | null,
-      originalAmount: (e.amount as bigint).toString(),
-      role: "delegator" as const,
-    })),
-  }));
-
-  // Total distributed: sum of direct payouts + lottery prizes
-  let totalDistributed = 0n;
-  for (const r of result.rewards) {
-    if ((r.total as bigint) >= minPayout) totalDistributed += r.total as bigint;
-  }
-  for (const b of result.lottery.buckets) {
-    totalDistributed += b.prize as bigint;
-  }
-
-  // Eligible delegator count
-  const eligibleDelegatorCount = result.rewards.filter(
-    (r) => (r.delegatorReward as bigint) > 0n,
-  ).length;
-
-  // MoM growth in basis points
-  const growthPct = parseFloat(meta.vpGrowthPct);
-  const momGrowthBps = Math.round(growthPct * 100).toString();
-
-  return {
-    month: meta.month,
-    metadata: {
-      totalDistributed: totalDistributed.toString(),
-      totalDistributedEns: formatEns(totalDistributed),
-      poolTier: {
-        momGrowthMinBps: (tierConfig.minGrowthPct * 100).toString(),
-        momGrowthMaxBps: tierConfig.maxGrowthPct === Infinity
-          ? "Infinity"
-          : (tierConfig.maxGrowthPct * 100).toString(),
-        poolSize: (tierConfig.poolSize as bigint).toString(),
-        delegateCap: (tierConfig.delegateCap as bigint).toString(),
-        delegatorCap: (tierConfig.delegatorCap as bigint).toString(),
-      },
-      momGrowthBps,
-      activeDelegateCount: meta.activeDelegateCount,
-      eligibleDelegatorCount,
-      computedAt: new Date().toISOString(),
-      randaoSeed: meta.randaoValue,
-    },
-    directPayouts,
-    lotteryPools,
-  };
-}
+import { normalizeAddress } from "../helpers.js";
+import {
+  distributionToApiResponse,
+  getAddressReward,
+  parseDistributionRow,
+  parseDistributionRows,
+  type DistributionStorageRow,
+} from "../distribution-utils.js";
+import {
+  type DistributionDataStatus,
+  type RoundStatus,
+  getConfiguredRoundMonths,
+  getRoundDateRange,
+  getRoundNumber,
+  getRoundTiming,
+} from "../round-config.js";
 
 const MonthParam = z.object({
   month: z
@@ -125,22 +27,102 @@ const MonthParam = z.object({
     .openapi({ param: { name: "month", in: "path" }, example: "2026-03" }),
 });
 
-// --- List months ---
+const DistributionMonthListResponse = z.array(
+  z.string().openapi({ example: "2026-03" }),
+);
+
+const AddressDistributionRoundSchema = z.object({
+  roundNumber: z.number(),
+  month: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  roundStatus: z.enum(["live", "ended", "pending", "paid"]),
+  distributionDataStatus: z.enum(["available", "in_progress", "missing", "not_started"]),
+  rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
+  delegateReward: z.string(),
+  delegateRewardEns: z.string(),
+  tokenHolderReward: z.string(),
+  tokenHolderRewardEns: z.string(),
+  lotteryReward: z.string(),
+  lotteryRewardEns: z.string(),
+  totalReward: z.string(),
+  totalRewardEns: z.string(),
+});
+
+const AddressDistributionHistoryResponse = z.object({
+  address: z.string(),
+  rounds: z.array(AddressDistributionRoundSchema),
+});
+
+type AddressDistributionRewardStatus =
+  | "paid"
+  | "no_reward"
+  | "not_eligible"
+  | "pending"
+  | "unavailable";
+
+interface AddressDistributionRound {
+  roundNumber: number;
+  month: string;
+  startDate: string;
+  endDate: string;
+  roundStatus: RoundStatus;
+  distributionDataStatus: DistributionDataStatus;
+  rewardStatus: AddressDistributionRewardStatus;
+  delegateReward: string;
+  delegateRewardEns: string;
+  tokenHolderReward: string;
+  tokenHolderRewardEns: string;
+  lotteryReward: string;
+  lotteryRewardEns: string;
+  totalReward: string;
+  totalRewardEns: string;
+}
+
+export interface DistributionRouteDeps {
+  getRows?: () => Promise<DistributionStorageRow[]>;
+  now?: () => Date;
+}
+
+async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
+  const rows = await db
+    .select()
+    .from(distributionResult)
+    .orderBy(desc(distributionResult.month));
+
+  return rows as DistributionStorageRow[];
+}
 
 const listRoute = createRoute({
   method: "get",
   path: "/distributions",
   tags: ["Distributions"],
-  summary: "List distribution months",
-  description: "Returns an array of YYYY-MM month strings for which distributions have been computed, most recent first.",
+  summary: "List distribution months or address history",
+  description:
+    "Without query parameters, returns an array of YYYY-MM month strings for computed distributions. With ?address=0x..., returns that address's per-round distribution history derived from stored results.",
+  request: {
+    query: z.object({
+      address: z.string().optional().openapi({
+        description: "Optional Ethereum address for address-specific distribution history",
+        example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+      }),
+    }),
+  },
   responses: {
     200: {
-      description: "Month list",
+      description: "Distribution month list or address distribution history",
       content: {
         "application/json": {
-          schema: z.array(z.string().openapi({ example: "2026-03" })),
+          schema: z.union([
+            DistributionMonthListResponse,
+            AddressDistributionHistoryResponse,
+          ]),
         },
       },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
       description: "Internal server error",
@@ -148,8 +130,6 @@ const listRoute = createRoute({
     },
   },
 });
-
-// --- Get distribution JSON ---
 
 const getRoute = createRoute({
   method: "get",
@@ -178,8 +158,6 @@ const getRoute = createRoute({
   },
 });
 
-// --- CSV export ---
-
 const csvRoute = createRoute({
   method: "get",
   path: "/distributions/{month}/csv",
@@ -207,69 +185,143 @@ const csvRoute = createRoute({
   },
 });
 
-const app = new OpenAPIHono();
+export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
+  const app = new OpenAPIHono();
+  const getRows = deps.getRows ?? getStoredDistributionRows;
+  const getNow = deps.now ?? (() => new Date());
 
-app.openapi(listRoute, async (c) => {
-  try {
-    const rows = await db
-      .select({ month: distributionResult.month })
-      .from(distributionResult)
-      .orderBy(desc(distributionResult.month));
+  app.openapi(listRoute, async (c) => {
+    try {
+      const { address: rawAddress } = c.req.valid("query");
+      const rows = await getRows();
 
-    return c.json(rows.map((row) => row.month), 200);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
-  }
-});
+      if (rawAddress) {
+        const address = normalizeAddress(rawAddress);
+        if (!address) {
+          return c.json({ error: "Invalid Ethereum address" }, 400);
+        }
 
-app.openapi(getRoute, async (c) => {
-  try {
-    const { month } = c.req.valid("param");
+        return c.json(
+          buildAddressDistributionHistory(rows, address, getNow()),
+          200,
+        );
+      }
 
-    const rows = await db
-      .select()
-      .from(distributionResult)
-      .where(eq(distributionResult.month, month))
-      .limit(1);
-
-    if (rows.length === 0) {
-      return c.json({ error: `No distribution found for month ${month}` }, 404);
+      const months = [...new Set(rows.map((row) => row.month))].sort().reverse();
+      return c.json(months, 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
     }
+  });
 
-    const result = reviveBigInts(JSON.parse(rows[0].resultJson));
-    return c.json(toApiResponse(result), 200);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
-  }
-});
+  app.openapi(getRoute, async (c) => {
+    try {
+      const { month } = c.req.valid("param");
+      const rows = await getRows();
+      const row = rows.find((candidate) => candidate.month === month);
 
-app.openapi(csvRoute, async (c) => {
-  try {
-    const { month } = c.req.valid("param");
+      if (!row) {
+        return c.json({ error: `No distribution found for month ${month}` }, 404);
+      }
 
-    const rows = await db
-      .select()
-      .from(distributionResult)
-      .where(eq(distributionResult.month, month))
-      .limit(1);
-
-    if (rows.length === 0) {
-      return c.json({ error: `No distribution found for month ${month}` }, 404);
+      return c.json(distributionToApiResponse(parseDistributionRow(row)), 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
     }
+  });
 
-    const result = reviveBigInts(JSON.parse(rows[0].resultJson));
-    const csv = distributionToCsv(result);
+  app.openapi(csvRoute, async (c) => {
+    try {
+      const { month } = c.req.valid("param");
+      const rows = await getRows();
+      const row = rows.find((candidate) => candidate.month === month);
 
-    return c.text(csv, 200, {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
-  }
-});
+      if (!row) {
+        return c.json({ error: `No distribution found for month ${month}` }, 404);
+      }
 
-export default app;
+      const { result } = parseDistributionRow(row);
+      const csv = distributionToCsv(result);
+
+      return c.text(csv, 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  return app;
+}
+
+function buildAddressDistributionHistory(
+  rows: readonly DistributionStorageRow[],
+  address: string,
+  now: Date,
+) {
+  const parsedRows = parseDistributionRows(rows);
+  const configuredMonths = getConfiguredRoundMonths();
+  const months = configuredMonths.length > 0
+    ? configuredMonths
+    : [...parsedRows.keys()].sort();
+
+  return {
+    address,
+    rounds: months
+      .map((month, index) => {
+        const roundNumber = getRoundNumber(month, months) ?? index + 1;
+        const range = getRoundDateRange(month);
+        const parsed = parsedRows.get(month);
+        const timing = getRoundTiming(month, now, parsed != null);
+
+        if (!parsed) {
+          return {
+            roundNumber,
+            month,
+            startDate: range.startDate,
+            endDate: range.endDate,
+            roundStatus: timing.status,
+            distributionDataStatus: timing.distributionDataStatus,
+            rewardStatus: (timing.distributionDataStatus === "in_progress"
+              ? "pending"
+              : "unavailable") as AddressDistributionRewardStatus,
+            delegateReward: "0",
+            delegateRewardEns: "0.000000000000000000",
+            tokenHolderReward: "0",
+            tokenHolderRewardEns: "0.000000000000000000",
+            lotteryReward: "0",
+            lotteryRewardEns: "0.000000000000000000",
+            totalReward: "0",
+            totalRewardEns: "0.000000000000000000",
+          } satisfies AddressDistributionRound;
+        }
+
+        const reward = getAddressReward(parsed, address);
+
+        return {
+          roundNumber,
+          month,
+          startDate: range.startDate,
+          endDate: range.endDate,
+          roundStatus: timing.status,
+          distributionDataStatus: timing.distributionDataStatus,
+          rewardStatus: reward.status,
+          delegateReward: reward.delegateReward,
+          delegateRewardEns: reward.delegateRewardEns,
+          tokenHolderReward: reward.tokenHolderReward,
+          tokenHolderRewardEns: reward.tokenHolderRewardEns,
+          lotteryReward: reward.lotteryReward,
+          lotteryRewardEns: reward.lotteryRewardEns,
+          totalReward: reward.totalReward,
+          totalRewardEns: reward.totalRewardEns,
+        } satisfies AddressDistributionRound;
+      })
+      .sort((a, b) => b.roundNumber - a.roundNumber),
+  };
+}
+
+export default createDistributionsApp();

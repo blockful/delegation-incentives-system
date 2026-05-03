@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { DelegatesPage } from '@/pages/DelegatesPage'
 import { DelegateProfilePage } from '@/pages/DelegateProfilePage'
 import { RoundsPage } from '@/pages/RoundsPage'
+import { RoundDetailPage } from '@/pages/RoundsPage/RoundDetailPage'
 import { LotteryPage } from '@/pages/LotteryPage'
 import { TransparencyPage } from '@/pages/TransparencyPage'
 
@@ -31,6 +32,7 @@ export function Router() {
         <Route path="dashboard-4" element={<Suspense fallback={<LazyFallback />}><Dashboard4 /></Suspense>} />
         <Route path="delegates" element={<DelegatesPage />} />
         <Route path="delegates/:address" element={<DelegateProfilePage />} />
+        <Route path="rounds/:roundNumber" element={<RoundDetailPage />} />
         <Route path="rounds" element={<RoundsPage />} />
         <Route path="lottery" element={<LotteryPage />} />
         <Route path="transparency" element={<TransparencyPage />} />

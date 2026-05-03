@@ -9,3 +9,9 @@ export {
 export { apyFixture } from './apy'
 export { distributionFixture } from './lottery'
 export { roundInfoFixture } from './roundInfo'
+export {
+  addressDistributionFixture,
+  emptyRoundDetailFixture,
+  roundDetailFixture,
+  roundListFixture,
+} from './roundRewards'

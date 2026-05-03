@@ -7,6 +7,9 @@ import type {
   ApyEstimateResponse,
   DistributionResponse,
   RoundInfoResponse,
+  RoundListResponse,
+  RoundDetailResponse,
+  AddressDistributionHistoryResponse,
 } from './types'
 
 function delay<T>(value: T, ms = 400): Promise<T> {
@@ -255,6 +258,101 @@ const MOCK_DISTRIBUTION: DistributionResponse = {
   ],
 }
 
+const MOCK_ROUNDS: RoundListResponse = {
+  currentRoundNumber: 3,
+  rounds: [
+    {
+      roundNumber: 3,
+      month: '2026-05',
+      startDate: '2026-05-01T00:00:00.000Z',
+      endDate: '2026-05-31T23:59:59.999Z',
+      status: 'live',
+      distributionDataStatus: 'in_progress',
+      isCurrent: true,
+      percentComplete: 10,
+      daysRemaining: 28,
+      tierIndex: 0,
+      tierLabel: 'Tier #1',
+      poolSize: '5000000000000000000000',
+      poolSizeEns: '5000.000000000000000000',
+      totalDistributed: null,
+      totalDistributedEns: null,
+      activeDelegateCount: null,
+      eligibleDelegatorCount: null,
+      computedAt: null,
+    },
+    {
+      roundNumber: 2,
+      month: '2026-04',
+      startDate: '2026-04-01T00:00:00.000Z',
+      endDate: '2026-04-30T23:59:59.999Z',
+      status: 'ended',
+      distributionDataStatus: 'missing',
+      isCurrent: false,
+      percentComplete: 100,
+      daysRemaining: 0,
+      tierIndex: null,
+      tierLabel: null,
+      poolSize: null,
+      poolSizeEns: null,
+      totalDistributed: null,
+      totalDistributedEns: null,
+      activeDelegateCount: null,
+      eligibleDelegatorCount: null,
+      computedAt: null,
+    },
+    {
+      roundNumber: 1,
+      month: '2026-03',
+      startDate: '2026-03-01T00:00:00.000Z',
+      endDate: '2026-03-31T23:59:59.999Z',
+      status: 'ended',
+      distributionDataStatus: 'missing',
+      isCurrent: false,
+      percentComplete: 100,
+      daysRemaining: 0,
+      tierIndex: null,
+      tierLabel: null,
+      poolSize: null,
+      poolSizeEns: null,
+      totalDistributed: null,
+      totalDistributedEns: null,
+      activeDelegateCount: null,
+      eligibleDelegatorCount: null,
+      computedAt: null,
+    },
+  ],
+}
+
+const MOCK_ADDRESS_HISTORY: AddressDistributionHistoryResponse = {
+  address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+  rounds: MOCK_ROUNDS.rounds.map((round) => ({
+    roundNumber: round.roundNumber,
+    month: round.month,
+    startDate: round.startDate,
+    endDate: round.endDate,
+    roundStatus: round.status,
+    distributionDataStatus: round.distributionDataStatus,
+    address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+    rewardStatus: round.isCurrent ? 'pending' : 'unavailable',
+    delegateReward: '0',
+    delegateRewardEns: '0.000000000000000000',
+    tokenHolderReward: '0',
+    tokenHolderRewardEns: '0.000000000000000000',
+    lotteryReward: '0',
+    lotteryRewardEns: '0.000000000000000000',
+    totalReward: '0',
+    totalRewardEns: '0.000000000000000000',
+  })),
+}
+
+const MOCK_ROUND_DETAIL: RoundDetailResponse = {
+  ...MOCK_ROUNDS.rounds[0],
+  addressReward: null,
+  topDelegateRewards: [],
+  topTokenHolderRewards: [],
+}
+
 export const mockApi = {
   health: () => delay<HealthResponse>({ status: 'ok' }),
 
@@ -305,5 +403,11 @@ export const mockApi = {
 
   distribution: (_month: string) => delay(MOCK_DISTRIBUTION),
 
+  distributionsForAddress: (_address: string) => delay(MOCK_ADDRESS_HISTORY),
+
   currentRound: () => delay(createMockRound()),
+
+  rounds: () => delay(MOCK_ROUNDS),
+
+  round: (_roundNumber: number, _address?: string) => delay(MOCK_ROUND_DETAIL),
 } as const

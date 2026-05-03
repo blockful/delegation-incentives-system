@@ -508,7 +508,7 @@
           "Rounds"
         ],
         "summary": "Current incentive round",
-        "description": "Returns the current round info: dates, progress, pool size, and active tier index.",
+        "description": "Returns current round dates, progress, pool size, and active tier index. Dates are UTC.",
         "responses": {
           "200": {
             "description": "Current round info",
@@ -519,41 +519,41 @@
                   "properties": {
                     "roundNumber": {
                       "type": "number",
-                      "description": "Sequential round number (months since program start)",
+                      "description": "Sequential round number from ROUND_MONTHS",
                       "example": 3
                     },
                     "startDate": {
                       "type": "string",
-                      "description": "ISO 8601 start of the round",
-                      "example": "2026-04-01T00:00:00.000Z"
+                      "description": "ISO 8601 UTC start of the round",
+                      "example": "2026-05-01T00:00:00.000Z"
                     },
                     "endDate": {
                       "type": "string",
-                      "description": "ISO 8601 end of the round",
-                      "example": "2026-04-30T23:59:59.999Z"
+                      "description": "ISO 8601 UTC end of the round",
+                      "example": "2026-05-31T23:59:59.999Z"
                     },
                     "percentComplete": {
                       "type": "number",
                       "description": "Percentage of round elapsed (0-100)",
-                      "example": 53
+                      "example": 10
                     },
                     "daysRemaining": {
                       "type": "number",
-                      "example": 14
+                      "example": 28
                     },
                     "poolSizeEns": {
                       "type": "string",
-                      "description": "Current tier pool size in ENS",
+                      "description": "Current round tier pool size in ENS",
                       "example": "5000.000000000000000000"
                     },
                     "tierIndex": {
                       "type": "number",
-                      "example": 1
+                      "example": 0
                     },
                     "vpGrowthPct": {
                       "type": "string",
-                      "description": "Month-over-month active VP growth percentage",
-                      "example": "9.09"
+                      "description": "Current month active VP growth percentage",
+                      "example": "0.00"
                     }
                   },
                   "required": [
@@ -565,6 +565,998 @@
                     "poolSizeEns",
                     "tierIndex",
                     "vpGrowthPct"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rounds": {
+      "get": {
+        "tags": [
+          "Rounds"
+        ],
+        "summary": "List configured rounds with reward summaries",
+        "description": "Returns all configured ROUND_MONTHS rounds with UTC dates, global pool/distribution metadata when available, and truthful missing-data states.",
+        "responses": {
+          "200": {
+            "description": "Round summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "currentRoundNumber": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "rounds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "roundNumber": {
+                            "type": "number"
+                          },
+                          "month": {
+                            "type": "string"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "live",
+                              "ended",
+                              "pending",
+                              "paid"
+                            ]
+                          },
+                          "distributionDataStatus": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "in_progress",
+                              "missing",
+                              "not_started"
+                            ]
+                          },
+                          "isCurrent": {
+                            "type": "boolean"
+                          },
+                          "percentComplete": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "daysRemaining": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "tierIndex": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "tierLabel": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "poolSize": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "poolSizeEns": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "totalDistributed": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "totalDistributedEns": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "activeDelegateCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "eligibleDelegatorCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "computedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "roundNumber",
+                          "month",
+                          "startDate",
+                          "endDate",
+                          "status",
+                          "distributionDataStatus",
+                          "isCurrent",
+                          "percentComplete",
+                          "daysRemaining",
+                          "tierIndex",
+                          "tierLabel",
+                          "poolSize",
+                          "poolSizeEns",
+                          "totalDistributed",
+                          "totalDistributedEns",
+                          "activeDelegateCount",
+                          "eligibleDelegatorCount",
+                          "computedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "currentRoundNumber",
+                    "rounds"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rounds/{roundNumber}": {
+      "get": {
+        "tags": [
+          "Rounds"
+        ],
+        "summary": "Get round details",
+        "description": "Returns one round's global reward summary, optional address-specific reward, and top delegate/token-holder rewards when distribution data exists.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "example": 3
+            },
+            "required": true,
+            "name": "roundNumber",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional Ethereum address for wallet-specific round earnings",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": false,
+            "description": "Optional Ethereum address for wallet-specific round earnings",
+            "name": "address",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Round detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roundNumber": {
+                      "type": "number"
+                    },
+                    "month": {
+                      "type": "string"
+                    },
+                    "startDate": {
+                      "type": "string"
+                    },
+                    "endDate": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "ended",
+                        "pending",
+                        "paid"
+                      ]
+                    },
+                    "distributionDataStatus": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "in_progress",
+                        "missing",
+                        "not_started"
+                      ]
+                    },
+                    "isCurrent": {
+                      "type": "boolean"
+                    },
+                    "percentComplete": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "daysRemaining": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "tierIndex": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "tierLabel": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "poolSize": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "poolSizeEns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "totalDistributed": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "totalDistributedEns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "activeDelegateCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "eligibleDelegatorCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "computedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "addressReward": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "address": {
+                          "type": "string"
+                        },
+                        "rewardStatus": {
+                          "type": "string",
+                          "enum": [
+                            "paid",
+                            "no_reward",
+                            "not_eligible",
+                            "pending",
+                            "unavailable"
+                          ]
+                        },
+                        "delegateReward": {
+                          "type": "string"
+                        },
+                        "delegateRewardEns": {
+                          "type": "string"
+                        },
+                        "tokenHolderReward": {
+                          "type": "string"
+                        },
+                        "tokenHolderRewardEns": {
+                          "type": "string"
+                        },
+                        "lotteryReward": {
+                          "type": "string"
+                        },
+                        "lotteryRewardEns": {
+                          "type": "string"
+                        },
+                        "totalReward": {
+                          "type": "string"
+                        },
+                        "totalRewardEns": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "address",
+                        "rewardStatus",
+                        "delegateReward",
+                        "delegateRewardEns",
+                        "tokenHolderReward",
+                        "tokenHolderRewardEns",
+                        "lotteryReward",
+                        "lotteryRewardEns",
+                        "totalReward",
+                        "totalRewardEns"
+                      ]
+                    },
+                    "topDelegateRewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": {
+                            "type": "number"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "ensName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "delegate",
+                              "token_holder"
+                            ]
+                          },
+                          "reward": {
+                            "type": "string"
+                          },
+                          "rewardEns": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "lottery",
+                              "combined"
+                            ]
+                          },
+                          "votingPower": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "delegationCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "rank",
+                          "address",
+                          "ensName",
+                          "role",
+                          "reward",
+                          "rewardEns",
+                          "source",
+                          "votingPower",
+                          "delegationCount"
+                        ]
+                      }
+                    },
+                    "topTokenHolderRewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": {
+                            "type": "number"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "ensName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "delegate",
+                              "token_holder"
+                            ]
+                          },
+                          "reward": {
+                            "type": "string"
+                          },
+                          "rewardEns": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "lottery",
+                              "combined"
+                            ]
+                          },
+                          "votingPower": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "delegationCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "rank",
+                          "address",
+                          "ensName",
+                          "role",
+                          "reward",
+                          "rewardEns",
+                          "source",
+                          "votingPower",
+                          "delegationCount"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "roundNumber",
+                    "month",
+                    "startDate",
+                    "endDate",
+                    "status",
+                    "distributionDataStatus",
+                    "isCurrent",
+                    "percentComplete",
+                    "daysRemaining",
+                    "tierIndex",
+                    "tierLabel",
+                    "poolSize",
+                    "poolSizeEns",
+                    "totalDistributed",
+                    "totalDistributedEns",
+                    "activeDelegateCount",
+                    "eligibleDelegatorCount",
+                    "computedAt",
+                    "addressReward",
+                    "topDelegateRewards",
+                    "topTokenHolderRewards"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown round",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rounds/{roundNumber}/distributions": {
+      "get": {
+        "tags": [
+          "Rounds"
+        ],
+        "summary": "Get round distribution rankings",
+        "description": "Returns top delegate and token-holder rewards for one round when stored distribution data exists.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "example": 3
+            },
+            "required": true,
+            "name": "roundNumber",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional Ethereum address for wallet-specific round earnings",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": false,
+            "description": "Optional Ethereum address for wallet-specific round earnings",
+            "name": "address",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Round distribution detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roundNumber": {
+                      "type": "number"
+                    },
+                    "month": {
+                      "type": "string"
+                    },
+                    "startDate": {
+                      "type": "string"
+                    },
+                    "endDate": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "ended",
+                        "pending",
+                        "paid"
+                      ]
+                    },
+                    "distributionDataStatus": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "in_progress",
+                        "missing",
+                        "not_started"
+                      ]
+                    },
+                    "isCurrent": {
+                      "type": "boolean"
+                    },
+                    "percentComplete": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "daysRemaining": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "tierIndex": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "tierLabel": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "poolSize": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "poolSizeEns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "totalDistributed": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "totalDistributedEns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "activeDelegateCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "eligibleDelegatorCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "computedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "addressReward": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "address": {
+                          "type": "string"
+                        },
+                        "rewardStatus": {
+                          "type": "string",
+                          "enum": [
+                            "paid",
+                            "no_reward",
+                            "not_eligible",
+                            "pending",
+                            "unavailable"
+                          ]
+                        },
+                        "delegateReward": {
+                          "type": "string"
+                        },
+                        "delegateRewardEns": {
+                          "type": "string"
+                        },
+                        "tokenHolderReward": {
+                          "type": "string"
+                        },
+                        "tokenHolderRewardEns": {
+                          "type": "string"
+                        },
+                        "lotteryReward": {
+                          "type": "string"
+                        },
+                        "lotteryRewardEns": {
+                          "type": "string"
+                        },
+                        "totalReward": {
+                          "type": "string"
+                        },
+                        "totalRewardEns": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "address",
+                        "rewardStatus",
+                        "delegateReward",
+                        "delegateRewardEns",
+                        "tokenHolderReward",
+                        "tokenHolderRewardEns",
+                        "lotteryReward",
+                        "lotteryRewardEns",
+                        "totalReward",
+                        "totalRewardEns"
+                      ]
+                    },
+                    "topDelegateRewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": {
+                            "type": "number"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "ensName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "delegate",
+                              "token_holder"
+                            ]
+                          },
+                          "reward": {
+                            "type": "string"
+                          },
+                          "rewardEns": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "lottery",
+                              "combined"
+                            ]
+                          },
+                          "votingPower": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "delegationCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "rank",
+                          "address",
+                          "ensName",
+                          "role",
+                          "reward",
+                          "rewardEns",
+                          "source",
+                          "votingPower",
+                          "delegationCount"
+                        ]
+                      }
+                    },
+                    "topTokenHolderRewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": {
+                            "type": "number"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "ensName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "delegate",
+                              "token_holder"
+                            ]
+                          },
+                          "reward": {
+                            "type": "string"
+                          },
+                          "rewardEns": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "lottery",
+                              "combined"
+                            ]
+                          },
+                          "votingPower": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "delegationCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "rank",
+                          "address",
+                          "ensName",
+                          "role",
+                          "reward",
+                          "rewardEns",
+                          "source",
+                          "votingPower",
+                          "delegationCount"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "roundNumber",
+                    "month",
+                    "startDate",
+                    "endDate",
+                    "status",
+                    "distributionDataStatus",
+                    "isCurrent",
+                    "percentComplete",
+                    "daysRemaining",
+                    "tierIndex",
+                    "tierLabel",
+                    "poolSize",
+                    "poolSizeEns",
+                    "totalDistributed",
+                    "totalDistributedEns",
+                    "activeDelegateCount",
+                    "eligibleDelegatorCount",
+                    "computedAt",
+                    "addressReward",
+                    "topDelegateRewards",
+                    "topTokenHolderRewards"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown round",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
                   ]
                 }
               }
@@ -744,19 +1736,155 @@
         "tags": [
           "Distributions"
         ],
-        "summary": "List distribution months",
-        "description": "Returns an array of YYYY-MM month strings for which distributions have been computed, most recent first.",
+        "summary": "List distribution months or address history",
+        "description": "Without query parameters, returns an array of YYYY-MM month strings for computed distributions. With ?address=0x..., returns that address's per-round distribution history derived from stored results.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional Ethereum address for address-specific distribution history",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": false,
+            "description": "Optional Ethereum address for address-specific distribution history",
+            "name": "address",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Month list",
+            "description": "Distribution month list or address distribution history",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "example": "2026-03"
-                  }
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "example": "2026-03"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "address": {
+                          "type": "string"
+                        },
+                        "rounds": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "roundNumber": {
+                                "type": "number"
+                              },
+                              "month": {
+                                "type": "string"
+                              },
+                              "startDate": {
+                                "type": "string"
+                              },
+                              "endDate": {
+                                "type": "string"
+                              },
+                              "roundStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "live",
+                                  "ended",
+                                  "pending",
+                                  "paid"
+                                ]
+                              },
+                              "distributionDataStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "in_progress",
+                                  "missing",
+                                  "not_started"
+                                ]
+                              },
+                              "rewardStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "paid",
+                                  "no_reward",
+                                  "not_eligible",
+                                  "pending",
+                                  "unavailable"
+                                ]
+                              },
+                              "delegateReward": {
+                                "type": "string"
+                              },
+                              "delegateRewardEns": {
+                                "type": "string"
+                              },
+                              "tokenHolderReward": {
+                                "type": "string"
+                              },
+                              "tokenHolderRewardEns": {
+                                "type": "string"
+                              },
+                              "lotteryReward": {
+                                "type": "string"
+                              },
+                              "lotteryRewardEns": {
+                                "type": "string"
+                              },
+                              "totalReward": {
+                                "type": "string"
+                              },
+                              "totalRewardEns": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "roundNumber",
+                              "month",
+                              "startDate",
+                              "endDate",
+                              "roundStatus",
+                              "distributionDataStatus",
+                              "rewardStatus",
+                              "delegateReward",
+                              "delegateRewardEns",
+                              "tokenHolderReward",
+                              "tokenHolderRewardEns",
+                              "lotteryReward",
+                              "lotteryRewardEns",
+                              "totalReward",
+                              "totalRewardEns"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "address",
+                        "rounds"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }

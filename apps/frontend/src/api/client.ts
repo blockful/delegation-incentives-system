@@ -8,6 +8,9 @@ import type {
   ApyEstimateResponse,
   DistributionResponse,
   RoundInfoResponse,
+  RoundListResponse,
+  RoundDetailResponse,
+  AddressDistributionHistoryResponse,
 } from "./types";
 
 const BASE = env.apiBaseUrl;
@@ -31,6 +34,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+function withAddress(path: string, address?: string): string {
+  if (!address) return path;
+  const params = new URLSearchParams({ address });
+  return `${path}?${params.toString()}`;
+}
+
 export const api = {
   health: () => request<HealthResponse>("/health"),
 
@@ -50,7 +59,15 @@ export const api = {
   distribution: (month: string) =>
     request<DistributionResponse>(`/distributions/${month}`),
 
+  distributionsForAddress: (address: string) =>
+    request<AddressDistributionHistoryResponse>(withAddress("/distributions", address)),
+
   currentRound: () => request<RoundInfoResponse>("/rounds/current"),
+
+  rounds: () => request<RoundListResponse>("/rounds"),
+
+  round: (roundNumber: number, address?: string) =>
+    request<RoundDetailResponse>(withAddress(`/rounds/${roundNumber}`, address)),
 } as const;
 
 export { ApiClientError };

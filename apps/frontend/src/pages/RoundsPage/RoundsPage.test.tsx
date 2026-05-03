@@ -1,45 +1,190 @@
-import { screen, waitFor } from '@testing-library/react'
-import { renderApp } from '@/test/utils'
+import { Route, Routes } from 'react-router-dom'
+import { screen, waitFor, within } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
+import { renderApp, userEvent } from '@/test/utils'
+import { server } from '@/test/mocks/server'
+import {
+  addressDistributionFixture,
+  emptyRoundDetailFixture,
+  roundListFixture,
+} from '@/test/mocks/fixtures'
 import { RoundsPage } from './index'
+import { RoundDetailPage } from './RoundDetailPage'
+
+const WALLET = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+
+async function findSection(name: string) {
+  const label = await screen.findByText(name)
+  const section = label.closest('section')
+  expect(section).not.toBeNull()
+  return section!
+}
 
 describe('RoundsPage', () => {
-  it('renders round heading with live text', async () => {
+  it('renders the current round heading and tier table', async () => {
     renderApp(<RoundsPage />)
 
-    await waitFor(() => {
-      expect(screen.getByText(/Round 2 is/)).toBeInTheDocument()
-    })
+    expect(await screen.findByRole('heading', { name: /Round 3 is live/i })).toBeInTheDocument()
     expect(screen.getByText('live')).toBeInTheDocument()
+
+    const tierTable = await screen.findByTestId('tier-table')
+    for (let i = 1; i <= 7; i++) {
+      expect(within(tierTable).getByText(`Tier #${i}`)).toBeInTheDocument()
+    }
   })
 
-  it('renders tier table with 7 tiers', async () => {
+  it('renders UTC global round history without fake rewards', async () => {
     renderApp(<RoundsPage />)
 
+    const history = await findSection('Round History')
     await waitFor(() => {
-      expect(screen.getAllByTestId('tier-row')).toHaveLength(7)
+      expect(within(history).getByRole('link', { name: 'Round 3' })).toBeInTheDocument()
+    })
+
+    const currentRoundRow = within(history)
+      .getAllByRole('row')
+      .find((row) => within(row).queryByRole('link', { name: 'Round 3' }))
+
+    expect(currentRoundRow).toBeDefined()
+    expect(within(currentRoundRow!).getByText('May 1–31, 2026')).toBeInTheDocument()
+    expect(within(currentRoundRow!).queryByText('Apr 30')).not.toBeInTheDocument()
+    expect(within(currentRoundRow!).getByText('5,000 ENS')).toBeInTheDocument()
+    expect(within(currentRoundRow!).getByText('Pending')).toBeInTheDocument()
+    expect(within(currentRoundRow!).getByText('Live')).toBeInTheDocument()
+
+    expect(within(history).getByText('Apr 1–30, 2026')).toBeInTheDocument()
+    expect(within(history).getByText('Mar 1–31, 2026')).toBeInTheDocument()
+    expect(screen.queryByText('+12.3456 ENS')).not.toBeInTheDocument()
+  })
+
+  it('formats the current round pool and progress from round data', async () => {
+    server.use(
+      http.get('/api/rounds', () =>
+        HttpResponse.json({
+          ...roundListFixture,
+          rounds: roundListFixture.rounds.map((round) =>
+            round.roundNumber === 3
+              ? { ...round, percentComplete: 48 }
+              : round,
+          ),
+        }),
+      ),
+    )
+
+    renderApp(<RoundsPage />)
+
+    const poolStat = (await screen.findAllByText('Pool'))[0]
+    expect(within(poolStat.closest('div')!).getByText('5,000 ENS')).toBeInTheDocument()
+
+    const status = await screen.findByRole('status', {
+      name: /round 3 is in progress/i,
+    })
+    expect(status).toHaveTextContent(/in progress/i)
+
+    const progress = screen.getByRole('progressbar', { name: /round 3 progress/i })
+    expect(progress).toHaveAttribute('aria-valuenow', '48')
+    expect(progress).toHaveAttribute('aria-valuemin', '0')
+    expect(progress).toHaveAttribute('aria-valuemax', '100')
+  })
+
+  it('uses the connected wallet for address-specific rewards', async () => {
+    renderApp(<RoundsPage />, {
+      walletState: { status: 'connected', address: WALLET },
+    })
+
+    const rewards = await findSection('Address Rewards')
+    await waitFor(() => {
+      expect(within(rewards).getByText(WALLET)).toBeInTheDocument()
+    })
+
+    expect(within(rewards).getByText('+35 ENS')).toBeInTheDocument()
+    expect(within(rewards).getByText('Apr 1–30, 2026')).toBeInTheDocument()
+    expect(within(rewards).getAllByText('Pending').length).toBeGreaterThan(0)
+  })
+
+  it('allows inspecting an entered address without a connected wallet', async () => {
+    renderApp(<RoundsPage />)
+
+    await userEvent.type(await screen.findByLabelText('Wallet address'), WALLET)
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
+
+    const rewards = await findSection('Address Rewards')
+    await waitFor(() => {
+      expect(within(rewards).getByText('+35 ENS')).toBeInTheDocument()
     })
   })
 
-  it('renders round history section', async () => {
-    renderApp(<RoundsPage />)
+  it('does not fake address rewards when the API has no distribution data', async () => {
+    server.use(
+      http.get('/api/distributions', ({ request }) => {
+        const url = new URL(request.url)
+        if (!url.searchParams.has('address')) return HttpResponse.json([])
 
-    await waitFor(() => {
-      expect(screen.getByText('Round History')).toBeInTheDocument()
+        return HttpResponse.json({
+          address: WALLET,
+          rounds: addressDistributionFixture.rounds.map((round) => ({
+            ...round,
+            rewardStatus: round.roundNumber === 3 ? 'pending' : 'unavailable',
+            totalRewardEns: '0.000000000000000000',
+          })),
+        })
+      }),
+    )
+
+    renderApp(<RoundsPage />, {
+      walletState: { status: 'connected', address: WALLET },
     })
-    expect(screen.getByText('Round 3')).toBeInTheDocument()
-    expect(screen.getAllByText('Paid').length).toBeGreaterThanOrEqual(1)
+
+    const rewards = await findSection('Address Rewards')
+    await waitFor(() => {
+      expect(within(rewards).getAllByText('Unavailable').length).toBeGreaterThan(0)
+    })
+    expect(screen.queryByText('+35 ENS')).not.toBeInTheDocument()
   })
 
-  it('renders round card stats (pool size from fixture)', async () => {
+  it('makes round rows clickable', async () => {
     renderApp(<RoundsPage />)
 
-    // currentTierIndex=1 → poolSizeEns='1000'
-    await waitFor(() => {
-      expect(screen.getByText('1000 ENS')).toBeInTheDocument()
-    })
-    // currentTierIndex=1 → estimatedApyPct='8.64'
-    expect(screen.getByText('8.64%')).toBeInTheDocument()
-    // "Tier #2" appears in both card and table — verify at least one exists
-    expect(screen.getAllByText('Tier #2').length).toBeGreaterThanOrEqual(1)
+    const history = await findSection('Round History')
+    const roundLink = await within(history).findByRole('link', { name: 'Round 2' })
+
+    expect(roundLink).toHaveAttribute('href', '/rounds/2')
+  })
+})
+
+describe('RoundDetailPage', () => {
+  function renderDetail(path: string) {
+    return renderApp(
+      <Routes>
+        <Route path="/rounds/:roundNumber" element={<RoundDetailPage />} />
+      </Routes>,
+      { initialPath: path },
+    )
+  }
+
+  it('renders populated round detail rankings and address reward', async () => {
+    renderDetail(`/rounds/2?address=${WALLET}`)
+
+    expect(await screen.findByRole('heading', { name: 'Round 2' })).toBeInTheDocument()
+    expect(screen.getByText('Apr 1–30, 2026')).toBeInTheDocument()
+    expect(screen.getByText('8,000 ENS')).toBeInTheDocument()
+    expect(screen.getByText('155 ENS')).toBeInTheDocument()
+    expect(screen.getAllByText('35 ENS').length).toBeGreaterThan(0)
+    expect(screen.getByText('delegate.eth')).toBeInTheDocument()
+    expect(screen.getByText('Direct + lottery')).toBeInTheDocument()
+  })
+
+  it('renders clean empty states on a round without distribution data', async () => {
+    server.use(
+      http.get('/api/rounds/:roundNumber', () =>
+        HttpResponse.json(emptyRoundDetailFixture),
+      ),
+    )
+
+    renderDetail(`/rounds/3?address=${WALLET}`)
+
+    expect(await screen.findByRole('heading', { name: 'Round 3' })).toBeInTheDocument()
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('No distribution data.')).toHaveLength(2)
   })
 })

@@ -330,7 +330,7 @@ export interface paths {
         };
         /**
          * Current incentive round
-         * @description Returns the current round info: dates, progress, pool size, and active tier index.
+         * @description Returns current round dates, progress, pool size, and active tier index. Dates are UTC.
          */
         get: {
             parameters: {
@@ -349,39 +349,387 @@ export interface paths {
                     content: {
                         "application/json": {
                             /**
-                             * @description Sequential round number (months since program start)
+                             * @description Sequential round number from ROUND_MONTHS
                              * @example 3
                              */
                             roundNumber: number;
                             /**
-                             * @description ISO 8601 start of the round
-                             * @example 2026-04-01T00:00:00.000Z
+                             * @description ISO 8601 UTC start of the round
+                             * @example 2026-05-01T00:00:00.000Z
                              */
                             startDate: string;
                             /**
-                             * @description ISO 8601 end of the round
-                             * @example 2026-04-30T23:59:59.999Z
+                             * @description ISO 8601 UTC end of the round
+                             * @example 2026-05-31T23:59:59.999Z
                              */
                             endDate: string;
                             /**
                              * @description Percentage of round elapsed (0-100)
-                             * @example 53
+                             * @example 10
                              */
                             percentComplete: number;
-                            /** @example 14 */
+                            /** @example 28 */
                             daysRemaining: number;
                             /**
-                             * @description Current tier pool size in ENS
+                             * @description Current round tier pool size in ENS
                              * @example 5000.000000000000000000
                              */
                             poolSizeEns: string;
-                            /** @example 1 */
+                            /** @example 0 */
                             tierIndex: number;
                             /**
-                             * @description Month-over-month active VP growth percentage
-                             * @example 9.09
+                             * @description Current month active VP growth percentage
+                             * @example 0.00
                              */
                             vpGrowthPct: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List configured rounds with reward summaries
+         * @description Returns all configured ROUND_MONTHS rounds with UTC dates, global pool/distribution metadata when available, and truthful missing-data states.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Round summaries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            currentRoundNumber: number | null;
+                            rounds: {
+                                roundNumber: number;
+                                month: string;
+                                startDate: string;
+                                endDate: string;
+                                /** @enum {string} */
+                                status: "live" | "ended" | "pending" | "paid";
+                                /** @enum {string} */
+                                distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
+                                isCurrent: boolean;
+                                percentComplete: number | null;
+                                daysRemaining: number | null;
+                                tierIndex: number | null;
+                                tierLabel: string | null;
+                                poolSize: string | null;
+                                poolSizeEns: string | null;
+                                totalDistributed: string | null;
+                                totalDistributedEns: string | null;
+                                activeDelegateCount: number | null;
+                                eligibleDelegatorCount: number | null;
+                                computedAt: string | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rounds/{roundNumber}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get round details
+         * @description Returns one round's global reward summary, optional address-specific reward, and top delegate/token-holder rewards when distribution data exists.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Optional Ethereum address for wallet-specific round earnings */
+                    address?: string;
+                };
+                header?: never;
+                path: {
+                    roundNumber: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Round detail */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            roundNumber: number;
+                            month: string;
+                            startDate: string;
+                            endDate: string;
+                            /** @enum {string} */
+                            status: "live" | "ended" | "pending" | "paid";
+                            /** @enum {string} */
+                            distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
+                            isCurrent: boolean;
+                            percentComplete: number | null;
+                            daysRemaining: number | null;
+                            tierIndex: number | null;
+                            tierLabel: string | null;
+                            poolSize: string | null;
+                            poolSizeEns: string | null;
+                            totalDistributed: string | null;
+                            totalDistributedEns: string | null;
+                            activeDelegateCount: number | null;
+                            eligibleDelegatorCount: number | null;
+                            computedAt: string | null;
+                            addressReward: {
+                                address: string;
+                                /** @enum {string} */
+                                rewardStatus: "paid" | "no_reward" | "not_eligible" | "pending" | "unavailable";
+                                delegateReward: string;
+                                delegateRewardEns: string;
+                                tokenHolderReward: string;
+                                tokenHolderRewardEns: string;
+                                lotteryReward: string;
+                                lotteryRewardEns: string;
+                                totalReward: string;
+                                totalRewardEns: string;
+                            } | null;
+                            topDelegateRewards: {
+                                rank: number;
+                                address: string;
+                                ensName: string | null;
+                                /** @enum {string} */
+                                role: "delegate" | "token_holder";
+                                reward: string;
+                                rewardEns: string;
+                                /** @enum {string} */
+                                source: "direct" | "lottery" | "combined";
+                                votingPower: string | null;
+                                delegationCount: number | null;
+                            }[];
+                            topTokenHolderRewards: {
+                                rank: number;
+                                address: string;
+                                ensName: string | null;
+                                /** @enum {string} */
+                                role: "delegate" | "token_holder";
+                                reward: string;
+                                rewardEns: string;
+                                /** @enum {string} */
+                                source: "direct" | "lottery" | "combined";
+                                votingPower: string | null;
+                                delegationCount: number | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Unknown round */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rounds/{roundNumber}/distributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get round distribution rankings
+         * @description Returns top delegate and token-holder rewards for one round when stored distribution data exists.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Optional Ethereum address for wallet-specific round earnings */
+                    address?: string;
+                };
+                header?: never;
+                path: {
+                    roundNumber: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Round distribution detail */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            roundNumber: number;
+                            month: string;
+                            startDate: string;
+                            endDate: string;
+                            /** @enum {string} */
+                            status: "live" | "ended" | "pending" | "paid";
+                            /** @enum {string} */
+                            distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
+                            isCurrent: boolean;
+                            percentComplete: number | null;
+                            daysRemaining: number | null;
+                            tierIndex: number | null;
+                            tierLabel: string | null;
+                            poolSize: string | null;
+                            poolSizeEns: string | null;
+                            totalDistributed: string | null;
+                            totalDistributedEns: string | null;
+                            activeDelegateCount: number | null;
+                            eligibleDelegatorCount: number | null;
+                            computedAt: string | null;
+                            addressReward: {
+                                address: string;
+                                /** @enum {string} */
+                                rewardStatus: "paid" | "no_reward" | "not_eligible" | "pending" | "unavailable";
+                                delegateReward: string;
+                                delegateRewardEns: string;
+                                tokenHolderReward: string;
+                                tokenHolderRewardEns: string;
+                                lotteryReward: string;
+                                lotteryRewardEns: string;
+                                totalReward: string;
+                                totalRewardEns: string;
+                            } | null;
+                            topDelegateRewards: {
+                                rank: number;
+                                address: string;
+                                ensName: string | null;
+                                /** @enum {string} */
+                                role: "delegate" | "token_holder";
+                                reward: string;
+                                rewardEns: string;
+                                /** @enum {string} */
+                                source: "direct" | "lottery" | "combined";
+                                votingPower: string | null;
+                                delegationCount: number | null;
+                            }[];
+                            topTokenHolderRewards: {
+                                rank: number;
+                                address: string;
+                                ensName: string | null;
+                                /** @enum {string} */
+                                role: "delegate" | "token_holder";
+                                reward: string;
+                                rewardEns: string;
+                                /** @enum {string} */
+                                source: "direct" | "lottery" | "combined";
+                                votingPower: string | null;
+                                delegationCount: number | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Unknown round */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
                         };
                     };
                 };
@@ -519,25 +867,61 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List distribution months
-         * @description Returns an array of YYYY-MM month strings for which distributions have been computed, most recent first.
+         * List distribution months or address history
+         * @description Without query parameters, returns an array of YYYY-MM month strings for computed distributions. With ?address=0x..., returns that address's per-round distribution history derived from stored results.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Optional Ethereum address for address-specific distribution history */
+                    address?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Month list */
+                /** @description Distribution month list or address distribution history */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": string[];
+                        "application/json": string[] | {
+                            address: string;
+                            rounds: {
+                                roundNumber: number;
+                                month: string;
+                                startDate: string;
+                                endDate: string;
+                                /** @enum {string} */
+                                roundStatus: "live" | "ended" | "pending" | "paid";
+                                /** @enum {string} */
+                                distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
+                                /** @enum {string} */
+                                rewardStatus: "paid" | "no_reward" | "not_eligible" | "pending" | "unavailable";
+                                delegateReward: string;
+                                delegateRewardEns: string;
+                                tokenHolderReward: string;
+                                tokenHolderRewardEns: string;
+                                lotteryReward: string;
+                                lotteryRewardEns: string;
+                                totalReward: string;
+                                totalRewardEns: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
                     };
                 };
                 /** @description Internal server error */

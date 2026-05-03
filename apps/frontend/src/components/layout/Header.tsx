@@ -18,6 +18,10 @@ const StyledHeader = styled.header`
   top: 0;
   z-index: 100;
 
+  @media (max-width: 360px) {
+    padding: 0 12px;
+  }
+
   @media (min-width: 768px) {
     padding: 0 40px;
     height: 72px;
@@ -38,6 +42,10 @@ const BrandText = styled.span`
   font-size: ${tokens.font.size.base};
   color: ${tokens.color.darkBlue};
   white-space: nowrap;
+
+  @media (max-width: 360px) {
+    display: none;
+  }
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.lg};
