@@ -1,6 +1,7 @@
 import { render, type RenderOptions } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThorinProvider } from '@/app/providers/ThorinProvider'
 import { WalletStateContext } from '@/features/wallet/WalletStateProvider'
 import type { AppWalletState } from '@/features/wallet/wallet.types'
@@ -18,14 +19,23 @@ export function renderApp(
     ...options
   }: TestRenderOptions = {},
 ) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <ThorinProvider>
-        <WalletStateContext.Provider value={walletState}>
-          {ui}
-        </WalletStateContext.Provider>
-      </ThorinProvider>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <ThorinProvider>
+          <WalletStateContext.Provider value={walletState}>
+            {ui}
+          </WalletStateContext.Provider>
+        </ThorinProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
     options,
   )
 }

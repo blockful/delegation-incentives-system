@@ -454,6 +454,10 @@ export interface paths {
                                 totalDistributed: string | null;
                                 totalDistributedEns: string | null;
                                 activeDelegateCount: number | null;
+                                /**
+                                 * @description Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.
+                                 * @example 312
+                                 */
                                 eligibleDelegatorCount: number | null;
                                 computedAt: string | null;
                             }[];
@@ -497,6 +501,8 @@ export interface paths {
                 query?: {
                     /** @description Optional Ethereum address for wallet-specific round earnings */
                     address?: string;
+                    /** @description Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row. */
+                    rewardLimit?: string;
                 };
                 header?: never;
                 path: {
@@ -532,6 +538,10 @@ export interface paths {
                             totalDistributed: string | null;
                             totalDistributedEns: string | null;
                             activeDelegateCount: number | null;
+                            /**
+                             * @description Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.
+                             * @example 312
+                             */
                             eligibleDelegatorCount: number | null;
                             computedAt: string | null;
                             addressReward: {
@@ -635,6 +645,8 @@ export interface paths {
                 query?: {
                     /** @description Optional Ethereum address for wallet-specific round earnings */
                     address?: string;
+                    /** @description Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row. */
+                    rewardLimit?: string;
                 };
                 header?: never;
                 path: {
@@ -670,6 +682,10 @@ export interface paths {
                             totalDistributed: string | null;
                             totalDistributedEns: string | null;
                             activeDelegateCount: number | null;
+                            /**
+                             * @description Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.
+                             * @example 312
+                             */
                             eligibleDelegatorCount: number | null;
                             computedAt: string | null;
                             addressReward: {
@@ -1241,7 +1257,7 @@ export interface paths {
                              */
                             totalDelegatedEns: string;
                             /**
-                             * @description Count of unique addresses earning rewards (active delegates plus unique direct delegators to active delegates)
+                             * @description Current count of active delegates plus unique direct delegators to active delegates. This is live delegation state, not finalized round payout recipients.
                              * @example 412
                              */
                             holdersEarning: number;

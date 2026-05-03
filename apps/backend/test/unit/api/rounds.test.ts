@@ -80,6 +80,32 @@ function makeDistributionRow(month = "2026-03"): DistributionStorageRow {
   };
 }
 
+function makeManyRewardsDistributionRow(
+  month = "2026-03",
+  count = 12,
+): DistributionStorageRow {
+  const row = makeDistributionRow(month);
+  const result = JSON.parse(row.resultJson);
+
+  result.rewards = Array.from({ length: count }, (_, index) => {
+    const rank = BigInt(count - index);
+    const address = `0x${(index + 1).toString(16).padStart(40, "0")}`;
+
+    return {
+      address,
+      delegateReward: ens(rank),
+      delegatorReward: ens(rank),
+      total: ens(rank * 2n),
+    };
+  });
+  result.lottery = { buckets: [] };
+
+  return {
+    ...row,
+    resultJson: JSON.stringify(result),
+  };
+}
+
 function makeRoundsApp(rows: DistributionStorageRow[] = []) {
   return createRoundsApp({
     getRows: async () => rows,
@@ -205,6 +231,57 @@ describe("round reward responses", () => {
       rewardEns: "35.000000000000000000",
       source: "combined",
     });
+  });
+
+  it("keeps round detail rankings capped at 10 by default", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const res = await makeRoundsApp([makeManyRewardsDistributionRow()]).request("/rounds/1");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.topDelegateRewards).toHaveLength(10);
+    expect(body.topTokenHolderRewards).toHaveLength(10);
+    expect(body.topDelegateRewards.at(-1)).toMatchObject({
+      rank: 10,
+      rewardEns: "3.000000000000000000",
+    });
+    expect(body.topTokenHolderRewards.at(-1)).toMatchObject({
+      rank: 10,
+      rewardEns: "3.000000000000000000",
+    });
+  });
+
+  it("returns every round detail ranking row when rewardLimit is all", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const res = await makeRoundsApp([makeManyRewardsDistributionRow()]).request(
+      "/rounds/1?rewardLimit=all",
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.topDelegateRewards).toHaveLength(12);
+    expect(body.topTokenHolderRewards).toHaveLength(12);
+    expect(body.topDelegateRewards.at(-1)).toMatchObject({
+      rank: 12,
+      rewardEns: "1.000000000000000000",
+    });
+    expect(body.topTokenHolderRewards.at(-1)).toMatchObject({
+      rank: 12,
+      rewardEns: "1.000000000000000000",
+    });
+  });
+
+  it("rejects invalid round detail reward limits", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const res = await makeRoundsApp([makeManyRewardsDistributionRow()]).request(
+      "/rounds/1?rewardLimit=0",
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid rewardLimit" });
   });
 
   it("returns clean empty detail state when a round has no stored distribution", async () => {

@@ -35,9 +35,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function withAddress(path: string, address?: string): string {
-  if (!address) return path;
-  const params = new URLSearchParams({ address });
-  return `${path}?${params.toString()}`;
+  return withQuery(path, address ? { address } : undefined);
+}
+
+function withQuery(path: string, query?: Record<string, string | undefined>): string {
+  if (!query) return path;
+
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) params.set(key, value);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `${path}?${queryString}` : path;
 }
 
 export const api = {
@@ -66,8 +76,15 @@ export const api = {
 
   rounds: () => request<RoundListResponse>("/rounds"),
 
-  round: (roundNumber: number, address?: string) =>
-    request<RoundDetailResponse>(withAddress(`/rounds/${roundNumber}`, address)),
+  round: (
+    roundNumber: number,
+    address?: string,
+    options?: { rewardLimit?: "all" | `${number}` },
+  ) =>
+    request<RoundDetailResponse>(withQuery(`/rounds/${roundNumber}`, {
+      address,
+      rewardLimit: options?.rewardLimit,
+    })),
 } as const;
 
 export { ApiClientError };

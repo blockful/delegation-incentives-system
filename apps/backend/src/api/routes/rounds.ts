@@ -60,7 +60,10 @@ const RoundSummarySchema = z.object({
   totalDistributed: z.string().nullable(),
   totalDistributedEns: z.string().nullable(),
   activeDelegateCount: z.number().nullable(),
-  eligibleDelegatorCount: z.number().nullable(),
+  eligibleDelegatorCount: z.number().nullable().openapi({
+    description: "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
+    example: 312,
+  }),
   computedAt: z.string().nullable(),
 });
 
@@ -113,7 +116,14 @@ const AddressQuery = z.object({
     description: "Optional Ethereum address for wallet-specific round earnings",
     example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
   }),
+  rewardLimit: z.string().optional().openapi({
+    description: "Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row.",
+    example: "all",
+  }),
 });
+
+const DEFAULT_REWARD_LIMIT = 10;
+const MAX_REWARD_LIMIT = 1000;
 
 export interface RoundTierSnapshot {
   tierIndex: number;
@@ -308,11 +318,16 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
   const handleRoundDetail = async (c: any) => {
     try {
       const { roundNumber } = c.req.valid("param");
-      const { address: rawAddress } = c.req.valid("query");
+      const { address: rawAddress, rewardLimit: rawRewardLimit } = c.req.valid("query");
       const address = rawAddress ? normalizeAddress(rawAddress) : null;
 
       if (rawAddress && !address) {
         return c.json({ error: "Invalid Ethereum address" }, 400);
+      }
+
+      const rewardLimit = parseRewardLimit(rawRewardLimit);
+      if (rewardLimit == null) {
+        return c.json({ error: "Invalid rewardLimit" }, 400);
       }
 
       const [rows, tierSnapshot] = await Promise.all([
@@ -342,8 +357,8 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
           addressReward: address
             ? buildAddressRoundReward(address, parsed, summary.distributionDataStatus)
             : null,
-          topDelegateRewards: parsed ? getTopDelegateRewards(parsed) : [],
-          topTokenHolderRewards: parsed ? getTopTokenHolderRewards(parsed) : [],
+          topDelegateRewards: parsed ? getTopDelegateRewards(parsed, rewardLimit) : [],
+          topTokenHolderRewards: parsed ? getTopTokenHolderRewards(parsed, rewardLimit) : [],
         },
         200,
       );
@@ -357,6 +372,18 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
   app.openapi(roundDistributionsRoute, handleRoundDetail);
 
   return app;
+}
+
+function parseRewardLimit(rawRewardLimit: string | undefined): number | null {
+  if (!rawRewardLimit) return DEFAULT_REWARD_LIMIT;
+  if (rawRewardLimit === "all") return Number.POSITIVE_INFINITY;
+
+  const rewardLimit = Number(rawRewardLimit);
+  if (!Number.isInteger(rewardLimit) || rewardLimit < 1 || rewardLimit > MAX_REWARD_LIMIT) {
+    return null;
+  }
+
+  return rewardLimit;
 }
 
 function buildRoundSummaries({

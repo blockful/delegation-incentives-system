@@ -714,7 +714,9 @@
                             "type": [
                               "number",
                               "null"
-                            ]
+                            ],
+                            "description": "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
+                            "example": 312
                           },
                           "computedAt": {
                             "type": [
@@ -803,6 +805,17 @@
             "required": false,
             "description": "Optional Ethereum address for wallet-specific round earnings",
             "name": "address",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row.",
+              "example": "all"
+            },
+            "required": false,
+            "description": "Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row.",
+            "name": "rewardLimit",
             "in": "query"
           }
         ],
@@ -911,7 +924,9 @@
                       "type": [
                         "number",
                         "null"
-                      ]
+                      ],
+                      "description": "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
+                      "example": 312
                     },
                     "computedAt": {
                       "type": [
@@ -1218,6 +1233,17 @@
             "description": "Optional Ethereum address for wallet-specific round earnings",
             "name": "address",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row.",
+              "example": "all"
+            },
+            "required": false,
+            "description": "Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row.",
+            "name": "rewardLimit",
+            "in": "query"
           }
         ],
         "responses": {
@@ -1325,7 +1351,9 @@
                       "type": [
                         "number",
                         "null"
-                      ]
+                      ],
+                      "description": "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
+                      "example": 312
                     },
                     "computedAt": {
                       "type": [
@@ -2341,7 +2369,7 @@
                     },
                     "holdersEarning": {
                       "type": "number",
-                      "description": "Count of unique addresses earning rewards (active delegates plus unique direct delegators to active delegates)",
+                      "description": "Current count of active delegates plus unique direct delegators to active delegates. This is live delegation state, not finalized round payout recipients.",
                       "example": 412
                     }
                   },

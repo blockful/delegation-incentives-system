@@ -63,7 +63,7 @@ export function StatsBar({
       </Cell>
       <Cell>
         <CellValue>{holdersEarning ?? '—'}</CellValue>
-        <CellLabel>holders earning</CellLabel>
+        <CellLabel>wallets at active delegates</CellLabel>
       </Cell>
     </Bar>
   )

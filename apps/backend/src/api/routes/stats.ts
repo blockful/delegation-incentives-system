@@ -17,7 +17,7 @@ const StatsResponse = z.object({
   holdersEarning: z
     .number()
     .openapi({
-      description: "Count of unique addresses earning rewards (active delegates plus unique direct delegators to active delegates)",
+      description: "Current count of active delegates plus unique direct delegators to active delegates. This is live delegation state, not finalized round payout recipients.",
       example: 412,
     }),
 });

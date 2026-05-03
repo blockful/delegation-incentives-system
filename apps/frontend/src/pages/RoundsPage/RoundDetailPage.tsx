@@ -117,6 +117,20 @@ const Section = styled.section`
   min-width: 0;
 `
 
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+`
+
+const RowCount = styled.span`
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+`
+
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -296,6 +310,10 @@ function RankingTable({ rows }: { rows: RewardRank[] }) {
   )
 }
 
+function rewardCountLabel(count: number): string {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'recipient' : 'recipients'}`
+}
+
 export function RoundDetailPage() {
   const params = useParams()
   const roundNumber = Number(params.roundNumber)
@@ -311,7 +329,9 @@ export function RoundDetailPage() {
   const fetchRound = useCallback(
     async () => {
       try {
-        return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined)
+        return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined, {
+          rewardLimit: 'all',
+        })
       } catch (error) {
         if (!isLegacyEndpointError(error)) throw error
 
@@ -463,18 +483,24 @@ export function RoundDetailPage() {
           <SummaryValue>{round.data.activeDelegateCount ?? 'Unavailable'}</SummaryValue>
         </SummaryItem>
         <SummaryItem>
-          <SummaryLabel>Eligible Holders</SummaryLabel>
+          <SummaryLabel>Direct Payout Holders</SummaryLabel>
           <SummaryValue>{round.data.eligibleDelegatorCount ?? 'Unavailable'}</SummaryValue>
         </SummaryItem>
       </SummaryGrid>
 
       <Section>
-        <Eyebrow>Top Delegate Rewards</Eyebrow>
+        <SectionHeader>
+          <Eyebrow>Delegate Rewards</Eyebrow>
+          <RowCount>{rewardCountLabel(round.data.topDelegateRewards.length)}</RowCount>
+        </SectionHeader>
         <RankingTable rows={round.data.topDelegateRewards} />
       </Section>
 
       <Section>
-        <Eyebrow>Top Token Holder Rewards</Eyebrow>
+        <SectionHeader>
+          <Eyebrow>Token Holder Rewards</Eyebrow>
+          <RowCount>{rewardCountLabel(round.data.topTokenHolderRewards.length)}</RowCount>
+        </SectionHeader>
         <RankingTable rows={round.data.topTokenHolderRewards} />
       </Section>
     </Page>

@@ -19,7 +19,7 @@ describe('DelegatesPage', () => {
     expect(screen.getByText('1.3M')).toBeInTheDocument()
     expect(screen.getByText('ENS delegated')).toBeInTheDocument()
     expect(screen.getByText('412')).toBeInTheDocument()
-    expect(screen.getByText('holders earning')).toBeInTheDocument()
+    expect(screen.getByText('wallets at active delegates')).toBeInTheDocument()
   })
 
   it('renders delegate cards after loading', async () => {

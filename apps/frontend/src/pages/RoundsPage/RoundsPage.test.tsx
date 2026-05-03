@@ -220,7 +220,13 @@ describe('RoundDetailPage', () => {
     expect(screen.getByText('+20%')).toBeInTheDocument()
     expect(screen.getByText('155 ENS')).toBeInTheDocument()
     expect(screen.getAllByText('35 ENS').length).toBeGreaterThan(0)
+    expect(screen.getByText('Direct Payout Holders')).toBeInTheDocument()
+    expect(screen.getByText('Delegate Rewards')).toBeInTheDocument()
+    expect(screen.getByText('Token Holder Rewards')).toBeInTheDocument()
     expect(screen.getByText('delegate.eth')).toBeInTheDocument()
+    expect(screen.getByText('rank-eleven.eth')).toBeInTheDocument()
+    expect(screen.getByText('holder-eleven.eth')).toBeInTheDocument()
+    expect(screen.getAllByText('2 recipients')).toHaveLength(2)
     expect(screen.getByText('Direct + lottery')).toBeInTheDocument()
   })
 
