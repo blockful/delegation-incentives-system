@@ -6,7 +6,7 @@
 #
 # What it does:
 #   1. Deletes the cached distribution result from the database.
-#   2. The next GET /distributions/<month> request will automatically recompute.
+#   2. Run pnpm --dir apps/backend distribution:run -- --month <month> --force
 #
 # Prerequisites: DATABASE_URL must be set (either in .env or environment).
 
@@ -41,4 +41,5 @@ fi
 
 echo "Clearing cached distribution for $MONTH..."
 psql "$DATABASE_URL" -c "DELETE FROM distribution_result WHERE month = '$MONTH';"
-echo "Done. Next GET /distributions/$MONTH will recompute automatically."
+echo "Done. Recompute with:"
+echo "  pnpm --dir apps/backend distribution:run -- --month $MONTH --force"

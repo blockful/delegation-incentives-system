@@ -3,6 +3,12 @@ import { db } from "ponder:api";
 import { distributionResult } from "ponder:schema";
 import { desc } from "drizzle-orm";
 import { distributionToCsv } from "../../output/csv-writer.js";
+import {
+  DistributionComputeError,
+  computeAndStoreDistribution,
+  type ComputeDistributionOptions,
+  type ComputeDistributionResponse,
+} from "../distribution-compute.js";
 import { normalizeAddress } from "../helpers.js";
 import {
   distributionToApiResponse,
@@ -54,6 +60,21 @@ const AddressDistributionHistoryResponse = z.object({
   rounds: z.array(AddressDistributionRoundSchema),
 });
 
+const ComputeDistributionResponseSchema = z.object({
+  month: z.string(),
+  status: z.enum(["cached", "computed"]),
+  computedAt: z.string(),
+  tierIndex: z.number(),
+  poolSize: z.string(),
+  poolSizeEns: z.string(),
+  totalDistributed: z.string(),
+  totalDistributedEns: z.string(),
+  activeDelegateCount: z.number(),
+  eligibleDelegatorCount: z.number(),
+  rewardCount: z.number(),
+  lotteryBucketCount: z.number(),
+});
+
 type AddressDistributionRewardStatus =
   | "paid"
   | "no_reward"
@@ -81,6 +102,11 @@ interface AddressDistributionRound {
 
 export interface DistributionRouteDeps {
   getRows?: () => Promise<DistributionStorageRow[]>;
+  computeDistribution?: (
+    month: string,
+    options: ComputeDistributionOptions,
+  ) => Promise<ComputeDistributionResponse>;
+  adminToken?: string | null;
   now?: () => Date;
 }
 
@@ -185,9 +211,58 @@ const csvRoute = createRoute({
   },
 });
 
+const computeRoute = createRoute({
+  method: "post",
+  path: "/distributions/{month}/compute",
+  tags: ["Distributions"],
+  summary: "Compute and store a monthly distribution",
+  description:
+    "Runs the domain distribution pipeline for a completed configured round and stores the result in distribution_result. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
+  request: {
+    params: MonthParam,
+    body: {
+      required: false,
+      content: {
+        "application/json": {
+          schema: z.object({
+            force: z.boolean().optional().openapi({
+              description: "Recompute and overwrite an existing cached result",
+              example: false,
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Distribution was already cached or was computed",
+      content: { "application/json": { schema: ComputeDistributionResponseSchema } },
+    },
+    401: {
+      description: "Missing or invalid admin token",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    404: {
+      description: "Unknown configured month",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    409: {
+      description: "Round has not ended yet",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
+
 export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
   const app = new OpenAPIHono();
   const getRows = deps.getRows ?? getStoredDistributionRows;
+  const computeDistribution = deps.computeDistribution ?? computeAndStoreDistribution;
+  const adminToken = deps.adminToken ?? process.env.DISTRIBUTION_ADMIN_TOKEN ?? null;
   const getNow = deps.now ?? (() => new Date());
 
   app.openapi(listRoute, async (c) => {
@@ -255,7 +330,41 @@ export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
     }
   });
 
+  app.openapi(computeRoute, async (c) => {
+    try {
+      const { month } = c.req.valid("param");
+      if (!isComputeAuthorized(c, adminToken)) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const body = await c.req.json().catch(() => ({}));
+      const result = await computeDistribution(month, {
+        force: body?.force === true,
+        now: getNow(),
+      });
+
+      return c.json(result, 200);
+    } catch (err) {
+      if (err instanceof DistributionComputeError) {
+        return c.json({ error: err.message }, err.status as 404 | 409 | 500);
+      }
+
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+
   return app;
+}
+
+function isComputeAuthorized(c: any, adminToken: string | null): boolean {
+  if (!adminToken) return true;
+
+  const headerToken = c.req.header("x-distribution-admin-token");
+  if (headerToken === adminToken) return true;
+
+  const authorization = c.req.header("authorization");
+  return authorization === `Bearer ${adminToken}`;
 }
 
 function buildAddressDistributionHistory(

@@ -1095,6 +1095,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/distributions/{month}/compute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compute and store a monthly distribution
+         * @description Runs the domain distribution pipeline for a completed configured round and stores the result in distribution_result. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    month: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Recompute and overwrite an existing cached result
+                         * @example false
+                         */
+                        force?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Distribution was already cached or was computed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            month: string;
+                            /** @enum {string} */
+                            status: "cached" | "computed";
+                            computedAt: string;
+                            tierIndex: number;
+                            poolSize: string;
+                            poolSizeEns: string;
+                            totalDistributed: string;
+                            totalDistributedEns: string;
+                            activeDelegateCount: number;
+                            eligibleDelegatorCount: number;
+                            rewardCount: number;
+                            lotteryBucketCount: number;
+                        };
+                    };
+                };
+                /** @description Missing or invalid admin token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Unknown configured month */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Round has not ended yet */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stats": {
         parameters: {
             query?: never;

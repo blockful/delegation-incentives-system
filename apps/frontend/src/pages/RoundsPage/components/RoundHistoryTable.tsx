@@ -115,6 +115,11 @@ const MutedValue = styled.span`
   white-space: nowrap;
 `
 
+const EmptyState = styled.p`
+  margin: 0;
+  color: ${tokens.color.darkGray};
+`
+
 const StatusPill = styled.span<{ $status: RoundStatus }>`
   display: inline-flex;
   justify-self: start;
@@ -154,6 +159,15 @@ function renderValue(value: string) {
 }
 
 export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
+  if (entries.length === 0) {
+    return (
+      <Container>
+        <Eyebrow>Round History</Eyebrow>
+        <EmptyState>No rounds configured.</EmptyState>
+      </Container>
+    )
+  }
+
   return (
     <Container>
       <Eyebrow>Round History</Eyebrow>

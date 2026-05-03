@@ -80,7 +80,6 @@ export const addressDistributionFixture: AddressDistributionHistoryResponse = {
       endDate: '2026-05-31T23:59:59.999Z',
       roundStatus: 'live',
       distributionDataStatus: 'in_progress',
-      address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
       rewardStatus: 'pending',
       delegateReward: '0',
       delegateRewardEns: '0.000000000000000000',
@@ -98,7 +97,6 @@ export const addressDistributionFixture: AddressDistributionHistoryResponse = {
       endDate: '2026-04-30T23:59:59.999Z',
       roundStatus: 'paid',
       distributionDataStatus: 'available',
-      address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
       rewardStatus: 'paid',
       delegateReward: '0',
       delegateRewardEns: '0.000000000000000000',
@@ -116,7 +114,6 @@ export const addressDistributionFixture: AddressDistributionHistoryResponse = {
       endDate: '2026-03-31T23:59:59.999Z',
       roundStatus: 'ended',
       distributionDataStatus: 'missing',
-      address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
       rewardStatus: 'unavailable',
       delegateReward: '0',
       delegateRewardEns: '0.000000000000000000',
@@ -132,7 +129,18 @@ export const addressDistributionFixture: AddressDistributionHistoryResponse = {
 
 export const roundDetailFixture: RoundDetailResponse = {
   ...roundListFixture.rounds[1],
-  addressReward: addressDistributionFixture.rounds[1],
+  addressReward: {
+    address: addressDistributionFixture.address,
+    rewardStatus: addressDistributionFixture.rounds[1].rewardStatus,
+    delegateReward: addressDistributionFixture.rounds[1].delegateReward,
+    delegateRewardEns: addressDistributionFixture.rounds[1].delegateRewardEns,
+    tokenHolderReward: addressDistributionFixture.rounds[1].tokenHolderReward,
+    tokenHolderRewardEns: addressDistributionFixture.rounds[1].tokenHolderRewardEns,
+    lotteryReward: addressDistributionFixture.rounds[1].lotteryReward,
+    lotteryRewardEns: addressDistributionFixture.rounds[1].lotteryRewardEns,
+    totalReward: addressDistributionFixture.rounds[1].totalReward,
+    totalRewardEns: addressDistributionFixture.rounds[1].totalRewardEns,
+  },
   topDelegateRewards: [
     {
       rank: 1,

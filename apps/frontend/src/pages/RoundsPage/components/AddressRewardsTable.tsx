@@ -156,6 +156,7 @@ function rewardDisplay(round: AddressDistributionRound) {
   if (round.rewardStatus === 'pending') return <Muted>Pending</Muted>
   if (round.rewardStatus === 'unavailable') return <Muted>Unavailable</Muted>
   if (round.rewardStatus === 'not_eligible') return <Muted>0 ENS</Muted>
+  if (round.rewardStatus === 'no_reward') return <Muted>0 ENS</Muted>
 
   const amount = formatEnsAmount(round.totalRewardEns, {
     maximumFractionDigits: 4,
@@ -193,6 +194,18 @@ export function AddressRewardsTable({
       <Container>
         <Eyebrow>Address Rewards</Eyebrow>
         <EmptyState>Rewards unavailable.</EmptyState>
+      </Container>
+    )
+  }
+
+  if (!rounds || rounds.length === 0) {
+    return (
+      <Container>
+        <Header>
+          <Eyebrow>Address Rewards</Eyebrow>
+          <AddressText>{address}</AddressText>
+        </Header>
+        <EmptyState>No reward history.</EmptyState>
       </Container>
     )
   }

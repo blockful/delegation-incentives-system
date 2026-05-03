@@ -137,13 +137,22 @@ export interface RoundDetailResponse extends RoundSummary {
   topTokenHolderRewards: RewardRank[]
 }
 
-export interface AddressDistributionRound extends AddressRoundReward {
+export interface AddressDistributionRound {
   roundNumber: number
   month: string
   startDate: string
   endDate: string
   roundStatus: RoundStatus
   distributionDataStatus: DistributionDataStatus
+  rewardStatus: RewardStatus
+  delegateReward: string
+  delegateRewardEns: string
+  tokenHolderReward: string
+  tokenHolderRewardEns: string
+  lotteryReward: string
+  lotteryRewardEns: string
+  totalReward: string
+  totalRewardEns: string
 }
 
 export interface AddressDistributionHistoryResponse {

@@ -269,3 +269,85 @@ describe("address-specific distributions", () => {
     expect(await res.json()).toEqual(["2026-04", "2026-03"]);
   });
 });
+
+describe("distribution computation route", () => {
+  it("requires an admin token when configured", async () => {
+    const app = createDistributionsApp({
+      adminToken: "secret",
+      computeDistribution: async () => {
+        throw new Error("should not compute");
+      },
+    });
+
+    const res = await app.request("/distributions/2026-03/compute", {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("runs the configured compute function and returns its summary", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+    const calls: Array<{ month: string; force?: boolean }> = [];
+    const app = createDistributionsApp({
+      adminToken: "secret",
+      now: () => new Date("2026-05-03T12:00:00.000Z"),
+      computeDistribution: async (month, options) => {
+        calls.push({ month, force: options.force });
+        return {
+          month,
+          status: "computed",
+          computedAt: "2026-05-03T12:00:00.000Z",
+          tierIndex: 1,
+          poolSize: ens(8_000n),
+          poolSizeEns: "8000.000000000000000000",
+          totalDistributed: ens(155n),
+          totalDistributedEns: "155.000000000000000000",
+          activeDelegateCount: 42,
+          eligibleDelegatorCount: 312,
+          rewardCount: 3,
+          lotteryBucketCount: 1,
+        };
+      },
+    });
+
+    const res = await app.request("/distributions/2026-04/compute", {
+      method: "POST",
+      body: JSON.stringify({ force: true }),
+      headers: {
+        "content-type": "application/json",
+        "x-distribution-admin-token": "secret",
+      },
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([{ month: "2026-04", force: true }]);
+    expect(body).toMatchObject({
+      month: "2026-04",
+      status: "computed",
+      totalDistributedEns: "155.000000000000000000",
+      rewardCount: 3,
+    });
+  });
+
+  it("refuses to compute a live round even with force", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+    const app = createDistributionsApp({
+      now: () => new Date("2026-05-03T12:00:00.000Z"),
+    });
+
+    const res = await app.request("/distributions/2026-05/compute", {
+      method: "POST",
+      body: JSON.stringify({ force: true }),
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: "Round 2026-05 has not ended yet",
+    });
+  });
+});

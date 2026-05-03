@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
-import { api } from '@/api'
-import type { RoundSummary } from '@/api/types'
+import { api, ApiClientError } from '@/api'
+import type { RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -66,12 +66,20 @@ const livePulse = keyframes`
   60%       { box-shadow: 0 0 0 6px rgba(26, 127, 55, 0); }
 `
 
-const LiveBadge = styled.span`
+const StatusBadge = styled.span<{ $status: RoundStatus }>`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: ${tokens.color.tierHighlight};
-  color: ${tokens.color.positiveEmphasis};
+  background: ${({ $status }) =>
+    $status === 'live'
+      ? tokens.color.tierHighlight
+      : $status === 'paid'
+        ? tokens.color.tierHighlight
+        : tokens.color.borderLight};
+  color: ${({ $status }) =>
+    $status === 'live' || $status === 'paid'
+      ? tokens.color.positiveEmphasis
+      : tokens.color.darkGray};
   font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.black};
   padding: 6px 18px 6px 12px;
@@ -96,6 +104,11 @@ const LiveDot = styled.span`
     width: 14px;
     height: 14px;
   }
+`
+
+const EmptyState = styled.p`
+  margin: 0;
+  color: ${tokens.color.darkGray};
 `
 
 const Grid = styled.div`
@@ -168,6 +181,24 @@ function getWalletAddress(walletState: ReturnType<typeof useWalletState>): strin
   return walletState.address
 }
 
+function isLegacyEndpointError(error: unknown): boolean {
+  return error instanceof ApiClientError && error.status === 404
+}
+
+function selectFeaturedRound(rounds: RoundSummary[]): RoundSummary | null {
+  return rounds.find((round) => round.isCurrent)
+    ?? rounds.find((round) => round.status === 'pending')
+    ?? rounds[0]
+    ?? null
+}
+
+function headingStatus(status: RoundStatus): string {
+  if (status === 'live') return 'live'
+  if (status === 'paid') return 'paid'
+  if (status === 'pending') return 'pending'
+  return 'ended'
+}
+
 export function RoundsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const walletState = useWalletState()
@@ -181,7 +212,9 @@ export function RoundsPage() {
   const fetchRounds = useCallback(async () => {
     try {
       return await api.rounds()
-    } catch {
+    } catch (error) {
+      if (!isLegacyEndpointError(error)) throw error
+
       const currentRound = await api.currentRound()
       return buildRoundListFromCurrentRound(currentRound)
     }
@@ -197,7 +230,9 @@ export function RoundsPage() {
           return buildUnavailableAddressHistory(activeAddress, roundList.data?.rounds ?? [])
         }
         return history
-      } catch {
+      } catch (error) {
+        if (!isLegacyEndpointError(error)) throw error
+
         return buildUnavailableAddressHistory(activeAddress, roundList.data?.rounds ?? [])
       }
     },
@@ -215,7 +250,7 @@ export function RoundsPage() {
 
   const currentRound = useMemo(() => {
     const rounds = roundList.data?.rounds ?? []
-    return rounds.find((round) => round.isCurrent) ?? rounds[0] ?? null
+    return selectFeaturedRound(rounds)
   }, [roundList.data])
 
   const roundHistory = useMemo(
@@ -268,7 +303,19 @@ export function RoundsPage() {
     )
   }
 
-  if (!tierData || !roundList.data || !currentRound) return null
+  if (!tierData || !roundList.data) return null
+
+  if (!currentRound) {
+    return (
+      <Page>
+        <HeaderBlock>
+          <Eyebrow>Rounds</Eyebrow>
+          <RoundsPageTitle>No rounds configured</RoundsPageTitle>
+          <EmptyState>Round history is unavailable.</EmptyState>
+        </HeaderBlock>
+      </Page>
+    )
+  }
 
   const currentTierIndex = currentRound.tierIndex ?? tierData.currentTierIndex
   const currentTier = tierData.tiers[currentTierIndex] ?? tierData.tiers[tierData.currentTierIndex]
@@ -287,10 +334,10 @@ export function RoundsPage() {
           <RoundsPageTitle aria-label={`Round ${currentRound.roundNumber} is ${currentRound.status}`}>
             Round {currentRound.roundNumber} is
           </RoundsPageTitle>
-          <LiveBadge aria-hidden="true">
-            <LiveDot />
-            {currentRound.status}
-          </LiveBadge>
+          <StatusBadge $status={currentRound.status} aria-hidden="true">
+            {currentRound.status === 'live' ? <LiveDot /> : null}
+            {headingStatus(currentRound.status)}
+          </StatusBadge>
         </HeadingRow>
         <AddressPanel>
           <Eyebrow>Inspect Address</Eyebrow>
@@ -310,6 +357,7 @@ export function RoundsPage() {
         <LeftColumn>
           <RoundCard
             roundNumber={currentRound.roundNumber}
+            status={currentRound.status}
             percentComplete={currentRound.percentComplete ?? 0}
             startDate={formatUtcDate(currentRound.startDate, { year: 'numeric' })}
             endDate={formatUtcDate(currentRound.endDate, { year: 'numeric' })}

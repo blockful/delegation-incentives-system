@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "sh -c 'set -a; . ../../.env 2>/dev/null; set +a; PORT=${BACKEND_PORT:-42069} ponder dev'",
     "start": "sh -c 'set -a; . ../../.env 2>/dev/null; set +a; PORT=${BACKEND_PORT:-42069} ponder start'",
+    "distribution:run": "sh -c 'set -a; . ../../.env 2>/dev/null; set +a; tsx ../../scripts/run-distribution.ts \"$@\"' --",
     "codegen": "ponder codegen",
     "openapi:gen": "vitest run scripts/gen-openapi.test.ts",
     "test": "vitest run --exclude scripts/gen-openapi.test.ts",
@@ -25,7 +26,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/node": "^22.19.15",
     "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

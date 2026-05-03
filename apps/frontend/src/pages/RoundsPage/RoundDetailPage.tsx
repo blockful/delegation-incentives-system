@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
-import { api } from '@/api'
+import { api, ApiClientError } from '@/api'
 import type { AddressRoundReward, RewardRank, RewardStatus, RoundStatus } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -208,6 +208,10 @@ function getWalletAddress(walletState: ReturnType<typeof useWalletState>): strin
   return walletState.address
 }
 
+function isLegacyEndpointError(error: unknown): boolean {
+  return error instanceof ApiClientError && error.status === 404
+}
+
 function statusLabel(status: RoundStatus | RewardStatus): string {
   if (status === 'live') return 'Live'
   if (status === 'paid') return 'Paid'
@@ -300,11 +304,15 @@ export function RoundDetailPage() {
     async () => {
       try {
         return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined)
-      } catch {
+      } catch (error) {
+        if (!isLegacyEndpointError(error)) throw error
+
         let rounds = []
         try {
           rounds = (await api.rounds()).rounds
-        } catch {
+        } catch (roundsError) {
+          if (!isLegacyEndpointError(roundsError)) throw roundsError
+
           const currentRound = await api.currentRound()
           rounds = buildRoundListFromCurrentRound(currentRound).rounds
         }
@@ -366,6 +374,15 @@ export function RoundDetailPage() {
         <LoadingWrapper>
           <Spinner />
         </LoadingWrapper>
+      </Page>
+    )
+  }
+
+  if (!Number.isInteger(roundNumber) || roundNumber <= 0) {
+    return (
+      <Page>
+        <BackLink to={backTo}>Back to rounds</BackLink>
+        <ErrorMessage>Unknown round.</ErrorMessage>
       </Page>
     )
   }

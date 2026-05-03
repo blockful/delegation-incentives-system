@@ -1,89 +1,162 @@
 #!/usr/bin/env tsx
 /**
- * Distribution script — triggered by cron after month-end.
+ * Compute completed configured round distributions through the backend API.
  *
  * Usage:
- *   tsx scripts/run-distribution.ts
- *
- * Reads ROUND_MONTHS from environment, runs the pipeline for any completed
- * round whose output JSON does not yet exist, and writes the result to
- * distributions/{month}.json.
+ *   pnpm --dir apps/backend distribution:run
+ *   pnpm --dir apps/backend distribution:run -- --month 2026-04 --force
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+interface Args {
+  months: string[];
+  force: boolean;
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const DIST_DIR = path.join(ROOT, "distributions");
 
-function getConfiguredRounds(): string[] {
-  const raw = process.env.ROUND_MONTHS ?? "";
-  return raw
+function loadEnvFile(): void {
+  const envPath = path.join(ROOT, ".env");
+  if (!fs.existsSync(envPath)) return;
+
+  for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    if (process.env[key] != null) continue;
+    process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
+  }
+}
+
+function parseArgs(argv: string[]): Args {
+  const months: string[] = [];
+  let force = false;
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === "--force") {
+      force = true;
+      continue;
+    }
+
+    if (arg === "--month") {
+      const month = argv[i + 1];
+      if (!month) throw new Error("--month requires a YYYY-MM value");
+      months.push(month);
+      i += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--month=")) {
+      months.push(arg.slice("--month=".length));
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return { months, force };
+}
+
+function parseRoundMonths(): string[] {
+  return (process.env.ROUND_MONTHS ?? "")
     .split(",")
-    .map((m) => m.trim())
-    .filter(Boolean);
+    .map((month) => month.trim())
+    .filter((month) => /^\d{4}-\d{2}$/.test(month))
+    .sort();
 }
 
-function isMonthOver(month: string): boolean {
-  const [year, m] = month.split("-").map(Number);
-  // Month is over when the current UTC date is past the last day of the month
-  const nextMonth = new Date(Date.UTC(year, m, 1)); // first day of next month
-  return Date.now() >= nextMonth.getTime();
+function hasEnded(month: string, now = new Date()): boolean {
+  const [yearText, monthText] = month.split("-");
+  const year = Number(yearText);
+  const monthNumber = Number(monthText);
+  const nextMonthStart = Date.UTC(year, monthNumber, 1);
+  return now.getTime() >= nextMonthStart;
 }
 
-function outputExists(month: string): boolean {
-  return fs.existsSync(path.join(DIST_DIR, `${month}.json`));
+function apiBaseUrl(): string {
+  const explicit = process.env.DISTRIBUTION_API_BASE_URL;
+  if (explicit) return explicit.replace(/\/+$/, "");
+
+  const port = process.env.BACKEND_PORT ?? "42069";
+  return `http://localhost:${port}`;
 }
 
-async function main() {
-  const rounds = getConfiguredRounds();
-
-  if (rounds.length === 0) {
-    console.log("No ROUND_MONTHS configured. Nothing to do.");
-    process.exit(0);
+async function assertReady(baseUrl: string): Promise<void> {
+  const ready = await fetch(`${baseUrl}/ready`);
+  if (!ready.ok) {
+    throw new Error(`Backend is not ready: ${ready.status} ${ready.statusText}`);
   }
 
-  console.log(`Configured rounds: ${rounds.join(", ")}`);
-
-  const pendingRounds = rounds.filter(
-    (month) => isMonthOver(month) && !outputExists(month),
-  );
-
-  if (pendingRounds.length === 0) {
-    console.log("All completed rounds already have distribution files. Nothing to do.");
-    process.exit(0);
+  const status = await fetch(`${baseUrl}/status`);
+  if (status.ok) {
+    const body = await status.json().catch(() => null) as any;
+    const blockNumber = body?.mainnet?.block?.number;
+    if (blockNumber != null) {
+      console.log(`Backend ready at indexed mainnet block ${blockNumber}`);
+    }
   }
+}
 
-  console.log(`Pending rounds to compute: ${pendingRounds.join(", ")}`);
+async function computeMonth(baseUrl: string, month: string, force: boolean): Promise<void> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  const adminToken = process.env.DISTRIBUTION_ADMIN_TOKEN;
+  if (adminToken) headers["x-distribution-admin-token"] = adminToken;
 
-  // Ensure output directory exists
-  fs.mkdirSync(DIST_DIR, { recursive: true });
+  const response = await fetch(`${baseUrl}/distributions/${month}/compute`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ force }),
+  });
+  const body = await response.json().catch(() => null) as any;
 
-  for (const month of pendingRounds) {
-    console.log(`\n=== Computing distribution for ${month} ===`);
-
-    // NOTE: The actual pipeline execution requires a running Ponder instance
-    // with an indexed database and a viem PublicClient. This script is a
-    // skeleton that should be integrated with the backend's data source
-    // once the system is deployed.
-    //
-    // In production, this would:
-    // 1. Connect to the Ponder PostgreSQL database
-    // 2. Create a viem PublicClient from RPC_URL
-    // 3. Build the IncentivesDataSource via createDataSource(db, client)
-    // 4. Call runDistributionPipeline(month, dataSource)
-    // 5. Write the result JSON
-
-    console.log(`TODO: Connect to Ponder DB and run pipeline for ${month}`);
-    console.log(
-      `Output would be written to: ${path.join(DIST_DIR, `${month}.json`)}`,
+  if (!response.ok) {
+    throw new Error(
+      `Failed to compute ${month}: ${response.status} ${body?.error ?? response.statusText}`,
     );
   }
+
+  console.log(
+    `${month}: ${body.status}, distributed ${body.totalDistributedEns} ENS, rewards ${body.rewardCount}, lottery buckets ${body.lotteryBucketCount}`,
+  );
 }
 
-main().catch((err) => {
-  console.error("Distribution script failed:", err);
+async function main(): Promise<void> {
+  loadEnvFile();
+
+  const args = parseArgs(process.argv.slice(2));
+  const configured = parseRoundMonths();
+  const months = args.months.length > 0
+    ? args.months
+    : configured.filter((month) => hasEnded(month));
+
+  if (months.length === 0) {
+    console.log("No completed ROUND_MONTHS to compute.");
+    return;
+  }
+
+  const baseUrl = apiBaseUrl();
+  await assertReady(baseUrl);
+
+  for (const month of months) {
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      throw new Error(`Invalid month format: ${month}`);
+    }
+
+    await computeMonth(baseUrl, month, args.force);
+  }
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

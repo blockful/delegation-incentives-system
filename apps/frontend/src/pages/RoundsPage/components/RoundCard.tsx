@@ -2,9 +2,11 @@ import styled from 'styled-components'
 import { tokens } from '@/styles'
 import { StatCard } from '@/components/shared/StatCard'
 import { formatEnsAmount } from '@/utils/format'
+import type { RoundStatus } from '@/api/types'
 
 interface RoundCardProps {
   roundNumber: number
+  status: RoundStatus
   percentComplete: number
   startDate: string
   endDate: string
@@ -40,11 +42,21 @@ const RoundTitle = styled.h3`
   margin: 0;
 `
 
-const InProgressTag = styled.span`
+const StatusTag = styled.span<{ $status: RoundStatus }>`
   display: inline-flex;
   align-items: center;
-  background: ${tokens.color.lightBlueOpacity};
-  color: ${tokens.color.blue};
+  background: ${({ $status }) =>
+    $status === 'live'
+      ? tokens.color.lightBlueOpacity
+      : $status === 'paid'
+        ? tokens.color.tierHighlight
+        : tokens.color.borderLight};
+  color: ${({ $status }) =>
+    $status === 'live'
+      ? tokens.color.blue
+      : $status === 'paid'
+        ? tokens.color.positiveEmphasis
+        : tokens.color.darkGray};
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   padding: 3px 10px;
@@ -100,8 +112,16 @@ function clampPercent(percent: number): number {
   return Math.min(Math.max(percent, 0), 100)
 }
 
+function statusLabel(status: RoundStatus): string {
+  if (status === 'live') return 'In progress'
+  if (status === 'paid') return 'Paid'
+  if (status === 'pending') return 'Pending'
+  return 'Ended'
+}
+
 export function RoundCard({
   roundNumber,
+  status,
   percentComplete,
   startDate,
   endDate,
@@ -117,13 +137,14 @@ export function RoundCard({
     <Card>
       <Header>
         <RoundTitle>Round {roundNumber}</RoundTitle>
-        <InProgressTag
+        <StatusTag
+          $status={status}
           role="status"
           aria-live="polite"
-          aria-label={`Round ${roundNumber} is in progress`}
+          aria-label={`Round ${roundNumber} is ${statusLabel(status)}`}
         >
-          In progress
-        </InProgressTag>
+          {statusLabel(status)}
+        </StatusTag>
       </Header>
 
       <ProgressSection>

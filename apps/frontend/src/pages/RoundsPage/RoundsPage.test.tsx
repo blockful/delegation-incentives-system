@@ -150,6 +150,48 @@ describe('RoundsPage', () => {
 
     expect(roundLink).toHaveAttribute('href', '/rounds/2')
   })
+
+  it('does not label an ended-only round as in progress', async () => {
+    server.use(
+      http.get('/api/rounds', () =>
+        HttpResponse.json({
+          currentRoundNumber: null,
+          rounds: [
+            {
+              ...roundListFixture.rounds[1],
+              isCurrent: false,
+              status: 'paid',
+              percentComplete: 100,
+              daysRemaining: 0,
+            },
+          ],
+        }),
+      ),
+    )
+
+    renderApp(<RoundsPage />)
+
+    expect(await screen.findByRole('heading', { name: /Round 2 is paid/i })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: /round 2 is paid/i })).toHaveTextContent('Paid')
+    expect(screen.queryByText('In progress')).not.toBeInTheDocument()
+  })
+
+  it('shows an address reward empty state for an empty address history', async () => {
+    server.use(
+      http.get('/api/distributions', () =>
+        HttpResponse.json({
+          address: WALLET,
+          rounds: [],
+        }),
+      ),
+    )
+
+    renderApp(<RoundsPage />, {
+      walletState: { status: 'connected', address: WALLET },
+    })
+
+    expect(await screen.findByText('No reward history.')).toBeInTheDocument()
+  })
 })
 
 describe('RoundDetailPage', () => {
@@ -186,5 +228,11 @@ describe('RoundDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Round 3' })).toBeInTheDocument()
     expect(screen.getAllByText('Pending').length).toBeGreaterThan(0)
     expect(screen.getAllByText('No distribution data.')).toHaveLength(2)
+  })
+
+  it('renders a useful invalid round state', async () => {
+    renderDetail('/rounds/abc')
+
+    expect(await screen.findByText('Unknown round.')).toBeInTheDocument()
   })
 })
