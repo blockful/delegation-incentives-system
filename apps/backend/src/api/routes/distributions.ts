@@ -62,17 +62,18 @@ const AddressDistributionHistoryResponse = z.object({
 
 const ComputeDistributionResponseSchema = z.object({
   month: z.string(),
-  status: z.enum(["cached", "computed"]),
-  computedAt: z.string(),
-  tierIndex: z.number(),
-  poolSize: z.string(),
-  poolSizeEns: z.string(),
-  totalDistributed: z.string(),
-  totalDistributedEns: z.string(),
-  activeDelegateCount: z.number(),
-  eligibleDelegatorCount: z.number(),
-  rewardCount: z.number(),
-  lotteryBucketCount: z.number(),
+  status: z.enum(["cached", "computed", "skipped"]),
+  reason: z.string().optional(),
+  computedAt: z.string().nullable(),
+  tierIndex: z.number().nullable(),
+  poolSize: z.string().nullable(),
+  poolSizeEns: z.string().nullable(),
+  totalDistributed: z.string().nullable(),
+  totalDistributedEns: z.string().nullable(),
+  activeDelegateCount: z.number().nullable(),
+  eligibleDelegatorCount: z.number().nullable(),
+  rewardCount: z.number().nullable(),
+  lotteryBucketCount: z.number().nullable(),
 });
 
 type AddressDistributionRewardStatus =
@@ -217,7 +218,7 @@ const computeRoute = createRoute({
   tags: ["Distributions"],
   summary: "Compute and store a monthly distribution",
   description:
-    "Runs the domain distribution pipeline for a completed configured round and stores the result in distribution_result. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
+    "Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
   request: {
     params: MonthParam,
     body: {
@@ -236,7 +237,7 @@ const computeRoute = createRoute({
   },
   responses: {
     200: {
-      description: "Distribution was already cached or was computed",
+      description: "Distribution was already cached, computed, or skipped because the round has not ended",
       content: { "application/json": { schema: ComputeDistributionResponseSchema } },
     },
     401: {
@@ -245,10 +246,6 @@ const computeRoute = createRoute({
     },
     404: {
       description: "Unknown configured month",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
-    },
-    409: {
-      description: "Round has not ended yet",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
@@ -346,7 +343,8 @@ export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
       return c.json(result, 200);
     } catch (err) {
       if (err instanceof DistributionComputeError) {
-        return c.json({ error: err.message }, err.status as 404 | 409 | 500);
+        const status = err.status === 404 ? 404 : 500;
+        return c.json({ error: err.message }, status);
       }
 
       const message = err instanceof Error ? err.message : "Unknown error";

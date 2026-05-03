@@ -2113,7 +2113,7 @@
           "Distributions"
         ],
         "summary": "Compute and store a monthly distribution",
-        "description": "Runs the domain distribution pipeline for a completed configured round and stores the result in distribution_result. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
+        "description": "Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
         "parameters": [
           {
             "schema": {
@@ -2145,7 +2145,7 @@
         },
         "responses": {
           "200": {
-            "description": "Distribution was already cached or was computed",
+            "description": "Distribution was already cached, computed, or skipped because the round has not ended",
             "content": {
               "application/json": {
                 "schema": {
@@ -2158,38 +2158,72 @@
                       "type": "string",
                       "enum": [
                         "cached",
-                        "computed"
+                        "computed",
+                        "skipped"
                       ]
                     },
-                    "computedAt": {
+                    "reason": {
                       "type": "string"
+                    },
+                    "computedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tierIndex": {
-                      "type": "number"
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     },
                     "poolSize": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "poolSizeEns": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "totalDistributed": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "totalDistributedEns": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "activeDelegateCount": {
-                      "type": "number"
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     },
                     "eligibleDelegatorCount": {
-                      "type": "number"
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     },
                     "rewardCount": {
-                      "type": "number"
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     },
                     "lotteryBucketCount": {
-                      "type": "number"
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
@@ -2230,24 +2264,6 @@
           },
           "404": {
             "description": "Unknown configured month",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Round has not ended yet",
             "content": {
               "application/json": {
                 "schema": {

@@ -335,7 +335,7 @@ describe("distribution computation route", () => {
     });
   });
 
-  it("refuses to compute a live round even with force", async () => {
+  it("skips a live round without computing even with force", async () => {
     process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
     const app = createDistributionsApp({
       now: () => new Date("2026-05-03T12:00:00.000Z"),
@@ -347,9 +347,15 @@ describe("distribution computation route", () => {
       headers: { "content-type": "application/json" },
     });
 
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({
-      error: "Round 2026-05 has not ended yet",
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      month: "2026-05",
+      status: "skipped",
+      reason: "Round 2026-05 has not ended yet",
+      computedAt: null,
+      tierIndex: null,
+      totalDistributedEns: null,
+      rewardCount: null,
     });
   });
 });

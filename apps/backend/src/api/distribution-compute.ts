@@ -12,7 +12,7 @@ import {
 } from "./distribution-utils.js";
 import { getConfiguredRoundMonths, getRoundDateRange } from "./round-config.js";
 
-export type ComputeDistributionStatus = "cached" | "computed";
+export type ComputeDistributionStatus = "cached" | "computed" | "skipped";
 
 export interface ComputeDistributionOptions {
   force?: boolean;
@@ -22,16 +22,17 @@ export interface ComputeDistributionOptions {
 export interface ComputeDistributionResponse {
   month: string;
   status: ComputeDistributionStatus;
-  computedAt: string;
-  tierIndex: number;
-  poolSize: string;
-  poolSizeEns: string;
-  totalDistributed: string;
-  totalDistributedEns: string;
-  activeDelegateCount: number;
-  eligibleDelegatorCount: number;
-  rewardCount: number;
-  lotteryBucketCount: number;
+  reason?: string;
+  computedAt: string | null;
+  tierIndex: number | null;
+  poolSize: string | null;
+  poolSizeEns: string | null;
+  totalDistributed: string | null;
+  totalDistributedEns: string | null;
+  activeDelegateCount: number | null;
+  eligibleDelegatorCount: number | null;
+  rewardCount: number | null;
+  lotteryBucketCount: number | null;
 }
 
 export class DistributionComputeError extends Error {
@@ -52,7 +53,8 @@ export async function computeAndStoreDistribution(
   options: ComputeDistributionOptions = {},
 ): Promise<ComputeDistributionResponse> {
   const now = options.now ?? new Date();
-  validateComputableMonth(month, now);
+  const skipped = getSkipResponse(month, now);
+  if (skipped) return skipped;
 
   const key = `${month}:${options.force === true ? "force" : "cached"}`;
   const pending = inFlightComputations.get(key);
@@ -140,7 +142,10 @@ function getDistributionWriteSql(): ReturnType<typeof postgres> {
   return distributionWriteSql;
 }
 
-function validateComputableMonth(month: string, now: Date): void {
+function getSkipResponse(
+  month: string,
+  now: Date,
+): ComputeDistributionResponse | null {
   const configuredMonths = getConfiguredRoundMonths();
   if (configuredMonths.length > 0 && !configuredMonths.includes(month)) {
     throw new DistributionComputeError(404, `Unknown configured month ${month}`);
@@ -148,11 +153,24 @@ function validateComputableMonth(month: string, now: Date): void {
 
   const { endDate } = getRoundDateRange(month);
   if (now.getTime() <= Date.parse(endDate)) {
-    throw new DistributionComputeError(
-      409,
-      `Round ${month} has not ended yet`,
-    );
+    return {
+      month,
+      status: "skipped",
+      reason: `Round ${month} has not ended yet`,
+      computedAt: null,
+      tierIndex: null,
+      poolSize: null,
+      poolSizeEns: null,
+      totalDistributed: null,
+      totalDistributedEns: null,
+      activeDelegateCount: null,
+      eligibleDelegatorCount: null,
+      rewardCount: null,
+      lotteryBucketCount: null,
+    };
   }
+
+  return null;
 }
 
 function computeResponse(

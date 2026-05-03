@@ -1109,7 +1109,7 @@ export interface paths {
         put?: never;
         /**
          * Compute and store a monthly distribution
-         * @description Runs the domain distribution pipeline for a completed configured round and stores the result in distribution_result. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.
+         * @description Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.
          */
         post: {
             parameters: {
@@ -1132,7 +1132,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Distribution was already cached or was computed */
+                /** @description Distribution was already cached, computed, or skipped because the round has not ended */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1141,17 +1141,18 @@ export interface paths {
                         "application/json": {
                             month: string;
                             /** @enum {string} */
-                            status: "cached" | "computed";
-                            computedAt: string;
-                            tierIndex: number;
-                            poolSize: string;
-                            poolSizeEns: string;
-                            totalDistributed: string;
-                            totalDistributedEns: string;
-                            activeDelegateCount: number;
-                            eligibleDelegatorCount: number;
-                            rewardCount: number;
-                            lotteryBucketCount: number;
+                            status: "cached" | "computed" | "skipped";
+                            reason?: string;
+                            computedAt: string | null;
+                            tierIndex: number | null;
+                            poolSize: string | null;
+                            poolSizeEns: string | null;
+                            totalDistributed: string | null;
+                            totalDistributedEns: string | null;
+                            activeDelegateCount: number | null;
+                            eligibleDelegatorCount: number | null;
+                            rewardCount: number | null;
+                            lotteryBucketCount: number | null;
                         };
                     };
                 };
@@ -1168,17 +1169,6 @@ export interface paths {
                 };
                 /** @description Unknown configured month */
                 404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Round has not ended yet */
-                409: {
                     headers: {
                         [name: string]: unknown;
                     };

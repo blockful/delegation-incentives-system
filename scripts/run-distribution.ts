@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Compute completed configured round distributions through the backend API.
+ * Compute configured round distributions through the backend API.
  *
  * Usage:
  *   pnpm --dir apps/backend distribution:run
@@ -73,14 +73,6 @@ function parseRoundMonths(): string[] {
     .sort();
 }
 
-function hasEnded(month: string, now = new Date()): boolean {
-  const [yearText, monthText] = month.split("-");
-  const year = Number(yearText);
-  const monthNumber = Number(monthText);
-  const nextMonthStart = Date.UTC(year, monthNumber, 1);
-  return now.getTime() >= nextMonthStart;
-}
-
 function apiBaseUrl(): string {
   const explicit = process.env.DISTRIBUTION_API_BASE_URL;
   if (explicit) return explicit.replace(/\/+$/, "");
@@ -125,6 +117,11 @@ async function computeMonth(baseUrl: string, month: string, force: boolean): Pro
     );
   }
 
+  if (body?.status === "skipped") {
+    console.log(`${month}: skipped, ${body.reason ?? "round is not ready"}`);
+    return;
+  }
+
   console.log(
     `${month}: ${body.status}, distributed ${body.totalDistributedEns} ENS, rewards ${body.rewardCount}, lottery buckets ${body.lotteryBucketCount}`,
   );
@@ -137,10 +134,10 @@ async function main(): Promise<void> {
   const configured = parseRoundMonths();
   const months = args.months.length > 0
     ? args.months
-    : configured.filter((month) => hasEnded(month));
+    : configured;
 
   if (months.length === 0) {
-    console.log("No completed ROUND_MONTHS to compute.");
+    console.log("No ROUND_MONTHS to compute.");
     return;
   }
 
