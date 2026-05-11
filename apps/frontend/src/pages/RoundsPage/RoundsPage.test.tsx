@@ -50,12 +50,14 @@ describe('RoundsPage', () => {
     expect(within(currentRoundRow!).queryByText('Apr 30')).not.toBeInTheDocument()
     expect(within(currentRoundRow!).getByText('5,000 ENS')).toBeInTheDocument()
     expect(within(currentRoundRow!).getByText('0%')).toBeInTheDocument()
+    expect(within(currentRoundRow!).getByText('Pending')).toBeInTheDocument()
     expect(within(currentRoundRow!).getByText('No address')).toBeInTheDocument()
     expect(within(history).queryByText('Distributed')).not.toBeInTheDocument()
     expect(within(history).queryByText('Tier')).not.toBeInTheDocument()
     expect(within(history).queryByText('Status')).not.toBeInTheDocument()
 
     expect(within(history).getByText('Apr 1–30, 2026')).toBeInTheDocument()
+    expect(within(history).getByText('1 winners / 2 entries')).toBeInTheDocument()
     expect(within(history).getByText('Mar 1–31, 2026')).toBeInTheDocument()
     expect(screen.queryByText('+12.3456 ENS')).not.toBeInTheDocument()
   })
@@ -195,7 +197,7 @@ describe('RoundsPage', () => {
 
     const history = await findSection('Round History')
     await waitFor(() => {
-      expect(within(history).getByText('Pending')).toBeInTheDocument()
+      expect(within(history).getAllByText('Pending').length).toBeGreaterThan(0)
     })
     expect(within(history).getAllByText('Unavailable').length).toBeGreaterThan(0)
   })
@@ -221,6 +223,14 @@ describe('RoundDetailPage', () => {
     expect(screen.getByText('155 ENS')).toBeInTheDocument()
     expect(screen.getAllByText('35 ENS').length).toBeGreaterThan(0)
     expect(screen.getByText('Direct Payout Holders')).toBeInTheDocument()
+    expect(screen.getByText('Lottery Prize')).toBeInTheDocument()
+    expect(screen.getByText('Lottery Results')).toBeInTheDocument()
+    expect(screen.getAllByText('Lottery Entries').length).toBeGreaterThan(0)
+    expect(screen.getByText('Ethereum prevRandao')).toBeInTheDocument()
+    expect(screen.getByText('keccak256(prevRandao, bucketIndex)')).toBeInTheDocument()
+    expect(screen.getByText('#24,996,367')).toBeInTheDocument()
+    expect(screen.getAllByText('75%').length).toBeGreaterThan(0)
+    expect(screen.getByText('7.5 ENS')).toBeInTheDocument()
     expect(screen.getByText('Delegate Rewards')).toBeInTheDocument()
     expect(screen.getByText('Token Holder Rewards')).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: 'Previous round' })).toHaveAttribute(
@@ -233,7 +243,7 @@ describe('RoundDetailPage', () => {
     )
     expect(screen.getByText('delegate.eth')).toBeInTheDocument()
     expect(screen.getByText('rank-eleven.eth')).toBeInTheDocument()
-    expect(screen.getByText('holder-eleven.eth')).toBeInTheDocument()
+    expect(screen.getAllByText('holder-eleven.eth').length).toBeGreaterThan(0)
     expect(screen.getAllByText('2 recipients')).toHaveLength(2)
     expect(screen.queryByText('Type')).not.toBeInTheDocument()
     expect(screen.queryByText('Metadata')).not.toBeInTheDocument()
@@ -251,6 +261,8 @@ describe('RoundDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Round 3' })).toBeInTheDocument()
     expect(screen.getAllByText('Pending').length).toBeGreaterThan(0)
     expect(screen.getAllByText('No distribution data.')).toHaveLength(2)
+    expect(screen.getByText('No lottery data.')).toBeInTheDocument()
+    expect(screen.getByText('No lottery entries.')).toBeInTheDocument()
   })
 
   it('renders a useful invalid round state', async () => {

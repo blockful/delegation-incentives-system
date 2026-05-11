@@ -4,7 +4,15 @@ import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
 import { api, ApiClientError } from '@/api'
-import type { AddressRoundReward, RewardRank, RewardStatus, RoundStatus } from '@/api/types'
+import type {
+  AddressRoundReward,
+  LotteryBucketDetail,
+  LotteryDetail,
+  LotteryEntryDetail,
+  RewardRank,
+  RewardStatus,
+  RoundStatus,
+} from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, Eyebrow, PageTitle, LoadingWrapper, ErrorMessage } from '@/styles'
@@ -177,6 +185,10 @@ const SectionHeader = styled.div`
   max-width: 680px;
 `
 
+const WideSectionHeader = styled(SectionHeader)`
+  max-width: 840px;
+`
+
 const RowCount = styled.span`
   color: ${tokens.color.darkGray};
   font-size: ${tokens.font.size.sm};
@@ -196,6 +208,10 @@ const Table = styled.table`
 const TableWrap = styled.div`
   width: 100%;
   max-width: 680px;
+`
+
+const WideTableWrap = styled(TableWrap)`
+  max-width: 840px;
 `
 
 const Thead = styled.thead`
@@ -269,6 +285,40 @@ const RewardValue = styled.span`
   white-space: nowrap;
 `
 
+const MetaGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${tokens.spacing.md};
+  width: 100%;
+  max-width: 840px;
+
+  @media (min-width: 760px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+`
+
+const MetaItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+`
+
+const MetaLabel = styled.span`
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+`
+
+const MetaValue = styled.span`
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  overflow-wrap: anywhere;
+`
+
 const EmptyState = styled.p`
   margin: 0;
   color: ${tokens.color.darkGray};
@@ -311,6 +361,25 @@ function formatAddressReward(reward: AddressRoundReward | null): string {
   if (reward.rewardStatus === 'pending') return 'Pending'
   if (reward.rewardStatus === 'unavailable') return 'Unavailable'
   return formatEns(reward.totalRewardEns, '0 ENS')
+}
+
+function formatCount(value: number | null | undefined, empty = 'Unavailable'): string {
+  return value == null ? empty : value.toLocaleString('en-US')
+}
+
+function formatProbability(value: string | null): string {
+  if (value == null) return 'Unavailable'
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 'Unavailable'
+  return `${(numericValue * 100).toLocaleString('en-US', {
+    maximumFractionDigits: 2,
+  })}%`
+}
+
+function formatBlockNumber(value: string): string {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return value
+  return `#${numericValue.toLocaleString('en-US')}`
 }
 
 function buildRoundPath(roundNumber: number, activeAddress: string, activeAddressValid: boolean): string {
@@ -360,6 +429,104 @@ function RankingTable({ rows }: { rows: RewardRank[] }) {
 
 function rewardCountLabel(count: number): string {
   return `${count.toLocaleString('en-US')} ${count === 1 ? 'recipient' : 'recipients'}`
+}
+
+function lotteryBucketCountLabel(lottery: LotteryDetail | null): string {
+  if (!lottery) return 'Unavailable'
+  return `${lottery.bucketCount.toLocaleString('en-US')} ${lottery.bucketCount === 1 ? 'bucket' : 'buckets'}`
+}
+
+function lotteryEntryCountLabel(lottery: LotteryDetail | null): string {
+  if (!lottery) return 'Unavailable'
+  return `${lottery.entryCount.toLocaleString('en-US')} ${lottery.entryCount === 1 ? 'entry' : 'entries'}`
+}
+
+function flattenLotteryEntries(lottery: LotteryDetail | null): LotteryEntryDetail[] {
+  if (!lottery) return []
+  return lottery.buckets.flatMap((bucket) => bucket.entries)
+}
+
+function LotteryBucketTable({ buckets }: { buckets: LotteryBucketDetail[] }) {
+  if (buckets.length === 0) {
+    return <EmptyState>No lottery results.</EmptyState>
+  }
+
+  return (
+    <WideTableWrap>
+      <Table>
+        <colgroup>
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '42%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '13%' }} />
+          <col style={{ width: '13%' }} />
+        </colgroup>
+        <Thead>
+          <tr>
+            <Th>Bucket</Th>
+            <Th>Winner</Th>
+            <Th>Prize</Th>
+            <Th>Entries</Th>
+            <Th>Chance</Th>
+          </tr>
+        </Thead>
+        <Tbody>
+          {buckets.map((bucket) => (
+            <Row key={bucket.bucketIndex}>
+              <Td data-label="Bucket">#{bucket.bucketIndex + 1}</Td>
+              <Td data-label="Winner">
+                <AddressText>{bucket.winnerEnsName ?? truncateAddress(bucket.winner)}</AddressText>
+              </Td>
+              <Td data-label="Prize">
+                <RewardValue>{formatEns(bucket.prizeEns)}</RewardValue>
+              </Td>
+              <Td data-label="Entries">{bucket.entryCount.toLocaleString('en-US')}</Td>
+              <Td data-label="Chance">{formatProbability(bucket.winnerProbability)}</Td>
+            </Row>
+          ))}
+        </Tbody>
+      </Table>
+    </WideTableWrap>
+  )
+}
+
+function LotteryEntryTable({ entries }: { entries: LotteryEntryDetail[] }) {
+  if (entries.length === 0) {
+    return <EmptyState>No lottery entries.</EmptyState>
+  }
+
+  return (
+    <WideTableWrap>
+      <Table>
+        <colgroup>
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '48%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '18%' }} />
+        </colgroup>
+        <Thead>
+          <tr>
+            <Th>Bucket</Th>
+            <Th>Address</Th>
+            <Th>Amount</Th>
+            <Th>Chance</Th>
+          </tr>
+        </Thead>
+        <Tbody>
+          {entries.map((entry) => (
+            <Row key={`${entry.bucketIndex}-${entry.entryIndex}-${entry.address}`}>
+              <Td data-label="Bucket">#{entry.bucketIndex + 1}</Td>
+              <Td data-label="Address">
+                <AddressText>{entry.ensName ?? truncateAddress(entry.address)}</AddressText>
+              </Td>
+              <Td data-label="Amount">{formatEns(entry.amountEns, '0 ENS')}</Td>
+              <Td data-label="Chance">{formatProbability(entry.probability)}</Td>
+            </Row>
+          ))}
+        </Tbody>
+      </Table>
+    </WideTableWrap>
+  )
 }
 
 export function RoundDetailPage() {
@@ -438,6 +605,10 @@ export function RoundDetailPage() {
     .at(-1) ?? null
   const nextRoundNumber = availableRoundNumbers
     .find((candidate) => candidate > roundNumber) ?? null
+  const lotteryEntries = useMemo(
+    () => flattenLotteryEntries(round.data?.lottery ?? null),
+    [round.data?.lottery],
+  )
 
   function handleAddressSubmit() {
     const nextAddress = addressInput.trim()
@@ -574,7 +745,67 @@ export function RoundDetailPage() {
           <SummaryLabel>Direct Payout Holders</SummaryLabel>
           <SummaryValue>{round.data.eligibleDelegatorCount ?? 'Unavailable'}</SummaryValue>
         </SummaryItem>
+        <SummaryItem>
+          <SummaryLabel>Lottery Entries</SummaryLabel>
+          <SummaryValue>{formatCount(round.data.lotteryEntryCount)}</SummaryValue>
+        </SummaryItem>
+        <SummaryItem>
+          <SummaryLabel>Lottery Winners</SummaryLabel>
+          <SummaryValue>{formatCount(round.data.lotteryWinnerCount)}</SummaryValue>
+        </SummaryItem>
+        <SummaryItem>
+          <SummaryLabel>Lottery Prize</SummaryLabel>
+          <SummaryValue>{formatEns(round.data.lotteryPrizeEns, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
+        </SummaryItem>
       </SummaryGrid>
+
+      <Section>
+        <WideSectionHeader>
+          <Eyebrow>Lottery Results</Eyebrow>
+          <RowCount>{lotteryBucketCountLabel(round.data.lottery)}</RowCount>
+        </WideSectionHeader>
+        {round.data.lottery ? (
+          <>
+            <MetaGrid>
+              <MetaItem>
+                <MetaLabel>Seed Source</MetaLabel>
+                <MetaValue>{round.data.lottery.seed.label}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Seed Block</MetaLabel>
+                <MetaValue>{formatBlockNumber(round.data.lottery.seed.blockNumber)}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Bucket Target</MetaLabel>
+                <MetaValue>{formatEns(round.data.lottery.bucketTargetEns, '0 ENS')}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Participants</MetaLabel>
+                <MetaValue>{round.data.lottery.participantCount.toLocaleString('en-US')}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Algorithm</MetaLabel>
+                <MetaValue>{round.data.lottery.seed.algorithm}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Seed</MetaLabel>
+                <MetaValue>{round.data.lottery.seed.value}</MetaValue>
+              </MetaItem>
+            </MetaGrid>
+            <LotteryBucketTable buckets={round.data.lottery.buckets} />
+          </>
+        ) : (
+          <EmptyState>No lottery data.</EmptyState>
+        )}
+      </Section>
+
+      <Section>
+        <WideSectionHeader>
+          <Eyebrow>Lottery Entries</Eyebrow>
+          <RowCount>{lotteryEntryCountLabel(round.data.lottery)}</RowCount>
+        </WideSectionHeader>
+        <LotteryEntryTable entries={lotteryEntries} />
+      </Section>
 
       <Section>
         <SectionHeader>

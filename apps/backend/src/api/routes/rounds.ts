@@ -12,6 +12,7 @@ import {
 import {
   getAddressReward,
   getDistributionSnapshot,
+  getLotteryDetail,
   getTopDelegateRewards,
   getTopTokenHolderRewards,
   parseDistributionRows,
@@ -64,6 +65,24 @@ const RoundSummarySchema = z.object({
     description: "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
     example: 312,
   }),
+  lotteryBucketCount: z.number().nullable().openapi({
+    description: "Number of deterministic lottery buckets formed from sub-1 ENS entries.",
+    example: 53,
+  }),
+  lotteryEntryCount: z.number().nullable().openapi({
+    description: "Number of sub-threshold reward entries participating in the lottery.",
+    example: 2597,
+  }),
+  lotteryParticipantCount: z.number().nullable().openapi({
+    description: "Unique address count across lottery entries.",
+    example: 2597,
+  }),
+  lotteryWinnerCount: z.number().nullable().openapi({
+    description: "Unique lottery winner count.",
+    example: 53,
+  }),
+  lotteryPrize: z.string().nullable(),
+  lotteryPrizeEns: z.string().nullable(),
   computedAt: z.string().nullable(),
 });
 
@@ -97,10 +116,54 @@ const AddressRoundRewardSchema = z.object({
   totalRewardEns: z.string(),
 });
 
+const LotteryEntrySchema = z.object({
+  bucketIndex: z.number(),
+  entryIndex: z.number(),
+  address: z.string(),
+  ensName: z.string().nullable(),
+  amount: z.string(),
+  amountEns: z.string(),
+  probability: z.string().openapi({
+    description: "Entry win probability inside the bucket, formatted as a 0-1 decimal string.",
+    example: "0.1250",
+  }),
+});
+
+const LotteryBucketSchema = z.object({
+  bucketIndex: z.number(),
+  prize: z.string(),
+  prizeEns: z.string(),
+  winner: z.string(),
+  winnerEnsName: z.string().nullable(),
+  winnerProbability: z.string().nullable(),
+  entryCount: z.number(),
+  entries: z.array(LotteryEntrySchema),
+});
+
+const LotteryDetailSchema = z.object({
+  seed: z.object({
+    source: z.literal("ethereum_prev_randao"),
+    label: z.string(),
+    value: z.string(),
+    blockNumber: z.string(),
+    algorithm: z.string(),
+  }),
+  bucketTarget: z.string(),
+  bucketTargetEns: z.string(),
+  totalPrize: z.string(),
+  totalPrizeEns: z.string(),
+  bucketCount: z.number(),
+  entryCount: z.number(),
+  participantCount: z.number(),
+  winnerCount: z.number(),
+  buckets: z.array(LotteryBucketSchema),
+});
+
 const RoundDetailResponse = RoundSummarySchema.extend({
   addressReward: AddressRoundRewardSchema.nullable(),
   topDelegateRewards: z.array(RewardRankSchema),
   topTokenHolderRewards: z.array(RewardRankSchema),
+  lottery: LotteryDetailSchema.nullable(),
 });
 
 const RoundNumberParam = z.object({
@@ -359,6 +422,7 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
             : null,
           topDelegateRewards: parsed ? getTopDelegateRewards(parsed, rewardLimit) : [],
           topTokenHolderRewards: parsed ? getTopTokenHolderRewards(parsed, rewardLimit) : [],
+          lottery: parsed ? getLotteryDetail(parsed) : null,
         },
         200,
       );
@@ -459,6 +523,12 @@ function buildRoundSummary({
     totalDistributedEns: snapshot?.totalDistributedEns ?? null,
     activeDelegateCount: snapshot?.activeDelegateCount ?? null,
     eligibleDelegatorCount: snapshot?.eligibleDelegatorCount ?? null,
+    lotteryBucketCount: snapshot?.lotteryBucketCount ?? null,
+    lotteryEntryCount: snapshot?.lotteryEntryCount ?? null,
+    lotteryParticipantCount: snapshot?.lotteryParticipantCount ?? null,
+    lotteryWinnerCount: snapshot?.lotteryWinnerCount ?? null,
+    lotteryPrize: snapshot?.lotteryPrize ?? null,
+    lotteryPrizeEns: snapshot?.lotteryPrizeEns ?? null,
     computedAt: snapshot?.computedAt ?? null,
   };
 }

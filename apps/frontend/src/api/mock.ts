@@ -280,6 +280,12 @@ const MOCK_ROUNDS: RoundListResponse = {
       totalDistributedEns: null,
       activeDelegateCount: null,
       eligibleDelegatorCount: null,
+      lotteryBucketCount: null,
+      lotteryEntryCount: null,
+      lotteryParticipantCount: null,
+      lotteryWinnerCount: null,
+      lotteryPrize: null,
+      lotteryPrizeEns: null,
       computedAt: null,
     },
     {
@@ -301,6 +307,12 @@ const MOCK_ROUNDS: RoundListResponse = {
       totalDistributedEns: null,
       activeDelegateCount: null,
       eligibleDelegatorCount: null,
+      lotteryBucketCount: null,
+      lotteryEntryCount: null,
+      lotteryParticipantCount: null,
+      lotteryWinnerCount: null,
+      lotteryPrize: null,
+      lotteryPrizeEns: null,
       computedAt: null,
     },
     {
@@ -322,6 +334,12 @@ const MOCK_ROUNDS: RoundListResponse = {
       totalDistributedEns: null,
       activeDelegateCount: null,
       eligibleDelegatorCount: null,
+      lotteryBucketCount: null,
+      lotteryEntryCount: null,
+      lotteryParticipantCount: null,
+      lotteryWinnerCount: null,
+      lotteryPrize: null,
+      lotteryPrizeEns: null,
       computedAt: null,
     },
   ],
@@ -354,6 +372,7 @@ const MOCK_ROUND_DETAIL: RoundDetailResponse = {
   addressReward: null,
   topDelegateRewards: [],
   topTokenHolderRewards: [],
+  lottery: null,
 }
 
 export const mockApi = {

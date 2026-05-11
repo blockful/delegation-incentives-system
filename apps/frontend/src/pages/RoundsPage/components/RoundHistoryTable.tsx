@@ -7,6 +7,7 @@ export interface RoundHistoryEntry {
   dates: string
   pool: string
   vpGrowth: string
+  lottery: string
   yourRewards: string
   to: string
 }
@@ -105,7 +106,7 @@ const RoundLink = styled(Link)`
 `
 
 const ValueText = styled.span`
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 `
 
 const MutedValue = styled.span`
@@ -152,10 +153,11 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
       <Table>
         <colgroup>
           <col style={{ width: '16%' }} />
-          <col style={{ width: '29%' }} />
-          <col style={{ width: '18%' }} />
+          <col style={{ width: '24%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '14%' }} />
           <col style={{ width: '17%' }} />
-          <col style={{ width: '20%' }} />
+          <col style={{ width: '15%' }} />
         </colgroup>
         <Thead>
           <tr>
@@ -163,6 +165,7 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
             <Th>Dates</Th>
             <Th>Pool</Th>
             <Th>VP growth</Th>
+            <Th>Lottery</Th>
             <Th>Your rewards</Th>
           </tr>
         </Thead>
@@ -175,6 +178,7 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
               <Td data-label="Dates">{entry.dates}</Td>
               <Td data-label="Pool">{renderValue(entry.pool)}</Td>
               <Td data-label="VP growth">{renderValue(entry.vpGrowth)}</Td>
+              <Td data-label="Lottery">{renderValue(entry.lottery)}</Td>
               <Td data-label="Your rewards">{renderValue(entry.yourRewards)}</Td>
             </Row>
           ))}

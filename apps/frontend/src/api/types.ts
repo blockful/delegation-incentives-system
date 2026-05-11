@@ -99,6 +99,12 @@ export interface RoundSummary {
   totalDistributedEns: string | null
   activeDelegateCount: number | null
   eligibleDelegatorCount: number | null
+  lotteryBucketCount: number | null
+  lotteryEntryCount: number | null
+  lotteryParticipantCount: number | null
+  lotteryWinnerCount: number | null
+  lotteryPrize: string | null
+  lotteryPrizeEns: string | null
   computedAt: string | null
 }
 
@@ -132,10 +138,51 @@ export interface AddressRoundReward {
   totalRewardEns: string
 }
 
+export interface LotteryEntryDetail {
+  bucketIndex: number
+  entryIndex: number
+  address: string
+  ensName: string | null
+  amount: string
+  amountEns: string
+  probability: string
+}
+
+export interface LotteryBucketDetail {
+  bucketIndex: number
+  prize: string
+  prizeEns: string
+  winner: string
+  winnerEnsName: string | null
+  winnerProbability: string | null
+  entryCount: number
+  entries: LotteryEntryDetail[]
+}
+
+export interface LotteryDetail {
+  seed: {
+    source: 'ethereum_prev_randao'
+    label: string
+    value: string
+    blockNumber: string
+    algorithm: string
+  }
+  bucketTarget: string
+  bucketTargetEns: string
+  totalPrize: string
+  totalPrizeEns: string
+  bucketCount: number
+  entryCount: number
+  participantCount: number
+  winnerCount: number
+  buckets: LotteryBucketDetail[]
+}
+
 export interface RoundDetailResponse extends RoundSummary {
   addressReward: AddressRoundReward | null
   topDelegateRewards: RewardRank[]
   topTokenHolderRewards: RewardRank[]
+  lottery: LotteryDetail | null
 }
 
 export interface AddressDistributionRound {

@@ -1,4 +1,9 @@
-import { MIN_PAYOUT, POOL_TIERS, type DistributionResult } from "@ens-dis/domain";
+import {
+  LOTTERY_BUCKET_TARGET,
+  MIN_PAYOUT,
+  POOL_TIERS,
+  type DistributionResult,
+} from "@ens-dis/domain";
 import { formatEns } from "./helpers.js";
 
 export interface DistributionStorageRow {
@@ -22,6 +27,12 @@ export interface DistributionSnapshot {
   totalDistributedEns: string;
   activeDelegateCount: number;
   eligibleDelegatorCount: number;
+  lotteryBucketCount: number;
+  lotteryEntryCount: number;
+  lotteryParticipantCount: number;
+  lotteryWinnerCount: number;
+  lotteryPrize: string;
+  lotteryPrizeEns: string;
   computedAt: string;
 }
 
@@ -48,6 +59,46 @@ export interface AddressRewardBreakdown {
   totalReward: string;
   totalRewardEns: string;
   status: "paid" | "no_reward" | "not_eligible";
+}
+
+export interface LotteryEntryDetail {
+  bucketIndex: number;
+  entryIndex: number;
+  address: string;
+  ensName: string | null;
+  amount: string;
+  amountEns: string;
+  probability: string;
+}
+
+export interface LotteryBucketDetail {
+  bucketIndex: number;
+  prize: string;
+  prizeEns: string;
+  winner: string;
+  winnerEnsName: string | null;
+  winnerProbability: string | null;
+  entryCount: number;
+  entries: LotteryEntryDetail[];
+}
+
+export interface LotteryDetail {
+  seed: {
+    source: "ethereum_prev_randao";
+    label: string;
+    value: string;
+    blockNumber: string;
+    algorithm: string;
+  };
+  bucketTarget: string;
+  bucketTargetEns: string;
+  totalPrize: string;
+  totalPrizeEns: string;
+  bucketCount: number;
+  entryCount: number;
+  participantCount: number;
+  winnerCount: number;
+  buckets: LotteryBucketDetail[];
 }
 
 export function reviveDistributionResult(obj: any): DistributionResult {
@@ -178,6 +229,7 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
   const eligibleDelegatorCount = result.rewards.filter(
     (r) => (r.delegatorReward as bigint) > 0n,
   ).length;
+  const lotteryStats = getLotteryStats(result);
 
   return {
     month: meta.month,
@@ -189,7 +241,62 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
     totalDistributedEns: formatEns(totalDistributed),
     activeDelegateCount: meta.activeDelegateCount,
     eligibleDelegatorCount,
+    lotteryBucketCount: lotteryStats.bucketCount,
+    lotteryEntryCount: lotteryStats.entryCount,
+    lotteryParticipantCount: lotteryStats.participantCount,
+    lotteryWinnerCount: lotteryStats.winnerCount,
+    lotteryPrize: lotteryStats.totalPrize.toString(),
+    lotteryPrizeEns: formatEns(lotteryStats.totalPrize),
     computedAt: computedAtToIso(row.computedAt),
+  };
+}
+
+export function getLotteryDetail(parsed: ParsedDistribution): LotteryDetail {
+  const { result } = parsed;
+  const meta = result.metadata;
+  const lotteryStats = getLotteryStats(result);
+
+  return {
+    seed: {
+      source: "ethereum_prev_randao",
+      label: "Ethereum prevRandao",
+      value: meta.randaoValue,
+      blockNumber: (meta.endBlock as bigint).toString(),
+      algorithm: "keccak256(prevRandao, bucketIndex)",
+    },
+    bucketTarget: (LOTTERY_BUCKET_TARGET as bigint).toString(),
+    bucketTargetEns: formatEns(LOTTERY_BUCKET_TARGET as bigint),
+    totalPrize: lotteryStats.totalPrize.toString(),
+    totalPrizeEns: formatEns(lotteryStats.totalPrize),
+    bucketCount: lotteryStats.bucketCount,
+    entryCount: lotteryStats.entryCount,
+    participantCount: lotteryStats.participantCount,
+    winnerCount: lotteryStats.winnerCount,
+    buckets: result.lottery.buckets.map((bucket) => {
+      const winner = bucket.winner.toLowerCase();
+      const winnerEntry = bucket.entries.find(
+        (entry) => entry.address.toLowerCase() === winner,
+      );
+
+      return {
+        bucketIndex: bucket.bucketIndex,
+        prize: (bucket.prize as bigint).toString(),
+        prizeEns: formatEns(bucket.prize as bigint),
+        winner: bucket.winner,
+        winnerEnsName: null,
+        winnerProbability: winnerEntry?.probability ?? null,
+        entryCount: bucket.entries.length,
+        entries: bucket.entries.map((entry, index) => ({
+          bucketIndex: bucket.bucketIndex,
+          entryIndex: index + 1,
+          address: entry.address,
+          ensName: null,
+          amount: (entry.amount as bigint).toString(),
+          amountEns: formatEns(entry.amount as bigint),
+          probability: entry.probability,
+        })),
+      };
+    }),
   };
 }
 
@@ -334,6 +441,31 @@ function getTotalDistributed(result: DistributionResult): bigint {
   }
 
   return totalDistributed;
+}
+
+function getLotteryStats(result: DistributionResult) {
+  const participants = new Set<string>();
+  const winners = new Set<string>();
+  let entryCount = 0;
+  let totalPrize = 0n;
+
+  for (const bucket of result.lottery.buckets) {
+    totalPrize += bucket.prize as bigint;
+    winners.add(bucket.winner.toLowerCase());
+
+    for (const entry of bucket.entries) {
+      entryCount += 1;
+      participants.add(entry.address.toLowerCase());
+    }
+  }
+
+  return {
+    bucketCount: result.lottery.buckets.length,
+    entryCount,
+    participantCount: participants.size,
+    winnerCount: winners.size,
+    totalPrize,
+  };
 }
 
 function computedAtToIso(value: DistributionStorageRow["computedAt"]): string {

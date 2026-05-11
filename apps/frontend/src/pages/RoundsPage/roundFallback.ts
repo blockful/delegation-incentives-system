@@ -38,6 +38,12 @@ export function buildRoundListFromCurrentRound(current: RoundInfoResponse): Roun
       totalDistributedEns: null,
       activeDelegateCount: null,
       eligibleDelegatorCount: null,
+      lotteryBucketCount: null,
+      lotteryEntryCount: null,
+      lotteryParticipantCount: null,
+      lotteryWinnerCount: null,
+      lotteryPrize: null,
+      lotteryPrizeEns: null,
       computedAt: null,
     })
   }
@@ -77,6 +83,7 @@ export function buildRoundDetailFallback(
       : null,
     topDelegateRewards: [],
     topTokenHolderRewards: [],
+    lottery: null,
   }
 }
 

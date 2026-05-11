@@ -165,6 +165,7 @@ function buildRoundHistory(
     dates: formatUtcMonthRange(round.startDate, round.endDate),
     pool: formatEnsCell(round.poolSizeEns, 'Unavailable', 0),
     vpGrowth: formatVpGrowth(round.vpGrowthPct),
+    lottery: formatLotteryCell(round),
     yourRewards: formatRewardCell({
       activeAddress,
       addressRound: rewardsByRound.get(round.roundNumber) ?? null,
@@ -174,6 +175,20 @@ function buildRoundHistory(
     }),
     to: `/rounds/${round.roundNumber}${addressQuery}`,
   }))
+}
+
+function formatLotteryCell(round: RoundSummary): string {
+  if (round.distributionDataStatus === 'in_progress' || round.distributionDataStatus === 'not_started') {
+    return 'Pending'
+  }
+
+  if (round.lotteryEntryCount == null || round.lotteryWinnerCount == null) {
+    return 'Unavailable'
+  }
+
+  const winners = round.lotteryWinnerCount.toLocaleString('en-US')
+  const entries = round.lotteryEntryCount.toLocaleString('en-US')
+  return `${winners} winners / ${entries} entries`
 }
 
 function formatVpGrowth(value: string | null): string {

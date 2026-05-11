@@ -459,6 +459,28 @@ export interface paths {
                                  * @example 312
                                  */
                                 eligibleDelegatorCount: number | null;
+                                /**
+                                 * @description Number of deterministic lottery buckets formed from sub-1 ENS entries.
+                                 * @example 53
+                                 */
+                                lotteryBucketCount: number | null;
+                                /**
+                                 * @description Number of sub-threshold reward entries participating in the lottery.
+                                 * @example 2597
+                                 */
+                                lotteryEntryCount: number | null;
+                                /**
+                                 * @description Unique address count across lottery entries.
+                                 * @example 2597
+                                 */
+                                lotteryParticipantCount: number | null;
+                                /**
+                                 * @description Unique lottery winner count.
+                                 * @example 53
+                                 */
+                                lotteryWinnerCount: number | null;
+                                lotteryPrize: string | null;
+                                lotteryPrizeEns: string | null;
                                 computedAt: string | null;
                             }[];
                         };
@@ -543,6 +565,28 @@ export interface paths {
                              * @example 312
                              */
                             eligibleDelegatorCount: number | null;
+                            /**
+                             * @description Number of deterministic lottery buckets formed from sub-1 ENS entries.
+                             * @example 53
+                             */
+                            lotteryBucketCount: number | null;
+                            /**
+                             * @description Number of sub-threshold reward entries participating in the lottery.
+                             * @example 2597
+                             */
+                            lotteryEntryCount: number | null;
+                            /**
+                             * @description Unique address count across lottery entries.
+                             * @example 2597
+                             */
+                            lotteryParticipantCount: number | null;
+                            /**
+                             * @description Unique lottery winner count.
+                             * @example 53
+                             */
+                            lotteryWinnerCount: number | null;
+                            lotteryPrize: string | null;
+                            lotteryPrizeEns: string | null;
                             computedAt: string | null;
                             addressReward: {
                                 address: string;
@@ -583,6 +627,46 @@ export interface paths {
                                 votingPower: string | null;
                                 delegationCount: number | null;
                             }[];
+                            lottery: {
+                                seed: {
+                                    /** @enum {string} */
+                                    source: "ethereum_prev_randao";
+                                    label: string;
+                                    value: string;
+                                    blockNumber: string;
+                                    algorithm: string;
+                                };
+                                bucketTarget: string;
+                                bucketTargetEns: string;
+                                totalPrize: string;
+                                totalPrizeEns: string;
+                                bucketCount: number;
+                                entryCount: number;
+                                participantCount: number;
+                                winnerCount: number;
+                                buckets: {
+                                    bucketIndex: number;
+                                    prize: string;
+                                    prizeEns: string;
+                                    winner: string;
+                                    winnerEnsName: string | null;
+                                    winnerProbability: string | null;
+                                    entryCount: number;
+                                    entries: {
+                                        bucketIndex: number;
+                                        entryIndex: number;
+                                        address: string;
+                                        ensName: string | null;
+                                        amount: string;
+                                        amountEns: string;
+                                        /**
+                                         * @description Entry win probability inside the bucket, formatted as a 0-1 decimal string.
+                                         * @example 0.1250
+                                         */
+                                        probability: string;
+                                    }[];
+                                }[];
+                            } | null;
                         };
                     };
                 };
@@ -687,6 +771,28 @@ export interface paths {
                              * @example 312
                              */
                             eligibleDelegatorCount: number | null;
+                            /**
+                             * @description Number of deterministic lottery buckets formed from sub-1 ENS entries.
+                             * @example 53
+                             */
+                            lotteryBucketCount: number | null;
+                            /**
+                             * @description Number of sub-threshold reward entries participating in the lottery.
+                             * @example 2597
+                             */
+                            lotteryEntryCount: number | null;
+                            /**
+                             * @description Unique address count across lottery entries.
+                             * @example 2597
+                             */
+                            lotteryParticipantCount: number | null;
+                            /**
+                             * @description Unique lottery winner count.
+                             * @example 53
+                             */
+                            lotteryWinnerCount: number | null;
+                            lotteryPrize: string | null;
+                            lotteryPrizeEns: string | null;
                             computedAt: string | null;
                             addressReward: {
                                 address: string;
@@ -727,6 +833,46 @@ export interface paths {
                                 votingPower: string | null;
                                 delegationCount: number | null;
                             }[];
+                            lottery: {
+                                seed: {
+                                    /** @enum {string} */
+                                    source: "ethereum_prev_randao";
+                                    label: string;
+                                    value: string;
+                                    blockNumber: string;
+                                    algorithm: string;
+                                };
+                                bucketTarget: string;
+                                bucketTargetEns: string;
+                                totalPrize: string;
+                                totalPrizeEns: string;
+                                bucketCount: number;
+                                entryCount: number;
+                                participantCount: number;
+                                winnerCount: number;
+                                buckets: {
+                                    bucketIndex: number;
+                                    prize: string;
+                                    prizeEns: string;
+                                    winner: string;
+                                    winnerEnsName: string | null;
+                                    winnerProbability: string | null;
+                                    entryCount: number;
+                                    entries: {
+                                        bucketIndex: number;
+                                        entryIndex: number;
+                                        address: string;
+                                        ensName: string | null;
+                                        amount: string;
+                                        amountEns: string;
+                                        /**
+                                         * @description Entry win probability inside the bucket, formatted as a 0-1 decimal string.
+                                         * @example 0.1250
+                                         */
+                                        probability: string;
+                                    }[];
+                                }[];
+                            } | null;
                         };
                     };
                 };

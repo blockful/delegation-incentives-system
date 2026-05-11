@@ -718,6 +718,50 @@
                             "description": "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
                             "example": 312
                           },
+                          "lotteryBucketCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "description": "Number of deterministic lottery buckets formed from sub-1 ENS entries.",
+                            "example": 53
+                          },
+                          "lotteryEntryCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "description": "Number of sub-threshold reward entries participating in the lottery.",
+                            "example": 2597
+                          },
+                          "lotteryParticipantCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "description": "Unique address count across lottery entries.",
+                            "example": 2597
+                          },
+                          "lotteryWinnerCount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "description": "Unique lottery winner count.",
+                            "example": 53
+                          },
+                          "lotteryPrize": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lotteryPrizeEns": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "computedAt": {
                             "type": [
                               "string",
@@ -744,6 +788,12 @@
                           "totalDistributedEns",
                           "activeDelegateCount",
                           "eligibleDelegatorCount",
+                          "lotteryBucketCount",
+                          "lotteryEntryCount",
+                          "lotteryParticipantCount",
+                          "lotteryWinnerCount",
+                          "lotteryPrize",
+                          "lotteryPrizeEns",
                           "computedAt"
                         ]
                       }
@@ -927,6 +977,50 @@
                       ],
                       "description": "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
                       "example": 312
+                    },
+                    "lotteryBucketCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Number of deterministic lottery buckets formed from sub-1 ENS entries.",
+                      "example": 53
+                    },
+                    "lotteryEntryCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Number of sub-threshold reward entries participating in the lottery.",
+                      "example": 2597
+                    },
+                    "lotteryParticipantCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Unique address count across lottery entries.",
+                      "example": 2597
+                    },
+                    "lotteryWinnerCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Unique lottery winner count.",
+                      "example": 53
+                    },
+                    "lotteryPrize": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lotteryPrizeEns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "computedAt": {
                       "type": [
@@ -1118,6 +1212,168 @@
                           "delegationCount"
                         ]
                       }
+                    },
+                    "lottery": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "seed": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "ethereum_prev_randao"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "string"
+                            },
+                            "blockNumber": {
+                              "type": "string"
+                            },
+                            "algorithm": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "label",
+                            "value",
+                            "blockNumber",
+                            "algorithm"
+                          ]
+                        },
+                        "bucketTarget": {
+                          "type": "string"
+                        },
+                        "bucketTargetEns": {
+                          "type": "string"
+                        },
+                        "totalPrize": {
+                          "type": "string"
+                        },
+                        "totalPrizeEns": {
+                          "type": "string"
+                        },
+                        "bucketCount": {
+                          "type": "number"
+                        },
+                        "entryCount": {
+                          "type": "number"
+                        },
+                        "participantCount": {
+                          "type": "number"
+                        },
+                        "winnerCount": {
+                          "type": "number"
+                        },
+                        "buckets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "bucketIndex": {
+                                "type": "number"
+                              },
+                              "prize": {
+                                "type": "string"
+                              },
+                              "prizeEns": {
+                                "type": "string"
+                              },
+                              "winner": {
+                                "type": "string"
+                              },
+                              "winnerEnsName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "winnerProbability": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "entryCount": {
+                                "type": "number"
+                              },
+                              "entries": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "bucketIndex": {
+                                      "type": "number"
+                                    },
+                                    "entryIndex": {
+                                      "type": "number"
+                                    },
+                                    "address": {
+                                      "type": "string"
+                                    },
+                                    "ensName": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "amount": {
+                                      "type": "string"
+                                    },
+                                    "amountEns": {
+                                      "type": "string"
+                                    },
+                                    "probability": {
+                                      "type": "string",
+                                      "description": "Entry win probability inside the bucket, formatted as a 0-1 decimal string.",
+                                      "example": "0.1250"
+                                    }
+                                  },
+                                  "required": [
+                                    "bucketIndex",
+                                    "entryIndex",
+                                    "address",
+                                    "ensName",
+                                    "amount",
+                                    "amountEns",
+                                    "probability"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "bucketIndex",
+                              "prize",
+                              "prizeEns",
+                              "winner",
+                              "winnerEnsName",
+                              "winnerProbability",
+                              "entryCount",
+                              "entries"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "seed",
+                        "bucketTarget",
+                        "bucketTargetEns",
+                        "totalPrize",
+                        "totalPrizeEns",
+                        "bucketCount",
+                        "entryCount",
+                        "participantCount",
+                        "winnerCount",
+                        "buckets"
+                      ]
                     }
                   },
                   "required": [
@@ -1139,10 +1395,17 @@
                     "totalDistributedEns",
                     "activeDelegateCount",
                     "eligibleDelegatorCount",
+                    "lotteryBucketCount",
+                    "lotteryEntryCount",
+                    "lotteryParticipantCount",
+                    "lotteryWinnerCount",
+                    "lotteryPrize",
+                    "lotteryPrizeEns",
                     "computedAt",
                     "addressReward",
                     "topDelegateRewards",
-                    "topTokenHolderRewards"
+                    "topTokenHolderRewards",
+                    "lottery"
                   ]
                 }
               }
@@ -1355,6 +1618,50 @@
                       "description": "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
                       "example": 312
                     },
+                    "lotteryBucketCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Number of deterministic lottery buckets formed from sub-1 ENS entries.",
+                      "example": 53
+                    },
+                    "lotteryEntryCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Number of sub-threshold reward entries participating in the lottery.",
+                      "example": 2597
+                    },
+                    "lotteryParticipantCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Unique address count across lottery entries.",
+                      "example": 2597
+                    },
+                    "lotteryWinnerCount": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Unique lottery winner count.",
+                      "example": 53
+                    },
+                    "lotteryPrize": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lotteryPrizeEns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "computedAt": {
                       "type": [
                         "string",
@@ -1545,6 +1852,168 @@
                           "delegationCount"
                         ]
                       }
+                    },
+                    "lottery": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "seed": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "ethereum_prev_randao"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "string"
+                            },
+                            "blockNumber": {
+                              "type": "string"
+                            },
+                            "algorithm": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "label",
+                            "value",
+                            "blockNumber",
+                            "algorithm"
+                          ]
+                        },
+                        "bucketTarget": {
+                          "type": "string"
+                        },
+                        "bucketTargetEns": {
+                          "type": "string"
+                        },
+                        "totalPrize": {
+                          "type": "string"
+                        },
+                        "totalPrizeEns": {
+                          "type": "string"
+                        },
+                        "bucketCount": {
+                          "type": "number"
+                        },
+                        "entryCount": {
+                          "type": "number"
+                        },
+                        "participantCount": {
+                          "type": "number"
+                        },
+                        "winnerCount": {
+                          "type": "number"
+                        },
+                        "buckets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "bucketIndex": {
+                                "type": "number"
+                              },
+                              "prize": {
+                                "type": "string"
+                              },
+                              "prizeEns": {
+                                "type": "string"
+                              },
+                              "winner": {
+                                "type": "string"
+                              },
+                              "winnerEnsName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "winnerProbability": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "entryCount": {
+                                "type": "number"
+                              },
+                              "entries": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "bucketIndex": {
+                                      "type": "number"
+                                    },
+                                    "entryIndex": {
+                                      "type": "number"
+                                    },
+                                    "address": {
+                                      "type": "string"
+                                    },
+                                    "ensName": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "amount": {
+                                      "type": "string"
+                                    },
+                                    "amountEns": {
+                                      "type": "string"
+                                    },
+                                    "probability": {
+                                      "type": "string",
+                                      "description": "Entry win probability inside the bucket, formatted as a 0-1 decimal string.",
+                                      "example": "0.1250"
+                                    }
+                                  },
+                                  "required": [
+                                    "bucketIndex",
+                                    "entryIndex",
+                                    "address",
+                                    "ensName",
+                                    "amount",
+                                    "amountEns",
+                                    "probability"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "bucketIndex",
+                              "prize",
+                              "prizeEns",
+                              "winner",
+                              "winnerEnsName",
+                              "winnerProbability",
+                              "entryCount",
+                              "entries"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "seed",
+                        "bucketTarget",
+                        "bucketTargetEns",
+                        "totalPrize",
+                        "totalPrizeEns",
+                        "bucketCount",
+                        "entryCount",
+                        "participantCount",
+                        "winnerCount",
+                        "buckets"
+                      ]
                     }
                   },
                   "required": [
@@ -1566,10 +2035,17 @@
                     "totalDistributedEns",
                     "activeDelegateCount",
                     "eligibleDelegatorCount",
+                    "lotteryBucketCount",
+                    "lotteryEntryCount",
+                    "lotteryParticipantCount",
+                    "lotteryWinnerCount",
+                    "lotteryPrize",
+                    "lotteryPrizeEns",
                     "computedAt",
                     "addressReward",
                     "topDelegateRewards",
-                    "topTokenHolderRewards"
+                    "topTokenHolderRewards",
+                    "lottery"
                   ]
                 }
               }

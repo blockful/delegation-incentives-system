@@ -210,6 +210,11 @@ describe("round reward responses", () => {
       vpGrowthPct: "20.00",
       poolSizeEns: "8000.000000000000000000",
       totalDistributedEns: "155.000000000000000000",
+      lotteryBucketCount: 1,
+      lotteryEntryCount: 1,
+      lotteryParticipantCount: 1,
+      lotteryWinnerCount: 1,
+      lotteryPrizeEns: "10.000000000000000000",
     });
     expect(body.addressReward).toMatchObject({
       address: ADDRESS_B,
@@ -230,6 +235,38 @@ describe("round reward responses", () => {
       role: "token_holder",
       rewardEns: "35.000000000000000000",
       source: "combined",
+    });
+    expect(body.lottery).toMatchObject({
+      totalPrizeEns: "10.000000000000000000",
+      bucketTargetEns: "10.000000000000000000",
+      bucketCount: 1,
+      entryCount: 1,
+      participantCount: 1,
+      winnerCount: 1,
+      seed: {
+        source: "ethereum_prev_randao",
+        value: "0xabc",
+        blockNumber: "200",
+        algorithm: "keccak256(prevRandao, bucketIndex)",
+      },
+      buckets: [
+        {
+          bucketIndex: 0,
+          prizeEns: "10.000000000000000000",
+          winner: ADDRESS_B,
+          winnerProbability: "0.5",
+          entryCount: 1,
+          entries: [
+            {
+              bucketIndex: 0,
+              entryIndex: 1,
+              address: ADDRESS_B,
+              amountEns: "1.000000000000000000",
+              probability: "0.5",
+            },
+          ],
+        },
+      ],
     });
   });
 
@@ -296,6 +333,7 @@ describe("round reward responses", () => {
     expect(body.addressReward.rewardStatus).toBe("unavailable");
     expect(body.topDelegateRewards).toEqual([]);
     expect(body.topTokenHolderRewards).toEqual([]);
+    expect(body.lottery).toBeNull();
   });
 });
 
