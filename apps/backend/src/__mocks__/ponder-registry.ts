@@ -1,10 +1,13 @@
-// Mock for ponder:registry used in unit tests
-export const ponder = {
-  on: (_event: string, _handler: any) => {},
-}
+/**
+ * Mock for ponder:registry — collects handler registrations without running Ponder.
+ *
+ * ponder.on() stores the callback; tests can import handlers that call ponder.on()
+ * without side effects.
+ */
+const handlers = new Map<string, Function>();
 
-export type Context = {
-  db: any
-}
-export type EventNames = string
-export type IndexingFunctionArgs<T = string> = { event: any; context: Context }
+export const ponder = {
+  on(name: string, fn: Function) {
+    handlers.set(name, fn);
+  },
+};

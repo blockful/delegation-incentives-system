@@ -1,6 +1,6 @@
 import styled from 'styled-components'
-import { Button, Card } from '@ensdomains/thorin'
 import { useEnsName } from 'wagmi'
+import { Link } from 'react-router-dom'
 import type { DelegateDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -17,14 +17,14 @@ function formatVotingPower(vpWei: string): string {
   if (ens >= 1_000_000) {
     const m = ens / 1_000_000
     const rounded = Math.round(m * 10) / 10
-    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}M VP`
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}M`
   }
   if (ens >= 1_000) {
     const k = ens / 1_000
     const rounded = Math.round(k * 10) / 10
-    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K VP`
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K`
   }
-  return `${Math.round(ens)} VP`
+  return `${Math.round(ens)}`
 }
 
 function formatActiveSince(iso: string): string {
@@ -34,14 +34,22 @@ function formatActiveSince(iso: string): string {
   return `${month} '${year}`
 }
 
-const StyledCard = styled(Card)`
+const StyledCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
   padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.sm};
+  transition:
+    border-color ${tokens.transition.fast},
+    box-shadow ${tokens.transition.base};
 
-  @media (max-width: 767px) {
-    padding: ${tokens.spacing['2xl']};
+  &:hover {
+    border-color: ${tokens.color.blue};
+    box-shadow: ${tokens.shadow.md};
   }
 `
 
@@ -60,54 +68,91 @@ const IdentityInfo = styled.div`
 const Name = styled.span`
   font-weight: ${tokens.font.weight.bold};
   font-size: ${tokens.font.size.lg};
-  color: ${tokens.color.text};
+  color: ${tokens.color.darkBlue};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `
 
-const Address = styled.span`
+const AddressText = styled.span`
   font-size: ${tokens.font.size.base};
-  color: ${tokens.color.textMuted};
+  color: ${tokens.color.darkGray};
 `
 
-const StatsRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: ${tokens.spacing.lg};
-`
-
-const Stat = styled.div`
+const ProposalSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xs};
 `
 
-const StatLabel = styled.span`
+const ProposalLabel = styled.span`
   font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  text-transform: uppercase;
+  color: ${tokens.color.darkGray};
+`
+
+const StatsRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${tokens.spacing.md};
+`
+
+const Stat = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 `
 
 const StatValue = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
 `
 
-const Actions = styled.div`
+const StatLabel = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+`
+
+const ActionsBlock = styled.div`
   display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  margin-top: auto;
 `
 
-const ProfileLink = styled.a`
+const DelegatedButton = styled.button<{ $delegated: boolean }>`
+  width: 100%;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.sm};
+  border: 1px solid ${({ $delegated }) =>
+    $delegated ? tokens.color.positiveEmphasis : tokens.color.blue};
+  background: ${({ $delegated }) =>
+    $delegated ? tokens.color.tierHighlight : tokens.color.blue};
+  color: ${({ $delegated }) =>
+    $delegated ? tokens.color.positiveEmphasis : '#fff'};
   font-size: ${tokens.font.size.base};
-  color: ${tokens.color.accent};
+  font-weight: ${tokens.font.weight.semibold};
+  cursor: ${({ $delegated }) => ($delegated ? 'default' : 'pointer')};
+  transition: all ${tokens.transition.fast};
+  text-align: center;
+
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+`
+
+const ProfileLink = styled(Link)`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
   text-decoration: none;
-  white-space: nowrap;
+  text-align: center;
+  display: block;
+  padding: ${tokens.spacing.xs} 0;
+  transition: color ${tokens.transition.fast};
 
   &:hover {
+    color: ${tokens.color.blue};
     text-decoration: underline;
   }
 `
@@ -133,56 +178,47 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
           size={40}
         />
         <IdentityInfo>
-          {ensName && <Name>{ensName}</Name>}
-          <Address>{truncateAddress(delegate.address)}</Address>
+          {ensName ? (
+            <>
+              <Name>{ensName}</Name>
+              <AddressText>{truncateAddress(delegate.address)}</AddressText>
+            </>
+          ) : (
+            <Name>{truncateAddress(delegate.address)}</Name>
+          )}
         </IdentityInfo>
       </IdentityRow>
 
-      {delegate.last10ProposalsVoted && (
+      <ProposalSection>
+        <ProposalLabel>Last 10 proposals</ProposalLabel>
         <ProposalBar votes={delegate.last10ProposalsVoted} />
-      )}
+      </ProposalSection>
 
-      {(delegate.votingPower || delegate.delegatorCount != null || delegate.activeSince) && (
-        <StatsRow>
-          {delegate.votingPower && (
-            <Stat>
-              <StatLabel>Voting Power</StatLabel>
-              <StatValue>{formatVotingPower(delegate.votingPower)}</StatValue>
-            </Stat>
-          )}
-          {delegate.delegatorCount != null && (
-            <Stat>
-              <StatLabel>Delegators</StatLabel>
-              <StatValue>{delegate.delegatorCount}</StatValue>
-            </Stat>
-          )}
-          {delegate.activeSince && (
-            <Stat>
-              <StatLabel>Active since</StatLabel>
-              <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
-            </Stat>
-          )}
-        </StatsRow>
-      )}
-
-      <Actions>
-        {isDelegated ? (
-          <Button colorStyle="greenPrimary" size="small" disabled>
-            Delegated ✓
-          </Button>
-        ) : (
-          <Button colorStyle="bluePrimary" size="small">
-            Delegate
-          </Button>
+      <StatsRow>
+        <Stat>
+          <StatValue>{formatVotingPower(delegate.votingPower)}</StatValue>
+          <StatLabel>Voting Power</StatLabel>
+        </Stat>
+        <Stat>
+          <StatValue>{delegate.delegatorCount}</StatValue>
+          <StatLabel>Delegators</StatLabel>
+        </Stat>
+        {delegate.activeSince && (
+          <Stat>
+            <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
+            <StatLabel>Active since</StatLabel>
+          </Stat>
         )}
-        <ProfileLink
-          href={`https://anticapture.com/ens/holders-and-delegates?tab=delegates&drawerAddress=${delegate.address}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Full profile ↗
+      </StatsRow>
+
+      <ActionsBlock>
+        <DelegatedButton $delegated={isDelegated} disabled={isDelegated}>
+          {isDelegated ? 'Delegated ✓' : 'Delegate'}
+        </DelegatedButton>
+        <ProfileLink to={`/delegates/${ensName ?? delegate.address}`}>
+          Profile →
         </ProfileLink>
-      </Actions>
+      </ActionsBlock>
     </StyledCard>
   )
 }

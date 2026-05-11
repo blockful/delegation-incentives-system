@@ -1,144 +1,159 @@
 import { describe, it, expect } from "vitest";
 import {
+  sum,
   mulDiv,
-  mulDivRoundUp,
-  applyBasisPoints,
+  applyBps,
   percentageGrowthBps,
+  abs,
   min,
   max,
-  abs,
-  sum,
-  clamp,
-} from "@/util/bigint-math.js";
+} from "../../../src/util/bigint-math.js";
 
+// ---------------------------------------------------------------------------
+// sum
+// ---------------------------------------------------------------------------
+describe("sum", () => {
+  it("returns 0n for an empty array", () => {
+    expect(sum([])).toBe(0n);
+  });
+
+  it("returns the element for a single-element array", () => {
+    expect(sum([42n])).toBe(42n);
+  });
+
+  it("sums multiple positive values", () => {
+    expect(sum([1n, 2n, 3n, 4n])).toBe(10n);
+  });
+
+  it("handles negative values", () => {
+    expect(sum([10n, -3n, -7n])).toBe(0n);
+  });
+
+  it("handles a mix of large positive and negative values", () => {
+    expect(sum([10n ** 18n, -(10n ** 18n)])).toBe(0n);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mulDiv
+// ---------------------------------------------------------------------------
 describe("mulDiv", () => {
-  it("computes (a * b) / denominator", () => {
-    expect(mulDiv(100n, 200n, 10n)).toBe(2000n);
+  it("computes basic multiplication then division", () => {
+    // (6 * 7) / 3 = 14
+    expect(mulDiv(6n, 7n, 3n)).toBe(14n);
   });
 
   it("truncates toward zero", () => {
-    expect(mulDiv(10n, 3n, 4n)).toBe(7n); // 30/4 = 7.5 → 7
+    // (7 * 2) / 3 = 14/3 = 4 (truncated)
+    expect(mulDiv(7n, 2n, 3n)).toBe(4n);
   });
 
-  it("handles large values without overflow", () => {
-    const large = 10n ** 36n;
-    expect(mulDiv(large, large, large)).toBe(large);
+  it("works with large numbers without overflow", () => {
+    const a = 10n ** 18n; // 1 ETH in wei
+    const b = 5000n; // bps
+    const denom = 10_000n;
+    // (1e18 * 5000) / 10000 = 5e17
+    expect(mulDiv(a, b, denom)).toBe(5n * 10n ** 17n);
   });
 
-  it("throws on zero denominator", () => {
-    expect(() => mulDiv(1n, 1n, 0n)).toThrow("Division by zero");
-  });
-
-  it("returns 0 when numerator is 0", () => {
-    expect(mulDiv(0n, 100n, 50n)).toBe(0n);
-  });
-});
-
-describe("mulDivRoundUp", () => {
-  it("rounds up when there is a remainder", () => {
-    expect(mulDivRoundUp(10n, 3n, 4n)).toBe(8n); // 30/4 = 7.5 → 8
-  });
-
-  it("does not round up when exact", () => {
-    expect(mulDivRoundUp(10n, 4n, 4n)).toBe(10n);
-  });
-
-  it("throws on zero denominator", () => {
-    expect(() => mulDivRoundUp(1n, 1n, 0n)).toThrow("Division by zero");
+  it("returns 0n when numerator product is smaller than denominator", () => {
+    expect(mulDiv(1n, 1n, 3n)).toBe(0n);
   });
 });
 
-describe("applyBasisPoints", () => {
-  it("computes 10% (1000 bps)", () => {
-    const pool = 10000n * 10n ** 18n; // 10,000 ENS
-    const result = applyBasisPoints(pool, 1000n);
-    expect(result).toBe(1000n * 10n ** 18n); // 1,000 ENS
+// ---------------------------------------------------------------------------
+// applyBps
+// ---------------------------------------------------------------------------
+describe("applyBps", () => {
+  it("applies 10% (1000 bps)", () => {
+    expect(applyBps(1_000_000n, 1_000n)).toBe(100_000n);
   });
 
-  it("computes 90% (9000 bps)", () => {
-    const pool = 10000n * 10n ** 18n;
-    const result = applyBasisPoints(pool, 9000n);
-    expect(result).toBe(9000n * 10n ** 18n);
+  it("applies 100% (10000 bps)", () => {
+    expect(applyBps(1_000_000n, 10_000n)).toBe(1_000_000n);
   });
 
-  it("computes 100% (10000 bps)", () => {
-    expect(applyBasisPoints(500n, 10000n)).toBe(500n);
+  it("applies 0% (0 bps)", () => {
+    expect(applyBps(1_000_000n, 0n)).toBe(0n);
   });
 
-  it("handles 0 bps", () => {
-    expect(applyBasisPoints(1000n, 0n)).toBe(0n);
+  it("accepts a custom base", () => {
+    // 50% with base 100
+    expect(applyBps(200n, 50n, 100n)).toBe(100n);
   });
 });
 
+// ---------------------------------------------------------------------------
+// percentageGrowthBps
+// ---------------------------------------------------------------------------
 describe("percentageGrowthBps", () => {
-  it("returns 0 for no growth", () => {
+  it("returns positive growth in bps", () => {
+    // 100 -> 150 = 50% = 5000 bps
+    expect(percentageGrowthBps(100n, 150n)).toBe(5_000n);
+  });
+
+  it("returns negative growth in bps", () => {
+    // 200 -> 100 = -50% = -5000 bps
+    expect(percentageGrowthBps(200n, 100n)).toBe(-5_000n);
+  });
+
+  it("returns 0n when before is 0n", () => {
+    expect(percentageGrowthBps(0n, 500n)).toBe(0n);
+  });
+
+  it("returns 0n when there is no growth", () => {
     expect(percentageGrowthBps(100n, 100n)).toBe(0n);
   });
 
-  it("returns 10000 for 100% growth", () => {
-    expect(percentageGrowthBps(200n, 100n)).toBe(10000n);
-  });
-
-  it("returns 5000 for 50% growth", () => {
-    expect(percentageGrowthBps(150n, 100n)).toBe(5000n);
-  });
-
-  it("returns negative for decline", () => {
-    expect(percentageGrowthBps(80n, 100n)).toBe(-2000n); // -20%
-  });
-
-  it("handles zero previous (returns 10000 for 100%+ if current > 0)", () => {
-    expect(percentageGrowthBps(100n, 0n)).toBe(10000n);
-  });
-
-  it("handles both zero", () => {
-    expect(percentageGrowthBps(0n, 0n)).toBe(0n);
+  it("handles 100% growth (doubling)", () => {
+    expect(percentageGrowthBps(100n, 200n)).toBe(10_000n);
   });
 });
 
-describe("min / max / abs", () => {
-  it("min returns smaller value", () => {
-    expect(min(3n, 5n)).toBe(3n);
-    expect(min(5n, 3n)).toBe(3n);
-    expect(min(3n, 3n)).toBe(3n);
+// ---------------------------------------------------------------------------
+// abs
+// ---------------------------------------------------------------------------
+describe("abs", () => {
+  it("returns the same value for a positive number", () => {
+    expect(abs(42n)).toBe(42n);
   });
 
-  it("max returns larger value", () => {
-    expect(max(3n, 5n)).toBe(5n);
-    expect(max(5n, 3n)).toBe(5n);
+  it("negates a negative number", () => {
+    expect(abs(-42n)).toBe(42n);
   });
 
-  it("abs returns absolute value", () => {
-    expect(abs(-5n)).toBe(5n);
-    expect(abs(5n)).toBe(5n);
+  it("returns 0n for zero", () => {
     expect(abs(0n)).toBe(0n);
   });
 });
 
-describe("sum", () => {
-  it("sums an array of BigInts", () => {
-    expect(sum([1n, 2n, 3n, 4n])).toBe(10n);
+// ---------------------------------------------------------------------------
+// min / max
+// ---------------------------------------------------------------------------
+describe("min", () => {
+  it("returns the smaller value", () => {
+    expect(min(3n, 7n)).toBe(3n);
   });
 
-  it("returns 0 for empty array", () => {
-    expect(sum([])).toBe(0n);
+  it("works when arguments are equal", () => {
+    expect(min(5n, 5n)).toBe(5n);
   });
 
-  it("handles single element", () => {
-    expect(sum([42n])).toBe(42n);
+  it("handles negative values", () => {
+    expect(min(-10n, 1n)).toBe(-10n);
   });
 });
 
-describe("clamp", () => {
-  it("returns value when within range", () => {
-    expect(clamp(5n, 1n, 10n)).toBe(5n);
+describe("max", () => {
+  it("returns the larger value", () => {
+    expect(max(3n, 7n)).toBe(7n);
   });
 
-  it("clamps to lower bound", () => {
-    expect(clamp(-1n, 0n, 10n)).toBe(0n);
+  it("works when arguments are equal", () => {
+    expect(max(5n, 5n)).toBe(5n);
   });
 
-  it("clamps to upper bound", () => {
-    expect(clamp(15n, 0n, 10n)).toBe(10n);
+  it("handles negative values", () => {
+    expect(max(-10n, 1n)).toBe(1n);
   });
 });

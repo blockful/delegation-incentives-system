@@ -1,71 +1,86 @@
-import { type BalanceEvent, type Wei, type Seconds, wei } from "./types.js";
+import type { Wei, Seconds } from "./types.js";
+import { wei } from "./types.js";
 
 /**
- * Compute the time-weighted balance for an account over a window.
- * TWB = Σ(balance_i × seconds_i) / totalSeconds
- *
+ * Balance event for step-function integration.
  * Events must be sorted by timestamp ascending.
- * Events before windowStart update the effective initial balance.
- * Events at or after windowEnd are ignored.
+ */
+export interface BalanceSnapshot {
+  readonly balance: Wei;
+  readonly timestamp: Seconds;
+}
+
+/**
+ * Compute the time-weighted average balance over a window [windowStart, windowEnd].
+ *
+ * @param events - Balance change events within or before the window, sorted by timestamp asc.
+ *                 Each event records the new balance AFTER the change.
+ * @param windowStart - Start of the TWB window (inclusive).
+ * @param windowEnd - End of the TWB window (inclusive).
+ * @param initialBalance - Balance at `windowStart` (the most recent balance before the window, or 0n if none).
+ * @returns Time-weighted average balance in Wei.
+ *
+ * Algorithm:
+ * 1. Start with initialBalance at windowStart.
+ * 2. For each event within [windowStart, windowEnd]:
+ *    - accumulate: previousBalance * (event.timestamp - lastTimestamp)
+ *    - update currentBalance = event.balance
+ *    - update lastTimestamp = event.timestamp
+ * 3. After all events: accumulate currentBalance * (windowEnd - lastTimestamp)
+ * 4. TWB = totalAccumulated / (windowEnd - windowStart)
+ *
+ * Events before windowStart are used to determine initialBalance and should NOT be passed here.
+ * Events exactly at windowStart: the initialBalance parameter already reflects the state at windowStart.
+ * Events at windowEnd: included (they affect the balance at the boundary).
  */
 export function computeTimeWeightedBalance(
-  events: BalanceEvent[],
+  events: readonly BalanceSnapshot[],
   windowStart: Seconds,
   windowEnd: Seconds,
   initialBalance: Wei,
 ): Wei {
-  const totalSeconds = windowEnd - windowStart;
-  if (totalSeconds <= 0n) return wei(0n);
+  // Degenerate window: avoid division by zero.
+  if (windowEnd <= windowStart) {
+    return initialBalance;
+  }
 
-  // Sort events by timestamp, then by array index for stability
-  const sorted = [...events].sort((a, b) => {
-    const diff = Number(a.timestamp - b.timestamp);
-    return diff !== 0 ? diff : 0; // stable sort preserves insertion order
-  });
+  const windowDuration = (windowEnd as bigint) - (windowStart as bigint);
 
-  // Apply pre-window events to update effective initial balance
-  let effectiveInitial = initialBalance;
-  const windowEvents: BalanceEvent[] = [];
+  // Sort defensively — callers should provide sorted events, but unsorted
+  // input would silently produce incorrect TWB via negative time deltas.
+  const sorted =
+    events.length <= 1
+      ? events
+      : [...events].sort(
+          (a, b) =>
+            Number((a.timestamp as bigint) - (b.timestamp as bigint)),
+        );
+
+  let accumulated = 0n;
+  let currentBalance: bigint = initialBalance as bigint;
+  let lastTimestamp: bigint = windowStart as bigint;
 
   for (const event of sorted) {
-    if (event.timestamp < windowStart) {
-      effectiveInitial = event.balance;
-    } else if (event.timestamp < windowEnd) {
-      windowEvents.push(event);
+    const ts = event.timestamp as bigint;
+
+    // Defensively skip events outside the window.
+    if (ts < (windowStart as bigint) || ts > (windowEnd as bigint)) {
+      continue;
     }
-    // Events at or after windowEnd are ignored
+
+    // Same-timestamp events: last-write-wins.
+    // When ts === lastTimestamp the delta is 0, so accumulation is 0
+    // and we just update the balance — which is the correct behavior.
+    const delta = ts - lastTimestamp;
+    accumulated += currentBalance * delta;
+
+    currentBalance = event.balance as bigint;
+    lastTimestamp = ts;
   }
 
-  // Deduplicate same-timestamp events (last-write-wins)
-  const deduped: BalanceEvent[] = [];
-  for (let i = 0; i < windowEvents.length; i++) {
-    const current = windowEvents[i];
-    const next = windowEvents[i + 1];
-    // Keep only the last event at each timestamp
-    if (!next || next.timestamp !== current.timestamp) {
-      deduped.push(current);
-    }
-  }
+  // Final segment: from last event (or windowStart) to windowEnd.
+  const finalDelta = (windowEnd as bigint) - lastTimestamp;
+  accumulated += currentBalance * finalDelta;
 
-  // Build segments and compute weighted sum
-  let weightedSum = 0n;
-  let currentBalance: bigint = effectiveInitial;
-  let currentTimestamp: bigint = windowStart;
-
-  for (const event of deduped) {
-    const segmentDuration = event.timestamp - currentTimestamp;
-    if (segmentDuration > 0n) {
-      weightedSum += currentBalance * segmentDuration;
-    }
-    currentBalance = event.balance;
-    currentTimestamp = event.timestamp;
-  }
-
-  // Final segment from last event to window end
-  const finalDuration = windowEnd - currentTimestamp;
-  if (finalDuration > 0n) {
-    weightedSum += currentBalance * finalDuration;
-  }
-
-  return wei(weightedSum / totalSeconds);
+  return wei(accumulated / windowDuration);
 }

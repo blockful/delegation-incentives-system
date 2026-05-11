@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, CheckSVG, LockSVG } from '@ensdomains/thorin'
 import { tokens } from '@/styles/tokens'
-import { fadeInUp } from '@/styles/primitives'
-import { formatPool, formatPayout, formatVpNeeded, computeVpProgress, projectPayout } from '@/utils/dashboard'
+import { formatPool, formatVpNeeded, computeVpProgress } from '@/utils/dashboard'
 import type { TierEntry } from '@/api/types'
 
 interface RewardTiersProps {
@@ -13,120 +12,115 @@ interface RewardTiersProps {
 }
 
 const Section = styled.section`
-  border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.lg};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
   overflow: hidden;
   background: ${tokens.color.surface};
-  animation: ${fadeInUp} 0.35s ease 0.1s both;
+  box-shadow: ${tokens.shadow.sm};
 `
 
 const Header = styled.div`
   padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  border-bottom: 1px solid ${tokens.color.border};
+  border-bottom: 1px solid ${tokens.color.gray};
 `
 
 const Title = styled.h2`
-  font-size: ${tokens.font.size.md};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
+  color: ${tokens.color.darkBlue};
   margin: 0 0 2px;
 `
 
 const Subtitle = styled.p`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
   margin: 0;
 `
 
-const Table = styled.div`
+const Rows = styled.div`
+  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
+`
+
+const Separator = styled.div`
   width: 100%;
+  height: 1px;
+  background: ${tokens.color.borderLight};
 `
 
-const TableHead = styled.div`
-  display: grid;
-  grid-template-columns: 56px 1fr 56px 72px;
-  padding: ${tokens.spacing.sm} ${tokens.spacing.xl};
-  background: ${tokens.color.surfaceAlt};
-  border-bottom: 1px solid ${tokens.color.border};
-
-  @media (min-width: 768px) {
-    grid-template-columns: 72px 1fr 72px 90px;
-  }
-`
-
-const Th = styled.span<{ $align?: 'right' }>`
-  font-size: 10px;
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: ${tokens.color.textFaint};
-  text-align: ${({ $align }) => $align ?? 'left'};
-`
-
-const Row = styled.div<{ $isCurrent: boolean }>`
-  display: grid;
-  grid-template-columns: 56px 1fr 56px 72px;
-  align-items: center;
-  padding: ${tokens.spacing.md} ${tokens.spacing.xl};
-  background: ${({ $isCurrent }) =>
-    $isCurrent ? 'rgba(0, 128, 188, 0.04)' : 'transparent'};
-  border-left: 3px solid ${({ $isCurrent }) =>
-    $isCurrent ? tokens.color.accent : 'transparent'};
-  transition: background ${tokens.transition.fast};
-
-  &:not(:last-child) {
-    border-bottom: 1px solid ${tokens.color.border};
-  }
-
-  @media (min-width: 768px) {
-    grid-template-columns: 72px 1fr 72px 90px;
-  }
-`
-
-const TierCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${({ $isCurrent }) =>
-    $isCurrent ? tokens.font.weight.bold : tokens.font.weight.medium};
-  color: ${({ $isCurrent, $locked }) =>
-    $isCurrent ? tokens.color.accent : $locked ? tokens.color.textFaint : tokens.color.text};
-`
-
-const PoolCell = styled.span<{ $locked: boolean }>`
-  font-size: ${tokens.font.size.sm};
-  color: ${({ $locked }) => ($locked ? tokens.color.textFaint : tokens.color.textMuted)};
+const TierRow = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  justify-content: space-between;
+  align-items: center;
+  gap: ${tokens.spacing['2xl']};
+  padding: 10px ${tokens.spacing.md};
+  margin: 2px ${tokens.spacing.xs};
+  border-radius: ${tokens.radius.sm};
+  background: ${({ $isCurrent }) => ($isCurrent ? tokens.color.tierHighlight : 'transparent')};
+  opacity: ${({ $isLocked }) => ($isLocked ? 0.45 : 1)};
 `
 
-const VpHint = styled.span`
-  font-size: 10px;
-  color: ${tokens.color.accent};
+const TierLabel = styled.span<{ $isCurrent: boolean }>`
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${({ $isCurrent }) => ($isCurrent ? tokens.font.weight.bold : tokens.font.weight.medium)};
+  color: ${tokens.color.darkBlue};
+  flex-shrink: 0;
+`
+
+const TierRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+`
+
+const Dots = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.xs};
+  align-items: center;
+`
+
+const Dot = styled.div<{ $filled: boolean; $isUnlocked: boolean }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: ${({ $filled, $isUnlocked }) =>
+    $filled
+      ? ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)
+      : tokens.color.middleGray};
+`
+
+const ApyText = styled.span<{ $isUnlocked: boolean }>`
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
+  color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
+  width: 110px;
+  text-align: right;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 `
 
-const NumCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: ${({ $isCurrent, $locked }) =>
-    $isCurrent ? tokens.color.accent : $locked ? tokens.color.textFaint : tokens.color.text};
+const PoolText = styled.span`
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  min-width: 80px;
+  white-space: nowrap;
 `
 
-const PayoutCell = styled.span<{ $isCurrent: boolean; $locked: boolean }>`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: ${({ $isCurrent }) =>
-    $isCurrent ? tokens.color.positive : tokens.color.textMuted};
-  opacity: ${({ $locked }) => ($locked ? 0.5 : 1)};
+const StatusIcon = styled.span`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `
 
 const Footer = styled.div`
   padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  border-top: 1px solid ${tokens.color.border};
+  border-top: 1px solid ${tokens.color.gray};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.md};
@@ -145,12 +139,12 @@ const ProgressInfo = styled.div`
 `
 
 const ProgressText = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
   line-height: 1.4;
 
   strong {
-    color: ${tokens.color.text};
+    color: ${tokens.color.darkBlue};
     font-weight: ${tokens.font.weight.semibold};
   }
 `
@@ -158,7 +152,7 @@ const ProgressText = styled.span`
 const ProgressTrack = styled.div`
   height: 4px;
   border-radius: 2px;
-  background: ${tokens.color.border};
+  background: ${tokens.color.borderLight};
   overflow: hidden;
   max-width: 200px;
 `
@@ -166,7 +160,7 @@ const ProgressTrack = styled.div`
 const ProgressFill = styled.div<{ $pct: number }>`
   height: 100%;
   border-radius: 2px;
-  background: ${tokens.color.accent};
+  background: ${tokens.color.blue};
   width: ${({ $pct }) => Math.min(Math.max($pct, 2), 100)}%;
   transition: width 0.5s ease;
 `
@@ -179,7 +173,6 @@ const ShareLink = styled(Link)`
 export function RewardTiers({
   tiers,
   currentTierIndex,
-  userEstimatedReward,
 }: RewardTiersProps) {
   const currentTier = tiers[currentTierIndex]
   const nextTier = tiers[currentTierIndex + 1]
@@ -195,49 +188,42 @@ export function RewardTiers({
       <Header>
         <Title>Reward Tiers</Title>
         <Subtitle>
-          Share the campaign to grow voting power — higher tiers mean more for everyone.
+          Higher tiers unlock as more ENS gets delegated — everyone earns more.
         </Subtitle>
       </Header>
 
-      <Table role="table" aria-label="Tier comparison">
-        <TableHead role="row">
-          <Th>Tier</Th>
-          <Th>Pool</Th>
-          <Th $align="right">APY</Th>
-          <Th $align="right">Payout</Th>
-        </TableHead>
-
-        {tiers.map((tier) => {
+      <Rows>
+        {tiers.map((tier, i) => {
+          const isLocked = !tier.isUnlocked
           const isCurrent = tier.index === currentTierIndex
-          const locked = !tier.isUnlocked && !isCurrent
-          const isNext = tier.index === currentTierIndex + 1
-          const projected = projectPayout(
-            userEstimatedReward,
-            currentTier.poolSizeEns,
-            tier.poolSizeEns,
-          )
+          const apyLabel = tier.estimatedApyPct != null ? `~${tier.estimatedApyPct}% APY` : '—'
 
           return (
-            <Row key={tier.index} $isCurrent={isCurrent} role="row">
-              <TierCell $isCurrent={isCurrent} $locked={locked}>
-                {isCurrent ? '→ ' : ''}Tier {tier.index + 1}
-              </TierCell>
-              <PoolCell $locked={locked}>
-                <span>{formatPool(tier.poolSizeEns)} ENS</span>
-                {isNext && !locked && (
-                  <VpHint>{formatVpNeeded(tier.additionalVPNeeded)} VP to go</VpHint>
-                )}
-              </PoolCell>
-              <NumCell $isCurrent={isCurrent} $locked={locked}>
-                {tier.estimatedApyPct}%
-              </NumCell>
-              <PayoutCell $isCurrent={isCurrent} $locked={locked}>
-                {isCurrent ? '+' : '~'}{formatPayout(projected)}
-              </PayoutCell>
-            </Row>
+            <div key={tier.index}>
+              {i > 0 && <Separator />}
+              <TierRow $isCurrent={isCurrent} $isLocked={isLocked}>
+                <TierLabel $isCurrent={isCurrent}>Tier #{tier.index + 1}</TierLabel>
+                <TierRight>
+                  <PoolText>{formatPool(tier.poolSizeEns)} ENS</PoolText>
+                  <Dots>
+                    {Array.from({ length: tiers.length }, (_, j) => (
+                      <Dot key={j} $filled={j <= tier.index} $isUnlocked={tier.isUnlocked} />
+                    ))}
+                  </Dots>
+                  <ApyText $isUnlocked={tier.isUnlocked}>{apyLabel}</ApyText>
+                  <StatusIcon>
+                    {tier.isUnlocked ? (
+                      <CheckSVG style={{ color: tokens.color.positiveEmphasis }} />
+                    ) : (
+                      <LockSVG style={{ color: tokens.color.darkBlue }} />
+                    )}
+                  </StatusIcon>
+                </TierRight>
+              </TierRow>
+            </div>
           )
         })}
-      </Table>
+      </Rows>
 
       {!isMaxTier && nextTier && (
         <Footer>

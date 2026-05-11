@@ -1,104 +1,220 @@
+import { db } from "ponder:api";
 import {
-  type IncentivesDataSource,
-  identifyActiveDelegates,
-  determinePoolTier,
-  PROPOSAL_WINDOW_SIZE,
-  ONE_ENS,
+  governanceProposal,
+  governanceVote,
+  ensVotingPowerSnapshot,
+} from "ponder:schema";
+import {
+  getLastFinalizedProposals,
+  PROPOSAL_WINDOW,
+  ACTIVE_THRESHOLD,
   POOL_TIERS,
+  FINALIZED_STATUSES,
+  computeVpGrowthPct,
+  selectPoolTier,
+  type Address,
+  type Wei,
+  type Proposal,
+  type ProposalStatus,
+  type PoolTier,
+  seconds,
   wei,
-  parseMonth,
-  monthEndTimestamp,
-  previousMonth,
-  currentMonth,
-} from "@ens-dis/domain"
+  blockNumber,
+} from "@ens-dis/domain";
+import { and, eq, desc, inArray, lte } from "drizzle-orm";
 
-// ─── Shared helpers ──────────────────────────────────────────────────────────
+type Db = typeof db;
 
-/** Fetch proposals/votes and identify active delegates. Reused across routes. */
-export async function fetchActiveDelegates(dataSource: IncentivesDataSource) {
-  const proposals = await dataSource.proposals.getRecentProposals(PROPOSAL_WINDOW_SIZE)
-  const proposalIds = proposals.map((p) => p.id)
-  const votes = await dataSource.votes.getVotesForProposals(proposalIds)
-  const activeDelegates = identifyActiveDelegates(proposals, votes)
-  return { proposals, votes, activeDelegates }
+const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES];
+
+/** Fetch active delegates from the current indexed state. */
+export async function fetchActiveDelegates(database: Db): Promise<{
+  activeDelegates: Set<Address>;
+  proposals: Proposal[];
+  proposalIds: string[];
+  voteCounts: Map<Address, number>;
+  voterProposals: Map<Address, Set<string>>;
+}> {
+  // 1. Get finalized proposals
+  const proposalRows = await database
+    .select()
+    .from(governanceProposal)
+    .where(inArray(governanceProposal.status, FINALIZED_STATUS_LIST))
+    .orderBy(desc(governanceProposal.finalizedTimestamp))
+    .limit(PROPOSAL_WINDOW);
+
+  const proposals: Proposal[] = proposalRows.map((row) => ({
+    id: row.id,
+    status: row.status as ProposalStatus,
+    finalizedTimestamp: seconds(BigInt(row.finalizedTimestamp!)),
+    startBlock: blockNumber(BigInt(row.startBlock)),
+    endBlock: blockNumber(BigInt(row.endBlock)),
+  }));
+
+  const windowProposals = getLastFinalizedProposals(proposals, PROPOSAL_WINDOW);
+
+  // 2. Get all votes for those proposals
+  const proposalIds = windowProposals.map((p) => p.id);
+  let voteRows: { voter: string; proposalId: string }[] = [];
+  if (proposalIds.length > 0) {
+    voteRows = await database
+      .select({ voter: governanceVote.voter, proposalId: governanceVote.proposalId })
+      .from(governanceVote)
+      .where(inArray(governanceVote.proposalId, proposalIds));
+  }
+
+  // 3. Build deduplicated vote counts per voter
+  const proposalIdSet = new Set(proposalIds);
+  const voterProposals = new Map<Address, Set<string>>();
+
+  for (const row of voteRows) {
+    if (!proposalIdSet.has(row.proposalId)) continue;
+    const voter = row.voter as Address;
+    let seen = voterProposals.get(voter);
+    if (!seen) {
+      seen = new Set<string>();
+      voterProposals.set(voter, seen);
+    }
+    seen.add(row.proposalId);
+  }
+
+  const voteCounts = new Map<Address, number>();
+  const activeDelegates = new Set<Address>();
+
+  for (const [voter, proposalsVoted] of voterProposals) {
+    const count = proposalsVoted.size;
+    voteCounts.set(voter, count);
+    if (count >= ACTIVE_THRESHOLD) {
+      activeDelegates.add(voter);
+    }
+  }
+
+  return { activeDelegates, proposals: windowProposals, proposalIds, voteCounts, voterProposals };
 }
 
-/** Case-insensitive set from a Set<string>. */
-export function toLowerSet(addresses: Set<string>): Set<string> {
-  return new Set(Array.from(addresses).map((a) => a.toLowerCase()))
+/** Fetch current VP growth (estimates start-of-current-month to now). */
+export async function fetchCurrentVpGrowth(
+  database: Db,
+  activeDelegatesStart: Set<Address>,
+  activeDelegatesEnd: Set<Address>,
+): Promise<{
+  vpStart: Wei;
+  vpEnd: Wei;
+  growthPct: number;
+  tier: PoolTier;
+}> {
+  // vpEnd: latest VP snapshot per delegate (current state)
+  const endDelegates = [...activeDelegatesEnd];
+  let vpEnd = 0n;
+  for (const delegate of endDelegates) {
+    const rows = await database
+      .select({ votingPower: ensVotingPowerSnapshot.votingPower })
+      .from(ensVotingPowerSnapshot)
+      .where(eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()))
+      .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+      .limit(1);
+    if (rows.length > 0) {
+      vpEnd += BigInt(rows[0].votingPower);
+    }
+  }
+
+  // vpStart: latest VP snapshot at or before month start
+  const monthStr = getCurrentMonth();
+  const [year, monthNum] = monthStr.split("-").map(Number);
+  const monthStartTs = BigInt(Math.floor(Date.UTC(year, monthNum - 1, 1) / 1000));
+
+  const startDelegates = [...activeDelegatesStart];
+  let vpStart = 0n;
+  for (const delegate of startDelegates) {
+    const rows = await database
+      .select({ votingPower: ensVotingPowerSnapshot.votingPower })
+      .from(ensVotingPowerSnapshot)
+      .where(
+        and(
+          eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()),
+          lte(ensVotingPowerSnapshot.timestamp, monthStartTs),
+        ),
+      )
+      .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+      .limit(1);
+    if (rows.length > 0) {
+      vpStart += BigInt(rows[0].votingPower);
+    }
+  }
+
+  const growthPct = computeVpGrowthPct(wei(vpStart), wei(vpEnd));
+  const tier = selectPoolTier(growthPct);
+
+  return { vpStart: wei(vpStart), vpEnd: wei(vpEnd), growthPct, tier };
 }
 
-/** Resolve current and previous month boundaries + aggregate VP + tier. */
-export async function fetchMonthContext(
-  dataSource: IncentivesDataSource,
-  activeDelegateArray: string[],
-) {
-  const monthStr = currentMonth()
-  const { year, month } = parseMonth(monthStr)
-  const monthEnd = monthEndTimestamp(year, month)
-  const prevMonthStr = previousMonth(monthStr)
-  const { year: prevYear, month: prevMonth } = parseMonth(prevMonthStr)
-  const prevMonthEnd = monthEndTimestamp(prevYear, prevMonth)
-
-  const [currentAVP, previousAVP] =
-    activeDelegateArray.length > 0
-      ? await Promise.all([
-          dataSource.votingPower.getAggregateVotingPowerAt(activeDelegateArray, monthEnd),
-          dataSource.votingPower.getAggregateVotingPowerAt(activeDelegateArray, prevMonthEnd),
-        ])
-      : [wei(0n), wei(0n)]
-
-  // Bootstrap guard: same logic as pipeline.ts — if previousAVP is 0 (first program
-  // month), percentageGrowthBps returns 100% which would select tier 6. Force tier 0
-  // so the dashboard matches what the actual distribution will produce.
-  const poolTier =
-    previousAVP === 0n ? POOL_TIERS[0] : determinePoolTier(currentAVP, previousAVP, POOL_TIERS)
-  const currentTierIndex = POOL_TIERS.findIndex(
-    (t) => t.momGrowthMinBps === poolTier.momGrowthMinBps && t.momGrowthMaxBps === poolTier.momGrowthMaxBps,
-  )
-
-  return { monthEnd, currentAVP, previousAVP, poolTier, currentTierIndex }
-}
-
-/** Convert a Wei reward and Wei balance to an APY percentage string. */
-export function computeApyPct(monthlyReward: bigint, balance: bigint): string {
-  const rewardEns = Number(monthlyReward) / Number(ONE_ENS)
-  const balanceEns = Number(balance) / Number(ONE_ENS)
-  const apyPct = balanceEns > 0 ? ((rewardEns * 12) / balanceEns) * 100 : 0
-  return apyPct.toFixed(2)
-}
-
-/** Format Wei as ENS string (4 decimal places). */
+/** Format Wei to ENS string (18 decimals). */
 export function formatEns(value: bigint): string {
-  return (Number(value) / Number(ONE_ENS)).toFixed(4)
+  const whole = value / 10n ** 18n;
+  const frac = value % 10n ** 18n;
+  const fracAbs = frac < 0n ? -frac : frac;
+  return `${whole}.${fracAbs.toString().padStart(18, "0")}`;
 }
 
-/** Format Wei as whole ENS string (for pool sizes/caps). */
-export function formatWholeEns(value: bigint): string {
-  return `${value / BigInt(ONE_ENS)}`
+/** Format a growth range label for a tier. */
+export function formatGrowthRange(tier: PoolTier): string {
+  if (tier.maxGrowthPct === Infinity) {
+    return `${tier.minGrowthPct}%+`;
+  }
+  return `${tier.minGrowthPct}-${tier.maxGrowthPct}%`;
 }
 
-/**
- * Compute the maximum delegator APY percentage for a given tier.
- * Formula: (delegatorPool * 12 / totalWeightEns) * 100
- * where delegatorPool = poolSizeEns * delegatorPoolBps / 10000
- *
- * All inputs are plain numbers (ENS units, not Wei).
- * Returns a fixed-2 string; returns "0.00" when totalWeightEns is 0.
- */
-export function computeMaxDelegatorApyPct(
-  poolSizeEns: number,
-  delegatorPoolBps: number,
-  totalWeightEns: number,
-): string {
-  if (totalWeightEns === 0) return "0.00"
-  const delegatorPool = (poolSizeEns * delegatorPoolBps) / 10000
-  const apyPct = (delegatorPool * 12 / totalWeightEns) * 100
-  return apyPct.toFixed(2)
+/** Get current YYYY-MM month string. */
+export function getCurrentMonth(): string {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
 }
 
-/** Log the full error internally; return a safe message for clients. */
-export function internalError(error: unknown): string {
-  console.error("[API error]", error)
-  return "Internal server error"
+/** Get days remaining in the current month. */
+export function getDaysRemainingInMonth(): number {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const currentDay = now.getUTCDate();
+  return lastDay - currentDay;
+}
+
+/** Validate and normalize an Ethereum address from URL params. */
+export function normalizeAddress(raw: string): Address | null {
+  const trimmed = raw.trim().toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(trimmed)) {
+    return null;
+  }
+  return trimmed as Address;
+}
+
+/** Find the tier index for a given growth percentage. */
+export function findTierIndex(growthPct: number): number {
+  for (let i = 0; i < POOL_TIERS.length; i++) {
+    const t = POOL_TIERS[i];
+    if (growthPct >= t.minGrowthPct && growthPct < t.maxGrowthPct) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+/** Get total VP for a set of active delegates. */
+export async function getActiveVpTotal(database: Db, activeDelegates: Set<Address>): Promise<bigint> {
+  let total = 0n;
+  for (const delegate of activeDelegates) {
+    const rows = await database
+      .select({ votingPower: ensVotingPowerSnapshot.votingPower })
+      .from(ensVotingPowerSnapshot)
+      .where(eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()))
+      .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+      .limit(1);
+    if (rows.length > 0) {
+      total += BigInt(rows[0].votingPower);
+    }
+  }
+  return total;
 }

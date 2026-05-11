@@ -1,49 +1,55 @@
-import {
-  type Proposal,
-  type Vote,
-  ACTIVE_VOTE_THRESHOLD,
-  PROPOSAL_WINDOW_SIZE,
-} from "./types.js";
+import type { Address, Proposal, Vote } from "./types.js";
+import { ACTIVE_THRESHOLD, PROPOSAL_WINDOW } from "./config.js";
 
 /**
- * Identify active delegates from the last N on-chain proposals.
- * A delegate is active if they voted on at least ACTIVE_VOTE_THRESHOLD
- * of the last PROPOSAL_WINDOW_SIZE proposals.
+ * From a list of finalized proposals, take the last N (sorted by finalizedTimestamp desc).
+ * Returns up to PROPOSAL_WINDOW proposals.
+ */
+export function getLastFinalizedProposals(
+  proposals: readonly Proposal[],
+  limit: number = PROPOSAL_WINDOW,
+): Proposal[] {
+  return [...proposals]
+    .sort((a, b) => {
+      if (a.finalizedTimestamp > b.finalizedTimestamp) return -1;
+      if (a.finalizedTimestamp < b.finalizedTimestamp) return 1;
+      return 0;
+    })
+    .slice(0, limit);
+}
+
+/**
+ * Given the last N finalized proposals and all votes cast on them,
+ * identify delegates who voted on >= ACTIVE_THRESHOLD of them.
+ * Returns a Set of active delegate addresses.
  */
 export function identifyActiveDelegates(
-  proposals: Proposal[],
-  votes: Vote[],
-): Set<string> {
-  if (proposals.length === 0) return new Set();
+  proposals: readonly Proposal[],
+  votes: readonly Vote[],
+  threshold: number = ACTIVE_THRESHOLD,
+): Set<Address> {
+  const proposalIds = new Set(proposals.map((p) => p.id));
 
-  // Take the last PROPOSAL_WINDOW_SIZE proposals by timestamp
-  const sorted = [...proposals].sort(
-    (a, b) => Number(b.timestamp - a.timestamp), // descending
-  );
-  const recentProposals = sorted.slice(0, PROPOSAL_WINDOW_SIZE);
-  const recentProposalIds = new Set(recentProposals.map((p) => p.id));
-
-  // Count unique proposals each delegate voted on
-  const voteCountByDelegate = new Map<string, Set<string>>();
+  // Count how many distinct proposals each voter voted on.
+  const voteCounts = new Map<Address, Set<string>>();
 
   for (const vote of votes) {
-    if (!recentProposalIds.has(vote.proposalId)) continue;
+    if (!proposalIds.has(vote.proposalId)) continue;
 
-    let proposalSet = voteCountByDelegate.get(vote.voterAccountId);
-    if (!proposalSet) {
-      proposalSet = new Set();
-      voteCountByDelegate.set(vote.voterAccountId, proposalSet);
+    let seen = voteCounts.get(vote.voter);
+    if (!seen) {
+      seen = new Set<string>();
+      voteCounts.set(vote.voter, seen);
     }
-    proposalSet.add(vote.proposalId);
+    seen.add(vote.proposalId);
   }
 
-  // Filter to those meeting the threshold
-  const activeDelegates = new Set<string>();
-  for (const [delegate, proposalSet] of voteCountByDelegate) {
-    if (proposalSet.size >= ACTIVE_VOTE_THRESHOLD) {
-      activeDelegates.add(delegate);
+  const active = new Set<Address>();
+  for (const [voter, proposalsVotedOn] of voteCounts) {
+    if (proposalsVotedOn.size >= threshold) {
+      active.add(voter);
     }
   }
 
-  return activeDelegates;
+  return active;
 }

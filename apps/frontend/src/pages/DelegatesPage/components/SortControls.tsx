@@ -15,10 +15,10 @@ interface SortControlsProps {
 }
 
 const fields: { value: SortField; label: string }[] = [
-  { value: 'random', label: 'Random' },
   { value: 'votingPower', label: 'Voting Power' },
   { value: 'activity', label: 'Activity' },
-  { value: 'activeSince', label: 'Active Since' },
+  { value: 'activeSince', label: 'First Active' },
+  { value: 'random', label: 'Random' },
 ]
 
 const Wrapper = styled.div`
@@ -30,14 +30,23 @@ const Wrapper = styled.div`
   -webkit-overflow-scrolling: touch;
 `
 
+const SortLabel = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.darkGray};
+  flex-shrink: 0;
+  margin-right: ${tokens.spacing.xs};
+`
+
 const Pill = styled.button<{ $active: boolean }>`
   padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
   border-radius: ${tokens.radius.pill};
-  border: 1px solid ${tokens.color.border};
+  border: 1px solid ${({ $active }) =>
+    $active ? tokens.color.darkBlue : tokens.color.borderLight};
   background: ${({ $active }) =>
-    $active ? tokens.color.text : 'transparent'};
+    $active ? tokens.color.darkBlue : 'transparent'};
   color: ${({ $active }) =>
-    $active ? tokens.color.surface : tokens.color.text};
+    $active ? tokens.color.white : tokens.color.darkGray};
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
   cursor: pointer;
@@ -67,12 +76,14 @@ export function SortControls({ value, onChange, onShuffle }: SortControlsProps) 
     if (value.field === field) {
       onChange({ field, direction: value.direction === 'desc' ? 'asc' : 'desc' })
     } else {
-      onChange({ field, direction: 'desc' })
+      const defaultDir = field === 'activeSince' ? 'asc' : 'desc'
+      onChange({ field, direction: defaultDir })
     }
   }
 
   return (
     <Wrapper>
+      <SortLabel>Sort by</SortLabel>
       {fields.map((opt) => (
         <Pill
           key={opt.value}

@@ -1,105 +1,132 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { TierProgressionSchema, ErrorSchema } from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db } from "ponder:api";
+import {
+  POOL_TIERS,
+  DELEGATOR_POOL_BPS,
+  BPS_BASE,
+} from "@ens-dis/domain";
 import {
   fetchActiveDelegates,
-  fetchMonthContext,
-  formatWholeEns,
-  internalError,
-  computeMaxDelegatorApyPct,
-} from "../helpers.js"
-import { POOL_TIERS, percentageGrowthBps, mulDiv, DELEGATOR_POOL_BPS, ONE_ENS } from "@ens-dis/domain"
+  fetchCurrentVpGrowth,
+  formatEns,
+  findTierIndex,
+  getActiveVpTotal,
+} from "../helpers.js";
 
-const tierProgressionRoute = createRoute({
+const TierEntrySchema = z.object({
+  index: z.number().openapi({ example: 0 }),
+  momGrowthMinPct: z.string().openapi({ example: "0" }),
+  momGrowthMaxPct: z.string().openapi({ example: "10" }),
+  poolSizeEns: z.string().openapi({ example: "5000.000000000000000000" }),
+  delegateCapEns: z.string().openapi({ example: "50.000000000000000000" }),
+  delegatorCapEns: z.string().openapi({ example: "250.000000000000000000" }),
+  isCurrent: z.boolean(),
+  isUnlocked: z.boolean(),
+  additionalVPNeeded: z.string().openapi({ description: "Wei needed above current VP to reach this tier", example: "0" }),
+  requiredAVP: z.string().openapi({ description: "VP threshold to enter this tier (wei)", example: "110000000000000000000000" }),
+  estimatedApyPct: z.string().openapi({ description: "Estimated delegator APY at this tier", example: "12.50" }),
+});
+
+const TierProgressionResponse = z.object({
+  currentAVP: z.string().openapi({ description: "Current active VP (wei)", example: "107230000000000000000000" }),
+  previousAVP: z.string().openapi({ description: "Active VP at month start (wei)", example: "100000000000000000000000" }),
+  currentGrowthBps: z.string().openapi({ example: "723" }),
+  currentGrowthPct: z.string().openapi({ example: "7.23" }),
+  currentTierIndex: z.number().openapi({ example: 0 }),
+  activeDelegateCount: z.number().openapi({ example: 25 }),
+  maxDelegatorApyPct: z.string().openapi({ description: "Highest estimated delegator APY across all tiers", example: "54.00" }),
+  tiers: z.array(TierEntrySchema),
+});
+
+const route = createRoute({
   method: "get",
   path: "/tiers/progression",
   tags: ["Tiers"],
-  summary: "Get current tier and VP needed for each higher tier",
+  summary: "Tier progression and current VP growth",
+  description:
+    "Returns all tier definitions with current unlock state, VP thresholds, estimated APY, and overall VP growth.",
   responses: {
     200: {
-      content: { "application/json": { schema: TierProgressionSchema } },
-      description: "Tier progression",
+      description: "Tier progression data",
+      content: { "application/json": { schema: TierProgressionResponse } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-export const tiersRouter = new OpenAPIHono()
+const app = new OpenAPIHono();
 
-tiersRouter.openapi(tierProgressionRoute, async (c) => {
+app.openapi(route, async (c) => {
   try {
-    const dataSource = buildDataSource()
-    const { activeDelegates } = await fetchActiveDelegates(dataSource)
-    const activeDelegateArray = Array.from(activeDelegates)
-    const { currentAVP, previousAVP, currentTierIndex } = await fetchMonthContext(
-      dataSource,
-      activeDelegateArray,
-    )
+    const { activeDelegates } = await fetchActiveDelegates(db);
+    const { vpStart, vpEnd, growthPct } = await fetchCurrentVpGrowth(
+      db,
+      activeDelegates,
+      activeDelegates,
+    );
+    const totalVp = await getActiveVpTotal(db, activeDelegates);
 
-    const growthBps = percentageGrowthBps(currentAVP, previousAVP)
+    const vpStartBig = vpStart as bigint;
+    const vpEndBig = vpEnd as bigint;
+    const currentTierIndex = findTierIndex(growthPct);
+    const growthBps = Math.round(growthPct * 100);
 
-    // maxDelegatorApyPct uses the current tier pool and current AVP
-    const currentTierPoolSize = POOL_TIERS[currentTierIndex]?.poolSize ?? POOL_TIERS[0].poolSize
-    const currentPoolEns = Number(currentTierPoolSize) / Number(ONE_ENS)
-    const currentAVPEns = Number(currentAVP) / Number(ONE_ENS)
-    const maxDelegatorApyPct = computeMaxDelegatorApyPct(
-      currentPoolEns,
-      Number(DELEGATOR_POOL_BPS),
-      currentAVPEns,
-    )
-
-    const delegatorPoolBps = Number(DELEGATOR_POOL_BPS)
-    const previousAVPEns = Number(previousAVP) / Number(ONE_ENS)
+    let maxDelegatorApy = 0;
 
     const tiers = POOL_TIERS.map((tier, index) => {
       const requiredAVP =
-        previousAVP === 0n
-          ? 0n
-          : previousAVP + mulDiv(previousAVP, tier.momGrowthMinBps, 10000n)
-      const additionalVPNeeded = requiredAVP > currentAVP ? requiredAVP - currentAVP : 0n
+        (vpStartBig * (100n + BigInt(tier.minGrowthPct))) / 100n;
 
-      // Estimate APY based on initial VP of the round (previousAVP).
-      // For each tier, VP would have grown by tier.momGrowthMinBps from previousAVP.
-      let estimatedApyPct = "0.00"
-      if (previousAVPEns > 0) {
-        const tierPoolEns = Number(tier.poolSize) / Number(ONE_ENS)
-        const tierGrowthRatio = 1 + Number(tier.momGrowthMinBps) / 10000
-        const estimatedVPEns = previousAVPEns * tierGrowthRatio
-        estimatedApyPct = computeMaxDelegatorApyPct(tierPoolEns, delegatorPoolBps, estimatedVPEns)
+      const diff = requiredAVP - vpEndBig;
+      const additionalVPNeeded = diff > 0n ? diff : 0n;
+
+      // Estimated delegator APY: (delegatorPool * 12 / totalVP) * 100
+      let estimatedApyPct = "0.00";
+      if (totalVp > 0n) {
+        const delegatorPool = (tier.poolSize * (DELEGATOR_POOL_BPS as bigint)) / (BPS_BASE as bigint);
+        // APY in basis points: delegatorPool * 12 * 10000 / totalVp
+        const apyBps = (delegatorPool * 1200n * 100n) / totalVp;
+        estimatedApyPct = (Number(apyBps) / 100).toFixed(2);
       }
+
+      const apyNum = parseFloat(estimatedApyPct);
+      if (apyNum > maxDelegatorApy) maxDelegatorApy = apyNum;
 
       return {
         index,
-        momGrowthMinPct: `${Number(tier.momGrowthMinBps) / 100}`,
-        momGrowthMaxPct: `${Number(tier.momGrowthMaxBps) / 100}`,
-        poolSizeEns: formatWholeEns(tier.poolSize),
-        delegateCapEns: formatWholeEns(tier.delegateCap),
-        delegatorCapEns: formatWholeEns(tier.delegatorCap),
+        momGrowthMinPct: tier.minGrowthPct.toString(),
+        momGrowthMaxPct: tier.maxGrowthPct === Infinity ? "Infinity" : tier.maxGrowthPct.toString(),
+        poolSizeEns: formatEns(tier.poolSize as bigint),
+        delegateCapEns: formatEns(tier.delegateCap as bigint),
+        delegatorCapEns: formatEns(tier.delegatorCap as bigint),
         isCurrent: index === currentTierIndex,
-        isUnlocked: growthBps >= tier.momGrowthMinBps,
+        isUnlocked: index <= currentTierIndex,
         additionalVPNeeded: additionalVPNeeded.toString(),
         requiredAVP: requiredAVP.toString(),
         estimatedApyPct,
-      }
-    })
+      };
+    });
 
     return c.json(
       {
-        currentAVP: currentAVP.toString(),
-        previousAVP: previousAVP.toString(),
+        currentAVP: vpEndBig.toString(),
+        previousAVP: vpStartBig.toString(),
         currentGrowthBps: growthBps.toString(),
-        currentGrowthPct: `${Number(growthBps) / 100}`,
+        currentGrowthPct: growthPct.toFixed(2),
         currentTierIndex,
         activeDelegateCount: activeDelegates.size,
-        maxDelegatorApyPct,
+        maxDelegatorApyPct: maxDelegatorApy.toFixed(2),
         tiers,
       },
       200,
-    )
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return c.json({ error: message }, 500);
   }
-})
+});
+
+export default app;

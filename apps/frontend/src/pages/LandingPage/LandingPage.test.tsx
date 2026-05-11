@@ -18,7 +18,7 @@ describe('LandingPage', () => {
       expect(screen.getByTestId('tier-table')).toBeInTheDocument()
     })
     for (let i = 1; i <= 7; i++) {
-      expect(screen.getAllByText(`Tier ${i}`).length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText(`Tier #${i}`).length).toBeGreaterThanOrEqual(1)
     }
   })
 
@@ -26,7 +26,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/Three steps to earn/),
+        screen.getByText(/Simple to join/),
       ).toBeInTheDocument()
     })
   })

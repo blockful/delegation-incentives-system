@@ -1,137 +1,141 @@
-import {
-  type RewardAllocation,
-  type LotteryEntry,
-  type LotteryPool,
-  wei,
-} from "./types.js";
-import { sum } from "./util/bigint-math.js";
+import type { Address, Wei, LotteryBucket, LotteryEntry } from "./types.js";
+import { wei } from "./types.js";
 import { keccak256, encodePacked } from "viem";
+import { LOTTERY_BUCKET_TARGET } from "./config.js";
+
+// ──────────────────────────────────────────────────────────
+// Step 14: Deterministic lottery
+// ──────────────────────────────────────────────────────────
 
 /**
- * Run the deterministic lottery for sub-threshold payouts.
- *
- * - Payouts below minThreshold are grouped into pools approaching targetPoolSize
- * - Each pool has a single winner selected by weighted random draw
- * - Randomness is deterministic: keccak256(randaoSeed, poolIndex)
+ * Form buckets from sub-threshold entries.
+ * Sort entries descending by amount. Fill buckets sequentially.
+ * Entry that pushes bucket over target stays in current bucket.
  */
-export function runLottery(
-  allocations: RewardAllocation[],
-  minThreshold: bigint,
-  targetPoolSize: bigint,
-  randaoSeed: bigint,
-): { directPayouts: RewardAllocation[]; lotteryPools: LotteryPool[] } {
-  const directPayouts: RewardAllocation[] = [];
-  const lotteryEntries: LotteryEntry[] = [];
+export function formBuckets(
+  entries: readonly { address: Address; amount: Wei }[],
+): { address: Address; amount: Wei }[][] {
+  if (entries.length === 0) return [];
 
-  for (const alloc of allocations) {
-    if (alloc.amount >= minThreshold) {
-      directPayouts.push(alloc);
-    } else if (alloc.amount > 0n) {
-      lotteryEntries.push({
-        address: alloc.address,
-        originalAmount: alloc.amount,
-        role: alloc.role,
-      });
-    }
-  }
-
-  if (lotteryEntries.length === 0) {
-    return { directPayouts, lotteryPools: [] };
-  }
-
-  // Sort entries by amount descending, then address for determinism
-  lotteryEntries.sort((a, b) => {
-    const diff = b.originalAmount - a.originalAmount;
-    if (diff !== 0n) return diff > 0n ? 1 : -1;
-    return a.address.localeCompare(b.address);
+  // Sort descending by amount (do not mutate input)
+  const sorted = [...entries].sort((a, b) => {
+    if (a.amount > b.amount) return -1;
+    if (a.amount < b.amount) return 1;
+    return 0;
   });
 
-  // Group into pools approaching targetPoolSize
-  const pools: LotteryEntry[][] = [];
-  let currentPool: LotteryEntry[] = [];
-  let currentSum = 0n;
+  const buckets: { address: Address; amount: Wei }[][] = [];
+  let currentBucket: { address: Address; amount: Wei }[] = [];
+  let currentTotal = 0n;
 
-  for (const entry of lotteryEntries) {
-    const entryAmount = entry.originalAmount;
-    if (
-      currentPool.length > 0 &&
-      currentSum + entryAmount > targetPoolSize
-    ) {
-      pools.push(currentPool);
-      currentPool = [entry];
-      currentSum = entryAmount;
-    } else {
-      currentPool.push(entry);
-      currentSum += entryAmount;
-    }
-  }
-  if (currentPool.length > 0) {
-    pools.push(currentPool);
-  }
+  for (const entry of sorted) {
+    currentBucket.push(entry);
+    currentTotal += entry.amount;
 
-  // A single-entry pool has no randomness — promote to direct payout.
-  const soloEntries: LotteryEntry[] = [];
-  const multiEntryPools: LotteryEntry[][] = [];
-  for (const pool of pools) {
-    if (pool.length === 1) {
-      soloEntries.push(pool[0]);
-    } else {
-      multiEntryPools.push(pool);
+    if (currentTotal >= (LOTTERY_BUCKET_TARGET as bigint)) {
+      buckets.push(currentBucket);
+      currentBucket = [];
+      currentTotal = 0n;
     }
   }
 
-  for (const entry of soloEntries) {
-    directPayouts.push({
-      address: entry.address,
-      amount: entry.originalAmount,
-      role: entry.role,
-    });
+  // Push remaining entries as the last (smaller) bucket
+  if (currentBucket.length > 0) {
+    buckets.push(currentBucket);
   }
 
-  // For each multi-entry pool, draw a weighted random winner
-  const lotteryPools: LotteryPool[] = multiEntryPools.map((entries, poolIndex) => {
-    const totalPrize = wei(
-      sum(entries.map((e) => e.originalAmount)),
-    );
-    const winner = drawWeightedWinner(entries, randaoSeed, poolIndex);
-    return { entries, totalPrize, winner };
-  });
-
-  return { directPayouts, lotteryPools };
+  return buckets;
 }
 
 /**
- * Select a weighted random winner from pool entries.
- * Uses keccak256(randaoSeed, poolIndex) as deterministic randomness.
+ * Select a winner from a bucket using a deterministic hash.
+ * Walk entries by cumulative sum: winner is the entry where cumSum > randomValue.
  */
-function drawWeightedWinner(
-  entries: LotteryEntry[],
-  randaoSeed: bigint,
-  poolIndex: number,
-): string {
-  if (entries.length === 1) return entries[0].address;
+function selectWinner(
+  bucketEntries: readonly { address: Address; amount: Wei }[],
+  randaoValue: string,
+  bucketIndex: number,
+): { winner: Address; bucketTotal: bigint } {
+  const bucketTotal = bucketEntries.reduce(
+    (acc, e) => acc + (e.amount as bigint),
+    0n,
+  );
 
-  const totalWeight = sum(entries.map((e) => e.originalAmount));
-  if (totalWeight === 0n) return entries[0].address;
+  if (bucketEntries.length === 1 || bucketTotal === 0n) {
+    return { winner: bucketEntries[0].address, bucketTotal };
+  }
 
-  // Generate deterministic random number
   const hash = keccak256(
     encodePacked(
-      ["uint256", "uint256"],
-      [randaoSeed, BigInt(poolIndex)],
+      ["bytes32", "uint256"],
+      [randaoValue as `0x${string}`, BigInt(bucketIndex)],
     ),
   );
-  const randomValue = BigInt(hash) % totalWeight;
+  const randomValue = BigInt(hash) % bucketTotal;
 
-  // Weighted selection via cumulative sum
-  let cumulative = 0n;
-  for (const entry of entries) {
-    cumulative += entry.originalAmount;
-    if (randomValue < cumulative) {
-      return entry.address;
+  let cumSum = 0n;
+  for (const entry of bucketEntries) {
+    cumSum += entry.amount as bigint;
+    if (cumSum > randomValue) {
+      return { winner: entry.address, bucketTotal };
     }
   }
 
-  // Fallback (should never reach due to modulo)
-  return entries[entries.length - 1].address;
+  // Fallback: last entry (should not happen with correct math)
+  return {
+    winner: bucketEntries[bucketEntries.length - 1].address,
+    bucketTotal,
+  };
+}
+
+/**
+ * Run deterministic lottery.
+ * For each bucket: winner selected via keccak256(randaoValue, bucketIndex).
+ * Winner probability = entry.amount / bucket.total.
+ * Solo buckets: entry wins automatically.
+ */
+export function runLottery(
+  entries: readonly { address: Address; amount: Wei }[],
+  randaoValue: string,
+): LotteryBucket[] {
+  if (entries.length === 0) return [];
+
+  const buckets = formBuckets(entries);
+  const results: LotteryBucket[] = [];
+
+  for (let i = 0; i < buckets.length; i++) {
+    const bucketEntries = buckets[i];
+    const { winner, bucketTotal } = selectWinner(
+      bucketEntries,
+      randaoValue,
+      i,
+    );
+
+    const lotteryEntries: LotteryEntry[] = bucketEntries.map((e) => {
+      const probabilityBps = bucketTotal === 0n ? 0n : (e.amount as bigint) * 10000n / bucketTotal;
+      return {
+        address: e.address,
+        amount: e.amount,
+        probability: formatProbability(probabilityBps),
+      };
+    });
+
+    results.push({
+      bucketIndex: i,
+      entries: lotteryEntries,
+      prize: wei(bucketTotal),
+      winner,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Format probability from basis points (e.g. 5000 → "0.5000", 10000 → "1.0000").
+ */
+function formatProbability(bps: bigint): string {
+  const intPart = bps / 10000n;
+  const fracPart = bps % 10000n;
+  return `${intPart}.${fracPart.toString().padStart(4, "0")}`;
 }

@@ -1,167 +1,434 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { z } from "zod"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db } from "ponder:api";
+import { distributionResult } from "ponder:schema";
+import { desc } from "drizzle-orm";
+import { distributionToCsv } from "../../output/csv-writer.js";
 import {
-  DistributionSchema,
-  ErrorSchema,
-  MonthParam,
-} from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
-import { distributionToCsv } from "../output/csv-writer.js"
-import { distributionToJson } from "../output/json-writer.js"
-import { internalError } from "../helpers.js"
-import { isConfiguredRound } from "../rounds.js"
-import { runDistributionPipeline, type DistributionResult } from "@ens-dis/domain"
+  DistributionComputeError,
+  computeAndStoreDistribution,
+  type ComputeDistributionOptions,
+  type ComputeDistributionResponse,
+} from "../distribution-compute.js";
+import { normalizeAddress } from "../helpers.js";
+import {
+  distributionToApiResponse,
+  getAddressReward,
+  parseDistributionRow,
+  parseDistributionRows,
+  type DistributionStorageRow,
+} from "../distribution-utils.js";
+import {
+  type DistributionDataStatus,
+  type RoundStatus,
+  getConfiguredRoundMonths,
+  getRoundDateRange,
+  getRoundNumber,
+  getRoundTiming,
+} from "../round-config.js";
 
-// ─── In-flight deduplication ─────────────────────────────────────────────────
-// Prevents multiple concurrent requests from triggering parallel computations
-// for the same month. Once the promise settles it is removed; future requests
-// then hit the DB cache.
+const MonthParam = z.object({
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .openapi({ param: { name: "month", in: "path" }, example: "2026-03" }),
+});
 
-const inFlight = new Map<string, Promise<DistributionResult>>()
+const DistributionMonthListResponse = z.array(
+  z.string().openapi({ example: "2026-03" }),
+);
 
-/** Returns true when the calendar month has fully elapsed (UTC). */
-export function isMonthOver(month: string): boolean {
-  const [y, m] = month.split("-").map(Number)
-  return Date.now() >= Date.UTC(y, m, 1) // first ms of the following month
+const AddressDistributionRoundSchema = z.object({
+  roundNumber: z.number(),
+  month: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  roundStatus: z.enum(["live", "ended", "pending", "paid"]),
+  distributionDataStatus: z.enum(["available", "in_progress", "missing", "not_started"]),
+  rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
+  delegateReward: z.string(),
+  delegateRewardEns: z.string(),
+  tokenHolderReward: z.string(),
+  tokenHolderRewardEns: z.string(),
+  lotteryReward: z.string(),
+  lotteryRewardEns: z.string(),
+  totalReward: z.string(),
+  totalRewardEns: z.string(),
+});
+
+const AddressDistributionHistoryResponse = z.object({
+  address: z.string(),
+  rounds: z.array(AddressDistributionRoundSchema),
+});
+
+const ComputeDistributionResponseSchema = z.object({
+  month: z.string(),
+  status: z.enum(["cached", "computed", "skipped"]),
+  reason: z.string().optional(),
+  computedAt: z.string().nullable(),
+  tierIndex: z.number().nullable(),
+  poolSize: z.string().nullable(),
+  poolSizeEns: z.string().nullable(),
+  totalDistributed: z.string().nullable(),
+  totalDistributedEns: z.string().nullable(),
+  activeDelegateCount: z.number().nullable(),
+  eligibleDelegatorCount: z.number().nullable(),
+  rewardCount: z.number().nullable(),
+  lotteryBucketCount: z.number().nullable(),
+});
+
+type AddressDistributionRewardStatus =
+  | "paid"
+  | "no_reward"
+  | "not_eligible"
+  | "pending"
+  | "unavailable";
+
+interface AddressDistributionRound {
+  roundNumber: number;
+  month: string;
+  startDate: string;
+  endDate: string;
+  roundStatus: RoundStatus;
+  distributionDataStatus: DistributionDataStatus;
+  rewardStatus: AddressDistributionRewardStatus;
+  delegateReward: string;
+  delegateRewardEns: string;
+  tokenHolderReward: string;
+  tokenHolderRewardEns: string;
+  lotteryReward: string;
+  lotteryRewardEns: string;
+  totalReward: string;
+  totalRewardEns: string;
 }
 
-async function computeAndCache(
-  month: string,
-  dataSource: ReturnType<typeof buildDataSource>,
-): Promise<DistributionResult> {
-  const result = await runDistributionPipeline({ month, dataSource })
-  await dataSource.distributions.save(month, result)
-  return result
+export interface DistributionRouteDeps {
+  getRows?: () => Promise<DistributionStorageRow[]>;
+  computeDistribution?: (
+    month: string,
+    options: ComputeDistributionOptions,
+  ) => Promise<ComputeDistributionResponse>;
+  adminToken?: string | null;
+  now?: () => Date;
 }
 
-/**
- * Loads a distribution from cache, or triggers computation on first access
- * after month end. Concurrent requests share the same in-flight promise so
- * the pipeline runs at most once per month regardless of concurrency.
- *
- * Returns null when the month hasn't ended or isn't a configured round.
- */
-async function getOrCompute(
-  month: string,
-  dataSource: ReturnType<typeof buildDataSource>,
-): Promise<DistributionResult | null> {
-  const cached = await dataSource.distributions.load(month)
-  if (cached) return cached
+async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
+  const rows = await db
+    .select()
+    .from(distributionResult)
+    .orderBy(desc(distributionResult.month));
 
-  if (!isMonthOver(month) || !isConfiguredRound(month)) return null
-
-  let promise = inFlight.get(month)
-  if (!promise) {
-    promise = computeAndCache(month, dataSource).finally(() => inFlight.delete(month))
-    inFlight.set(month, promise)
-  }
-  return promise
+  return rows as DistributionStorageRow[];
 }
 
-// ─── Routes ──────────────────────────────────────────────────────────────────
-
-const listDistributionsRoute = createRoute({
+const listRoute = createRoute({
   method: "get",
   path: "/distributions",
   tags: ["Distributions"],
-  summary: "List all computed distribution months",
+  summary: "List distribution months or address history",
+  description:
+    "Without query parameters, returns an array of YYYY-MM month strings for computed distributions. With ?address=0x..., returns that address's per-round distribution history derived from stored results.",
+  request: {
+    query: z.object({
+      address: z.string().optional().openapi({
+        description: "Optional Ethereum address for address-specific distribution history",
+        example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+      }),
+    }),
+  },
   responses: {
     200: {
-      content: { "application/json": { schema: z.array(z.string()) } },
-      description: "List of computed months",
+      description: "Distribution month list or address distribution history",
+      content: {
+        "application/json": {
+          schema: z.union([
+            DistributionMonthListResponse,
+            AddressDistributionHistoryResponse,
+          ]),
+        },
+      },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-const getDistributionRoute = createRoute({
+const getRoute = createRoute({
   method: "get",
   path: "/distributions/{month}",
   tags: ["Distributions"],
-  summary: "Get distribution result for a month (auto-computes on first access after month end)",
-  request: { params: z.object({ month: MonthParam }) },
+  summary: "Get distribution for a month",
+  description: "Returns the curated distribution result for the requested month.",
+  request: { params: MonthParam },
   responses: {
     200: {
-      content: { "application/json": { schema: DistributionSchema } },
-      description: "Distribution data",
+      description: "Distribution result",
+      content: { "application/json": { schema: z.object({}).passthrough() } },
+    },
+    400: {
+      description: "Invalid month format",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Month has not ended or is not a configured round",
+      description: "Distribution not found",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Computation or retrieval error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-const getCsvRoute = createRoute({
+const csvRoute = createRoute({
   method: "get",
   path: "/distributions/{month}/csv",
   tags: ["Distributions"],
-  summary: "Download distribution as CSV (auto-computes on first access after month end)",
-  request: { params: z.object({ month: MonthParam }) },
+  summary: "Download distribution CSV",
+  description: "Returns the distribution for the requested month as a downloadable CSV file.",
+  request: { params: MonthParam },
   responses: {
     200: {
-      content: { "text/csv": { schema: z.string() } },
       description: "CSV file",
+      content: { "text/csv": { schema: z.string() } },
+    },
+    400: {
+      description: "Invalid month format",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Month has not ended or is not a configured round",
+      description: "Distribution not found",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
+const computeRoute = createRoute({
+  method: "post",
+  path: "/distributions/{month}/compute",
+  tags: ["Distributions"],
+  summary: "Compute and store a monthly distribution",
+  description:
+    "Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
+  request: {
+    params: MonthParam,
+    body: {
+      required: false,
+      content: {
+        "application/json": {
+          schema: z.object({
+            force: z.boolean().optional().openapi({
+              description: "Recompute and overwrite an existing cached result",
+              example: false,
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Distribution was already cached, computed, or skipped because the round has not ended",
+      content: { "application/json": { schema: ComputeDistributionResponseSchema } },
+    },
+    401: {
+      description: "Missing or invalid admin token",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    404: {
+      description: "Unknown configured month",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
 
-export const distributionsRouter = new OpenAPIHono()
+export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
+  const app = new OpenAPIHono();
+  const getRows = deps.getRows ?? getStoredDistributionRows;
+  const computeDistribution = deps.computeDistribution ?? computeAndStoreDistribution;
+  const adminToken = deps.adminToken ?? process.env.DISTRIBUTION_ADMIN_TOKEN ?? null;
+  const getNow = deps.now ?? (() => new Date());
 
-distributionsRouter.openapi(listDistributionsRoute, async (c) => {
-  try {
-    const dataSource = buildDataSource()
-    const months = await dataSource.distributions.list()
-    return c.json(months, 200)
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
-  }
-})
+  app.openapi(listRoute, async (c) => {
+    try {
+      const { address: rawAddress } = c.req.valid("query");
+      const rows = await getRows();
 
-distributionsRouter.openapi(getDistributionRoute, async (c) => {
-  const { month } = c.req.valid("param")
-  try {
-    const dataSource = buildDataSource()
-    const result = await getOrCompute(month, dataSource)
-    if (!result) {
-      return c.json({ error: `Distribution for ${month} is not available yet` }, 404)
+      if (rawAddress) {
+        const address = normalizeAddress(rawAddress);
+        if (!address) {
+          return c.json({ error: "Invalid Ethereum address" }, 400);
+        }
+
+        return c.json(
+          buildAddressDistributionHistory(rows, address, getNow()),
+          200,
+        );
+      }
+
+      const months = [...new Set(rows.map((row) => row.month))].sort().reverse();
+      return c.json(months, 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
     }
-    return c.json(JSON.parse(distributionToJson(result)), 200)
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
-  }
-})
+  });
 
-distributionsRouter.openapi(getCsvRoute, async (c) => {
-  const { month } = c.req.valid("param")
-  try {
-    const dataSource = buildDataSource()
-    const result = await getOrCompute(month, dataSource)
-    if (!result) {
-      return c.json({ error: `Distribution for ${month} is not available yet` }, 404)
+  app.openapi(getRoute, async (c) => {
+    try {
+      const { month } = c.req.valid("param");
+      const rows = await getRows();
+      const row = rows.find((candidate) => candidate.month === month);
+
+      if (!row) {
+        return c.json({ error: `No distribution found for month ${month}` }, 404);
+      }
+
+      return c.json(distributionToApiResponse(parseDistributionRow(row)), 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
     }
-    return c.text(distributionToCsv(result), 200, {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
-    })
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
-  }
-})
+  });
+
+  app.openapi(csvRoute, async (c) => {
+    try {
+      const { month } = c.req.valid("param");
+      const rows = await getRows();
+      const row = rows.find((candidate) => candidate.month === month);
+
+      if (!row) {
+        return c.json({ error: `No distribution found for month ${month}` }, 404);
+      }
+
+      const { result } = parseDistributionRow(row);
+      const csv = distributionToCsv(result);
+
+      return c.text(csv, 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": `attachment; filename="distribution-${month}.csv"`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  app.openapi(computeRoute, async (c) => {
+    try {
+      const { month } = c.req.valid("param");
+      if (!isComputeAuthorized(c, adminToken)) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const body = await c.req.json().catch(() => ({}));
+      const result = await computeDistribution(month, {
+        force: body?.force === true,
+        now: getNow(),
+      });
+
+      return c.json(result, 200);
+    } catch (err) {
+      if (err instanceof DistributionComputeError) {
+        const status = err.status === 404 ? 404 : 500;
+        return c.json({ error: err.message }, status);
+      }
+
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  return app;
+}
+
+function isComputeAuthorized(c: any, adminToken: string | null): boolean {
+  if (!adminToken) return true;
+
+  const headerToken = c.req.header("x-distribution-admin-token");
+  if (headerToken === adminToken) return true;
+
+  const authorization = c.req.header("authorization");
+  return authorization === `Bearer ${adminToken}`;
+}
+
+function buildAddressDistributionHistory(
+  rows: readonly DistributionStorageRow[],
+  address: string,
+  now: Date,
+) {
+  const parsedRows = parseDistributionRows(rows);
+  const configuredMonths = getConfiguredRoundMonths();
+  const months = configuredMonths.length > 0
+    ? configuredMonths
+    : [...parsedRows.keys()].sort();
+
+  return {
+    address,
+    rounds: months
+      .map((month, index) => {
+        const roundNumber = getRoundNumber(month, months) ?? index + 1;
+        const range = getRoundDateRange(month);
+        const parsed = parsedRows.get(month);
+        const timing = getRoundTiming(month, now, parsed != null);
+
+        if (!parsed) {
+          return {
+            roundNumber,
+            month,
+            startDate: range.startDate,
+            endDate: range.endDate,
+            roundStatus: timing.status,
+            distributionDataStatus: timing.distributionDataStatus,
+            rewardStatus: (timing.distributionDataStatus === "in_progress"
+              ? "pending"
+              : "unavailable") as AddressDistributionRewardStatus,
+            delegateReward: "0",
+            delegateRewardEns: "0.000000000000000000",
+            tokenHolderReward: "0",
+            tokenHolderRewardEns: "0.000000000000000000",
+            lotteryReward: "0",
+            lotteryRewardEns: "0.000000000000000000",
+            totalReward: "0",
+            totalRewardEns: "0.000000000000000000",
+          } satisfies AddressDistributionRound;
+        }
+
+        const reward = getAddressReward(parsed, address);
+
+        return {
+          roundNumber,
+          month,
+          startDate: range.startDate,
+          endDate: range.endDate,
+          roundStatus: timing.status,
+          distributionDataStatus: timing.distributionDataStatus,
+          rewardStatus: reward.status,
+          delegateReward: reward.delegateReward,
+          delegateRewardEns: reward.delegateRewardEns,
+          tokenHolderReward: reward.tokenHolderReward,
+          tokenHolderRewardEns: reward.tokenHolderRewardEns,
+          lotteryReward: reward.lotteryReward,
+          lotteryRewardEns: reward.lotteryRewardEns,
+          totalReward: reward.totalReward,
+          totalRewardEns: reward.totalRewardEns,
+        } satisfies AddressDistributionRound;
+      })
+      .sort((a, b) => b.roundNumber - a.roundNumber),
+  };
+}
+
+export default createDistributionsApp();

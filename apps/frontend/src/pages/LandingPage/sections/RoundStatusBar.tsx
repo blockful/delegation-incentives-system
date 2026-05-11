@@ -1,80 +1,110 @@
 import styled from 'styled-components'
 import { tokens } from '@/styles/tokens'
+import { formatEnsWhole, formatTimeLeft } from '@/utils/format'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
   currentTierIndex: number
   poolSizeEns: string
-  roundNumber?: number
-  roundTimeLeft?: string
+  roundNumber: number
+  roundEndDate: string
 }
 
 const Wrapper = styled.div`
-  max-width: 680px;
-  margin: -${tokens.spacing['3xl']} auto 0;
+  max-width: 600px;
+  margin: 0 auto;
   padding: 0 ${tokens.spacing.xl};
   position: relative;
   z-index: 1;
-
-  @media (min-width: 768px) {
-    margin-top: -36px;
-  }
+  transform: translateY(-50%);
 `
 
-const Bar = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background: ${tokens.color.surface};
-  border-radius: ${tokens.radius.lg};
-  box-shadow: ${tokens.shadow.md};
-  overflow: hidden;
+const Card = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  box-shadow: 0px 1px 3px #0000000f;
 `
 
-const Cell = styled.div`
-  padding: ${tokens.spacing.xl} ${tokens.spacing.lg};
-  text-align: center;
-
-  &:not(:last-child) {
-    border-right: 1px solid ${tokens.color.border};
-  }
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
-  }
-`
-
-const CellValue = styled.div`
-  font-size: ${tokens.font.size.lg};
+const Tagline = styled.span`
+  font-size: 13px;
   font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
+  color: #1a7f37;
+  text-align: center;
+  width: 100%;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.base};
+  }
+`
+
+const DataRow = styled.div`
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  padding: 10px 16px;
+`
+
+const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  align-items: ${({ $align }) =>
+    $align === 'center' ? 'center' : $align === 'right' ? 'flex-end' : 'flex-start'};
+`
+
+const ColLabel = styled.span`
+  font-size: 14px;
+  font-weight: ${tokens.font.weight.bold};
+  color: #1f2328;
+  line-height: 18px;
+  display: flex;
+  align-items: center;
   gap: 6px;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size.xl};
+    font-size: ${tokens.font.size.lg};
+  }
+`
+
+const ColSub = styled.span`
+  font-size: 12px;
+  font-weight: ${tokens.font.weight.normal};
+  color: #57606a;
+  line-height: 16px;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.base};
   }
 `
 
 const LiveDot = styled.span`
-  width: ${tokens.spacing.sm};
-  height: ${tokens.spacing.sm};
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: ${tokens.color.positive};
+  background: #1a7f37;
   flex-shrink: 0;
 `
 
-const GrowthValue = styled.span<{ $negative?: boolean }>`
-  color: ${({ $negative }) => ($negative ? tokens.color.negative : tokens.color.positive)};
+const GrowthLabel = styled.span<{ $negative?: boolean }>`
+  font-size: 14px;
   font-weight: ${tokens.font.weight.bold};
-`
+  color: ${({ $negative }) => ($negative ? tokens.color.negative : '#1a7f37')};
+  line-height: 18px;
 
-const CellLabel = styled.div`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  margin-top: ${tokens.spacing.xs};
-  letter-spacing: 0.02em;
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size.lg};
+  }
 `
 
 export function RoundStatusBar({
@@ -82,38 +112,40 @@ export function RoundStatusBar({
   currentTierIndex,
   poolSizeEns,
   roundNumber,
-  roundTimeLeft,
+  roundEndDate,
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
   const growthPrefix = isNegative ? '\u2013' : '+'
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
-  const displayRound = roundNumber ?? 1
-  const displayTimeLeft = roundTimeLeft ?? ''
+  const displayRound = roundNumber
+  const displayTimeLeft = formatTimeLeft(roundEndDate)
+  const displayPoolSizeEns = formatEnsWhole(poolSizeEns)
 
   return (
     <Wrapper>
-      <Bar>
-        <Cell>
-          <CellValue>
-            <LiveDot />
-            Round {displayRound}
-          </CellValue>
-          <CellLabel>{displayTimeLeft}</CellLabel>
-        </Cell>
-        <Cell>
-          <CellValue>
-            <GrowthValue $negative={isNegative}>
+      <Card>
+        <Tagline>No tokens locked · Gas sponsored · Rewards auto-sent</Tagline>
+        <DataRow>
+          <Col $align="left">
+            <ColLabel>
+              <LiveDot />
+              Round {displayRound}
+            </ColLabel>
+            <ColSub>{displayTimeLeft}</ColSub>
+          </Col>
+          <Col $align="center">
+            <GrowthLabel $negative={isNegative}>
               {growthPrefix}{displayGrowth}%
-            </GrowthValue>
-          </CellValue>
-          <CellLabel>VP growth</CellLabel>
-        </Cell>
-        <Cell>
-          <CellValue>Tier {currentTierIndex + 1}</CellValue>
-          <CellLabel>{poolSizeEns} ENS pool</CellLabel>
-        </Cell>
-      </Bar>
+            </GrowthLabel>
+            <ColSub>active VP growth</ColSub>
+          </Col>
+          <Col $align="right">
+            <ColLabel>Tier {currentTierIndex + 1}</ColLabel>
+            <ColSub>{displayPoolSizeEns} ENS pool</ColSub>
+          </Col>
+        </DataRow>
+      </Card>
     </Wrapper>
   )
 }

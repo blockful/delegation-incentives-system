@@ -1,21 +1,56 @@
 import { useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner, Tag } from '@ensdomains/thorin'
+import { Spinner } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
 import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles/tokens'
-import {
-  Eyebrow,
-  PageTitle,
-  SectionSubheading,
-  PageContainer,
-  cardStyles,
-  cardHoverStyles,
-} from '@/styles/primitives'
+import { Eyebrow, PageContainer } from '@/styles/primitives'
+import { LinkCardRow, LinkCardStack, type LinkCardItem } from '@/components/shared/LinkCard'
+import gitIcon from '@/images/github.svg'
+import anticaptureIcon from '@/images/anticapture.svg'
+import duneIcon from '@/images/dune.svg'
+import { StatCard } from '@/components/shared/StatCard'
+import { StepList } from '@/components/shared/StepList'
+
+import { CURRENT_ROUND } from '@/config/round'
+
+/* ─── Page wrapper ─── */
 
 const Page = styled(PageContainer)``
+
+/* ─── Hero ─── */
+
+const HeroBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+`
+
+const HeroTitle = styled.h1`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['5xl']};
+  }
+`
+
+const HeroDesc = styled.p`
+  font-size: ${tokens.font.size.xl};
+  color: ${tokens.color.darkGray};
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+`
+
+
+/* ─── Two-column grid ─── */
 
 const Grid = styled.div`
   display: grid;
@@ -39,93 +74,18 @@ const Section = styled.div`
   gap: ${tokens.spacing.lg};
 `
 
+/* ─── Section labels (small-caps style) ─── */
+
 const SectionLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: ${tokens.color.accent};
+  color: ${tokens.color.darkGray};
 `
 
-const SectionTitle = styled.h2`
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
-  margin: 0;
-`
 
-const LinkCard = styled.a`
-  ${cardStyles}
-  ${cardHoverStyles}
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-  text-decoration: none;
-  color: inherit;
-`
-
-const LinkIcon = styled.span`
-  width: 36px;
-  height: 36px;
-  border-radius: ${tokens.radius.sm};
-  background: ${tokens.color.lightBlue};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: ${tokens.font.size.lg};
-  flex-shrink: 0;
-`
-
-const LinkTitle = styled.span`
-  flex: 1;
-  font-size: ${tokens.font.size.md};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
-`
-
-const ChevronIcon = styled.span`
-  font-size: ${tokens.font.size.xl};
-  color: ${tokens.color.textFaint};
-`
-
-const ContractRow = styled.div`
-  ${cardStyles}
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const ContractInfo = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-`
-
-const ContractName = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
-`
-
-const ContractAddress = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-  font-family: ${tokens.font.mono};
-`
-
-const ExternalLink = styled.a`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.accent};
-  text-decoration: none;
-  flex-shrink: 0;
-
-  &:hover {
-    text-decoration: underline;
-  }
-`
+/* ─── Stat grid ─── */
 
 const StatGrid = styled.div`
   display: grid;
@@ -133,62 +93,8 @@ const StatGrid = styled.div`
   gap: ${tokens.spacing.md};
 `
 
-const StatCard = styled.div`
-  border-radius: ${tokens.radius.md};
-  background: ${tokens.color.surfaceAlt};
-  padding: ${tokens.spacing.lg};
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xs};
-`
 
-const StatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${tokens.color.textMuted};
-`
-
-const StatValue = styled.span`
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.text};
-`
-
-const StepList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.lg};
-`
-
-const Step = styled.div`
-  display: flex;
-  gap: ${tokens.spacing.md};
-  align-items: flex-start;
-`
-
-const StepNumber = styled.div`
-  width: 28px;
-  height: 28px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.accent};
-  color: ${tokens.color.surface};
-  font-weight: ${tokens.font.weight.bold};
-  font-size: ${tokens.font.size.base};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-`
-
-const StepText = styled.p`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.text};
-  margin: 0;
-  line-height: 1.5;
-  padding-top: 3px;
-`
+/* ─── Loading ─── */
 
 const LoadingWrapper = styled.div`
   display: flex;
@@ -197,43 +103,66 @@ const LoadingWrapper = styled.div`
   min-height: 200px;
 `
 
-const HeroBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.sm};
-`
+/* ─── Data ─── */
 
-const VERIFY_LINKS = [
+const VERIFY_LINKS: LinkCardItem[] = [
   {
-    icon: '📂',
+    iconSrc: gitIcon,
     title: 'GitHub',
+    desc: 'Open source contracts & scripts',
     href: 'https://github.com/blockful-io/delegation-incentives-system',
   },
   {
-    icon: '🛡️',
+    iconSrc: anticaptureIcon,
     title: 'Anticapture',
+    desc: 'Delegate activity & governance health',
     href: 'https://anticapture.xyz',
   },
   {
-    icon: '📊',
+    iconSrc: duneIcon,
     title: 'Dune Analytics',
+    desc: 'Live round data & payout breakdown',
     href: 'https://dune.com',
   },
 ]
 
-const CONTRACT_ENTRIES = [
-  { name: 'ENS Incentives', address: contracts.ensIncentives },
-  { name: 'Delegate By Sig', address: contracts.delegateBySig },
-  { name: 'Reward Distributor', address: contracts.rewardDistributor },
-] as const
-
-const HOW_REWARDS_STEPS = [
-  'We measure the aggregate voting power delegated to active delegates over a 180-day moving average.',
-  'Month-over-month growth determines the reward tier — higher growth unlocks larger reward pools.',
-  'Individual rewards are proportional to your share of the pool, capped per-address to ensure fair distribution.',
+const CONTRACT_ENTRIES: LinkCardItem[] = [
+  {
+    title: 'ENS Incentives',
+    desc: truncateAddress(contracts.ensIncentives),
+    href: `https://etherscan.io/address/${contracts.ensIncentives}`,
+    tag: 'Verified',
+  },
+  {
+    title: 'Delegate By Sig',
+    desc: truncateAddress(contracts.delegateBySig),
+    href: `https://etherscan.io/address/${contracts.delegateBySig}`,
+    tag: 'Verified',
+  },
+  {
+    title: 'Reward Distributor',
+    desc: truncateAddress(contracts.rewardDistributor),
+    href: `https://etherscan.io/address/${contracts.rewardDistributor}`,
+    tag: 'Verified',
+  },
 ]
 
-import { CURRENT_ROUND } from '@/config/round'
+const HOW_REWARDS_STEPS = [
+  {
+    title: 'Balance snapshot',
+    desc: 'Your share is based on the average of your daily ENS balance over the last 180 days — not just your current balance.',
+  },
+  {
+    title: 'Tier assignment',
+    desc: 'Tiers unlock as total delegated VP grows. Your tier is set at round start and determines your APY for the full 30-day round.',
+  },
+  {
+    title: 'Payout at round end',
+    desc: 'ENS is sent directly to your wallet. No claiming needed. Sub-1 ENS amounts enter the lottery pool instead.',
+  },
+]
+
+/* ─── Component ─── */
 
 export function TransparencyPage() {
   const fetchStatus = useCallback(() => api.status(), [])
@@ -245,55 +174,30 @@ export function TransparencyPage() {
 
   return (
     <Page>
+      {/* Hero */}
       <HeroBlock>
         <Eyebrow>Transparency</Eyebrow>
-        <PageTitle>Verify everything on-chain</PageTitle>
-        <SectionSubheading>
+        <HeroTitle>Verify everything on-chain</HeroTitle>
+        <HeroDesc>
           Every calculation is public. Every payout is verifiable. No trust
-          required.
-        </SectionSubheading>
+          required, check it yourself.
+        </HeroDesc>
       </HeroBlock>
 
-      <Grid>
-        <LeftColumn>
-          <Section>
-            <SectionLabel>Verify Yourself</SectionLabel>
-            {VERIFY_LINKS.map((link) => (
-              <LinkCard
-                key={link.title}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <LinkIcon aria-hidden>{link.icon}</LinkIcon>
-                <LinkTitle>{link.title}</LinkTitle>
-                <ChevronIcon aria-hidden>›</ChevronIcon>
-              </LinkCard>
-            ))}
-          </Section>
+      {/* Link cards row */}
+      <LinkCardRow items={VERIFY_LINKS} />
 
+      {/* Two-column grid */}
+      <Grid>
+        {/* Left column */}
+        <LeftColumn>
+          {/* Smart Contracts */}
           <Section>
             <SectionLabel>Smart Contracts</SectionLabel>
-            {CONTRACT_ENTRIES.map((contract) => (
-              <ContractRow key={contract.name}>
-                <ContractInfo>
-                  <ContractName>{contract.name}</ContractName>
-                  <ContractAddress>
-                    {truncateAddress(contract.address)}
-                  </ContractAddress>
-                </ContractInfo>
-                <Tag colorStyle="greenPrimary">Verified</Tag>
-                <ExternalLink
-                  href={`https://etherscan.io/address/${contract.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  ↗
-                </ExternalLink>
-              </ContractRow>
-            ))}
+            <LinkCardStack items={CONTRACT_ENTRIES} />
           </Section>
 
+          {/* Live data stats */}
           {loading ? (
             <LoadingWrapper>
               <Spinner />
@@ -306,40 +210,20 @@ export function TransparencyPage() {
                   Round {CURRENT_ROUND} · Live Data
                 </SectionLabel>
                 <StatGrid>
-                  <StatCard>
-                    <StatLabel>Active Delegates</StatLabel>
-                    <StatValue>{status.data.activeDelegateCount}</StatValue>
-                  </StatCard>
-                  <StatCard>
-                    <StatLabel>Proposals</StatLabel>
-                    <StatValue>{status.data.proposalCount}</StatValue>
-                  </StatCard>
-                  <StatCard>
-                    <StatLabel>Current Tier</StatLabel>
-                    <StatValue>
-                      Tier {tiers.data.currentTierIndex + 1}
-                    </StatValue>
-                  </StatCard>
-                  <StatCard>
-                    <StatLabel>Growth</StatLabel>
-                    <StatValue>{tiers.data.currentGrowthPct}%</StatValue>
-                  </StatCard>
+                  <StatCard label="Snapshot Block" value="—" />
+                  <StatCard label="Total Delegated" value={status.data.activeDelegateCount} />
+                  <StatCard label="Eligible Holders" value={status.data.proposalCount} />
+                  <StatCard label="Reward Pool" value={`Tier ${tiers.data.currentTierIndex + 1}`} />
                 </StatGrid>
               </Section>
             )
           )}
         </LeftColumn>
 
+        {/* Right column */}
         <Section>
-          <SectionTitle>How rewards are calculated</SectionTitle>
-          <StepList>
-            {HOW_REWARDS_STEPS.map((text, i) => (
-              <Step key={i}>
-                <StepNumber>{i + 1}</StepNumber>
-                <StepText>{text}</StepText>
-              </Step>
-            ))}
-          </StepList>
+          <SectionLabel>How rewards are calculated</SectionLabel>
+          <StepList steps={HOW_REWARDS_STEPS} />
         </Section>
       </Grid>
     </Page>

@@ -2,20 +2,25 @@ import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
 import { Spinner } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
-import { tokens, fadeInUp, Eyebrow, PageTitle, SectionSubheading, LoadingWrapper, ErrorMessage } from '@/styles'
+import { useStats } from '@/features/stats/useStats'
+import { tokens, fadeInUp, Eyebrow, LoadingWrapper, ErrorMessage } from '@/styles'
 import { DelegateCard } from './components/DelegateCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
 import type { DelegateDetail } from '@/api/types'
 
 const Page = styled.div`
-  max-width: 960px;
+  max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
   animation: ${fadeInUp} 0.4s ease both;
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+  }
 `
 
 const Grid = styled.div`
@@ -36,10 +41,53 @@ const Grid = styled.div`
   `).join('')}
 `
 
+const TopSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['2xl']};
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: ${tokens.spacing['4xl']};
+  }
+`
+
 const HeaderBlock = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.sm};
+  flex: 1;
+  min-width: 0;
+`
+
+const DelegatesPageTitle = styled.h1`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.15;
+  margin: 0;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['5xl']};
+  }
+`
+
+const DelegatesDescription = styled.p`
+  font-size: ${tokens.font.size.xl};
+  line-height: 1.6;
+  color: ${tokens.color.darkGray};
+  margin: 0;
+`
+
+const StatsBarWrapper = styled.div`
+  width: 100%;
+
+  @media (min-width: 768px) {
+    width: auto;
+    flex-shrink: 0;
+    align-self: center;
+  }
 `
 
 function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
@@ -51,13 +99,9 @@ function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
   return copy
 }
 
-function activityScore(d: DelegateDetail): number {
-  if (!d.last10ProposalsVoted) return 0
-  return d.last10ProposalsVoted.filter(Boolean).length
-}
-
 export function DelegatesPage() {
-  const { data, loading, error, count } = useDelegates()
+  const { data, loading, error } = useDelegates()
+  const { data: stats } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
 
@@ -73,12 +117,12 @@ export function DelegatesPage() {
 
     if (sort.field === 'votingPower') {
       sorted.sort((a, b) => {
-        const aVp = Number(a.votingPower ?? '0')
-        const bVp = Number(b.votingPower ?? '0')
+        const aVp = Number(a.votingPower)
+        const bVp = Number(b.votingPower)
         return (aVp - bVp) * dir
       })
     } else if (sort.field === 'activity') {
-      sorted.sort((a, b) => (activityScore(a) - activityScore(b)) * dir)
+      sorted.sort((a, b) => (a.votesInLast10 - b.votesInLast10) * dir)
     } else if (sort.field === 'activeSince') {
       sorted.sort((a, b) => {
         const aTime = a.activeSince ? new Date(a.activeSince).getTime() : 0
@@ -93,16 +137,24 @@ export function DelegatesPage() {
 
   return (
     <Page>
-      <HeaderBlock>
-        <Eyebrow>Delegate Your Tokens</Eyebrow>
-        <PageTitle>Delegate to someone who shows up</PageTitle>
-        <SectionSubheading>
-          Choose a delegate who votes on at least 7 out of 10 proposals to
-          maximize your rewards.
-        </SectionSubheading>
-      </HeaderBlock>
+      <TopSection>
+        <HeaderBlock>
+          <Eyebrow>Delegate Your Tokens</Eyebrow>
+          <DelegatesPageTitle>Delegate to someone who shows up</DelegatesPageTitle>
+          <DelegatesDescription>
+            Choose a delegate who votes on at least 7 out of 10 proposals to
+            maximize your rewards.
+          </DelegatesDescription>
+        </HeaderBlock>
 
-      <StatsBar activeDelegates={count} />
+        <StatsBarWrapper>
+          <StatsBar
+            activeDelegateCount={stats?.activeDelegateCount}
+            totalDelegatedEns={stats?.totalDelegatedEns}
+            holdersEarning={stats?.holdersEarning}
+          />
+        </StatsBarWrapper>
+      </TopSection>
 
       <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
 

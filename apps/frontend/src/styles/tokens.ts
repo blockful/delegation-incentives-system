@@ -5,10 +5,14 @@
 export const tokens = {
   color: {
     // Primary
-    blue: '#0080BC',
-    lightBlue: '#CEE1E8',
-    darkBlue: '#011A25',
-    white: '#f6f6f6',
+    blue: '#5298FF',
+    lightBlue: '#EFF6FF',
+    lightBlueOpacity: 'rgb(81 153 255 / 12%)',
+    darkBlue: '#1F2328',
+    darkGray: '#57606A',
+    middleGray: '#D0D7DE',
+    gray: '#D0D7DE',
+    white: '#fff',
 
     // Extended
     green: '#007C23',
@@ -19,9 +23,6 @@ export const tokens = {
     lightMagenta: '#F2C4DA',
     lightYellow: '#F8F6D6',
     midnightBlue: '#093C52',
-    gray: '#4A5C63',
-    gray3: '#C4C7C8',
-    gray2: '#E5E5E5',
 
     // Semantic
     text: '#011A25',
@@ -32,11 +33,19 @@ export const tokens = {
     surfaceAlt: '#f6f6f6',
     negative: '#F53293',
     positive: '#007C23',
+    positiveEmphasis: '#1A7F37',
     accent: '#0080BC',
+    orange: '#BC4C00',
+    lightOrange: '#FFF1E5',
+    bgSubtle: '#F6F8FA',
+    borderLight: '#EAEEF2',
+    tierHighlight: '#DAFBE1',
+    textSubtle: '#8C959F',
   },
 
   radius: {
     sm: '8px',
+    card: '10px',
     md: '12px',
     lg: '16px',
     xl: '20px',
@@ -44,9 +53,9 @@ export const tokens = {
   },
 
   shadow: {
-    sm: '0 1px 4px rgba(1, 26, 37, 0.04)',
-    md: '0 2px 12px rgba(1, 26, 37, 0.08)',
-    lg: '0 8px 32px rgba(1, 26, 37, 0.12)',
+    sm: '0 1px 3px rgba(0, 0, 0, 0.06)',
+    md: '0 4px 16px rgba(0, 0, 0, 0.10)',
+    lg: '0 8px 32px rgba(0, 0, 0, 0.14)',
   },
 
   font: {
@@ -64,6 +73,7 @@ export const tokens = {
       '3xl': '28px',
       '4xl': '36px',
       '5xl': '48px',
+      '6xl': '52px',
     },
     weight: {
       normal: 400,
@@ -71,6 +81,7 @@ export const tokens = {
       semibold: 600,
       bold: 700,
       extrabold: 800,
+      black: 900,
     },
   },
 
@@ -87,11 +98,24 @@ export const tokens = {
     '6xl': '64px',
     '7xl': '80px',
     '8xl': '96px',
+    '9xl': '112px',
   },
 
   transition: {
     fast: '0.15s ease',
     base: '0.2s ease',
     slow: '0.3s ease',
+  },
+
+  maxWidth: {
+    xs: '360px',
+    sm: '440px',
+    md: '520px',
+    lg: '640px',
+    xl: '768px',
+    '2xl': '960px',
+    '3xl': '1200px',
+    section: '1120px',
+    container: '1440px',
   },
 } as const

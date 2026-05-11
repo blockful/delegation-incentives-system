@@ -10,12 +10,16 @@ describe('DelegatesPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders stats bar with delegate count from fixture', async () => {
+  it('renders stats bar fields from /stats fixture', async () => {
     renderApp(<DelegatesPage />)
     await waitFor(() => {
-      expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByText('47')).toBeInTheDocument()
     })
-    expect(screen.getByText('Active Delegates')).toBeInTheDocument()
+    expect(screen.getByText('active delegates')).toBeInTheDocument()
+    expect(screen.getByText('1.3M')).toBeInTheDocument()
+    expect(screen.getByText('ENS delegated')).toBeInTheDocument()
+    expect(screen.getByText('412')).toBeInTheDocument()
+    expect(screen.getByText('wallets at active delegates')).toBeInTheDocument()
   })
 
   it('renders delegate cards after loading', async () => {

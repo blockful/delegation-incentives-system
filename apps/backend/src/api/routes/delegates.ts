@@ -1,85 +1,122 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { ActiveDelegatesDetailSchema, ErrorSchema } from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, internalError } from "../helpers.js"
-import { getCachedEnsName, getCachedAvatarUrl, prefetchEnsNames } from "../ens-cache.js"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db } from "ponder:api";
+import { ensVotingPowerSnapshot, ensDelegation, governanceVote } from "ponder:schema";
+import { eq, asc, desc, sql } from "drizzle-orm";
+import type { Address } from "@ens-dis/domain";
+import { fetchActiveDelegates } from "../helpers.js";
 
-const activeDelegatesRoute = createRoute({
+const DelegateSchema = z.object({
+  address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+  ensName: z.string().nullable().openapi({ example: null }),
+  avatarUrl: z.string().nullable().openapi({ example: null }),
+  votingPower: z.string().openapi({ example: "1000000000000000000000" }),
+  votesInLast10: z.number().openapi({ example: 8 }),
+  last10ProposalsVoted: z
+    .array(z.boolean())
+    .openapi({
+      description: "Per-proposal voting record for the last 10 finalized proposals (most recent first)",
+      example: [true, true, true, false, true, true, true, true, false, true],
+    }),
+  delegatorCount: z.number().openapi({ example: 42 }),
+  activeSince: z
+    .string()
+    .nullable()
+    .openapi({ description: "ISO 8601 timestamp of the delegate's earliest vote", example: "2024-01-15T00:00:00.000Z" }),
+});
+
+const route = createRoute({
   method: "get",
   path: "/delegates/active",
   tags: ["Delegates"],
-  summary: "List current active delegates",
+  summary: "List active delegates",
+  description:
+    "Returns delegates who meet the voting activity threshold, sorted by voting power descending.",
   responses: {
     200: {
-      content: { "application/json": { schema: ActiveDelegatesDetailSchema } },
-      description: "Active delegates",
+      description: "Active delegates list",
+      content: {
+        "application/json": {
+          schema: z.object({ count: z.number(), delegates: z.array(DelegateSchema) }),
+        },
+      },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
     },
   },
-})
+});
 
-export const delegatesRouter = new OpenAPIHono()
+const app = new OpenAPIHono();
 
-delegatesRouter.openapi(activeDelegatesRoute, async (c) => {
+app.openapi(route, async (c) => {
   try {
-    const dataSource = buildDataSource()
-    const { proposals, votes, activeDelegates } = await fetchActiveDelegates(dataSource)
-    const delegateAddresses = Array.from(activeDelegates)
+    const { activeDelegates, proposalIds, voteCounts, voterProposals } =
+      await fetchActiveDelegates(db);
 
-    // Fire-and-forget: populate ENS cache for next request without blocking this one
-    prefetchEnsNames(delegateAddresses).catch(() => {})
+    const delegates: z.infer<typeof DelegateSchema>[] = [];
 
-    // Fetch voting power, delegations, and earliest vote timestamps in parallel
-    const now = Math.floor(Date.now() / 1000)
-    const [votingPowerMap, delegations, earliestVoteMap] = await Promise.all([
-      dataSource.votingPower.getVotingPower(delegateAddresses),
-      dataSource.delegations.getActiveDelegations(delegateAddresses, now),
-      dataSource.votes.getEarliestVoteTimestamps(delegateAddresses),
-    ])
+    for (const addr of activeDelegates) {
+      const vpRows = await db
+        .select({ votingPower: ensVotingPowerSnapshot.votingPower })
+        .from(ensVotingPowerSnapshot)
+        .where(eq(ensVotingPowerSnapshot.accountId, addr.toLowerCase()))
+        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .limit(1);
 
-    // Count delegators per delegate (keys are lowercased to match adapter output)
-    const delegatorCountMap = new Map<string, number>()
-    for (const d of delegations) {
-      const key = d.delegateId.toLowerCase()
-      delegatorCountMap.set(key, (delegatorCountMap.get(key) ?? 0) + 1)
+      const votingPower =
+        vpRows.length > 0 ? BigInt(vpRows[0].votingPower).toString() : "0";
+
+      const countRows = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ensDelegation)
+        .where(eq(ensDelegation.delegateId, addr.toLowerCase()));
+
+      const voted = voterProposals.get(addr as Address) ?? new Set<string>();
+      const last10ProposalsVoted = proposalIds.map((pid) => voted.has(pid));
+
+      // Earliest vote timestamp
+      const earliestVoteRows = await db
+        .select({ timestamp: governanceVote.timestamp })
+        .from(governanceVote)
+        .where(eq(governanceVote.voter, addr.toLowerCase()))
+        .orderBy(asc(governanceVote.timestamp))
+        .limit(1);
+
+      const activeSince =
+        earliestVoteRows.length > 0
+          ? new Date(Number(earliestVoteRows[0].timestamp) * 1000).toISOString()
+          : null;
+
+      delegates.push({
+        address: addr,
+        ensName: null,    // ENS resolution handled client-side
+        avatarUrl: null,  // ENS resolution handled client-side
+        votingPower,
+        votesInLast10: voteCounts.get(addr) ?? 0,
+        last10ProposalsVoted,
+        delegatorCount: Number(countRows[0]?.count ?? 0),
+        activeSince,
+      });
     }
 
-    // Build vote lookup: voterAccountId -> Set<proposalId>
-    const votesByVoter = new Map<string, Set<string>>()
-    for (const vote of votes) {
-      const set = votesByVoter.get(vote.voterAccountId) ?? new Set<string>()
-      set.add(vote.proposalId)
-      votesByVoter.set(vote.voterAccountId, set)
-    }
+    delegates.sort((a, b) => {
+      const vpA = BigInt(a.votingPower);
+      const vpB = BigInt(b.votingPower);
+      if (vpB > vpA) return 1;
+      if (vpB < vpA) return -1;
+      return 0;
+    });
 
-    // Take last 10 proposals (already ordered by fetchActiveDelegates)
-    const last10 = proposals.slice(-10)
-
-    const delegates = delegateAddresses.map((address) => {
-      // Adapters normalize addresses to lowercase; voter IDs from active-delegate
-      // detection may be mixed-case, so we must lowercase for map lookups.
-      const lc = address.toLowerCase()
-      const vp = votingPowerMap.get(lc)
-      const voterSet = votesByVoter.get(address)
-      const firstVoteTs = earliestVoteMap.get(lc)
-      return {
-        address,
-        ensName: getCachedEnsName(address),
-        avatarUrl: getCachedAvatarUrl(address),
-        votingPower: vp != null ? vp.toString() : null,
-        delegatorCount: delegatorCountMap.get(lc) ?? 0,
-        activeSince: firstVoteTs != null
-          ? new Date(Number(firstVoteTs) * 1000).toISOString()
-          : null,
-        last10ProposalsVoted: last10.map((p) => voterSet?.has(p.id) ?? false),
-      }
-    })
-
-    return c.json({ count: delegates.length, delegates }, 200)
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
+    return c.json({ count: delegates.length, delegates }, 200);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return c.json({ error: message }, 500);
   }
-})
+});
+
+export default app;

@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { api } from '@/api/client'
+import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import type { DistributionResponse } from '@/api/types'
 

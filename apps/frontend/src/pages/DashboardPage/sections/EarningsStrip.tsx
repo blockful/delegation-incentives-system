@@ -1,12 +1,8 @@
 import styled from 'styled-components'
-import { Tag } from '@ensdomains/thorin'
 import { useEnsName } from 'wagmi'
 import { tokens } from '@/styles/tokens'
-import { fadeInUp } from '@/styles/primitives'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
-import { InfoTooltip } from '@/components/shared/InfoTooltip'
 import { truncateAddress } from '@/utils/format'
-import { formatBalance } from '@/utils/dashboard'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
 
 interface EarningsStripProps {
@@ -19,106 +15,127 @@ interface EarningsStripProps {
   balanceEns: string
   roundStartDate: string
   roundEndDate: string
+  roundNumber: number
+  daysRemaining: number
 }
 
-const Section = styled.section`
-  border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.lg};
+const Card = styled.section`
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
   background: ${tokens.color.surface};
-  overflow: hidden;
-  animation: ${fadeInUp} 0.35s ease both;
-`
-
-const TopRow = styled.div`
+  padding: ${tokens.spacing['2xl']};
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} 0;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: ${tokens.spacing.xl};
+  box-shadow: ${tokens.shadow.sm};
 `
 
 const EarningsBlock = styled.div`
   display: flex;
-  align-items: baseline;
-  gap: ${tokens.spacing.sm};
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
 `
 
 const EarnedValue = styled.span`
-  font-size: 28px;
-  font-weight: ${tokens.font.weight.extrabold};
-  color: ${tokens.color.positive};
+  font-size: 56px;
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.positiveEmphasis};
   font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
   line-height: 1;
+  letter-spacing: -0.02em;
 
   @media (min-width: 768px) {
-    font-size: 36px;
+    font-size: 68px;
   }
 `
 
-const EarnedUnit = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
+const EarnedSubtitle = styled.span`
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkBlue};
 `
 
-const MetaBlock = styled.div`
+const ApyRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
 `
 
 const ApyLabel = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
+  color: ${tokens.color.darkGray};
+
+  strong {
+    color: ${tokens.color.darkBlue};
+    font-weight: ${tokens.font.weight.bold};
+  }
 `
 
-const BottomRow = styled.div`
+const PillsRow = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.md} ${tokens.spacing.xl} ${tokens.spacing.lg};
+  gap: ${tokens.spacing.sm};
   flex-wrap: wrap;
 `
 
-const DelegatePill = styled.div`
-  display: flex;
+const TierBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.lightBlueOpacity};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  letter-spacing: 0.01em;
+`
+
+const Pill = styled.div`
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-`
-
-const DelegateLabel = styled.span`
-  color: ${tokens.color.textFaint};
-`
-
-const DelegateName = styled.span`
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.text};
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 4px 10px;
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.pill};
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  background: ${tokens.color.surface};
   white-space: nowrap;
 `
 
-const BalanceBlock = styled.div`
+const TimePill = styled(Pill)`
+  background: ${tokens.color.lightOrange};
+  border-color: transparent;
+  color: ${tokens.color.orange};
+  font-weight: ${tokens.font.weight.bold};
+`
+
+const ButtonsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${tokens.spacing.md};
+`
+
+const ShareButton = styled.button<{ $primary?: boolean }>`
   display: flex;
   align-items: center;
-  gap: ${tokens.spacing.xs};
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textMuted};
-`
-
-const BalanceValue = styled.span`
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  padding: 10px ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.md};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.text};
-`
+  cursor: pointer;
+  transition: opacity ${tokens.transition.fast};
+  border: 1px solid ${({ $primary }) => ($primary ? tokens.color.blue : tokens.color.gray)};
+  background: ${({ $primary }) => ($primary ? tokens.color.blue : tokens.color.surface)};
+  color: ${({ $primary }) => ($primary ? '#fff' : tokens.color.darkGray)};
 
-const TWAB_TOOLTIP = 'Time-weighted average balance over 180 days. Longer holding means a bigger share of the reward pool.'
+  &:hover {
+    opacity: 0.85;
+  }
+`
 
 export function EarningsStrip({
   earnedEns,
@@ -127,9 +144,10 @@ export function EarningsStrip({
   delegatedTo,
   delegateEnsName,
   delegateAvatarUrl,
-  balanceEns,
   roundStartDate,
   roundEndDate,
+  roundNumber,
+  daysRemaining,
 }: EarningsStripProps) {
   const { data: resolvedName } = useEnsName({
     address: delegatedTo as `0x${string}`,
@@ -138,35 +156,47 @@ export function EarningsStrip({
   const displayName = delegateEnsName ?? resolvedName ?? truncateAddress(delegatedTo)
   const streamingEarnings = useStreamingCounter(earnedEns, roundStartDate, roundEndDate)
 
+  const shareText = `I'm earning ${apyPct}% APY on my ENS by delegating to an active voter. Join the ENS Incentives Program!`
+
   return (
-    <Section aria-label="Your earnings">
-      <TopRow>
-        <EarningsBlock>
-          <EarnedValue>+{streamingEarnings}</EarnedValue>
-          <EarnedUnit>ENS</EarnedUnit>
-        </EarningsBlock>
-        <MetaBlock>
-          <ApyLabel>{apyPct}% APY</ApyLabel>
-          <Tag colorStyle="bluePrimary" size="small">Tier {tierIndex + 1}</Tag>
-        </MetaBlock>
-      </TopRow>
-      <BottomRow>
-        <DelegatePill>
+    <Card aria-label="Your earnings">
+      <EarningsBlock>
+        <EarnedValue>+{streamingEarnings}</EarnedValue>
+        <EarnedSubtitle>ENS earned so far</EarnedSubtitle>
+      </EarningsBlock>
+
+      <ApyRow>
+        <ApyLabel>Earning at <strong>{apyPct}% APY</strong></ApyLabel>
+        <TierBadge>Tier {tierIndex + 1}</TierBadge>
+      </ApyRow>
+
+      <PillsRow>
+        <Pill>
           <EnsAvatar
             address={delegatedTo}
             name={delegateEnsName ?? resolvedName ?? undefined}
             avatarUrl={delegateAvatarUrl}
-            size={20}
+            size={16}
           />
-          <DelegateLabel>Delegating to</DelegateLabel>
-          <DelegateName>{displayName}</DelegateName>
-        </DelegatePill>
-        <BalanceBlock>
-          <InfoTooltip text={TWAB_TOOLTIP}>
-            <BalanceValue>{formatBalance(balanceEns)} ENS</BalanceValue>
-          </InfoTooltip>
-        </BalanceBlock>
-      </BottomRow>
-    </Section>
+          Delegating to <strong style={{ color: tokens.color.darkBlue }}>{displayName}</strong>
+        </Pill>
+        <Pill>Round {roundNumber}</Pill>
+        <TimePill>{daysRemaining}d left</TimePill>
+      </PillsRow>
+
+      <ButtonsRow>
+        <ShareButton
+          $primary
+          onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank')}
+        >
+          𝕏 Share your earnings
+        </ShareButton>
+        <ShareButton
+          onClick={() => window.open(`https://t.me/share/url?text=${encodeURIComponent(shareText)}`, '_blank')}
+        >
+          ✈ Share on Telegram
+        </ShareButton>
+      </ButtonsRow>
+    </Card>
   )
 }

@@ -1,178 +1,577 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { z } from "zod"
-import { RoundInfoSchema, ErrorSchema } from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, fetchMonthContext, formatWholeEns, internalError } from "../helpers.js"
-import { getConfiguredRounds } from "../rounds.js"
-import { POOL_TIERS } from "@ens-dis/domain"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db } from "ponder:api";
+import { distributionResult } from "ponder:schema";
+import { POOL_TIERS } from "@ens-dis/domain";
+import {
+  fetchActiveDelegates,
+  fetchCurrentVpGrowth,
+  findTierIndex,
+  formatEns,
+  normalizeAddress,
+} from "../helpers.js";
+import {
+  getAddressReward,
+  getDistributionSnapshot,
+  getLotteryDetail,
+  getTopDelegateRewards,
+  getTopTokenHolderRewards,
+  parseDistributionRows,
+  type DistributionStorageRow,
+  type ParsedDistribution,
+} from "../distribution-utils.js";
+import {
+  getConfiguredRoundMonths,
+  getRoundDateRange,
+  getRoundMonth,
+  getRoundNumber,
+  getRoundTiming,
+  getUtcMonth,
+  parseRoundMonths,
+} from "../round-config.js";
 
-/**
- * Pure function: compute round info for a given moment in time.
- * Rounds are calendar months defined by the sorted `rounds` array (YYYY-MM strings).
- * - If `now` falls inside a configured month, that month is active.
- * - If `now` is before all rounds, the first round is returned (0% complete).
- * - If `now` is after all rounds, the last round is returned (100% complete).
- * Returns null when `rounds` is empty.
- */
-export function getCurrentRound(
-  now: Date,
-  rounds: string[],
-): {
-  roundNumber: number
-  month: string
-  startDate: Date
-  endDate: Date
-  percentComplete: number
-  daysRemaining: number
-} | null {
-  if (rounds.length === 0) return null
+const RoundStatusSchema = z.enum(["live", "ended", "pending", "paid"]);
+const DistributionDataStatusSchema = z.enum(["available", "in_progress", "missing", "not_started"]);
 
-  const sorted = [...rounds].sort()
-  const msPerDay = 24 * 60 * 60 * 1000
+const CurrentRoundResponse = z.object({
+  roundNumber: z.number().openapi({ description: "Sequential round number from ROUND_MONTHS", example: 3 }),
+  startDate: z.string().openapi({ description: "ISO 8601 UTC start of the round", example: "2026-05-01T00:00:00.000Z" }),
+  endDate: z.string().openapi({ description: "ISO 8601 UTC end of the round", example: "2026-05-31T23:59:59.999Z" }),
+  percentComplete: z.number().openapi({ description: "Percentage of round elapsed (0-100)", example: 10 }),
+  daysRemaining: z.number().openapi({ example: 28 }),
+  poolSizeEns: z.string().openapi({ description: "Current round tier pool size in ENS", example: "5000.000000000000000000" }),
+  tierIndex: z.number().openapi({ example: 0 }),
+  vpGrowthPct: z.string().openapi({ description: "Current month active VP growth percentage", example: "0.00" }),
+});
 
-  // Find the active or next upcoming round
-  let activeIndex = -1
-  for (let i = 0; i < sorted.length; i++) {
-    const [y, m] = sorted[i].split("-").map(Number)
-    const start = new Date(Date.UTC(y, m - 1, 1))
-    const end = new Date(Date.UTC(y, m, 1))
-    if (now >= start && now < end) {
-      activeIndex = i
-      break
-    }
-    // now is before this round's start — use it as the upcoming round
-    if (now < start && activeIndex === -1) {
-      activeIndex = i
-      break
-    }
-  }
+const RoundSummarySchema = z.object({
+  roundNumber: z.number(),
+  month: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  status: RoundStatusSchema,
+  distributionDataStatus: DistributionDataStatusSchema,
+  isCurrent: z.boolean(),
+  percentComplete: z.number().nullable(),
+  daysRemaining: z.number().nullable(),
+  tierIndex: z.number().nullable(),
+  tierLabel: z.string().nullable(),
+  vpGrowthPct: z.string().nullable(),
+  poolSize: z.string().nullable(),
+  poolSizeEns: z.string().nullable(),
+  totalDistributed: z.string().nullable(),
+  totalDistributedEns: z.string().nullable(),
+  activeDelegateCount: z.number().nullable(),
+  eligibleDelegatorCount: z.number().nullable().openapi({
+    description: "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
+    example: 312,
+  }),
+  lotteryBucketCount: z.number().nullable().openapi({
+    description: "Number of deterministic lottery buckets formed from sub-1 ENS entries.",
+    example: 53,
+  }),
+  lotteryEntryCount: z.number().nullable().openapi({
+    description: "Number of sub-threshold reward entries participating in the lottery.",
+    example: 2597,
+  }),
+  lotteryParticipantCount: z.number().nullable().openapi({
+    description: "Unique address count across lottery entries.",
+    example: 2597,
+  }),
+  lotteryWinnerCount: z.number().nullable().openapi({
+    description: "Unique lottery winner count.",
+    example: 53,
+  }),
+  lotteryPrize: z.string().nullable(),
+  lotteryPrizeEns: z.string().nullable(),
+  computedAt: z.string().nullable(),
+});
 
-  // Past all rounds — use the last one
-  if (activeIndex === -1) activeIndex = sorted.length - 1
+const RoundListResponse = z.object({
+  currentRoundNumber: z.number().nullable(),
+  rounds: z.array(RoundSummarySchema),
+});
 
-  const month = sorted[activeIndex]
-  const [year, monthNum] = month.split("-").map(Number)
-  const startDate = new Date(Date.UTC(year, monthNum - 1, 1))
-  const endDate = new Date(Date.UTC(year, monthNum, 1))
-  const roundDurationMs = endDate.getTime() - startDate.getTime()
+const RewardRankSchema = z.object({
+  rank: z.number(),
+  address: z.string(),
+  ensName: z.string().nullable(),
+  role: z.enum(["delegate", "token_holder"]),
+  reward: z.string(),
+  rewardEns: z.string(),
+  source: z.enum(["direct", "lottery", "combined"]),
+  votingPower: z.string().nullable(),
+  delegationCount: z.number().nullable(),
+});
 
-  const msIntoRound = now.getTime() - startDate.getTime()
-  const percentComplete = Math.min(100, Math.max(0, Math.floor((msIntoRound / roundDurationMs) * 100)))
-  // When now is before the round starts (upcoming round), cap remaining to the full month duration
-  const msRemaining = now < startDate
-    ? roundDurationMs
-    : Math.max(0, endDate.getTime() - now.getTime())
-  const daysRemaining = Math.ceil(msRemaining / msPerDay)
+const AddressRoundRewardSchema = z.object({
+  address: z.string(),
+  rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
+  delegateReward: z.string(),
+  delegateRewardEns: z.string(),
+  tokenHolderReward: z.string(),
+  tokenHolderRewardEns: z.string(),
+  lotteryReward: z.string(),
+  lotteryRewardEns: z.string(),
+  totalReward: z.string(),
+  totalRewardEns: z.string(),
+});
 
-  return { roundNumber: activeIndex + 1, month, startDate, endDate, percentComplete, daysRemaining }
+const LotteryEntrySchema = z.object({
+  bucketIndex: z.number(),
+  entryIndex: z.number(),
+  address: z.string(),
+  ensName: z.string().nullable(),
+  amount: z.string(),
+  amountEns: z.string(),
+  probability: z.string().openapi({
+    description: "Entry win probability inside the bucket, formatted as a 0-1 decimal string.",
+    example: "0.1250",
+  }),
+});
+
+const LotteryBucketSchema = z.object({
+  bucketIndex: z.number(),
+  prize: z.string(),
+  prizeEns: z.string(),
+  winner: z.string(),
+  winnerEnsName: z.string().nullable(),
+  winnerProbability: z.string().nullable(),
+  entryCount: z.number(),
+  entries: z.array(LotteryEntrySchema),
+});
+
+const LotteryDetailSchema = z.object({
+  seed: z.object({
+    source: z.literal("ethereum_prev_randao"),
+    label: z.string(),
+    value: z.string(),
+    blockNumber: z.string(),
+    algorithm: z.string(),
+  }),
+  bucketTarget: z.string(),
+  bucketTargetEns: z.string(),
+  totalPrize: z.string(),
+  totalPrizeEns: z.string(),
+  bucketCount: z.number(),
+  entryCount: z.number(),
+  participantCount: z.number(),
+  winnerCount: z.number(),
+  buckets: z.array(LotteryBucketSchema),
+});
+
+const RoundDetailResponse = RoundSummarySchema.extend({
+  addressReward: AddressRoundRewardSchema.nullable(),
+  topDelegateRewards: z.array(RewardRankSchema),
+  topTokenHolderRewards: z.array(RewardRankSchema),
+  lottery: LotteryDetailSchema.nullable(),
+});
+
+const RoundNumberParam = z.object({
+  roundNumber: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: "roundNumber", in: "path" }, example: 3 }),
+});
+
+const AddressQuery = z.object({
+  address: z.string().optional().openapi({
+    description: "Optional Ethereum address for wallet-specific round earnings",
+    example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+  }),
+  rewardLimit: z.string().optional().openapi({
+    description: "Reward ranking rows to return on round detail. Defaults to 10. Use all to return every reward row.",
+    example: "all",
+  }),
+});
+
+const DEFAULT_REWARD_LIMIT = 10;
+const MAX_REWARD_LIMIT = 1000;
+
+export interface RoundTierSnapshot {
+  tierIndex: number;
+  poolSizeEns: string;
+  vpGrowthPct: string;
 }
 
-const RoundSchema = z.object({
-  month: z.string(),
-  status: z.enum(["pending", "computed"]),
-}).openapi("Round")
+export interface RoundsRouteDeps {
+  getRows?: () => Promise<DistributionStorageRow[]>;
+  getTierSnapshot?: () => Promise<RoundTierSnapshot>;
+  now?: () => Date;
+}
 
-const RoundsSchema = z.object({
-  configured: z.boolean().openapi({ description: "false when ROUND_MONTHS is not set" }),
-  rounds: z.array(RoundSchema),
-}).openapi("Rounds")
+async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
+  const rows = await db.select().from(distributionResult);
+  return rows as DistributionStorageRow[];
+}
 
-const currentRoundRoute = createRoute({
+async function getCurrentTierSnapshot(): Promise<RoundTierSnapshot> {
+  const { activeDelegates } = await fetchActiveDelegates(db);
+  const { growthPct } = await fetchCurrentVpGrowth(
+    db,
+    activeDelegates,
+    activeDelegates,
+  );
+  const tierIndex = findTierIndex(growthPct);
+
+  return {
+    tierIndex,
+    poolSizeEns: formatEns(POOL_TIERS[tierIndex].poolSize as bigint),
+    vpGrowthPct: growthPct.toFixed(2),
+  };
+}
+
+const currentRoute = createRoute({
   method: "get",
   path: "/rounds/current",
   tags: ["Rounds"],
-  summary: "Get current round info including dates, progress, and pool tier",
+  summary: "Current incentive round",
+  description:
+    "Returns current round dates, progress, pool size, and active tier index. Dates are UTC.",
   responses: {
     200: {
-      content: { "application/json": { schema: RoundInfoSchema } },
-      description: "Current round information",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "No rounds configured",
+      description: "Current round info",
+      content: { "application/json": { schema: CurrentRoundResponse } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-const getRoundsRoute = createRoute({
+const listRoute = createRoute({
   method: "get",
   path: "/rounds",
   tags: ["Rounds"],
-  summary: "List configured rounds and their computation status",
+  summary: "List configured rounds with reward summaries",
+  description:
+    "Returns all configured ROUND_MONTHS rounds with UTC dates, global pool/distribution metadata when available, and truthful missing-data states.",
   responses: {
     200: {
-      content: { "application/json": { schema: RoundsSchema } },
-      description: "Round list",
+      description: "Round summaries",
+      content: { "application/json": { schema: RoundListResponse } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-export const roundsRouter = new OpenAPIHono()
+const detailRoute = createRoute({
+  method: "get",
+  path: "/rounds/{roundNumber}",
+  tags: ["Rounds"],
+  summary: "Get round details",
+  description:
+    "Returns one round's global reward summary, optional address-specific reward, and top delegate/token-holder rewards when distribution data exists.",
+  request: { params: RoundNumberParam, query: AddressQuery },
+  responses: {
+    200: {
+      description: "Round detail",
+      content: { "application/json": { schema: RoundDetailResponse } },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    404: {
+      description: "Unknown round",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
 
-roundsRouter.openapi(currentRoundRoute, async (c) => {
-  try {
-    const configuredMonths = getConfiguredRounds()
-    if (configuredMonths === null) {
-      return c.json({ error: "No rounds configured. Set ROUND_MONTHS in environment." }, 404)
+const roundDistributionsRoute = createRoute({
+  method: "get",
+  path: "/rounds/{roundNumber}/distributions",
+  tags: ["Rounds"],
+  summary: "Get round distribution rankings",
+  description:
+    "Returns top delegate and token-holder rewards for one round when stored distribution data exists.",
+  request: { params: RoundNumberParam, query: AddressQuery },
+  responses: {
+    200: {
+      description: "Round distribution detail",
+      content: { "application/json": { schema: RoundDetailResponse } },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    404: {
+      description: "Unknown round",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+  },
+});
+
+export function createRoundsApp(deps: RoundsRouteDeps = {}) {
+  const app = new OpenAPIHono();
+  const getRows = deps.getRows ?? getStoredDistributionRows;
+  const getTierSnapshot = deps.getTierSnapshot ?? getCurrentTierSnapshot;
+  const getNow = deps.now ?? (() => new Date());
+
+  app.openapi(currentRoute, async (c) => {
+    try {
+      const now = getNow();
+      const roundMonths = getConfiguredRoundMonths();
+      const month = getUtcMonth(now);
+      const roundNumber = getRoundNumber(month, roundMonths) ?? 1;
+      const range = getRoundDateRange(month);
+      const timing = getRoundTiming(month, now, false);
+      const tier = await getTierSnapshot();
+
+      return c.json(
+        {
+          roundNumber,
+          startDate: range.startDate,
+          endDate: range.endDate,
+          percentComplete: timing.percentComplete ?? 0,
+          daysRemaining: timing.daysRemaining ?? 0,
+          poolSizeEns: tier.poolSizeEns,
+          tierIndex: tier.tierIndex,
+          vpGrowthPct: tier.vpGrowthPct,
+        },
+        200,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
     }
+  });
 
-    const roundInfo = getCurrentRound(new Date(), configuredMonths)
-    if (!roundInfo) {
-      return c.json({ error: "No rounds configured." }, 404)
+  app.openapi(listRoute, async (c) => {
+    try {
+      const [rows, tierSnapshot] = await Promise.all([
+        getRows(),
+        getTierSnapshot(),
+      ]);
+      const roundMonths = getConfiguredRoundMonths();
+      const currentRoundNumber = getRoundNumber(getUtcMonth(getNow()), roundMonths);
+      const parsedRows = parseDistributionRows(rows);
+
+      return c.json(
+        {
+          currentRoundNumber,
+          rounds: buildRoundSummaries({
+            roundMonths,
+            parsedRows,
+            now: getNow(),
+            currentTierSnapshot: tierSnapshot,
+          }),
+        },
+        200,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
     }
+  });
 
-    const dataSource = buildDataSource()
-    const { activeDelegates } = await fetchActiveDelegates(dataSource)
-    const activeDelegateArray = Array.from(activeDelegates)
-    const { currentTierIndex } = await fetchMonthContext(dataSource, activeDelegateArray)
+  const handleRoundDetail = async (c: any) => {
+    try {
+      const { roundNumber } = c.req.valid("param");
+      const { address: rawAddress, rewardLimit: rawRewardLimit } = c.req.valid("query");
+      const address = rawAddress ? normalizeAddress(rawAddress) : null;
 
-    const currentTierPoolSize = POOL_TIERS[currentTierIndex]?.poolSize ?? POOL_TIERS[0].poolSize
-    const poolSizeEns = formatWholeEns(currentTierPoolSize)
+      if (rawAddress && !address) {
+        return c.json({ error: "Invalid Ethereum address" }, 400);
+      }
 
-    return c.json(
-      {
-        roundNumber: roundInfo.roundNumber,
-        month: roundInfo.month,
-        startDate: roundInfo.startDate.toISOString(),
-        endDate: roundInfo.endDate.toISOString(),
-        percentComplete: roundInfo.percentComplete,
-        daysRemaining: roundInfo.daysRemaining,
-        poolSizeEns,
-        tierIndex: currentTierIndex,
-      },
-      200,
-    )
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
+      const rewardLimit = parseRewardLimit(rawRewardLimit);
+      if (rewardLimit == null) {
+        return c.json({ error: "Invalid rewardLimit" }, 400);
+      }
+
+      const [rows, tierSnapshot] = await Promise.all([
+        getRows(),
+        getTierSnapshot(),
+      ]);
+      const roundMonths = getConfiguredRoundMonths();
+      const month = getRoundMonth(roundNumber, roundMonths);
+
+      if (!month) {
+        return c.json({ error: `Unknown round ${roundNumber}` }, 404);
+      }
+
+      const parsedRows = parseDistributionRows(rows);
+      const parsed = parsedRows.get(month) ?? null;
+      const summary = buildRoundSummary({
+        roundNumber,
+        month,
+        parsed,
+        now: getNow(),
+        currentTierSnapshot: tierSnapshot,
+      });
+
+      return c.json(
+        {
+          ...summary,
+          addressReward: address
+            ? buildAddressRoundReward(address, parsed, summary.distributionDataStatus)
+            : null,
+          topDelegateRewards: parsed ? getTopDelegateRewards(parsed, rewardLimit) : [],
+          topTokenHolderRewards: parsed ? getTopTokenHolderRewards(parsed, rewardLimit) : [],
+          lottery: parsed ? getLotteryDetail(parsed) : null,
+        },
+        200,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  };
+
+  app.openapi(detailRoute, handleRoundDetail);
+  app.openapi(roundDistributionsRoute, handleRoundDetail);
+
+  return app;
+}
+
+function parseRewardLimit(rawRewardLimit: string | undefined): number | null {
+  if (!rawRewardLimit) return DEFAULT_REWARD_LIMIT;
+  if (rawRewardLimit === "all") return Number.POSITIVE_INFINITY;
+
+  const rewardLimit = Number(rawRewardLimit);
+  if (!Number.isInteger(rewardLimit) || rewardLimit < 1 || rewardLimit > MAX_REWARD_LIMIT) {
+    return null;
   }
-})
 
-roundsRouter.openapi(getRoundsRoute, async (c) => {
-  try {
-    const configuredMonths = getConfiguredRounds()
+  return rewardLimit;
+}
 
-    if (configuredMonths === null) {
-      return c.json({ configured: false, rounds: [] }, 200)
-    }
-
-    const dataSource = buildDataSource()
-    const computed = new Set(await dataSource.distributions.list())
-
-    const rounds = configuredMonths.map((month) => ({
+function buildRoundSummaries({
+  roundMonths,
+  parsedRows,
+  now,
+  currentTierSnapshot,
+}: {
+  roundMonths: string[];
+  parsedRows: ReadonlyMap<string, ParsedDistribution>;
+  now: Date;
+  currentTierSnapshot: RoundTierSnapshot;
+}) {
+  return roundMonths
+    .map((month, index) => buildRoundSummary({
+      roundNumber: index + 1,
       month,
-      status: computed.has(month) ? ("computed" as const) : ("pending" as const),
+      parsed: parsedRows.get(month) ?? null,
+      now,
+      currentTierSnapshot,
     }))
+    .sort((a, b) => b.roundNumber - a.roundNumber);
+}
 
-    return c.json({ configured: true, rounds }, 200)
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
+function buildRoundSummary({
+  roundNumber,
+  month,
+  parsed,
+  now,
+  currentTierSnapshot,
+}: {
+  roundNumber: number;
+  month: string;
+  parsed: ParsedDistribution | null;
+  now: Date;
+  currentTierSnapshot: RoundTierSnapshot;
+}) {
+  const range = getRoundDateRange(month);
+  const timing = getRoundTiming(month, now, parsed != null);
+  const snapshot = parsed ? getDistributionSnapshot(parsed) : null;
+  const isCurrentWithoutDistribution = timing.isCurrent && !snapshot;
+  const tierIndex = snapshot?.tierIndex ?? (
+    isCurrentWithoutDistribution ? currentTierSnapshot.tierIndex : null
+  );
+  const poolSizeEns = snapshot?.poolSizeEns ?? (
+    isCurrentWithoutDistribution ? currentTierSnapshot.poolSizeEns : null
+  );
+  const vpGrowthPct = snapshot?.vpGrowthPct ?? (
+    isCurrentWithoutDistribution ? currentTierSnapshot.vpGrowthPct : null
+  );
+  const tierConfig = tierIndex == null ? null : POOL_TIERS[tierIndex];
+
+  return {
+    roundNumber,
+    month,
+    startDate: range.startDate,
+    endDate: range.endDate,
+    status: timing.status,
+    distributionDataStatus: timing.distributionDataStatus,
+    isCurrent: timing.isCurrent,
+    percentComplete: timing.percentComplete,
+    daysRemaining: timing.daysRemaining,
+    tierIndex,
+    tierLabel: tierIndex == null ? null : `Tier #${tierIndex + 1}`,
+    vpGrowthPct,
+    poolSize: snapshot?.poolSize ?? (
+      isCurrentWithoutDistribution && tierConfig
+        ? (tierConfig.poolSize as bigint).toString()
+        : null
+    ),
+    poolSizeEns,
+    totalDistributed: snapshot?.totalDistributed ?? null,
+    totalDistributedEns: snapshot?.totalDistributedEns ?? null,
+    activeDelegateCount: snapshot?.activeDelegateCount ?? null,
+    eligibleDelegatorCount: snapshot?.eligibleDelegatorCount ?? null,
+    lotteryBucketCount: snapshot?.lotteryBucketCount ?? null,
+    lotteryEntryCount: snapshot?.lotteryEntryCount ?? null,
+    lotteryParticipantCount: snapshot?.lotteryParticipantCount ?? null,
+    lotteryWinnerCount: snapshot?.lotteryWinnerCount ?? null,
+    lotteryPrize: snapshot?.lotteryPrize ?? null,
+    lotteryPrizeEns: snapshot?.lotteryPrizeEns ?? null,
+    computedAt: snapshot?.computedAt ?? null,
+  };
+}
+
+function buildAddressRoundReward(
+  address: string,
+  parsed: ParsedDistribution | null,
+  distributionDataStatus: string,
+) {
+  if (!parsed) {
+    const rewardStatus = distributionDataStatus === "in_progress"
+      ? "pending"
+      : "unavailable";
+
+    return {
+      address,
+      rewardStatus,
+      delegateReward: "0",
+      delegateRewardEns: "0.000000000000000000",
+      tokenHolderReward: "0",
+      tokenHolderRewardEns: "0.000000000000000000",
+      lotteryReward: "0",
+      lotteryRewardEns: "0.000000000000000000",
+      totalReward: "0",
+      totalRewardEns: "0.000000000000000000",
+    };
   }
-})
+
+  const reward = getAddressReward(parsed, address);
+  return {
+    address: reward.address,
+    rewardStatus: reward.status,
+    delegateReward: reward.delegateReward,
+    delegateRewardEns: reward.delegateRewardEns,
+    tokenHolderReward: reward.tokenHolderReward,
+    tokenHolderRewardEns: reward.tokenHolderRewardEns,
+    lotteryReward: reward.lotteryReward,
+    lotteryRewardEns: reward.lotteryRewardEns,
+    totalReward: reward.totalReward,
+    totalRewardEns: reward.totalRewardEns,
+  };
+}
+
+export { parseRoundMonths };
+
+export default createRoundsApp();

@@ -129,8 +129,8 @@ const ensGovernorAbi = [
       { name: "values", type: "uint256[]", indexed: false },
       { name: "signatures", type: "string[]", indexed: false },
       { name: "calldatas", type: "bytes[]", indexed: false },
-      { name: "voteStart", type: "uint256", indexed: false },
-      { name: "voteEnd", type: "uint256", indexed: false },
+      { name: "startBlock", type: "uint256", indexed: false },
+      { name: "endBlock", type: "uint256", indexed: false },
       { name: "description", type: "string", indexed: false },
     ],
   },
@@ -146,24 +146,7 @@ const ensGovernorAbi = [
     ],
   },
   {
-    name: "VoteCastWithParams",
-    type: "event",
-    inputs: [
-      { name: "voter", type: "address", indexed: true },
-      { name: "proposalId", type: "uint256", indexed: false },
-      { name: "support", type: "uint8", indexed: false },
-      { name: "weight", type: "uint256", indexed: false },
-      { name: "reason", type: "string", indexed: false },
-      { name: "params", type: "bytes", indexed: false },
-    ],
-  },
-  {
     name: "ProposalExecuted",
-    type: "event",
-    inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
-  },
-  {
-    name: "ProposalDefeated",
     type: "event",
     inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
   },
@@ -171,6 +154,14 @@ const ensGovernorAbi = [
     name: "ProposalCanceled",
     type: "event",
     inputs: [{ name: "proposalId", type: "uint256", indexed: false }],
+  },
+  {
+    name: "ProposalQueued",
+    type: "event",
+    inputs: [
+      { name: "proposalId", type: "uint256", indexed: false },
+      { name: "eta", type: "uint256", indexed: false },
+    ],
   },
 ] as const;
 
@@ -192,22 +183,19 @@ export default createConfig({
       chain: "mainnet",
       abi: hedgeyVestingAbi,
       address: "0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C",
-      startBlock: 18506969,
+      startBlock: 18466404,
     },
     ENSToken: {
       chain: "mainnet",
       abi: ensTokenAbi,
       address: "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72",
-      // Start block covers ~12 months before the program launch (Feb 2026).
-      // Provides ample margin beyond the 180-day TWB window.
-      // Adjust if the program timeline shifts.
-      startBlock: 21000000,
+      startBlock: 13533418,
     },
     ENSGovernor: {
       chain: "mainnet",
       abi: ensGovernorAbi,
       address: "0x323a76393544d5ecca80cd6ef2a560c6a395b7e3",
-      startBlock: 13533800,
+      startBlock: 13533772,
     },
   },
 });

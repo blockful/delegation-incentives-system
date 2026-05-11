@@ -1,57 +1,7 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { z } from "zod"
-import { HealthSchema, StatusSchema, ErrorSchema } from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, internalError } from "../helpers.js"
+import { OpenAPIHono } from "@hono/zod-openapi";
 
-const healthRoute = createRoute({
-  method: "get",
-  path: "/api/health",
-  tags: ["System"],
-  summary: "Health check",
-  responses: {
-    200: {
-      content: { "application/json": { schema: HealthSchema } },
-      description: "OK",
-    },
-  },
-})
+// Ponder reserves /health, /status, /ready, /metrics, /client.
+// Use Ponder's built-in /health for liveness checks.
+const app = new OpenAPIHono();
 
-const statusRoute = createRoute({
-  method: "get",
-  path: "/api/status",
-  tags: ["System"],
-  summary: "Get system status",
-  responses: {
-    200: {
-      content: { "application/json": { schema: StatusSchema } },
-      description: "System status",
-    },
-    500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
-    },
-  },
-})
-
-export const healthRouter = new OpenAPIHono()
-
-healthRouter.openapi(healthRoute, (c) => c.json({ status: "ok" as const }, 200))
-
-healthRouter.openapi(statusRoute, async (c) => {
-  try {
-    const dataSource = buildDataSource()
-    const { proposals, activeDelegates } = await fetchActiveDelegates(dataSource)
-    const cachedDistributions = await dataSource.distributions.list()
-    return c.json(
-      {
-        activeDelegateCount: activeDelegates.size,
-        proposalCount: proposals.length,
-        cachedDistributions,
-      },
-      200,
-    )
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
-  }
-})
+export default app;

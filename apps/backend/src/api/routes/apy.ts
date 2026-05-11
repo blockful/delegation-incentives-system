@@ -1,188 +1,202 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { z } from "zod"
-import { ApyEstimateSchema, ErrorSchema, AddressParam } from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db } from "ponder:api";
+import {
+  ensBalance,
+  ensVotingPowerSnapshot,
+  ensDelegation,
+  multiDelegatePosition,
+} from "ponder:schema";
+import { eq, desc, and, sql } from "drizzle-orm";
+import {
+  POOL_TIERS,
+  DELEGATOR_POOL_BPS,
+  DELEGATE_POOL_BPS,
+  BPS_BASE,
+  MIN_PAYOUT,
+  type Address,
+} from "@ens-dis/domain";
 import {
   fetchActiveDelegates,
-  fetchMonthContext,
-  toLowerSet,
-  computeApyPct,
+  fetchCurrentVpGrowth,
   formatEns,
-  formatWholeEns,
-  internalError,
-} from "../helpers.js"
-import {
-  DELEGATE_POOL_BPS,
-  DELEGATOR_POOL_BPS,
-  TWB_WINDOW_SECONDS,
-  MIN_PAYOUT_THRESHOLD,
-  computeTimeWeightedBalance,
-  applyBasisPoints,
-  mulDiv,
-  wei,
-  seconds,
-} from "@ens-dis/domain"
-import { getCachedEnsName, getCachedAvatarUrl, prefetchEnsNames } from "../ens-cache.js"
+  normalizeAddress,
+  findTierIndex,
+  getActiveVpTotal,
+} from "../helpers.js";
 
-const apyRoute = createRoute({
+const AddressParam = z.object({
+  address: z
+    .string()
+    .openapi({ param: { name: "address", in: "path" }, example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+});
+
+const ApyResponse = z.object({
+  address: z.string(),
+  ensName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  role: z.enum(["delegate", "delegator", "ineligible"]),
+  delegatedTo: z.string().nullable(),
+  delegatedToEnsName: z.string().nullable(),
+  delegatedToAvatarUrl: z.string().nullable(),
+  poolSizeEns: z.string(),
+  estimatedMonthlyRewardEns: z.string(),
+  estimatedApyPct: z.string(),
+  userShareWei: z.string(),
+  totalShareWei: z.string(),
+  currentBalanceEns: z.string(),
+  qualifiesForLottery: z.boolean(),
+});
+
+const route = createRoute({
   method: "get",
   path: "/apy/{address}",
   tags: ["APY"],
-  summary: "Get estimated APY for an address based on current conditions",
-  request: { params: z.object({ address: AddressParam }) },
+  summary: "Estimate APY and rewards for an address",
+  description:
+    "Returns role, delegation info, estimated monthly reward, APY, and lottery qualification for the given address.",
+  request: { params: AddressParam },
   responses: {
     200: {
-      content: { "application/json": { schema: ApyEstimateSchema } },
       description: "APY estimate",
+      content: { "application/json": { schema: ApyResponse } },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-/** ENS name + avatar for a primary address (served from in-memory cache). */
-function ensOf(address: string) {
-  return { ensName: getCachedEnsName(address), avatarUrl: getCachedAvatarUrl(address) }
-}
+const app = new OpenAPIHono();
 
-/** Delegate address fields (or nulls when there is no delegate). */
-function delegateEnsOf(delegatedTo: string | null) {
-  return {
-    delegatedTo,
-    delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
-    delegatedToAvatarUrl: delegatedTo ? getCachedAvatarUrl(delegatedTo) : null,
-  }
-}
-
-/** Fire-and-forget ENS prefetch; network failures are silently ignored. */
-function triggerEnsPrefetch(address: string, delegatedTo: string | null = null) {
-  prefetchEnsNames(delegatedTo ? [address, delegatedTo] : [address]).catch(() => {})
-}
-
-export const apyRouter = new OpenAPIHono()
-
-apyRouter.openapi(apyRoute, async (c) => {
-  const { address } = c.req.valid("param")
+app.openapi(route, async (c) => {
   try {
-    const dataSource = buildDataSource()
-    const { activeDelegates } = await fetchActiveDelegates(dataSource)
-    const activeLower = toLowerSet(activeDelegates)
-    const activeDelegateArray = Array.from(activeDelegates)
-    const { monthEnd, poolTier } = await fetchMonthContext(dataSource, activeDelegateArray)
+    const { address: rawAddress } = c.req.valid("param");
+    const address = normalizeAddress(rawAddress);
 
-    const monthlyPool = poolTier.poolSize
-    const addrLower = address.toLowerCase()
-    const isActiveDelegate = activeLower.has(addrLower)
-
-    const accountBalances = await dataSource.delegations.getAccountBalances()
-    const accountBalance = accountBalances.find((ab) => ab.accountId.toLowerCase() === addrLower)
-    const delegatedTo = accountBalance?.delegate ?? null
-    const isDelegatorToActive =
-      accountBalance !== undefined && activeLower.has(accountBalance.delegate.toLowerCase())
-
-    if (!isActiveDelegate && !isDelegatorToActive) {
-      triggerEnsPrefetch(address, delegatedTo)
-      return c.json(
-        {
-          address,
-          ...ensOf(address),
-          role: "ineligible" as const,
-          ...delegateEnsOf(delegatedTo),
-          poolSizeEns: formatWholeEns(monthlyPool),
-          estimatedMonthlyRewardEns: "0",
-          estimatedApyPct: "0",
-          userShareWei: "0",
-          totalShareWei: "0",
-          currentBalanceEns: "0",
-          qualifiesForLottery: false,
-        },
-        200,
-      )
+    if (!address) {
+      return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const twbWindowStart = seconds(monthEnd - TWB_WINDOW_SECONDS)
+    const { activeDelegates } = await fetchActiveDelegates(db);
+    const { growthPct } = await fetchCurrentVpGrowth(
+      db,
+      activeDelegates,
+      activeDelegates,
+    );
+    const currentTierIndex = findTierIndex(growthPct);
+    const tier = POOL_TIERS[currentTierIndex];
+    const totalVp = await getActiveVpTotal(db, activeDelegates);
 
-    if (isActiveDelegate) {
-      triggerEnsPrefetch(address)
-      const vpMap = await dataSource.votingPower.getVotingPower(activeDelegateArray)
-      // Adapters normalize to lowercase; accept both to be defensive
-      const userVP = vpMap.get(address) ?? vpMap.get(addrLower) ?? wei(0n)
-      const totalVP = [...vpMap.values()].reduce((sum, vp) => sum + vp, 0n)
+    const isDelegate = activeDelegates.has(address as Address);
 
-      const delegatePool = applyBasisPoints(monthlyPool, DELEGATE_POOL_BPS)
-      const rawReward = totalVP > 0n ? mulDiv(userVP, delegatePool, totalVP) : 0n
-      const cappedReward = rawReward > poolTier.delegateCap ? poolTier.delegateCap : rawReward
+    // Get user's ENS token balance
+    const balanceRows = await db
+      .select({ balance: ensBalance.balance })
+      .from(ensBalance)
+      .where(eq(ensBalance.id, address))
+      .limit(1);
+    const userBalance = balanceRows.length > 0 ? BigInt(balanceRows[0].balance) : 0n;
 
-      return c.json(
-        {
-          address,
-          ...ensOf(address),
-          role: "delegate" as const,
-          ...delegateEnsOf(null),
-          poolSizeEns: formatWholeEns(monthlyPool),
-          estimatedMonthlyRewardEns: formatEns(cappedReward),
-          estimatedApyPct: computeApyPct(cappedReward, userVP),
-          userShareWei: userVP.toString(),
-          totalShareWei: totalVP.toString(),
-          currentBalanceEns: formatEns(userVP),
-          qualifiesForLottery: cappedReward > 0n && cappedReward < MIN_PAYOUT_THRESHOLD,
-        },
-        200,
-      )
+    // Determine delegation target
+    let delegatedTo: string | null = null;
+    let isDelegatorToActive = false;
+
+    // Direct delegation
+    const delegationRows = await db
+      .select({ delegateId: ensDelegation.delegateId })
+      .from(ensDelegation)
+      .where(eq(ensDelegation.id, address))
+      .limit(1);
+
+    if (delegationRows.length > 0) {
+      const delegate = delegationRows[0].delegateId;
+      if (activeDelegates.has(delegate as Address)) {
+        delegatedTo = delegate;
+        isDelegatorToActive = true;
+      }
     }
 
-    // Delegator path
-    const delegations = await dataSource.delegations.getActiveDelegations(activeDelegateArray, monthEnd)
-    const allDelegatorIds = [...new Set(delegations.map((d) => d.delegatorId))]
+    // Multi-delegate fallback
+    if (!isDelegatorToActive) {
+      const multiPositions = await db
+        .select({ delegate: multiDelegatePosition.delegate, amount: multiDelegatePosition.amount })
+        .from(multiDelegatePosition)
+        .where(and(eq(multiDelegatePosition.owner, address), sql`${multiDelegatePosition.amount} > 0`));
 
-    // Batch balance history in one query; fetch initial balances and current balance in parallel
-    const [allEvents, currentBalance, initialBalances] = await Promise.all([
-      dataSource.balances.getBalanceHistory(allDelegatorIds, twbWindowStart, monthEnd),
-      dataSource.balances.getBalanceAt(address, monthEnd),
-      Promise.all(allDelegatorIds.map((id) => dataSource.balances.getBalanceAt(id, twbWindowStart))),
-    ])
-
-    // Group events by accountId once (O(n)) to avoid a per-delegator filter inside the loop.
-    const eventsByAccount = new Map<string, typeof allEvents>()
-    for (const e of allEvents) {
-      const bucket = eventsByAccount.get(e.accountId)
-      if (bucket) bucket.push(e)
-      else eventsByAccount.set(e.accountId, [e])
+      for (const pos of multiPositions) {
+        if (activeDelegates.has(pos.delegate as Address)) {
+          delegatedTo = pos.delegate;
+          isDelegatorToActive = true;
+          break;
+        }
+      }
     }
 
-    let userTWB = 0n
-    let totalTWB = 0n
-    for (let i = 0; i < allDelegatorIds.length; i++) {
-      const id = allDelegatorIds[i]
-      const twb = computeTimeWeightedBalance(eventsByAccount.get(id) ?? [], twbWindowStart, monthEnd, initialBalances[i])
-      totalTWB += twb
-      if (id.toLowerCase() === addrLower) userTWB = twb
+    // Determine role
+    let role: "delegate" | "delegator" | "ineligible" = "ineligible";
+    if (isDelegate) role = "delegate";
+    else if (isDelegatorToActive) role = "delegator";
+
+    // Compute reward estimate
+    let monthlyReward = 0n;
+    let userShare = 0n;
+
+    if (role === "delegate" && totalVp > 0n) {
+      const vpRows = await db
+        .select({ votingPower: ensVotingPowerSnapshot.votingPower })
+        .from(ensVotingPowerSnapshot)
+        .where(eq(ensVotingPowerSnapshot.accountId, address))
+        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .limit(1);
+      userShare = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
+
+      const delegatePool = (tier.poolSize * (DELEGATE_POOL_BPS as bigint)) / (BPS_BASE as bigint);
+      const raw = totalVp > 0n ? (delegatePool * userShare) / totalVp : 0n;
+      monthlyReward = raw < tier.delegateCap ? raw : (tier.delegateCap as bigint);
+    } else if (role === "delegator" && totalVp > 0n) {
+      userShare = userBalance;
+      const delegatorPool = (tier.poolSize * (DELEGATOR_POOL_BPS as bigint)) / (BPS_BASE as bigint);
+      const raw = totalVp > 0n ? (delegatorPool * userBalance) / totalVp : 0n;
+      monthlyReward = raw < tier.delegatorCap ? raw : (tier.delegatorCap as bigint);
     }
 
-    const delegatorPool = applyBasisPoints(monthlyPool, DELEGATOR_POOL_BPS)
-    const rawReward = totalTWB > 0n ? mulDiv(userTWB, delegatorPool, totalTWB) : 0n
-    const cappedReward = rawReward > poolTier.delegatorCap ? poolTier.delegatorCap : rawReward
+    // APY: (monthlyReward * 12 / userShare) * 100
+    let estimatedApyPct = "0.00";
+    if (userShare > 0n && monthlyReward > 0n) {
+      const apyBps = (monthlyReward * 1200n * 100n) / userShare;
+      estimatedApyPct = (Number(apyBps) / 100).toFixed(2);
+    }
 
-    triggerEnsPrefetch(address, delegatedTo)
+    const qualifiesForLottery = monthlyReward > 0n && monthlyReward < (MIN_PAYOUT as bigint);
+
     return c.json(
       {
         address,
-        ...ensOf(address),
-        role: "delegator" as const,
-        ...delegateEnsOf(delegatedTo),
-        poolSizeEns: formatWholeEns(monthlyPool),
-        estimatedMonthlyRewardEns: formatEns(cappedReward),
-        estimatedApyPct: computeApyPct(cappedReward, currentBalance),
-        userShareWei: userTWB.toString(),
-        totalShareWei: totalTWB.toString(),
-        currentBalanceEns: formatEns(currentBalance),
-        qualifiesForLottery: cappedReward > 0n && cappedReward < MIN_PAYOUT_THRESHOLD,
+        ensName: null,      // ENS resolution handled client-side
+        avatarUrl: null,     // ENS resolution handled client-side
+        role,
+        delegatedTo,
+        delegatedToEnsName: null,     // ENS resolution handled client-side
+        delegatedToAvatarUrl: null,   // ENS resolution handled client-side
+        poolSizeEns: formatEns(tier.poolSize as bigint),
+        estimatedMonthlyRewardEns: formatEns(monthlyReward),
+        estimatedApyPct,
+        userShareWei: userShare.toString(),
+        totalShareWei: totalVp.toString(),
+        currentBalanceEns: formatEns(userBalance),
+        qualifiesForLottery,
       },
       200,
-    )
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return c.json({ error: message }, 500);
   }
-})
+});
+
+export default app;

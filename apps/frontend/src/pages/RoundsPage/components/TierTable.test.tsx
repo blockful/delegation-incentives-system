@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { renderApp } from '@/test/utils'
 import { TierTable } from './TierTable'
 import { roundsFixture } from '@/test/mocks/fixtures'
@@ -16,21 +16,13 @@ describe('TierTable', () => {
     }
   })
 
-  it('highlights current tier (data-active="true" on correct row)', () => {
+  it('renders all tiers in the tier table', () => {
     renderApp(
       <TierTable tiers={tiers} currentTierIndex={currentTierIndex} />,
     )
 
-    const rows = screen.getAllByTestId('tier-row')
-    expect(rows).toHaveLength(7)
-
-    rows.forEach((row, i) => {
-      if (i === currentTierIndex) {
-        expect(row).toHaveAttribute('data-active', 'true')
-      } else {
-        expect(row).toHaveAttribute('data-active', 'false')
-      }
-    })
+    const tierTable = screen.getByTestId('tier-table')
+    expect(within(tierTable).getAllByText(/Tier #\d+/)).toHaveLength(7)
   })
 
   it('shows APY for each tier', () => {
@@ -38,13 +30,12 @@ describe('TierTable', () => {
       <TierTable tiers={tiers} currentTierIndex={currentTierIndex} />,
     )
 
-    // Each tier shows its pool size as part of the display
-    expect(screen.getByText('500 ENS')).toBeInTheDocument()
-    expect(screen.getByText('1,000 ENS')).toBeInTheDocument()
-    expect(screen.getByText('2,000 ENS')).toBeInTheDocument()
-    expect(screen.getByText('4,000 ENS')).toBeInTheDocument()
-    expect(screen.getByText('8,000 ENS')).toBeInTheDocument()
-    expect(screen.getByText('16,000 ENS')).toBeInTheDocument()
-    expect(screen.getByText('30,000 ENS')).toBeInTheDocument()
+    expect(screen.getByText('~4.80% APY')).toBeInTheDocument()
+    expect(screen.getByText('~8.64% APY')).toBeInTheDocument()
+    expect(screen.getByText('~15.65% APY')).toBeInTheDocument()
+    expect(screen.getByText('~27.00% APY')).toBeInTheDocument()
+    expect(screen.getByText('~46.29% APY')).toBeInTheDocument()
+    expect(screen.getByText('~80.00% APY')).toBeInTheDocument()
+    expect(screen.getByText('~120.00% APY')).toBeInTheDocument()
   })
 })

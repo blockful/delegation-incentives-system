@@ -1,105 +1,125 @@
-import { type AllocationInput, type AllocationResult, wei } from "./types.js";
-import { sum, min as bigMin } from "./util/bigint-math.js";
+import type { Address, Wei, RewardAllocation } from "./types.js";
+import { wei } from "./types.js";
+import { sum } from "./util/bigint-math.js";
 
 /**
- * Allocate a pool pro-rata by weight with per-recipient caps.
- * Excess from capped recipients is redistributed iteratively
- * until no recipient exceeds the cap.
+ * Iterative cap redistribution.
  *
- * Guaranteed to converge: each iteration removes at least one recipient.
- * Dust (remainder from BigInt truncation) is added to the largest
- * under-cap allocation with deterministic tie-breaking by address sort.
+ * 1. Find all entries where reward > cap
+ * 2. Set their reward to cap
+ * 3. Redistribute excess pro-rata to uncapped entries (by their weight)
+ * 4. Repeat until no one exceeds cap
+ *
+ * Dust from integer rounding goes to the largest uncapped allocation.
+ * Ties broken by lowest address (lexicographic).
+ *
+ * @param allocations - Initial reward allocations
+ * @param weights - Weight for each address (used for pro-rata redistribution)
+ * @param cap - Maximum reward per address
+ * @param totalPool - Total pool size (for dust verification)
+ * @returns Final capped allocations
  */
-export function allocateWithCap(
-  inputs: AllocationInput[],
-  totalPool: bigint,
-  perRecipientCap: bigint,
-): AllocationResult[] {
-  if (inputs.length === 0) return [];
+export function applyCapRedistribution(
+  allocations: readonly RewardAllocation[],
+  weights: ReadonlyMap<Address, Wei>,
+  cap: Wei,
+  totalPool: Wei,
+): RewardAllocation[] {
+  if (allocations.length === 0) return [];
 
-  // Zero-weight recipients can never earn a reward — exclude them from all
-  // redistribution rounds and from dust assignment. They get 0 unconditionally.
-  const nonZeroInputs = inputs.filter((i) => i.weight > 0n);
-  if (nonZeroInputs.length === 0)
-    return inputs.map((i) => ({ id: i.id, amount: wei(0n) }));
+  // Mutable working map: address -> current reward (as raw bigint).
+  const rewards = new Map<Address, bigint>();
+  for (const a of allocations) {
+    rewards.set(a.address, a.reward as bigint);
+  }
 
-  // Track final amounts for capped recipients
-  const capped = new Map<string, bigint>();
-  let remainingPool = totalPool;
-  let activeInputs = [...nonZeroInputs];
+  // Track which addresses are permanently capped.
+  const capped = new Set<Address>();
 
-  const nonZeroIds = new Set(nonZeroInputs.map((i) => i.id));
+  // Max iterations = allocations.length. At least one address gets capped
+  // per round, so convergence is guaranteed.
+  const maxIter = allocations.length;
 
-  // Iterative redistribution
-  for (let iteration = 0; iteration <= nonZeroInputs.length; iteration++) {
-    if (activeInputs.length === 0) break;
+  for (let iter = 0; iter < maxIter; iter++) {
+    // 1. Find newly capped entries and compute total excess.
+    let excess = 0n;
+    let newlyCapped = false;
 
-    const activeWeight = sum(activeInputs.map((i) => i.weight));
-    if (activeWeight === 0n) break;
-
-    // Compute raw allocation for each active recipient
-    const rawAllocations = new Map<string, bigint>();
-    for (const input of activeInputs) {
-      const raw = (input.weight * remainingPool) / activeWeight;
-      rawAllocations.set(input.id, raw);
-    }
-
-    // Find recipients that exceed cap
-    const newlyCapped: AllocationInput[] = [];
-    const stillActive: AllocationInput[] = [];
-
-    for (const input of activeInputs) {
-      const raw = rawAllocations.get(input.id)!;
-      if (raw > perRecipientCap) {
-        newlyCapped.push(input);
-        capped.set(input.id, perRecipientCap);
-      } else {
-        stillActive.push(input);
+    for (const [addr, reward] of rewards) {
+      if (!capped.has(addr) && reward > (cap as bigint)) {
+        excess += reward - (cap as bigint);
+        rewards.set(addr, cap as bigint);
+        capped.add(addr);
+        newlyCapped = true;
       }
     }
 
-    // If no one exceeded cap this round, finalize the active recipients
-    if (newlyCapped.length === 0) {
-      for (const input of activeInputs) {
-        capped.set(input.id, rawAllocations.get(input.id)!);
+    if (!newlyCapped) break;
+
+    // 2. Compute total weight of uncapped entries.
+    let uncappedWeightTotal = 0n;
+    for (const [addr] of rewards) {
+      if (!capped.has(addr)) {
+        uncappedWeightTotal += (weights.get(addr) ?? 0n) as bigint;
       }
-      break;
     }
 
-    // Subtract what was allocated to capped recipients
-    const cappedTotal = BigInt(newlyCapped.length) * perRecipientCap;
-    remainingPool -= cappedTotal;
-    activeInputs = stillActive;
-  }
+    // If no uncapped entries remain, the excess cannot be redistributed.
+    if (uncappedWeightTotal === 0n) break;
 
-  // Build result array preserving input order
-  const allocations: AllocationResult[] = inputs.map((input) => ({
-    id: input.id,
-    amount: wei(capped.get(input.id) ?? 0n),
-  }));
-
-  // Dust handling: assign rounding remainder to largest under-cap allocation
-  const distributed = sum(allocations.map((a) => a.amount));
-  const dust = totalPool - distributed;
-
-  if (dust > 0n && allocations.length > 0) {
-    // Find non-zero-weight recipients that still have room under cap, sorted by amount desc then id asc
-    const eligible = allocations
-      .filter((a) => nonZeroIds.has(a.id) && a.amount < perRecipientCap)
-      .sort((a, b) => {
-        const diff = b.amount - a.amount;
-        if (diff !== 0n) return diff > 0n ? 1 : -1;
-        return a.id.localeCompare(b.id);
-      });
-
-    if (eligible.length > 0) {
-      const recipient = eligible[0];
-      const idx = allocations.findIndex((a) => a.id === recipient.id);
-      const newAmount = bigMin(recipient.amount + dust, perRecipientCap);
-      allocations[idx] = { id: recipient.id, amount: wei(newAmount) };
+    // 3. Redistribute excess pro-rata by weight to uncapped entries.
+    for (const [addr, reward] of rewards) {
+      if (!capped.has(addr)) {
+        const w = (weights.get(addr) ?? 0n) as bigint;
+        const share = (excess * w) / uncappedWeightTotal;
+        rewards.set(addr, reward + share);
+      }
     }
-    // If everyone is at cap, dust is simply unallocated (returned to treasury)
   }
 
-  return allocations;
+  // 4. Dust assignment: totalPool - sum(all rewards).
+  const rewardValues = [...rewards.values()];
+  const totalAssigned = sum(rewardValues);
+  const dust = (totalPool as bigint) - totalAssigned;
+
+  if (dust > 0n) {
+    // Find the largest uncapped allocation. Ties broken by lowest address.
+    let dustRecipient: Address | undefined;
+    let maxReward = -1n;
+
+    for (const [addr, reward] of rewards) {
+      if (capped.has(addr)) continue;
+      if (
+        reward > maxReward ||
+        (reward === maxReward &&
+          (dustRecipient === undefined || addr < dustRecipient))
+      ) {
+        maxReward = reward;
+        dustRecipient = addr;
+      }
+    }
+
+    // If all are capped, give dust to the lexicographically lowest address.
+    if (dustRecipient === undefined) {
+      const sorted = [...rewards.keys()].sort();
+      dustRecipient = sorted[0];
+    }
+
+    if (dustRecipient !== undefined) {
+      rewards.set(
+        dustRecipient,
+        (rewards.get(dustRecipient) ?? 0n) + dust,
+      );
+    }
+  }
+
+  // 5. Build sorted output.
+  const result: RewardAllocation[] = [...rewards.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([address, reward]) => ({
+      address,
+      reward: wei(reward),
+    }));
+
+  return result;
 }

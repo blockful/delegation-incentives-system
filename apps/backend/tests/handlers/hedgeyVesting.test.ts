@@ -188,7 +188,7 @@ describe("HedgeyVesting:PlanRedeemed", () => {
     }
     await handlePlanRedeemed(event as any, makeContext(fakeDb.db))
     expect(fakeDb.stores.get("vesting_plan")!.get("1").amountRedeemed).toBe(100n)
-    expect(fakeDb.stores.get("vesting_redemption")!.has("1-200")).toBe(true)
+    expect(fakeDb.stores.get("vesting_redemption")!.has("1-200-0")).toBe(true)
   })
 
   it("accumulates amountRedeemed across multiple redemptions", async () => {
@@ -226,7 +226,7 @@ describe("HedgeyVesting:PlanRedeemed", () => {
       log: { logIndex: 0 },
     }
     await handlePlanRedeemed(event as any, makeContext(fakeDb.db))
-    const redemption = fakeDb.stores.get("vesting_redemption")!.get("2-400")
+    const redemption = fakeDb.stores.get("vesting_redemption")!.get("2-400-0")
     expect(redemption.planRemainder).toBe(800n)
     expect(redemption.blockNumber).toBe(400n)
     expect(redemption.amountRedeemed).toBe(200n)

@@ -1,27 +1,32 @@
-import { type Wei, type PoolTier } from "./types.js";
-import { percentageGrowthBps } from "./util/bigint-math.js";
+import type { PoolTier, Wei } from "./types.js";
+import { POOL_TIERS } from "./config.js";
 
 /**
- * Determine the pool tier based on month-over-month growth in
- * active delegated voting power.
+ * Compute VP growth as a percentage: ((vpEnd - vpStart) / vpStart) * 100.
+ * Returns a number (e.g., 15.5 for 15.5% growth).
+ * Returns 0 if vpStart is 0.
  */
-export function determinePoolTier(
-  currentMonthAVP: Wei,
-  previousMonthAVP: Wei,
-  tierTable: readonly PoolTier[],
-): PoolTier {
-  const growthBps = percentageGrowthBps(currentMonthAVP, previousMonthAVP);
+export function computeVpGrowthPct(vpStart: Wei, vpEnd: Wei): number {
+  if (vpStart === 0n) return 0;
 
-  // Find the matching tier (negative growth maps to lowest tier)
-  for (const tier of tierTable) {
-    if (
-      growthBps >= tier.momGrowthMinBps &&
-      growthBps < tier.momGrowthMaxBps
-    ) {
+  // Multiply by 10_000 first, then divide by 100 to get percentage with 2 decimal places.
+  return Number((vpEnd - vpStart) * 10_000n / vpStart) / 100;
+}
+
+/**
+ * Select the pool tier based on VP growth percentage.
+ * Negative growth maps to the first tier (0-10%).
+ * Returns the matching PoolTier including poolSize, delegateCap, delegatorCap.
+ */
+export function selectPoolTier(growthPct: number): PoolTier {
+  if (growthPct < 0) return POOL_TIERS[0];
+
+  for (const tier of POOL_TIERS) {
+    if (growthPct >= tier.minGrowthPct && growthPct < tier.maxGrowthPct) {
       return tier;
     }
   }
 
-  // If growth is negative or no tier matches, return lowest tier
-  return tierTable[0];
+  // Fallback: last tier (should not be reached since last tier has maxGrowthPct = Infinity).
+  return POOL_TIERS[POOL_TIERS.length - 1];
 }

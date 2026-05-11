@@ -17,8 +17,79 @@ test.describe('Rounds Page', () => {
     await expect(page.getByText('Tier #7')).toBeVisible()
   })
 
-  test('renders round history', async ({ page }) => {
-    await expect(page.getByText(/Round 3/).first()).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(/Paid/i).first()).toBeVisible()
+  test('renders round history without contradicting the current live round', async ({ page }) => {
+    const heading = page.getByRole('heading', { name: /Round \d+ is/ })
+    await expect(heading).toBeVisible({ timeout: 10000 })
+
+    const roundName = (await heading.textContent())?.match(/Round \d+/)?.[0]
+    expect(roundName).toBeTruthy()
+
+    const currentRoundRow = page.getByRole('row').filter({ has: page.getByRole('link', { name: roundName! }) }).first()
+    await expect(currentRoundRow).toContainText('May 1–31, 2026')
+    await expect(currentRoundRow).not.toContainText('Apr 30')
+    await expect(currentRoundRow).toContainText('5,000 ENS')
+    await expect(currentRoundRow).toContainText(/[+-]?\d+(?:\.\d+)?%|Unavailable/)
+    await expect(currentRoundRow).toContainText(/Pending|Unavailable|winners/)
+    await expect(currentRoundRow).toContainText('No address')
+    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Your rewards')
+    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Lottery')
+
+    await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 2' }) }).first()).toContainText('Apr 1–30, 2026')
+    await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 1' }) }).first()).toContainText('Mar 1–31, 2026')
+    await expect(page.getByText('+12.3456 ENS')).toHaveCount(0)
+  })
+
+  test('lets a user inspect an address and open round details', async ({ page }) => {
+    const address = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+
+    await page.getByLabel('Wallet address').fill(address)
+    await page.getByRole('button', { name: 'Inspect' }).click()
+    await expect(page).toHaveURL(/address=/)
+    await expect(page.getByLabel('Wallet address')).toHaveValue(address)
+    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText(/Pending|Unavailable|\+/)
+
+    await page.locator('section').filter({ hasText: 'Round History' }).getByRole('link', { name: 'Round 3' }).click()
+    await expect(page).toHaveURL(/\/rounds\/3/)
+    await expect(page.getByText('Round Details')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Round 3', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Previous round' })).toBeVisible()
+    await expect(page.getByText('Next round')).toBeVisible()
+    await expect(page.getByText('Delegate Rewards')).toBeVisible()
+    await expect(page.getByText('Token Holder Rewards')).toBeVisible()
+    await expect(page.getByText('Lottery Results')).toBeVisible()
+    await expect(page.getByText('Lottery Entries').nth(1)).toBeVisible()
+    await expect(page.getByText(/No distribution data|#1/).first()).toBeVisible()
+  })
+
+  test('does not create horizontal page overflow on mobile or tablet widths', async ({ page }) => {
+    for (const viewport of [
+      { width: 320, height: 844 },
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport)
+      await page.goto('/rounds')
+      await expect(
+        page.getByRole('heading', { name: /Round \d+ is/ }),
+      ).toBeVisible({ timeout: 10000 })
+
+      const overflow = await page.evaluate(() => {
+        const root = document.documentElement
+        return root.scrollWidth - root.clientWidth
+      })
+
+      expect(overflow).toBeLessThanOrEqual(0)
+
+      await page.locator('section').filter({ hasText: 'Round History' }).getByRole('link', { name: 'Round 3' }).click()
+      await expect(page.getByText('Round Details')).toBeVisible()
+
+      const detailOverflow = await page.evaluate(() => {
+        const root = document.documentElement
+        return root.scrollWidth - root.clientWidth
+      })
+
+      expect(detailOverflow).toBeLessThanOrEqual(0)
+    }
   })
 })

@@ -1,62 +1,134 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi"
-import { z } from "zod"
-import { EligibilitySchema, ErrorSchema, AddressParam } from "../schemas.js"
-import { buildDataSource } from "../data-source.js"
-import { fetchActiveDelegates, toLowerSet, internalError } from "../helpers.js"
-import { getCachedEnsName, prefetchEnsNames } from "../ens-cache.js"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db } from "ponder:api";
+import { ensDelegation, multiDelegatePosition, vestingPlan } from "ponder:schema";
+import { eq, and, sql } from "drizzle-orm";
+import { fetchActiveDelegates, normalizeAddress } from "../helpers.js";
 
-const eligibilityRoute = createRoute({
+const HEDGEY_VESTING_ADDRESS = "0x2cde9919e81b20b4b33dd562a48a84b54c48f00c";
+
+const AddressParam = z.object({
+  address: z
+    .string()
+    .openapi({ param: { name: "address", in: "path" }, example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+});
+
+const EligibilityResponse = z.object({
+  address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+  ensName: z.string().nullable(),
+  isActiveDelegate: z.boolean(),
+  isDelegatorToActiveDelegate: z.boolean(),
+  eligible: z.boolean(),
+  delegatedTo: z.string().nullable().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
+  delegatedToEnsName: z.string().nullable(),
+  source: z
+    .enum(["direct", "multidelegate", "hedgey_vesting"])
+    .nullable()
+    .openapi({ example: "direct" }),
+});
+
+const route = createRoute({
   method: "get",
   path: "/eligibility/{address}",
   tags: ["Eligibility"],
-  summary: "Check reward eligibility for an address",
-  request: { params: z.object({ address: AddressParam }) },
+  summary: "Check delegation eligibility",
+  description:
+    "Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active delegate.",
+  request: { params: AddressParam },
   responses: {
     200: {
-      content: { "application/json": { schema: EligibilitySchema } },
-      description: "Eligibility status",
+      description: "Eligibility result",
+      content: { "application/json": { schema: EligibilityResponse } },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     500: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Error",
+      description: "Internal server error",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
-})
+});
 
-export const eligibilityRouter = new OpenAPIHono()
+const app = new OpenAPIHono();
 
-eligibilityRouter.openapi(eligibilityRoute, async (c) => {
-  const { address } = c.req.valid("param")
+app.openapi(route, async (c) => {
   try {
-    const dataSource = buildDataSource()
-    const { activeDelegates } = await fetchActiveDelegates(dataSource)
-    const activeLower = toLowerSet(activeDelegates)
-    const isActiveDelegate = activeLower.has(address.toLowerCase())
+    const { address: rawAddress } = c.req.valid("param");
+    const address = normalizeAddress(rawAddress);
 
-    const accountBalances = await dataSource.delegations.getAccountBalances()
-    const accountBalance = accountBalances.find(
-      (ab) => ab.accountId.toLowerCase() === address.toLowerCase(),
-    )
-    const isDelegatorToActive =
-      accountBalance !== undefined && activeLower.has(accountBalance.delegate.toLowerCase())
+    if (!address) {
+      return c.json({ error: "Invalid Ethereum address" }, 400);
+    }
 
-    const delegatedTo = accountBalance?.delegate ?? null
-    const addressesToPrefetch = [address, ...(delegatedTo ? [delegatedTo] : [])]
-    prefetchEnsNames(addressesToPrefetch).catch(() => {})
+    const { activeDelegates } = await fetchActiveDelegates(db);
+    const isActiveDelegate = activeDelegates.has(address as `0x${string}`);
+
+    // 1. Direct delegation
+    const delegationRows = await db
+      .select({ delegateId: ensDelegation.delegateId })
+      .from(ensDelegation)
+      .where(eq(ensDelegation.id, address))
+      .limit(1);
+
+    if (delegationRows.length > 0) {
+      const delegateTo = delegationRows[0].delegateId;
+      if (activeDelegates.has(delegateTo as `0x${string}`)) {
+        return c.json(
+          { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: delegateTo, delegatedToEnsName: null, source: "direct" as const },
+          200,
+        );
+      }
+    }
+
+    // 2. Multi-delegate positions
+    const multiPositions = await db
+      .select({ delegate: multiDelegatePosition.delegate, amount: multiDelegatePosition.amount })
+      .from(multiDelegatePosition)
+      .where(and(eq(multiDelegatePosition.owner, address), sql`${multiDelegatePosition.amount} > 0`));
+
+    for (const pos of multiPositions) {
+      if (activeDelegates.has(pos.delegate as `0x${string}`)) {
+        return c.json(
+          { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: pos.delegate, delegatedToEnsName: null, source: "multidelegate" as const },
+          200,
+        );
+      }
+    }
+
+    // 3. Hedgey vesting
+    const vestingPlans = await db
+      .select({ id: vestingPlan.id })
+      .from(vestingPlan)
+      .where(eq(vestingPlan.recipient, address))
+      .limit(1);
+
+    if (vestingPlans.length > 0) {
+      const vestingDelegation = await db
+        .select({ delegateId: ensDelegation.delegateId })
+        .from(ensDelegation)
+        .where(eq(ensDelegation.id, HEDGEY_VESTING_ADDRESS))
+        .limit(1);
+
+      if (vestingDelegation.length > 0) {
+        const vestingDelegate = vestingDelegation[0].delegateId;
+        if (activeDelegates.has(vestingDelegate as `0x${string}`)) {
+          return c.json(
+            { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: vestingDelegate, delegatedToEnsName: null, source: "hedgey_vesting" as const },
+            200,
+          );
+        }
+      }
+    }
 
     return c.json(
-      {
-        address,
-        ensName: getCachedEnsName(address),
-        isActiveDelegate,
-        isDelegatorToActiveDelegate: isDelegatorToActive,
-        eligible: isActiveDelegate || isDelegatorToActive,
-        delegatedTo,
-        delegatedToEnsName: delegatedTo ? getCachedEnsName(delegatedTo) : null,
-      },
+      { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: false, eligible: isActiveDelegate, delegatedTo: null, delegatedToEnsName: null, source: null },
       200,
-    )
-  } catch (error) {
-    return c.json({ error: internalError(error) }, 500)
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return c.json({ error: message }, 500);
   }
-})
+});
+
+export default app;

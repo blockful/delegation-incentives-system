@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm codegen && tsc --noEmit",
+    "codegen": "pnpm --filter @ens-dis/backend openapi:gen && openapi-typescript ./openapi.json -o src/api/schema.gen.ts"
   },
   "dependencies": {
     "@ensdomains/thorin": "^0.6.50",
@@ -23,7 +24,8 @@
     "react-router-dom": "^7.6.1",
     "styled-components": "^6.3.11",
     "viem": "^2.47.0",
-    "wagmi": "^3.5.0"
+    "wagmi": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -35,6 +37,7 @@
     "@vitejs/plugin-react": "^4.5.2",
     "jsdom": "^26.1.0",
     "msw": "^2.12.10",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.9.3",
     "vite": "^6.3.5",
     "vitest": "^4.0.18"

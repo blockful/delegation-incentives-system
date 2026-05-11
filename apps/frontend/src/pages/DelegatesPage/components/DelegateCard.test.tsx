@@ -8,19 +8,21 @@ const fullDelegate: DelegateDetail = {
   ensName: 'alice.eth',
   avatarUrl: null,
   votingPower: '42000000000000000000000',
+  votesInLast10: 9,
   delegatorCount: 128,
   activeSince: '2024-01-15T00:00:00Z',
   last10ProposalsVoted: [true, true, true, true, true, true, true, true, true, false],
 }
 
-const nullDelegate: DelegateDetail = {
+const minimalDelegate: DelegateDetail = {
   address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
   ensName: null,
   avatarUrl: null,
-  votingPower: null,
-  delegatorCount: null,
+  votingPower: '0',
+  votesInLast10: 7,
+  delegatorCount: 0,
   activeSince: null,
-  last10ProposalsVoted: null,
+  last10ProposalsVoted: [true, true, true, true, true, true, true, false, false, false],
 }
 
 describe('DelegateCard', () => {
@@ -34,9 +36,10 @@ describe('DelegateCard', () => {
     expect(screen.getByText('0x1234…5678')).toBeInTheDocument()
   })
 
-  it('renders voting power formatted as VP', () => {
+  it('renders voting power formatted compactly', () => {
     renderApp(<DelegateCard delegate={fullDelegate} />)
-    expect(screen.getByText('42K VP')).toBeInTheDocument()
+    expect(screen.getByText('42K')).toBeInTheDocument()
+    expect(screen.getByText('Voting Power')).toBeInTheDocument()
   })
 
   it('renders proposal score', () => {
@@ -49,10 +52,10 @@ describe('DelegateCard', () => {
     expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
   })
 
-  it('renders address-only card when metadata is null', () => {
-    renderApp(<DelegateCard delegate={nullDelegate} />)
-    expect(screen.getByText('0xabcd…abcd')).toBeInTheDocument()
-    expect(screen.queryByText('VP')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
+  it('omits Active since when activeSince is null', () => {
+    renderApp(<DelegateCard delegate={minimalDelegate} />)
+    expect(screen.queryByText('Active since')).not.toBeInTheDocument()
+    expect(screen.getByText('Voting Power')).toBeInTheDocument()
+    expect(screen.getByText('Delegators')).toBeInTheDocument()
   })
 })

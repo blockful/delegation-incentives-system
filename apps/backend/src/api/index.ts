@@ -1,44 +1,50 @@
-import { OpenAPIHono } from "@hono/zod-openapi"
-import { swaggerUI } from "@hono/swagger-ui"
-import { healthRouter } from "./routes/health.js"
-import { delegatesRouter } from "./routes/delegates.js"
-import { eligibilityRouter } from "./routes/eligibility.js"
-import { distributionsRouter } from "./routes/distributions.js"
-import { tiersRouter } from "./routes/tiers.js"
-import { apyRouter } from "./routes/apy.js"
-import { roundsRouter } from "./routes/rounds.js"
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { apiReference } from "@scalar/hono-api-reference";
+import health from "./routes/health.js";
+import delegates from "./routes/delegates.js";
+import eligibility from "./routes/eligibility.js";
+import rewards from "./routes/rewards.js";
+import apy from "./routes/apy.js";
+import rounds from "./routes/rounds.js";
+import tiers from "./routes/tiers.js";
+import distributions from "./routes/distributions.js";
+import stats from "./routes/stats.js";
 
-const app = new OpenAPIHono()
+const app = new OpenAPIHono();
 
-app.route("/", healthRouter)
-app.route("/", delegatesRouter)
-app.route("/", eligibilityRouter)
-app.route("/", distributionsRouter)
-app.route("/", tiersRouter)
-app.route("/", apyRouter)
-app.route("/", roundsRouter)
+app.route("/", health);
+app.route("/", delegates);
+app.route("/", eligibility);
+app.route("/", rewards);
+app.route("/", apy);
+app.route("/", rounds);
+app.route("/", tiers);
+app.route("/", distributions);
+app.route("/", stats);
 
-app.doc("/docs/json", {
-  openapi: "3.1.0",
+app.doc("/openapi.json", {
+  openapi: "3.0.0",
   info: {
     title: "ENS Delegation Incentives API",
     version: "1.0.0",
     description:
-      "API for computing and querying ENS delegation incentive distributions. " +
-      "Handles active delegate identification, pool sizing, reward calculation with " +
-      "cap redistribution, and lottery allocation.",
+      "API for the ENS delegation incentives system — active delegates, eligibility, reward estimates, APY, tiers, rounds, and distribution history.",
   },
-  tags: [
-    { name: "System", description: "Health and status endpoints" },
-    { name: "Distributions", description: "Distribution computation and retrieval" },
-    { name: "Delegates", description: "Delegate information" },
-    { name: "Eligibility", description: "Reward eligibility checking" },
-    { name: "Tiers", description: "Pool tier progression and VP requirements" },
-    { name: "APY", description: "Estimated APY for addresses" },
-    { name: "Rounds", description: "Current round info, dates, and progress" },
-  ],
-})
+});
 
-app.get("/docs", swaggerUI({ url: "/docs/json" }))
+app.get(
+  "/docs",
+  apiReference({
+    url: "/openapi.json",
+    theme: "kepler",
+  }),
+);
 
-export default app
+app.notFound((c) =>
+  c.json(
+    { error: "Not found", path: c.req.path },
+    404,
+  ),
+);
+
+export default app;
