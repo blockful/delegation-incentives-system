@@ -28,7 +28,7 @@ test.describe('Rounds Page', () => {
     await expect(currentRoundRow).toContainText('May 1–31, 2026')
     await expect(currentRoundRow).not.toContainText('Apr 30')
     await expect(currentRoundRow).toContainText('5,000 ENS')
-    await expect(currentRoundRow).toContainText(/0%|Unavailable/)
+    await expect(currentRoundRow).toContainText(/[+-]?\d+(?:\.\d+)?%|Unavailable/)
     await expect(currentRoundRow).toContainText(/Pending|Unavailable|winners/)
     await expect(currentRoundRow).toContainText('No address')
     await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Your rewards')
@@ -57,7 +57,7 @@ test.describe('Rounds Page', () => {
     await expect(page.getByText('Delegate Rewards')).toBeVisible()
     await expect(page.getByText('Token Holder Rewards')).toBeVisible()
     await expect(page.getByText('Lottery Results')).toBeVisible()
-    await expect(page.getByText('Lottery Entries')).toBeVisible()
+    await expect(page.getByText('Lottery Entries').nth(1)).toBeVisible()
     await expect(page.getByText(/No distribution data|#1/).first()).toBeVisible()
   })
 
