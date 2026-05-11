@@ -11,10 +11,12 @@ import type {
   LotteryEntryDetail,
   RewardRank,
   RewardStatus,
+  RoundDetailResponse,
   RoundStatus,
 } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { CopyableAddress } from '@/components/shared/CopyableAddress'
 import { tokens, fadeInUp, Eyebrow, PageTitle, LoadingWrapper, ErrorMessage } from '@/styles'
 import { formatEnsAmount, formatUtcMonthRange, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
@@ -324,6 +326,50 @@ const EmptyState = styled.p`
   color: ${tokens.color.darkGray};
 `
 
+const TableNote = styled.p`
+  margin: ${tokens.spacing.sm} 0 0;
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  line-height: 1.5;
+`
+
+const AddressLotteryPanel = styled.section<{ $tone: 'neutral' | 'success' | 'warning' | 'pending' | 'error' }>`
+  width: 100%;
+  max-width: 840px;
+  border: 1px solid ${({ $tone }) => {
+    if ($tone === 'success') return tokens.color.positiveEmphasis
+    if ($tone === 'warning') return tokens.color.orange
+    if ($tone === 'pending') return tokens.color.blue
+    if ($tone === 'error') return tokens.color.negative
+    return tokens.color.borderLight
+  }};
+  border-radius: ${tokens.radius.sm};
+  background: ${({ $tone }) => {
+    if ($tone === 'success') return tokens.color.tierHighlight
+    if ($tone === 'warning') return tokens.color.lightOrange
+    if ($tone === 'pending') return tokens.color.lightBlue
+    if ($tone === 'error') return '#FEE9F0'
+    return tokens.color.surface
+  }};
+  padding: ${tokens.spacing['2xl']};
+  display: grid;
+  gap: ${tokens.spacing.lg};
+`
+
+const AddressLotteryTitle = styled.h2`
+  margin: 0;
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+`
+
+const AddressLotteryBody = styled.p`
+  margin: 0;
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  line-height: 1.6;
+`
+
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
   if (walletState.status === 'disconnected') return ''
   return walletState.address
@@ -338,7 +384,7 @@ function statusLabel(status: RoundStatus | RewardStatus): string {
   if (status === 'paid') return 'Paid'
   if (status === 'pending') return 'Pending'
   if (status === 'not_eligible') return 'Not eligible'
-  if (status === 'no_reward') return 'No reward'
+  if (status === 'no_reward') return 'No payout'
   if (status === 'unavailable') return 'Unavailable'
   return 'Ended'
 }
@@ -380,6 +426,182 @@ function formatBlockNumber(value: string): string {
   const numericValue = Number(value)
   if (!Number.isFinite(numericValue)) return value
   return `#${numericValue.toLocaleString('en-US')}`
+}
+
+function sameAddress(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase()
+}
+
+interface AddressLotteryEntry {
+  bucket: LotteryBucketDetail
+  entry: LotteryEntryDetail
+  won: boolean
+}
+
+interface AddressLotteryInsight {
+  tone: 'neutral' | 'success' | 'warning' | 'pending' | 'error'
+  title: string
+  body: string
+  metrics: Array<{ label: string; value: string }>
+}
+
+const LOTTERY_ENTRY_DISPLAY_LIMIT = 100
+
+function getAddressLotteryEntries(lottery: LotteryDetail | null, address: string): AddressLotteryEntry[] {
+  if (!lottery || !address) return []
+
+  const entries: AddressLotteryEntry[] = []
+  for (const bucket of lottery.buckets) {
+    for (const entry of bucket.entries) {
+      if (sameAddress(entry.address, address)) {
+        entries.push({
+          bucket,
+          entry,
+          won: sameAddress(bucket.winner, address),
+        })
+      }
+    }
+  }
+
+  return entries
+}
+
+function sumEntryAmountEns(entries: AddressLotteryEntry[]): string {
+  const total = entries.reduce((acc, item) => acc + Number(item.entry.amountEns), 0)
+  if (!Number.isFinite(total)) return 'Unavailable'
+  return `${total.toLocaleString('en-US', { maximumFractionDigits: 4 })} ENS`
+}
+
+function bestEntryProbability(entries: AddressLotteryEntry[]): string {
+  const best = entries.reduce((max, item) => {
+    const probability = Number(item.entry.probability)
+    return Number.isFinite(probability) ? Math.max(max, probability) : max
+  }, 0)
+  return best > 0 ? formatProbability(String(best)) : 'Unavailable'
+}
+
+function bucketList(entries: AddressLotteryEntry[]): string {
+  const buckets = [...new Set(entries.map((item) => item.bucket.bucketIndex + 1))]
+  return buckets.map((bucket) => `#${bucket}`).join(', ')
+}
+
+function hasDirectReward(round: RoundDetailResponse): boolean {
+  const reward = round.addressReward
+  if (!reward) return false
+  return Number(reward.delegateRewardEns) > 0 || Number(reward.tokenHolderRewardEns) > 0
+}
+
+function buildAddressLotteryInsight(
+  round: RoundDetailResponse,
+  activeAddress: string,
+  activeAddressValid: boolean,
+): AddressLotteryInsight {
+  if (!activeAddress) {
+    return {
+      tone: 'neutral',
+      title: 'No address selected',
+      body: 'Enter an address above to see whether it had a lottery entry, which bucket it entered, and whether it won.',
+      metrics: [
+        { label: 'Lottery entry', value: 'Unknown' },
+        { label: 'Buckets entered', value: 'Unknown' },
+        { label: 'Lottery reward', value: 'Unknown' },
+      ],
+    }
+  }
+
+  if (!activeAddressValid) {
+    return {
+      tone: 'error',
+      title: 'Invalid address',
+      body: 'Enter a valid Ethereum address before checking lottery participation.',
+      metrics: [
+        { label: 'Lottery entry', value: 'Unknown' },
+        { label: 'Buckets entered', value: 'Unknown' },
+        { label: 'Lottery reward', value: 'Unknown' },
+      ],
+    }
+  }
+
+  if (round.distributionDataStatus !== 'available') {
+    return {
+      tone: 'pending',
+      title: 'Lottery pending',
+      body: 'Final lottery entries are not available until this round has completed distribution data.',
+      metrics: [
+        { label: 'Round status', value: statusLabel(round.status) },
+        { label: 'Lottery entry', value: 'Pending' },
+        { label: 'Lottery reward', value: 'Pending' },
+      ],
+    }
+  }
+
+  if (!round.lottery) {
+    return {
+      tone: 'neutral',
+      title: 'No lottery data',
+      body: 'This round does not have lottery bucket data available.',
+      metrics: [
+        { label: 'Lottery entry', value: 'Unavailable' },
+        { label: 'Buckets entered', value: '0' },
+        { label: 'Lottery reward', value: '0 ENS' },
+      ],
+    }
+  }
+
+  const entries = getAddressLotteryEntries(round.lottery, activeAddress)
+  const winningEntries = entries.filter((item) => item.won)
+
+  if (winningEntries.length > 0) {
+    return {
+      tone: 'success',
+      title: winningEntries.length === 1
+        ? `Won bucket #${winningEntries[0].bucket.bucketIndex + 1}`
+        : `Won ${winningEntries.length} buckets`,
+      body: 'This address was selected by the final deterministic draw for the selected round.',
+      metrics: [
+        { label: 'Lottery reward', value: formatEns(round.addressReward?.lotteryRewardEns ?? null, '0 ENS') },
+        { label: 'Buckets won', value: bucketList(winningEntries) },
+        { label: 'Best weighted odds', value: bestEntryProbability(winningEntries) },
+      ],
+    }
+  }
+
+  if (entries.length > 0) {
+    return {
+      tone: 'warning',
+      title: 'Entered lottery, not selected',
+      body: 'This address had a sub-1 ENS calculated reward and entered the lottery, but another entry won the bucket.',
+      metrics: [
+        { label: 'Buckets entered', value: bucketList(entries) },
+        { label: 'Entry amount', value: sumEntryAmountEns(entries) },
+        { label: 'Best weighted odds', value: bestEntryProbability(entries) },
+      ],
+    }
+  }
+
+  if (hasDirectReward(round)) {
+    return {
+      tone: 'success',
+      title: 'Direct payout, no lottery entry',
+      body: 'This address received at least 1 ENS directly, so it did not enter a lottery bucket for this round.',
+      metrics: [
+        { label: 'Direct reward', value: formatEns(round.addressReward?.totalRewardEns ?? null, '0 ENS') },
+        { label: 'Lottery entry', value: 'No' },
+        { label: 'Lottery reward', value: '0 ENS' },
+      ],
+    }
+  }
+
+  return {
+    tone: 'neutral',
+    title: 'No lottery entry for this round',
+    body: 'This address was not present in the final lottery entries for the selected round.',
+    metrics: [
+      { label: 'Lottery entry', value: 'No' },
+      { label: 'Buckets entered', value: '0' },
+      { label: 'Lottery reward', value: '0 ENS' },
+    ],
+  }
 }
 
 function buildRoundPath(roundNumber: number, activeAddress: string, activeAddressValid: boolean): string {
@@ -441,6 +663,14 @@ function lotteryEntryCountLabel(lottery: LotteryDetail | null): string {
   return `${lottery.entryCount.toLocaleString('en-US')} ${lottery.entryCount === 1 ? 'entry' : 'entries'}`
 }
 
+function visibleLotteryEntryCountLabel(totalCount: number, visibleCount: number): string {
+  if (totalCount === 0) return 'No entries'
+  if (visibleCount >= totalCount) {
+    return `${totalCount.toLocaleString('en-US')} ${totalCount === 1 ? 'entry' : 'entries'}`
+  }
+  return `Showing first ${visibleCount.toLocaleString('en-US')} of ${totalCount.toLocaleString('en-US')} entries`
+}
+
 function flattenLotteryEntries(lottery: LotteryDetail | null): LotteryEntryDetail[] {
   if (!lottery) return []
   return lottery.buckets.flatMap((bucket) => bucket.entries)
@@ -475,7 +705,12 @@ function LotteryBucketTable({ buckets }: { buckets: LotteryBucketDetail[] }) {
             <Row key={bucket.bucketIndex}>
               <Td data-label="Bucket">#{bucket.bucketIndex + 1}</Td>
               <Td data-label="Winner">
-                <AddressText>{bucket.winnerEnsName ?? truncateAddress(bucket.winner)}</AddressText>
+                <CopyableAddress
+                  address={bucket.winner}
+                  ensName={bucket.winnerEnsName}
+                  resolveEns={false}
+                  showEnsName
+                />
               </Td>
               <Td data-label="Prize">
                 <RewardValue>{formatEns(bucket.prizeEns)}</RewardValue>
@@ -490,42 +725,96 @@ function LotteryBucketTable({ buckets }: { buckets: LotteryBucketDetail[] }) {
   )
 }
 
-function LotteryEntryTable({ entries }: { entries: LotteryEntryDetail[] }) {
+function LotteryEntryTable({
+  entries,
+  totalCount,
+}: {
+  entries: LotteryEntryDetail[]
+  totalCount: number
+}) {
   if (entries.length === 0) {
     return <EmptyState>No lottery entries.</EmptyState>
   }
 
   return (
-    <WideTableWrap>
-      <Table>
-        <colgroup>
-          <col style={{ width: '14%' }} />
-          <col style={{ width: '48%' }} />
-          <col style={{ width: '20%' }} />
-          <col style={{ width: '18%' }} />
-        </colgroup>
-        <Thead>
-          <tr>
-            <Th>Bucket</Th>
-            <Th>Address</Th>
-            <Th>Amount</Th>
-            <Th>Chance</Th>
-          </tr>
-        </Thead>
-        <Tbody>
-          {entries.map((entry) => (
-            <Row key={`${entry.bucketIndex}-${entry.entryIndex}-${entry.address}`}>
-              <Td data-label="Bucket">#{entry.bucketIndex + 1}</Td>
-              <Td data-label="Address">
-                <AddressText>{entry.ensName ?? truncateAddress(entry.address)}</AddressText>
-              </Td>
-              <Td data-label="Amount">{formatEns(entry.amountEns, '0 ENS')}</Td>
-              <Td data-label="Chance">{formatProbability(entry.probability)}</Td>
-            </Row>
-          ))}
-        </Tbody>
-      </Table>
-    </WideTableWrap>
+    <div>
+      <WideTableWrap>
+        <Table>
+          <colgroup>
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '48%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '18%' }} />
+          </colgroup>
+          <Thead>
+            <tr>
+              <Th>Bucket</Th>
+              <Th>Address</Th>
+              <Th>Amount</Th>
+              <Th>Chance</Th>
+            </tr>
+          </Thead>
+          <Tbody>
+            {entries.map((entry) => (
+              <Row key={`${entry.bucketIndex}-${entry.entryIndex}-${entry.address}`}>
+                <Td data-label="Bucket">#{entry.bucketIndex + 1}</Td>
+                <Td data-label="Address">
+                  <CopyableAddress
+                    address={entry.address}
+                    ensName={entry.ensName}
+                    resolveEns={false}
+                    showEnsName
+                  />
+                </Td>
+                <Td data-label="Amount">{formatEns(entry.amountEns, '0 ENS')}</Td>
+                <Td data-label="Chance">{formatProbability(entry.probability)}</Td>
+              </Row>
+            ))}
+          </Tbody>
+        </Table>
+      </WideTableWrap>
+      {entries.length < totalCount ? (
+        <TableNote>
+          Showing the first {entries.length.toLocaleString('en-US')} entries. Use the address inspector above
+          for exact wallet participation.
+        </TableNote>
+      ) : null}
+    </div>
+  )
+}
+
+function AddressLotteryInsightPanel({
+  round,
+  activeAddress,
+  activeAddressValid,
+}: {
+  round: RoundDetailResponse
+  activeAddress: string
+  activeAddressValid: boolean
+}) {
+  const insight = buildAddressLotteryInsight(round, activeAddress, activeAddressValid)
+
+  return (
+    <AddressLotteryPanel $tone={insight.tone}>
+      <AddressLotteryTitle>{insight.title}</AddressLotteryTitle>
+      <AddressLotteryBody>{insight.body}</AddressLotteryBody>
+      {activeAddress && activeAddressValid ? (
+        <MetaItem>
+          <MetaLabel>Selected Address</MetaLabel>
+          <MetaValue>
+            <CopyableAddress address={activeAddress} resolveEns={false} showEnsName />
+          </MetaValue>
+        </MetaItem>
+      ) : null}
+      <MetaGrid>
+        {insight.metrics.map((metric) => (
+          <MetaItem key={metric.label}>
+            <MetaLabel>{metric.label}</MetaLabel>
+            <MetaValue>{metric.value}</MetaValue>
+          </MetaItem>
+        ))}
+      </MetaGrid>
+    </AddressLotteryPanel>
   )
 }
 
@@ -545,7 +834,7 @@ export function RoundDetailPage() {
     async () => {
       try {
         return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined, {
-          rewardLimit: 'all',
+          rewardLimit: '25',
         })
       } catch (error) {
         if (!isLegacyEndpointError(error)) throw error
@@ -608,6 +897,10 @@ export function RoundDetailPage() {
   const lotteryEntries = useMemo(
     () => flattenLotteryEntries(round.data?.lottery ?? null),
     [round.data?.lottery],
+  )
+  const visibleLotteryEntries = useMemo(
+    () => lotteryEntries.slice(0, LOTTERY_ENTRY_DISPLAY_LIMIT),
+    [lotteryEntries],
   )
 
   function handleAddressSubmit() {
@@ -750,14 +1043,38 @@ export function RoundDetailPage() {
           <SummaryValue>{formatCount(round.data.lotteryEntryCount)}</SummaryValue>
         </SummaryItem>
         <SummaryItem>
-          <SummaryLabel>Lottery Winners</SummaryLabel>
+          <SummaryLabel>Lottery Buckets</SummaryLabel>
+          <SummaryValue>{formatCount(round.data.lotteryBucketCount)}</SummaryValue>
+        </SummaryItem>
+        <SummaryItem>
+          <SummaryLabel>Unique Lottery Winners</SummaryLabel>
           <SummaryValue>{formatCount(round.data.lotteryWinnerCount)}</SummaryValue>
         </SummaryItem>
         <SummaryItem>
-          <SummaryLabel>Lottery Prize</SummaryLabel>
+          <SummaryLabel>Total Lottery Prizes</SummaryLabel>
           <SummaryValue>{formatEns(round.data.lotteryPrizeEns, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
         </SummaryItem>
+        <SummaryItem>
+          <SummaryLabel>Bucket Target</SummaryLabel>
+          <SummaryValue>{formatEns(round.data.lottery?.bucketTargetEns ?? null, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
+        </SummaryItem>
       </SummaryGrid>
+
+      <Section>
+        <WideSectionHeader>
+          <Eyebrow>Address Lottery</Eyebrow>
+          <RowCount>
+            {activeAddressValid && activeAddress
+              ? 'Address-specific'
+              : 'No address'}
+          </RowCount>
+        </WideSectionHeader>
+        <AddressLotteryInsightPanel
+          round={round.data}
+          activeAddress={activeAddress}
+          activeAddressValid={activeAddressValid}
+        />
+      </Section>
 
       <Section>
         <WideSectionHeader>
@@ -802,9 +1119,13 @@ export function RoundDetailPage() {
       <Section>
         <WideSectionHeader>
           <Eyebrow>Lottery Entries</Eyebrow>
-          <RowCount>{lotteryEntryCountLabel(round.data.lottery)}</RowCount>
+          <RowCount>
+            {round.data.lottery
+              ? visibleLotteryEntryCountLabel(lotteryEntries.length, visibleLotteryEntries.length)
+              : lotteryEntryCountLabel(round.data.lottery)}
+          </RowCount>
         </WideSectionHeader>
-        <LotteryEntryTable entries={lotteryEntries} />
+        <LotteryEntryTable entries={visibleLotteryEntries} totalCount={lotteryEntries.length} />
       </Section>
 
       <Section>

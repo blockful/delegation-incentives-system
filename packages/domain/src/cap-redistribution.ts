@@ -1,6 +1,6 @@
 import type { Address, Wei, RewardAllocation } from "./types.js";
 import { wei } from "./types.js";
-import { sum } from "./util/bigint-math.js";
+import { min, sum } from "./util/bigint-math.js";
 
 /**
  * Iterative cap redistribution.
@@ -10,8 +10,10 @@ import { sum } from "./util/bigint-math.js";
  * 3. Redistribute excess pro-rata to uncapped entries (by their weight)
  * 4. Repeat until no one exceeds cap
  *
- * Dust from integer rounding goes to the largest uncapped allocation.
- * Ties broken by lowest address (lexicographic).
+ * Dust from integer rounding goes to the largest positive-weight allocation
+ * that is still under the cap. Ties are broken by lowest address
+ * (lexicographic). If every positive-weight recipient is capped, the
+ * remainder is left unallocated.
  *
  * @param allocations - Initial reward allocations
  * @param weights - Weight for each address (used for pro-rata redistribution)
@@ -83,12 +85,14 @@ export function applyCapRedistribution(
   const dust = (totalPool as bigint) - totalAssigned;
 
   if (dust > 0n) {
-    // Find the largest uncapped allocation. Ties broken by lowest address.
+    // Find the largest uncapped positive-weight allocation that still has room.
     let dustRecipient: Address | undefined;
     let maxReward = -1n;
 
     for (const [addr, reward] of rewards) {
       if (capped.has(addr)) continue;
+      if (((weights.get(addr) ?? 0n) as bigint) <= 0n) continue;
+      if (reward >= (cap as bigint)) continue;
       if (
         reward > maxReward ||
         (reward === maxReward &&
@@ -99,16 +103,11 @@ export function applyCapRedistribution(
       }
     }
 
-    // If all are capped, give dust to the lexicographically lowest address.
-    if (dustRecipient === undefined) {
-      const sorted = [...rewards.keys()].sort();
-      dustRecipient = sorted[0];
-    }
-
     if (dustRecipient !== undefined) {
+      const currentReward = rewards.get(dustRecipient) ?? 0n;
       rewards.set(
         dustRecipient,
-        (rewards.get(dustRecipient) ?? 0n) + dust,
+        currentReward + min(dust, (cap as bigint) - currentReward),
       );
     }
   }

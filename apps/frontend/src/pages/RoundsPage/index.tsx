@@ -186,9 +186,10 @@ function formatLotteryCell(round: RoundSummary): string {
     return 'Unavailable'
   }
 
-  const winners = round.lotteryWinnerCount.toLocaleString('en-US')
+  const buckets = round.lotteryBucketCount?.toLocaleString('en-US') ?? '0'
   const entries = round.lotteryEntryCount.toLocaleString('en-US')
-  return `${winners} winners / ${entries} entries`
+  const winners = round.lotteryWinnerCount.toLocaleString('en-US')
+  return `${buckets} buckets / ${entries} entries / ${winners} unique winners`
 }
 
 function formatVpGrowth(value: string | null): string {

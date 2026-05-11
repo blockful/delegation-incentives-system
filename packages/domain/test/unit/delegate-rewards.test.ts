@@ -95,7 +95,7 @@ describe("computeDelegateRewards", () => {
     // Without cap: A gets 90_000, B gets 10_000.
     // A is capped at 10_000. Excess = 80_000 redistributed to B.
     // B: 10_000 + 80_000 = 90_000 (exceeds cap again).
-    // B capped at 10_000. Dust = 80_000 to lowest address.
+    // B capped at 10_000. The remaining 80_000 stays unallocated.
     const poolSize = wei(1_000_000n * ENS);
     const delegateCap = applyBps(poolSize, DELEGATE_CAP_BPS); // 10_000 ENS
 
@@ -107,13 +107,11 @@ describe("computeDelegateRewards", () => {
     const result = computeDelegateRewards(twaps, poolSize);
 
     expect(result).toHaveLength(2);
-    expect(totalRewards(result)).toBe(100_000n * ENS);
+    expect(totalRewards(result)).toBe(20_000n * ENS);
 
-    // Both are capped at 10_000, dust goes to 0xaaaa (lowest addr).
+    // Both are capped at 10_000.
     const byAddr = new Map(result.map((r) => [r.address, r.reward]));
-    expect(byAddr.get("0xaaaa")! as bigint).toBeGreaterThanOrEqual(
-      delegateCap as bigint,
-    );
+    expect(byAddr.get("0xaaaa")).toBe(delegateCap);
     expect(byAddr.get("0xbbbb")).toBe(delegateCap);
   });
 
@@ -125,6 +123,7 @@ describe("computeDelegateRewards", () => {
     // Each small: 1_000 + 86_000*(1k/4k) = 1_000 + 21_500 = 22_500 (exceeds cap).
     const poolSize = wei(1_000_000n * ENS);
     const delegatePool = applyBps(poolSize, DELEGATE_POOL_BPS);
+    const delegateCap = applyBps(poolSize, DELEGATE_CAP_BPS);
 
     const twaps = new Map<Address, Wei>([
       ["0xaaaa", wei(1_000n * ENS)],
@@ -136,21 +135,19 @@ describe("computeDelegateRewards", () => {
 
     const result = computeDelegateRewards(twaps, poolSize);
 
-    expect(totalRewards(result)).toBe(delegatePool);
+    expect(totalRewards(result)).toBeLessThanOrEqual(delegatePool);
     for (const r of result) {
-      // Everyone ends up at or near cap due to cascading redistribution.
-      expect(r.reward as bigint).toBeLessThanOrEqual(
-        (delegatePool as bigint) + 1n,
-      );
+      expect(r.reward as bigint).toBeLessThanOrEqual(delegateCap as bigint);
     }
   });
 
   // ---------------------------------------------------------------------------
-  // Single delegate gets entire pool (capped, with dust back)
+  // Single delegate is capped
   // ---------------------------------------------------------------------------
-  it("single delegate gets entire pool even when capped", () => {
+  it("single delegate is capped and leaves the remainder unallocated", () => {
     const poolSize = wei(1_000_000n * ENS);
     const delegatePool = applyBps(poolSize, DELEGATE_POOL_BPS); // 100_000 ENS
+    const delegateCap = applyBps(poolSize, DELEGATE_CAP_BPS); // 10_000 ENS
 
     const twaps = new Map<Address, Wei>([
       ["0xaaaa", wei(1_000_000n * ENS)],
@@ -159,9 +156,9 @@ describe("computeDelegateRewards", () => {
     const result = computeDelegateRewards(twaps, poolSize);
 
     expect(result).toHaveLength(1);
-    // Single entry: capped but dust returns to the only entry.
-    expect(result[0].reward).toBe(delegatePool);
-    expect(totalRewards(result)).toBe(delegatePool);
+    expect(result[0].reward).toBe(delegateCap);
+    expect(totalRewards(result)).toBe(delegateCap);
+    expect(totalRewards(result)).toBeLessThan(delegatePool as bigint);
   });
 
   // ---------------------------------------------------------------------------
@@ -172,14 +169,11 @@ describe("computeDelegateRewards", () => {
     const poolSize = wei(999_997n * ENS);
     const delegatePool = applyBps(poolSize, DELEGATE_POOL_BPS);
 
-    const twaps = new Map<Address, Wei>([
-      ["0x1111", wei(7n * ENS)],
-      ["0x2222", wei(11n * ENS)],
-      ["0x3333", wei(13n * ENS)],
-      ["0x4444", wei(17n * ENS)],
-      ["0x5555", wei(19n * ENS)],
-      ["0x6666", wei(23n * ENS)],
-    ]);
+    const twaps = new Map<Address, Wei>();
+    for (let i = 0; i < 20; i++) {
+      const addr = `0x${i.toString(16).padStart(4, "0")}` as Address;
+      twaps.set(addr, wei(100n * ENS));
+    }
 
     const result = computeDelegateRewards(twaps, poolSize);
     expect(totalRewards(result)).toBe(delegatePool);

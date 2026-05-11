@@ -154,7 +154,7 @@ describe("applyCapRedistribution", () => {
     //   Redistribute to 0xbbbb: 400 + 300 = 700 (exceeds cap).
     // Round 2: 0xbbbb capped to 300, excess = 400.
     //   No uncapped entries remain.
-    // Dust = 1000 - 600 = 400, goes to lowest address "0xaaaa".
+    // Dust = 1000 - 600 = 400, left unallocated because every recipient is capped.
     const allocations = [
       alloc("0xaaaa", 600n * ENS),
       alloc("0xbbbb", 400n * ENS),
@@ -168,11 +168,11 @@ describe("applyCapRedistribution", () => {
 
     const result = applyCapRedistribution(allocations, weights, cap, totalPool);
 
-    // Both are capped at 300, dust of 400 goes to 0xaaaa (lowest address).
+    // Both are capped at 300, dust of 400 is unallocated.
     const byAddr = new Map(result.map((r) => [r.address, r.reward]));
-    expect(byAddr.get("0xaaaa")).toBe(700n * ENS);
+    expect(byAddr.get("0xaaaa")).toBe(300n * ENS);
     expect(byAddr.get("0xbbbb")).toBe(300n * ENS);
-    expect(totalRewards(result)).toBe(1000n * ENS);
+    expect(totalRewards(result)).toBe(600n * ENS);
   });
 
   // ---------------------------------------------------------------------------
@@ -275,7 +275,7 @@ describe("applyCapRedistribution", () => {
   // ---------------------------------------------------------------------------
   // Single entry gets entire pool
   // ---------------------------------------------------------------------------
-  it("single entry receives entire pool even when capped", () => {
+  it("single entry is capped and leaves the remainder unallocated", () => {
     const allocations = [alloc("0xaaaa", 1000n * ENS)];
     const weights = new Map<Address, Wei>([["0xaaaa", wei(1000n * ENS)]]);
     const cap = wei(500n * ENS);
@@ -283,15 +283,14 @@ describe("applyCapRedistribution", () => {
 
     const result = applyCapRedistribution(allocations, weights, cap, totalPool);
 
-    // Only one entry: capped to 500, dust of 500 assigned back.
-    expect(totalRewards(result)).toBe(1000n * ENS);
-    expect(result[0].reward).toBe(1000n * ENS);
+    expect(totalRewards(result)).toBe(500n * ENS);
+    expect(result[0].reward).toBe(500n * ENS);
   });
 
   // ---------------------------------------------------------------------------
-  // Invariant: sum of rewards == totalPool
+  // Invariant: sum of rewards <= totalPool
   // ---------------------------------------------------------------------------
-  it("preserves totalPool invariant with many participants and rounding", () => {
+  it("never exceeds totalPool or the per-recipient cap with many participants and rounding", () => {
     // 7 entries with varying weights, poolSize = 10_000_000 (odd), cap = 2_000_000.
     const addresses: Address[] = [
       "0x1111",
@@ -322,9 +321,29 @@ describe("applyCapRedistribution", () => {
       wei(pool),
     );
 
-    expect(totalRewards(result)).toBe(pool);
+    expect(totalRewards(result)).toBeLessThanOrEqual(pool);
     for (const r of result) {
       expect(r.reward as bigint).toBeLessThanOrEqual(capVal as bigint);
     }
+  });
+
+  it("never assigns dust to zero-weight recipients", () => {
+    const allocations = [
+      alloc("0xaaaa", 1000n),
+      alloc("0xbbbb", 0n),
+    ];
+    const weights = new Map<Address, Wei>([
+      ["0xaaaa", wei(1000n)],
+      ["0xbbbb", wei(0n)],
+    ]);
+    const cap = wei(200n);
+    const totalPool = wei(1000n);
+
+    const result = applyCapRedistribution(allocations, weights, cap, totalPool);
+
+    const byAddr = new Map(result.map((r) => [r.address, r.reward]));
+    expect(byAddr.get("0xaaaa")).toBe(200n);
+    expect(byAddr.get("0xbbbb")).toBe(0n);
+    expect(totalRewards(result)).toBe(200n);
   });
 });
