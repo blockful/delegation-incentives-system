@@ -1,7 +1,7 @@
 import { render, type RenderOptions } from '@testing-library/react'
-import type { ReactElement } from 'react'
-import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactElement, ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { ThorinProvider } from '@/app/providers/ThorinProvider'
 import { WalletStateContext } from '@/features/wallet/WalletStateProvider'
 import type { AppWalletState } from '@/features/wallet/wallet.types'
@@ -9,6 +9,25 @@ import type { AppWalletState } from '@/features/wallet/wallet.types'
 interface TestRenderOptions extends RenderOptions {
   walletState?: AppWalletState
   initialPath?: string
+}
+
+export function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  })
+}
+
+export function TestQueryProvider({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={createTestQueryClient()}>
+      {children}
+    </QueryClientProvider>
+  )
 }
 
 export function renderApp(
@@ -19,15 +38,8 @@ export function renderApp(
     ...options
   }: TestRenderOptions = {},
 ) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-
   return render(
-    <QueryClientProvider client={queryClient}>
+    <TestQueryProvider>
       <MemoryRouter initialEntries={[initialPath]}>
         <ThorinProvider>
           <WalletStateContext.Provider value={walletState}>
@@ -35,7 +47,7 @@ export function renderApp(
           </WalletStateContext.Provider>
         </ThorinProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </TestQueryProvider>,
     options,
   )
 }

@@ -1,6 +1,8 @@
-import styled from 'styled-components'
+import type { ReactNode } from 'react'
+import styled, { css } from 'styled-components'
 import { cardStyles, cardHoverStyles } from '@/styles/primitives'
 import { tokens } from '@/styles/tokens'
+import { CopyableAddress } from './CopyableAddress'
 
 /* ─── Styles ─── */
 
@@ -14,7 +16,7 @@ const Grid = styled.div`
   }
 `
 
-const Card = styled.a`
+const cardLayoutStyles = css`
   ${cardStyles}
   ${cardHoverStyles}
   width: 100%;
@@ -26,6 +28,24 @@ const Card = styled.a`
   color: inherit;
   box-shadow: ${tokens.shadow.sm};
   box-sizing: border-box;
+`
+
+const Card = styled.a`
+  ${cardLayoutStyles}
+`
+
+const CopyableCard = styled.div`
+  ${cardLayoutStyles}
+`
+
+const CardLink = styled.a`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
 `
 
 const IconBox = styled.span`
@@ -92,9 +112,10 @@ export interface LinkCardItem {
   icon?: string
   iconSrc?: string
   title: string
-  desc: string
+  desc: ReactNode
   href: string
   tag?: string
+  copyAddress?: string
 }
 
 interface LinkCardProps {
@@ -104,8 +125,8 @@ interface LinkCardProps {
 /* ─── Components ─── */
 
 export function LinkCard({ item }: LinkCardProps) {
-  return (
-    <Card href={item.href} target="_blank" rel="noopener noreferrer">
+  const body = (
+    <>
       {(item.icon || item.iconSrc) && (
         <IconBox aria-hidden>
           {item.iconSrc
@@ -119,6 +140,23 @@ export function LinkCard({ item }: LinkCardProps) {
       </Content>
       {item.tag && <Tag>{item.tag}</Tag>}
       <Chevron aria-hidden>›</Chevron>
+    </>
+  )
+
+  if (item.copyAddress) {
+    return (
+      <CopyableCard>
+        <CardLink href={item.href} target="_blank" rel="noopener noreferrer">
+          {body}
+        </CardLink>
+        <CopyableAddress address={item.copyAddress} showEnsName={false} resolveEns={false} />
+      </CopyableCard>
+    )
+  }
+
+  return (
+    <Card href={item.href} target="_blank" rel="noopener noreferrer">
+      {body}
     </Card>
   )
 }

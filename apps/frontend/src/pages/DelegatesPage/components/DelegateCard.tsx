@@ -2,10 +2,9 @@ import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
 import type { DelegateDetail } from '@/api/types'
-import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles'
 
 interface DelegateCardProps {
@@ -57,26 +56,6 @@ const IdentityRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.md};
-`
-
-const IdentityInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-`
-
-const Name = styled.span`
-  font-weight: ${tokens.font.weight.bold};
-  font-size: ${tokens.font.size.lg};
-  color: ${tokens.color.darkBlue};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`
-
-const AddressText = styled.span`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkGray};
 `
 
 const ProposalSection = styled.div`
@@ -141,6 +120,19 @@ const DelegatedButton = styled.button<{ $delegated: boolean }>`
   }
 `
 
+const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: ${tokens.radius.pill};
+  background: rgba(255, 255, 255, 0.25);
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: ${tokens.spacing.xs};
+`
+
 const ProfileLink = styled(Link)`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
@@ -171,22 +163,15 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
   return (
     <StyledCard>
       <IdentityRow>
-        <EnsAvatar
+        <AddressIdentity
           address={delegate.address}
-          name={ensName ?? undefined}
+          ensName={ensName}
           avatarUrl={delegate.avatarUrl}
-          size={40}
+          showAvatar
+          avatarSize={40}
+          layout="stack"
+          size="md"
         />
-        <IdentityInfo>
-          {ensName ? (
-            <>
-              <Name>{ensName}</Name>
-              <AddressText>{truncateAddress(delegate.address)}</AddressText>
-            </>
-          ) : (
-            <Name>{truncateAddress(delegate.address)}</Name>
-          )}
-        </IdentityInfo>
       </IdentityRow>
 
       <ProposalSection>
@@ -213,7 +198,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
 
       <ActionsBlock>
         <DelegatedButton $delegated={isDelegated} disabled={isDelegated}>
-          {isDelegated ? 'Delegated ✓' : 'Delegate'}
+          {isDelegated ? 'Delegated ✓' : <>Delegate <FreeTag>Free</FreeTag></>}
         </DelegatedButton>
         <ProfileLink to={`/delegates/${ensName ?? delegate.address}`}>
           Profile →

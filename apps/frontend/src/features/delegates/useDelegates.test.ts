@@ -1,14 +1,15 @@
 import { renderHook, waitFor } from '@testing-library/react'
+import { TestQueryProvider } from '@/test/utils'
 import { useDelegates } from './useDelegates'
 
 describe('useDelegates', () => {
   it('sets loading to true initially', () => {
-    const { result } = renderHook(() => useDelegates())
+    const { result } = renderHook(() => useDelegates(), { wrapper: TestQueryProvider })
     expect(result.current.loading).toBe(true)
   })
 
   it('fetches delegates and returns DelegateDetail array', async () => {
-    const { result } = renderHook(() => useDelegates())
+    const { result } = renderHook(() => useDelegates(), { wrapper: TestQueryProvider })
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)

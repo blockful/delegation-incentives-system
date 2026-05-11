@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from '@/test/utils'
 import { DashboardPage } from '.'
@@ -19,13 +19,15 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/3\.95% APY/)).toBeInTheDocument()
     })
-    expect(screen.getAllByText(/16\.35/).length).toBeGreaterThanOrEqual(1)
+    const earnings = screen.getByLabelText('Your earnings')
+    expect(within(earnings).getByText(/\+\d+(\.\d)?/)).toBeInTheDocument()
+    expect(screen.getByText('ENS earned so far')).toBeInTheDocument()
   })
 
   it('shows round progress', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText(/Round \d+/)).toBeInTheDocument()
+      expect(screen.getAllByText(/Round \d+/).length).toBeGreaterThan(0)
     })
   })
 

@@ -29,7 +29,7 @@ describe('LotteryPage', () => {
       expect(screen.getByText('How the draw works')).toBeInTheDocument()
     })
     expect(
-      screen.getByText(/verifiable random draw/),
+      screen.getByText(/publicly verifiable/),
     ).toBeInTheDocument()
   })
 })

@@ -4,10 +4,10 @@ import { Spinner } from '@ensdomains/thorin'
 import { useEnsName, useEnsAddress } from 'wagmi'
 import { useDelegate } from '@/features/delegates/useDelegate'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
-import { truncateAddress } from '@/utils/format'
 import { tokens, fadeInUp, LoadingWrapper, ErrorMessage } from '@/styles'
+import { formatEnsAmount } from '@/utils/format'
 
 function formatVotingPower(vpWei: string): string {
   const ens = Number(vpWei) / 1e18
@@ -21,7 +21,7 @@ function formatVotingPower(vpWei: string): string {
     const rounded = Math.round(k * 10) / 10
     return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K`
   }
-  return `${Math.round(ens)}`
+  return formatEnsAmount(ens)
 }
 
 function formatActiveSince(iso: string): string {
@@ -32,14 +32,14 @@ function formatActiveSince(iso: string): string {
 const Page = styled.div`
   max-width: ${tokens.maxWidth.lg};
   margin: 0 auto;
-  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['3xl']};
+  gap: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['5xl']} ${tokens.spacing['2xl']};
+    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
   }
 `
 
@@ -58,39 +58,47 @@ const BackLink = styled(Link)`
   }
 `
 
-const ProfileHeader = styled.div`
+const HeroCard = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.lg};
+  box-shadow: ${tokens.shadow.sm};
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: ${tokens.spacing.lg};
   text-align: center;
-`
-
-const Name = styled.h1`
-  font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
-  color: ${tokens.color.darkBlue};
-  margin: 0;
-  word-break: break-all;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['4xl']};
+    padding: ${tokens.spacing['4xl']} ${tokens.spacing['3xl']};
   }
 `
 
-const Address = styled.span`
-  font-size: ${tokens.font.size.lg};
-  color: ${tokens.color.darkGray};
-  font-family: ${tokens.font.mono};
+const Identity = styled(AddressIdentity)`
+  && {
+    align-items: center;
+  }
+
+  justify-content: center;
+  text-align: center;
+`
+
+const CtaWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  width: 100%;
+  max-width: 400px;
+  margin-top: ${tokens.spacing.sm};
 `
 
 const DelegateButton = styled.button<{ $delegated: boolean }>`
   width: 100%;
-  max-width: 400px;
   padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
-  border-radius: ${tokens.radius.sm};
-  border: 1px solid ${({ $delegated }) =>
-    $delegated ? tokens.color.positiveEmphasis : tokens.color.blue};
+  border-radius: ${tokens.radius.md};
+  border: none;
   background: ${({ $delegated }) =>
     $delegated ? tokens.color.tierHighlight : tokens.color.blue};
   color: ${({ $delegated }) =>
@@ -98,41 +106,53 @@ const DelegateButton = styled.button<{ $delegated: boolean }>`
   font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
   cursor: ${({ $delegated }) => ($delegated ? 'default' : 'pointer')};
-  transition: all ${tokens.transition.fast};
+  transition: all ${tokens.transition.base};
+  box-shadow: ${({ $delegated }) =>
+    $delegated ? 'none' : '0 4px 12px rgba(82, 152, 255, 0.3)'};
 
   &:hover:not(:disabled) {
-    opacity: 0.85;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(82, 152, 255, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 `
 
-const Card = styled.div`
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  padding: ${tokens.spacing.xl};
-  box-shadow: ${tokens.shadow.sm};
-`
-
-const CardTitle = styled.h2`
-  font-size: ${tokens.font.size.sm};
+const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: ${tokens.radius.pill};
+  background: rgba(255, 255, 255, 0.25);
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: ${tokens.color.darkGray};
-  margin: 0 0 ${tokens.spacing.lg};
+  letter-spacing: 0.05em;
+  margin-left: ${tokens.spacing.xs};
+`
+
+const CtaHint = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textSubtle};
 `
 
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${tokens.spacing.xl};
+  gap: ${tokens.spacing.md};
 
   @media (min-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 `
 
-const Stat = styled.div`
+const StatCard = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.lg};
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -147,6 +167,23 @@ const StatValue = styled.span`
 const StatLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
+`
+
+const VotingCard = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.gray};
+  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.xl};
+  box-shadow: ${tokens.shadow.sm};
+`
+
+const CardTitle = styled.h2`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: ${tokens.color.darkGray};
+  margin: 0 0 ${tokens.spacing.lg};
 `
 
 const ExternalLink = styled.a`
@@ -222,54 +259,49 @@ export function DelegateProfilePage() {
     <Page>
       <BackLink to="/delegates">← All delegates</BackLink>
 
-      <ProfileHeader>
-        <EnsAvatar
+      <HeroCard>
+        <Identity
           address={delegate.address}
-          name={ensName ?? undefined}
+          ensName={ensName}
           avatarUrl={delegate.avatarUrl}
-          size={96}
+          showAvatar
+          avatarSize={96}
+          layout="stack"
+          size="xl"
         />
-        {ensName ? (
-          <>
-            <Name>{ensName}</Name>
-            <Address>{truncateAddress(delegate.address)}</Address>
-          </>
-        ) : (
-          <Name>{truncateAddress(delegate.address)}</Name>
+        <CtaWrapper>
+          <DelegateButton $delegated={isDelegated} disabled={isDelegated}>
+            {isDelegated ? 'Delegated ✓' : <>Delegate <FreeTag>Free</FreeTag></>}
+          </DelegateButton>
+          {!isDelegated && <CtaHint>No gas fees required</CtaHint>}
+        </CtaWrapper>
+      </HeroCard>
+
+      <StatsGrid>
+        <StatCard>
+          <StatValue>{formatVotingPower(delegate.votingPower)} ENS</StatValue>
+          <StatLabel>Voting Power</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatValue>{delegate.delegatorCount}</StatValue>
+          <StatLabel>Delegators</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatValue>{votingPercentage}%</StatValue>
+          <StatLabel>Participation</StatLabel>
+        </StatCard>
+        {delegate.activeSince && (
+          <StatCard>
+            <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
+            <StatLabel>Active since</StatLabel>
+          </StatCard>
         )}
-        <DelegateButton $delegated={isDelegated} disabled={isDelegated}>
-          {isDelegated ? 'Delegated ✓' : 'Delegate'}
-        </DelegateButton>
-      </ProfileHeader>
+      </StatsGrid>
 
-      <Card>
-        <CardTitle>Stats</CardTitle>
-        <StatsGrid>
-          <Stat>
-            <StatValue>{formatVotingPower(delegate.votingPower)} ENS</StatValue>
-            <StatLabel>Voting Power</StatLabel>
-          </Stat>
-          <Stat>
-            <StatValue>{delegate.delegatorCount}</StatValue>
-            <StatLabel>Delegators</StatLabel>
-          </Stat>
-          <Stat>
-            <StatValue>{votingPercentage}%</StatValue>
-            <StatLabel>Participation</StatLabel>
-          </Stat>
-          {delegate.activeSince && (
-            <Stat>
-              <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
-              <StatLabel>Active since</StatLabel>
-            </Stat>
-          )}
-        </StatsGrid>
-      </Card>
-
-      <Card>
+      <VotingCard>
         <CardTitle>Voting Record (last 10 proposals)</CardTitle>
         <ProposalBar votes={delegate.last10ProposalsVoted} />
-      </Card>
+      </VotingCard>
 
       <ExternalLink
         href={`https://anticapture.com/ens/holders-and-delegates?tab=delegates&drawerAddress=${delegate.address}`}

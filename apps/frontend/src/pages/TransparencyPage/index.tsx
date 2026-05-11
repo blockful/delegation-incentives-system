@@ -4,7 +4,6 @@ import { Spinner } from '@ensdomains/thorin'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
-import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles/tokens'
 import { Eyebrow, PageContainer } from '@/styles/primitives'
 import { LinkCardRow, LinkCardStack, type LinkCardItem } from '@/components/shared/LinkCard'
@@ -129,20 +128,23 @@ const VERIFY_LINKS: LinkCardItem[] = [
 const CONTRACT_ENTRIES: LinkCardItem[] = [
   {
     title: 'ENS Incentives',
-    desc: truncateAddress(contracts.ensIncentives),
+    desc: 'Verified contract',
     href: `https://etherscan.io/address/${contracts.ensIncentives}`,
+    copyAddress: contracts.ensIncentives,
     tag: 'Verified',
   },
   {
     title: 'Delegate By Sig',
-    desc: truncateAddress(contracts.delegateBySig),
+    desc: 'Verified contract',
     href: `https://etherscan.io/address/${contracts.delegateBySig}`,
+    copyAddress: contracts.delegateBySig,
     tag: 'Verified',
   },
   {
     title: 'Reward Distributor',
-    desc: truncateAddress(contracts.rewardDistributor),
+    desc: 'Verified contract',
     href: `https://etherscan.io/address/${contracts.rewardDistributor}`,
+    copyAddress: contracts.rewardDistributor,
     tag: 'Verified',
   },
 ]
@@ -150,15 +152,15 @@ const CONTRACT_ENTRIES: LinkCardItem[] = [
 const HOW_REWARDS_STEPS = [
   {
     title: 'Balance snapshot',
-    desc: 'Your share is based on the average of your daily ENS balance over the last 180 days — not just your current balance.',
+    desc: 'Your share uses a 180-day moving average of your ENS balance, not just your current balance.',
   },
   {
     title: 'Tier assignment',
-    desc: 'Tiers unlock as total delegated VP grows. Your tier is set at round start and determines your APY for the full 30-day round.',
+    desc: 'Month-over-month growth in delegated VP unlocks tiers. Your tier is set at round start and determines APY.',
   },
   {
     title: 'Payout at round end',
-    desc: 'ENS is sent directly to your wallet. No claiming needed. Sub-1 ENS amounts enter the lottery pool instead.',
+    desc: 'Payouts are proportional to your share and sent directly to your wallet. Sub-1 ENS amounts enter the lottery pool.',
   },
 ]
 
