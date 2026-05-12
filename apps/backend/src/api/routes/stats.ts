@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { governanceProposal, distributionResult, ensDelegation } from "ponder:schema";
-import { sql, desc, inArray } from "drizzle-orm";
+import { governanceProposal, distributionResult, ensDelegation, ensBalance } from "ponder:schema";
+import { sql, desc, inArray, and, eq } from "drizzle-orm";
 import { fetchActiveDelegates, getActiveVpTotal, formatEns } from "../helpers.js";
 
 const StatsResponse = z.object({
@@ -17,7 +17,7 @@ const StatsResponse = z.object({
   holdersEarning: z
     .number()
     .openapi({
-      description: "Current count of active delegates plus unique direct delegators to active delegates. This is live delegation state, not finalized round payout recipients.",
+      description: "Current count of active delegates plus unique direct delegators to active delegates with a positive ENS balance. This is live delegation state, not finalized round payout recipients.",
       example: 412,
     }),
 });
@@ -67,7 +67,13 @@ app.openapi(route, async (c) => {
       const delegatorRows = await db
         .select({ delegator: ensDelegation.id })
         .from(ensDelegation)
-        .where(inArray(ensDelegation.delegateId, activeList));
+        .innerJoin(ensBalance, eq(ensBalance.id, ensDelegation.id))
+        .where(
+          and(
+            inArray(ensDelegation.delegateId, activeList),
+            sql`${ensBalance.balance} > 0`,
+          ),
+        );
 
       const uniqueDelegators = new Set<string>();
       for (const row of delegatorRows) {

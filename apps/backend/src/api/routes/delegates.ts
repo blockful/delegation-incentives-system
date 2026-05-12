@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { ensVotingPowerSnapshot, ensDelegation, governanceVote } from "ponder:schema";
-import { eq, asc, desc, sql } from "drizzle-orm";
+import { ensVotingPowerSnapshot, ensDelegation, governanceVote, ensBalance } from "ponder:schema";
+import { eq, asc, desc, sql, and } from "drizzle-orm";
 import type { Address } from "@ens-dis/domain";
 import { fetchActiveDelegates } from "../helpers.js";
 
@@ -74,7 +74,13 @@ app.openapi(route, async (c) => {
       const countRows = await db
         .select({ count: sql<number>`count(*)` })
         .from(ensDelegation)
-        .where(eq(ensDelegation.delegateId, addr.toLowerCase()));
+        .innerJoin(ensBalance, eq(ensBalance.id, ensDelegation.id))
+        .where(
+          and(
+            eq(ensDelegation.delegateId, addr.toLowerCase()),
+            sql`${ensBalance.balance} > 0`,
+          ),
+        );
 
       const voted = voterProposals.get(addr as Address) ?? new Set<string>();
       const last10ProposalsVoted = proposalIds.map((pid) => voted.has(pid));
