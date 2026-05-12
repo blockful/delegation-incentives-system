@@ -25,6 +25,7 @@ function resolveTableName(table: unknown): string {
 function makeFakeDb() {
   const stores = new Map([
     ["vesting_plan", new Map<string, any>()],
+    ["vesting_nft_ownership", new Map<string, any>()],
     ["vesting_redemption", new Map<string, any>()],
     ["protocol_mapping", new Map<string, any>()],
   ])
@@ -157,6 +158,11 @@ describe("HedgeyVesting:PlanCreated", () => {
     expect(plan.amountRedeemed).toBe(0n)
     expect(plan.token).toBe(ENS_TOKEN)
     expect(plan.createdAtBlock).toBe(100n)
+    expect(plan.createdAtTimestamp).toBe(1n)
+    expect(plan.createdAtLogIndex).toBe(0)
+    const ownership = fakeDb.stores.get("vesting_nft_ownership")!.get("1-100-0")
+    expect(ownership.owner).toBe(ALICE)
+    expect(ownership.logIndex).toBe(0)
   })
 
   it("does not overwrite existing mapping (onConflictDoNothing)", async () => {
@@ -229,6 +235,7 @@ describe("HedgeyVesting:PlanRedeemed", () => {
     const redemption = fakeDb.stores.get("vesting_redemption")!.get("2-400-0")
     expect(redemption.planRemainder).toBe(800n)
     expect(redemption.blockNumber).toBe(400n)
+    expect(redemption.logIndex).toBe(0)
     expect(redemption.amountRedeemed).toBe(200n)
   })
 })
@@ -262,6 +269,9 @@ describe("HedgeyVesting:Transfer", () => {
     }
     await handleHedgeyTransfer(event as any, makeContext(fakeDb.db))
     expect(fakeDb.stores.get("protocol_mapping")!.has("hedgey_vesting-1")).toBe(false)
+    expect(fakeDb.stores.get("vesting_nft_ownership")!.get("1-1-0").owner).toBe(
+      zeroAddress.toLowerCase(),
+    )
   })
 
   it("does not delete vesting plan on burn", async () => {
@@ -298,6 +308,9 @@ describe("HedgeyVesting:Transfer", () => {
     expect(
       fakeDb.stores.get("protocol_mapping")!.get("hedgey_vesting-1").operatorAddress,
     ).toBe(BOB)
+    expect(fakeDb.stores.get("vesting_nft_ownership")!.get("1-1-0").owner).toBe(
+      BOB,
+    )
   })
 
   it("skips when plan not found", async () => {

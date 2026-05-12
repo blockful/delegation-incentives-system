@@ -41,6 +41,7 @@ export async function handleEnsTransfer(event: any, context: any) {
       delta,
       deltaMod,
       blockNumber: event.block.number,
+      logIndex: event.log.logIndex,
       timestamp: event.block.timestamp,
       transactionHash: event.transaction.hash,
     });
@@ -70,6 +71,7 @@ export async function handleEnsTransfer(event: any, context: any) {
       delta,
       deltaMod,
       blockNumber: event.block.number,
+      logIndex: event.log.logIndex,
       timestamp: event.block.timestamp,
       transactionHash: event.transaction.hash,
     });
@@ -113,6 +115,7 @@ export async function handleDelegateChanged(event: any, context: any) {
     toDelegateId: toDelegateAddr,
     delegatedValue,
     blockNumber: event.block.number,
+    logIndex: event.log.logIndex,
     timestamp: event.block.timestamp,
     transactionHash: event.transaction.hash,
   });
@@ -137,6 +140,7 @@ export async function handleDelegateVotesChanged(event: any, context: any) {
     delta,
     deltaMod,
     blockNumber: event.block.number,
+    logIndex: event.log.logIndex,
     timestamp: event.block.timestamp,
     transactionHash: event.transaction.hash,
   });

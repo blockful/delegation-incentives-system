@@ -127,30 +127,35 @@ const directDelegations: Delegation[] = [
     delegate: delegate1,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
   {
     delegator: directDelegator2,
     delegate: delegate1,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
   {
     delegator: directDelegator3,
     delegate: delegate2,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
   {
     delegator: directDelegator4,
     delegate: delegate2,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
   {
     delegator: directDelegator5,
     delegate: delegate3,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
   // Vesting contract delegating to delegate3
   {
@@ -158,6 +163,7 @@ const directDelegations: Delegation[] = [
     delegate: delegate3,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
 ];
 
@@ -172,6 +178,7 @@ const multiPositions: MultiDelegatePosition[] = [
     balance: wei(500n * ENS),
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
   {
     holder: multiHolder2,
@@ -179,6 +186,7 @@ const multiPositions: MultiDelegatePosition[] = [
     balance: wei(300n * ENS),
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   },
 ];
 
@@ -191,7 +199,8 @@ const vestingPlans: VestingPlan[] = [
     planId: "plan-1",
     contractAddress: vestingContract1,
     token: "0x0000000000000000000000000000000000000ENS" as Address,
-    amount: wei(1000n * ENS),
+    amount: wei(800n * ENS),
+    createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
   },
 ];
 
@@ -357,6 +366,20 @@ function createMockDataSource(): IncentivesDataSource {
     ): Promise<readonly VestingPlan[]> {
       return vestingPlans;
     },
+    async getPlanBalanceEventsInRange(
+      _planId: string,
+      _from: Seconds,
+      _to: Seconds,
+    ) {
+      return [];
+    },
+    async getPlanBalanceAtTimestamp(
+      planId: string,
+      _timestamp: Seconds,
+    ): Promise<Wei> {
+      const plan = vestingPlans.find((p) => p.planId === planId);
+      return plan?.amount ?? wei(0n);
+    },
 
     // ── WalletAliasRepository ───────────────────────────────
     async getAliases(): Promise<readonly WalletAlias[]> {
@@ -438,12 +461,14 @@ describe("runDistributionPipeline", () => {
       delegate: delegate1,
       timestamp: MONTH_START,
       blockNumber: blockNumber(100n),
+      logIndex: 0,
     }));
     manyDelegations.push({
       delegator: tinyDelegator,
       delegate: delegate1,
       timestamp: MONTH_START,
       blockNumber: blockNumber(100n),
+      logIndex: 0,
     });
 
     const ds = createMockDataSource();
@@ -564,7 +589,7 @@ describe("runDistributionPipeline", () => {
     }
   });
 
-  it("hedgey beneficiary receives rewards based on vesting contract balance", async () => {
+  it("hedgey beneficiary receives rewards based on vesting plan balance", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
 
@@ -576,6 +601,78 @@ describe("runDistributionPipeline", () => {
       ),
     ];
     expect(allAddresses).toContain(hedgeyBeneficiary);
+  });
+
+  it("weights Hedgey beneficiaries by per-plan remainder, not full contract balance", async () => {
+    const ds = createMockDataSource();
+    const planOwner1: Address = "0xC300000000000000000000000000000000000003";
+    const planOwner2: Address = "0xC400000000000000000000000000000000000004";
+    const backgroundDelegators: Address[] = Array.from(
+      { length: 20 },
+      (_, i) =>
+        `0xF${i.toString(16).padStart(39, "0")}` as Address,
+    );
+
+    ds.getDelegationsToAtTimestamp = async () => [
+      {
+        delegator: vestingContract1,
+        delegate: delegate1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      },
+      ...backgroundDelegators.map((delegator) => ({
+        delegator,
+        delegate: delegate1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      })),
+    ];
+    ds.getPositionsAtTimestamp = async () => [];
+    ds.getAliases = async () => [];
+    ds.getPlansForContracts = async () => [
+      {
+        planId: "plan-100",
+        contractAddress: vestingContract1,
+        token: "0x0000000000000000000000000000000000000ENS" as Address,
+        amount: wei(100n * ENS),
+        createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
+      },
+      {
+        planId: "plan-300",
+        contractAddress: vestingContract1,
+        token: "0x0000000000000000000000000000000000000ENS" as Address,
+        amount: wei(300n * ENS),
+        createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
+      },
+    ];
+    ds.getNftOwnerAtTimestamp = async (planId: string) =>
+      planId === "plan-100" ? planOwner1 : planOwner2;
+    ds.getPlanBalanceEventsInRange = async () => [];
+    ds.getPlanBalanceAtTimestamp = async (planId: string) =>
+      planId === "plan-100" ? wei(100n * ENS) : wei(300n * ENS);
+    ds.getBalanceAtTimestamp = async (account: Address) => {
+      if (backgroundDelegators.includes(account)) return wei(1000n * ENS);
+      if (account === vestingContract1) return wei(1_000_000n * ENS);
+      return wei(0n);
+    };
+
+    const result = await runDistributionPipeline(MONTH, ds);
+    const rewardsByAddress = new Map(
+      result.rewards.map((reward) => [reward.address, reward]),
+    );
+    const delegatorPool = 4_500n * ENS;
+    const totalTwb = (20n * 1000n + 100n + 300n) * ENS;
+    const expectedPlan1 = (100n * ENS * delegatorPool) / totalTwb;
+    const expectedPlan2 = (300n * ENS * delegatorPool) / totalTwb;
+
+    expect(rewardsByAddress.get(planOwner1)?.delegatorReward).toBe(
+      wei(expectedPlan1),
+    );
+    expect(rewardsByAddress.get(planOwner2)?.delegatorReward).toBe(
+      wei(expectedPlan2),
+    );
   });
 
   it("multiDelegate holders appear in rewards or lottery", async () => {

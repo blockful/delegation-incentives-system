@@ -102,6 +102,7 @@ const BASE_PARAMS = {
   tokenId: TOKEN_ID_1,
   value: 100n,
   blockNumber: 1000n,
+  logIndex: 0,
   timestamp: 1n,
   transactionHash: "0xabc",
 }
@@ -381,6 +382,7 @@ describe("processMultiDelegateTransfer: position accumulation", () => {
       tokenId: TOKEN_ID_1,
       value: 50n,
       blockNumber: 2000n,
+      logIndex: 0,
       timestamp: 2n,
       transactionHash: "0xacc",
     })

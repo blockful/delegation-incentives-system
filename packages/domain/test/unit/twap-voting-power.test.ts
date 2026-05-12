@@ -21,6 +21,7 @@ function vpEvent(
     newBalance: wei(newBalance),
     timestamp: seconds(timestamp),
     blockNumber: blockNumber(0n),
+    logIndex: 0,
   };
 }
 

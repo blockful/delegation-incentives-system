@@ -4,7 +4,12 @@ import {
   identifyActiveDelegates,
 } from "../../src/active-delegates.js";
 import type { Address, Proposal, Vote } from "../../src/types.js";
-import { seconds, wei, blockNumber } from "../../src/types.js";
+import {
+  FINALIZED_STATUSES,
+  seconds,
+  wei,
+  blockNumber,
+} from "../../src/types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,6 +39,15 @@ function makeVote(voter: Address, proposalId: string): Vote {
 // getLastFinalizedProposals
 // ---------------------------------------------------------------------------
 describe("getLastFinalizedProposals", () => {
+  it("excludes canceled proposals from finalized activity statuses", () => {
+    expect(FINALIZED_STATUSES.has("canceled")).toBe(false);
+    expect(FINALIZED_STATUSES.has("succeeded")).toBe(true);
+    expect(FINALIZED_STATUSES.has("queued")).toBe(true);
+    expect(FINALIZED_STATUSES.has("executed")).toBe(true);
+    expect(FINALIZED_STATUSES.has("defeated")).toBe(true);
+    expect(FINALIZED_STATUSES.has("expired")).toBe(true);
+  });
+
   it("sorts proposals by finalizedTimestamp descending", () => {
     const proposals = [
       makeProposal("p1", 100),

@@ -30,7 +30,7 @@ The 180-day TWB window prevents last-minute delegation farming.
 
 ### Step 2 — Fetch proposals and votes
 
-The last `PROPOSAL_WINDOW_SIZE = 10` non-active proposals are fetched (executed, defeated, or canceled). All votes cast on those proposals are fetched.
+The last `PROPOSAL_WINDOW_SIZE = 10` non-active, non-canceled proposals are fetched. Valid statuses are `succeeded`, `queued`, `executed`, `defeated`, and `expired` — that is, proposals that reached a voting outcome or a later post-vote state. Canceled proposals are not valid for activity scoring. All votes cast on those proposals are fetched.
 
 ### Step 3 — Identify active delegates
 
@@ -125,20 +125,22 @@ Implemented in `time-weighted-balance.ts`. The opening balance (at `twbWindowSta
 
 A delegator with no balance events in or before the window gets `TWB = 0` and is excluded from rewards.
 
+For Hedgey vesting, TWB is computed per vesting plan from the plan's unredeemed ENS remainder history, not from the aggregate ENS balance of the Hedgey master contract. The plan NFT owner at `monthEnd` receives the plan's reward weight. If a plan NFT changed owners, historical owner lookup uses block/log ordering at or before `monthEnd`.
+
 ### Step 10 — Wallet consolidation (protocol deduplication)
 
 Before cap calculation, addresses that represent the same economic entity are merged. Two classes:
 
 **Protocol mappings** (from indexer, `protocol_mapping` table):
 - ERC20MultiDelegate positions: the proxy contract address is mapped to the operator (token holder)
-- Hedgey vesting plans: the vesting contract is mapped to the plan recipient
+- Hedgey vesting plans: the vesting plan NFT owner is treated as the economic recipient, while the delegated address remains the Hedgey vesting contract
 
 **Wallet aliases** (operator-managed, `wallet_alias` table):
 - Secondary EOAs known to belong to the same entity, mapped to a primary address
 
 Resolution is transitive: if address A → B and B → C, then A resolves to C. After resolution, TWBs for the same canonical address are summed before cap enforcement. Rewards are sent to the canonical (primary) address.
 
-Implemented in `protocol-dedup.ts` (`consolidateDelegators`).
+Implemented in `consolidation.ts` (`consolidateDelegators`).
 
 ### Step 11 — Delegator reward allocation
 
@@ -183,7 +185,7 @@ Implemented in `cap-redistribution.ts`. The algorithm is iterative:
 4. Repeat until no participant exceeds their cap (convergence is guaranteed — each iteration reduces the uncapped set).
 5. Any rounding remainder (dust from integer division) is added to the largest uncapped recipient.
 
-This ensures the full pool is distributed without any participant receiving more than their cap.
+If at least one uncapped positive-weight recipient has remaining cap room, this distributes the full sub-pool. If every positive-weight recipient reaches the cap, the remaining amount is left unallocated rather than violating caps.
 
 ---
 
@@ -211,7 +213,7 @@ accumulated += currentValue × (to − prevTime)
 TWAP = accumulated / (to − from)
 ```
 
-All arithmetic is integer (bigint). Results are truncated (floor division), not rounded.
+When multiple events share a timestamp, they are ordered by `blockNumber` and then `logIndex` so the step function follows on-chain event order. All arithmetic is integer (bigint). Results are truncated (floor division), not rounded.
 
 ---
 

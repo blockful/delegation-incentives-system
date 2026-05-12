@@ -37,13 +37,14 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
         );
 
       // Aggregate balances per (owner, delegate) pair.
-      const balances = new Map<string, { owner: string; delegate: string; balance: bigint; maxBlock: bigint }>();
+      const balances = new Map<string, { owner: string; delegate: string; balance: bigint; maxBlock: bigint; maxLogIndex: number }>();
 
       for (const row of rows) {
         const fromAddr = row.from.toLowerCase();
         const toAddr = row.to.toLowerCase();
         const amount = BigInt(row.amount);
         const block = BigInt(row.blockNumber);
+        const logIndex = row.logIndex;
 
         // Credit the receiver (skip zero address — mints have from=zero)
         if (toAddr !== ZERO_ADDRESS) {
@@ -51,9 +52,15 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
           const existing = balances.get(key);
           if (existing) {
             existing.balance += amount;
-            if (block > existing.maxBlock) existing.maxBlock = block;
+            if (
+              block > existing.maxBlock ||
+              (block === existing.maxBlock && logIndex > existing.maxLogIndex)
+            ) {
+              existing.maxBlock = block;
+              existing.maxLogIndex = logIndex;
+            }
           } else {
-            balances.set(key, { owner: toAddr, delegate: row.delegate, balance: amount, maxBlock: block });
+            balances.set(key, { owner: toAddr, delegate: row.delegate, balance: amount, maxBlock: block, maxLogIndex: logIndex });
           }
         }
 
@@ -63,9 +70,15 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
           const existing = balances.get(key);
           if (existing) {
             existing.balance -= amount;
-            if (block > existing.maxBlock) existing.maxBlock = block;
+            if (
+              block > existing.maxBlock ||
+              (block === existing.maxBlock && logIndex > existing.maxLogIndex)
+            ) {
+              existing.maxBlock = block;
+              existing.maxLogIndex = logIndex;
+            }
           } else {
-            balances.set(key, { owner: fromAddr, delegate: row.delegate, balance: -amount, maxBlock: block });
+            balances.set(key, { owner: fromAddr, delegate: row.delegate, balance: -amount, maxBlock: block, maxLogIndex: logIndex });
           }
         }
       }
@@ -79,6 +92,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
             balance: wei(entry.balance),
             timestamp: seconds(0n),
             blockNumber: blockNumber(entry.maxBlock),
+            logIndex: entry.maxLogIndex,
           });
         }
       }
@@ -110,7 +124,11 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
             ),
           ),
         )
-        .orderBy(asc(multiDelegateTransfer.timestamp));
+        .orderBy(
+          asc(multiDelegateTransfer.timestamp),
+          asc(multiDelegateTransfer.blockNumber),
+          asc(multiDelegateTransfer.logIndex),
+        );
 
       // Get the balance just before the range to compute running totals
       const priorBalance = await this.getErc1155BalanceAtTimestamp(
@@ -143,6 +161,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
           delta: wei(delta),
           timestamp: seconds(BigInt(row.timestamp)),
           blockNumber: blockNumber(BigInt(row.blockNumber)),
+          logIndex: row.logIndex,
         };
       });
     },

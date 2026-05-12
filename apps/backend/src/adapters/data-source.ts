@@ -60,6 +60,10 @@ export function createDataSource(
       vesting.getVestingContractAddresses.bind(vesting),
     getNftOwnerAtTimestamp: vesting.getNftOwnerAtTimestamp.bind(vesting),
     getPlansForContracts: vesting.getPlansForContracts.bind(vesting),
+    getPlanBalanceEventsInRange:
+      vesting.getPlanBalanceEventsInRange.bind(vesting),
+    getPlanBalanceAtTimestamp:
+      vesting.getPlanBalanceAtTimestamp.bind(vesting),
     // BlockRepository
     getBlockForTimestamp: block.getBlockForTimestamp.bind(block),
     getRandaoValue: block.getRandaoValue.bind(block),

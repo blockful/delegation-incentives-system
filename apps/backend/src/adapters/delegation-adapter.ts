@@ -38,6 +38,7 @@ export function createDelegationAdapter(db: Db): DelegationRepository {
           toDelegateId: ensDelegationEvent.toDelegateId,
           timestamp: ensDelegationEvent.timestamp,
           blockNumber: ensDelegationEvent.blockNumber,
+          logIndex: ensDelegationEvent.logIndex,
         })
         .from(ensDelegationEvent)
         .innerJoin(
@@ -48,13 +49,15 @@ export function createDelegationAdapter(db: Db): DelegationRepository {
           ),
         );
 
-      // Deduplicate same-timestamp ties: keep highest blockNumber per delegator.
+      // Deduplicate same-timestamp ties: keep highest blockNumber/logIndex per delegator.
       const deduped = new Map<string, (typeof rows)[0]>();
       for (const row of rows) {
         const existing = deduped.get(row.delegatorId);
         if (
           !existing ||
-          BigInt(row.blockNumber) > BigInt(existing.blockNumber)
+          BigInt(row.blockNumber) > BigInt(existing.blockNumber) ||
+          (BigInt(row.blockNumber) === BigInt(existing.blockNumber) &&
+            row.logIndex > existing.logIndex)
         ) {
           deduped.set(row.delegatorId, row);
         }
@@ -69,6 +72,7 @@ export function createDelegationAdapter(db: Db): DelegationRepository {
           delegate: row.toDelegateId as Address,
           timestamp: seconds(BigInt(row.timestamp)),
           blockNumber: blockNumber(BigInt(row.blockNumber)),
+          logIndex: row.logIndex,
         }));
     },
   };

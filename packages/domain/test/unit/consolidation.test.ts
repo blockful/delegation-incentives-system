@@ -34,6 +34,7 @@ function makeDelegation(
     delegate,
     timestamp: seconds(1_000_000n),
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   };
 }
 
@@ -47,6 +48,7 @@ function makeMultiDelegatePosition(
     balance: wei(1_000_000_000_000_000_000n),
     timestamp: seconds(1_000_000n),
     blockNumber: blockNumber(100n),
+    logIndex: 0,
   };
 }
 
@@ -118,8 +120,8 @@ describe("resolveEligibleDelegators", () => {
   it("resolves Hedgey vesting contract to NFT owner", () => {
     const delegations = [makeDelegation(vestingContract, delegate1)];
     const vestingAddresses = new Set<Address>([vestingContract]);
-    const nftOwners = new Map<Address, readonly Address[]>([
-      [vestingContract, [alice]],
+    const nftOwners = new Map([
+      [vestingContract, [{ planId: "1", owner: alice }]],
     ]);
     const activeDelegates = new Set<Address>([delegate1]);
 
@@ -137,13 +139,14 @@ describe("resolveEligibleDelegators", () => {
       originalAddress: vestingContract,
       delegateAddress: delegate1,
       source: "hedgey",
+      vestingPlanId: "1",
     });
   });
 
   it("skips Hedgey delegation when NFT owner is not found", () => {
     const delegations = [makeDelegation(vestingContract, delegate1)];
     const vestingAddresses = new Set<Address>([vestingContract]);
-    const nftOwners = new Map<Address, readonly Address[]>(); // no mapping
+    const nftOwners = new Map(); // no mapping
     const activeDelegates = new Set<Address>([delegate1]);
 
     const result = resolveEligibleDelegators(
@@ -164,8 +167,8 @@ describe("resolveEligibleDelegators", () => {
     ];
     const positions = [makeMultiDelegatePosition(alice, delegate2)];
     const vestingAddresses = new Set<Address>([vestingContract]);
-    const nftOwners = new Map<Address, readonly Address[]>([
-      [vestingContract, [alice]],
+    const nftOwners = new Map([
+      [vestingContract, [{ planId: "1", owner: alice }]],
     ]);
     const activeDelegates = new Set<Address>([delegate1, delegate2]);
 
@@ -218,9 +221,9 @@ describe("resolveEligibleDelegators", () => {
       vestingContract,
       vestingContract2,
     ]);
-    const nftOwners = new Map<Address, readonly Address[]>([
-      [vestingContract, [alice]],
-      [vestingContract2, [bob]],
+    const nftOwners = new Map([
+      [vestingContract, [{ planId: "1", owner: alice }]],
+      [vestingContract2, [{ planId: "2", owner: bob }]],
     ]);
     const activeDelegates = new Set<Address>([delegate1]);
 

@@ -8,6 +8,7 @@ import type {
   Proposal,
   Seconds,
   VestingNftOwnership,
+  VestingBalanceEvent,
   VestingPlan,
   Vote,
   VotingPowerEvent,
@@ -130,7 +131,21 @@ export interface VestingRepository {
   /** All vesting plans associated with the given contract addresses. */
   getPlansForContracts(
     contractAddresses: readonly Address[],
+    atTimestamp?: Seconds,
   ): Promise<readonly VestingPlan[]>;
+
+  /** Vesting plan remainder changes in [from, to]. */
+  getPlanBalanceEventsInRange(
+    planId: string,
+    from: Seconds,
+    to: Seconds,
+  ): Promise<readonly VestingBalanceEvent[]>;
+
+  /** Most recent vesting plan remainder at or before `timestamp`. */
+  getPlanBalanceAtTimestamp(
+    planId: string,
+    timestamp: Seconds,
+  ): Promise<Wei>;
 }
 
 export interface BlockRepository {

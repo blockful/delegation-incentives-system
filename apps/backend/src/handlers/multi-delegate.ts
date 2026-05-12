@@ -29,6 +29,7 @@ export async function processMultiDelegateTransfer(params: {
   tokenId: bigint;
   value: bigint;
   blockNumber: bigint;
+  logIndex: number;
   timestamp: bigint;
   transactionHash: string;
 }) {
@@ -40,6 +41,7 @@ export async function processMultiDelegateTransfer(params: {
     tokenId,
     value,
     blockNumber,
+    logIndex,
     timestamp,
     transactionHash,
   } = params;
@@ -56,6 +58,7 @@ export async function processMultiDelegateTransfer(params: {
     delegate,
     amount: value,
     blockNumber,
+    logIndex,
     timestamp,
     transactionHash,
   });
@@ -158,6 +161,7 @@ export async function handleTransferSingle(event: any, context: any) {
     tokenId: id,
     value,
     blockNumber: event.block.number,
+    logIndex: event.log.logIndex,
     timestamp: event.block.timestamp,
     transactionHash: event.transaction.hash,
   });
@@ -182,6 +186,7 @@ export async function handleTransferBatch(event: any, context: any) {
       tokenId: ids[i],
       value: values[i],
       blockNumber: event.block.number,
+      logIndex: event.log.logIndex,
       timestamp: event.block.timestamp,
       transactionHash: event.transaction.hash,
     });

@@ -24,6 +24,8 @@ import {
 import { combineRewards, applyMinimumThreshold } from "./combine-rewards.js";
 import { runLottery } from "./lottery.js";
 
+const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
+
 export async function runDistributionPipeline(
   month: string,
   dataSource: IncentivesDataSource,
@@ -122,18 +124,22 @@ export async function runDistributionPipeline(
   }
 
   // Get plans for matching vesting contracts — collect all owners per contract
-  const nftOwnerMap = new Map<Address, Address[]>();
+  const nftOwnerMap = new Map<
+    Address,
+    { planId: string; owner: Address }[]
+  >();
   if (matchingContracts.size > 0) {
     const vestingPlans = await dataSource.getPlansForContracts([
       ...matchingContracts,
-    ]);
+    ], monthEnd);
     for (const plan of vestingPlans) {
       const owner = await dataSource.getNftOwnerAtTimestamp(
         plan.planId,
         monthEnd,
       );
+      if (owner === ZERO_ADDRESS) continue;
       const owners = nftOwnerMap.get(plan.contractAddress) ?? [];
-      owners.push(owner);
+      owners.push({ planId: plan.planId, owner });
       nftOwnerMap.set(plan.contractAddress, owners);
     }
   }
@@ -210,16 +216,21 @@ export async function runDistributionPipeline(
           break;
         }
         case "hedgey": {
-          // For hedgey, use the vesting contract's ENS balance
+          if (entry.vestingPlanId === undefined) {
+            throw new Error(
+              `Missing vestingPlanId for Hedgey delegator ${entry.resolvedAddress}`,
+            );
+          }
+
           const vestingBalanceEvents =
-            await dataSource.getBalanceEventsInRange(
-              entry.originalAddress,
+            await dataSource.getPlanBalanceEventsInRange(
+              entry.vestingPlanId,
               twbWindowStart,
               monthEnd,
             );
           const vestingInitialBalance =
-            await dataSource.getBalanceAtTimestamp(
-              entry.originalAddress,
+            await dataSource.getPlanBalanceAtTimestamp(
+              entry.vestingPlanId,
               twbWindowStart,
             );
           twb = computeTimeWeightedBalance(
@@ -285,12 +296,16 @@ export async function runDistributionPipeline(
   // lottery winners are also included from the buckets.
   const rewards: CombinedReward[] = directPayouts;
 
-  return {
+  const result: DistributionResult = {
     metadata,
     rewards,
     lottery: { buckets: lotteryBuckets },
     deduplication,
   };
+
+  validateDistributionResult(result);
+
+  return result;
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -341,7 +356,10 @@ function emptyResult(
 function buildDeduplicationLog(
   eligible: readonly EligibleDelegator[],
   aliases: readonly WalletAlias[],
-  _nftOwnerMap: ReadonlyMap<Address, readonly Address[]>,
+  _nftOwnerMap: ReadonlyMap<
+    Address,
+    readonly { planId: string; owner: Address }[]
+  >,
 ): DeduplicationLog {
   // MultiDelegate entries
   const multiDelegate = eligible
@@ -358,7 +376,7 @@ function buildDeduplicationLog(
   const hedgey = hedgeyEntries.map((e) => ({
     vestingContract: e.originalAddress,
     nftOwner: e.resolvedAddress,
-    planId: "", // planId not tracked in EligibleDelegator; logged for dedup tracking
+    planId: e.vestingPlanId ?? "",
   }));
 
   // Wallet aliases that were used
@@ -368,4 +386,53 @@ function buildDeduplicationLog(
   }));
 
   return { multiDelegate, hedgey, walletAliases };
+}
+
+export function validateDistributionResult(result: DistributionResult): void {
+  let totalDistributed = 0n;
+  const poolSize = result.metadata.poolSize as bigint;
+  const delegateCap = result.metadata.delegateCap as bigint;
+  const delegatorCap = result.metadata.delegatorCap as bigint;
+
+  for (const reward of result.rewards) {
+    const delegateReward = reward.delegateReward as bigint;
+    const delegatorReward = reward.delegatorReward as bigint;
+    const total = reward.total as bigint;
+
+    if (delegateReward > delegateCap) {
+      throw new Error(`Delegate reward exceeds cap for ${reward.address}`);
+    }
+    if (delegatorReward > delegatorCap) {
+      throw new Error(`Delegator reward exceeds cap for ${reward.address}`);
+    }
+    if (delegateReward + delegatorReward !== total) {
+      throw new Error(`Combined reward total mismatch for ${reward.address}`);
+    }
+
+    totalDistributed += total;
+  }
+
+  for (const bucket of result.lottery.buckets) {
+    totalDistributed += bucket.prize as bigint;
+
+    const winner = bucket.winner.toLowerCase();
+    const hasWinner = bucket.entries.some(
+      (entry) => entry.address.toLowerCase() === winner,
+    );
+    if (!hasWinner) {
+      throw new Error(`Lottery winner is not an entry in bucket ${bucket.bucketIndex}`);
+    }
+
+    const entryTotal = bucket.entries.reduce(
+      (acc, entry) => acc + (entry.amount as bigint),
+      0n,
+    );
+    if (entryTotal !== (bucket.prize as bigint)) {
+      throw new Error(`Lottery prize mismatch in bucket ${bucket.bucketIndex}`);
+    }
+  }
+
+  if (totalDistributed > poolSize) {
+    throw new Error("Total distributed exceeds pool size");
+  }
 }

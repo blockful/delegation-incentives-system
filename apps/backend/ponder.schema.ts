@@ -29,6 +29,7 @@ export const multiDelegateTransfer = onchainTable("multi_delegate_transfer", (t)
   delegate: t.text().notNull(),        // delegate address (derived from token id)
   amount: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
 }), (table) => ({
@@ -51,9 +52,23 @@ export const vestingPlan = onchainTable("vesting_plan", (t) => ({
   period: t.bigint().notNull(),
   amountRedeemed: t.bigint().notNull(),
   createdAtBlock: t.bigint().notNull(),
+  createdAtTimestamp: t.bigint().notNull(),
+  createdAtLogIndex: t.integer().notNull(),
 }), (table) => ({
   recipientIdx: index().on(table.recipient),
   tokenIdx: index().on(table.token),
+}));
+
+export const vestingNftOwnership = onchainTable("vesting_nft_ownership", (t) => ({
+  id: t.text().primaryKey(),            // `${planId}-${blockNumber}-${logIndex}`
+  planId: t.bigint().notNull(),
+  owner: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  planIdIdx: index().on(table.planId),
+  timestampIdx: index().on(table.timestamp),
 }));
 
 export const vestingRedemption = onchainTable("vesting_redemption", (t) => ({
@@ -62,6 +77,7 @@ export const vestingRedemption = onchainTable("vesting_redemption", (t) => ({
   amountRedeemed: t.bigint().notNull(),
   planRemainder: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
 }), (table) => ({
   planIdIdx: index().on(table.planId),
@@ -85,6 +101,7 @@ export const ensBalanceEvent = onchainTable("ens_balance_event", (t) => ({
   delta: t.bigint().notNull(),         // signed change (negative for sender)
   deltaMod: t.bigint().notNull(),      // absolute value of delta (for sorting/filtering)
   blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
 }), (table) => ({
@@ -110,6 +127,7 @@ export const ensDelegationEvent = onchainTable("ens_delegation_event", (t) => ({
   toDelegateId: t.text().notNull(),
   delegatedValue: t.bigint().notNull(), // delegator's token balance at time of delegation
   blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
 }), (table) => ({
@@ -126,6 +144,7 @@ export const ensVotingPowerSnapshot = onchainTable("ens_voting_power_snapshot", 
   delta: t.bigint().notNull(),         // change (newBalance - previousBalance)
   deltaMod: t.bigint().notNull(),      // absolute value of delta (for sorting/filtering)
   blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
 }), (table) => ({

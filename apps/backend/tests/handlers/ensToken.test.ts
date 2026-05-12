@@ -171,6 +171,8 @@ describe("ENSToken:Transfer", () => {
     expect(events.has("0xdeadbeef-5-to")).toBe(true)
     expect(events.get("0xdeadbeef-5-from").delta).toBe(-100n)
     expect(events.get("0xdeadbeef-5-to").delta).toBe(100n)
+    expect(events.get("0xdeadbeef-5-from").logIndex).toBe(5)
+    expect(events.get("0xdeadbeef-5-to").logIndex).toBe(5)
   })
 
   it("creates balance record for new receiver (not previously in DB)", async () => {
@@ -293,6 +295,7 @@ describe("ENSToken:DelegateVotesChanged", () => {
     await handleDelegateVotesChanged(event as any, makeContext(fakeDb.db))
     const snap = fakeDb.stores.get("ens_voting_power_snapshot")!.get("0xcafe-0")
     expect(snap.blockNumber).toBe(12345n)
+    expect(snap.logIndex).toBe(0)
     expect(snap.timestamp).toBe(9999n)
     expect(snap.transactionHash).toBe("0xcafe")
   })

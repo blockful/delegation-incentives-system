@@ -1,5 +1,5 @@
 import type { db as PonderDb } from "ponder:api";
-import { eq, and, lte, gte, asc, desc, inArray } from "drizzle-orm";
+import { eq, and, lte, gte, asc, desc } from "drizzle-orm";
 import { ensVotingPowerSnapshot } from "ponder:schema";
 import type { VotingPowerRepository } from "@ens-dis/domain";
 import type { Address, Seconds, Wei, VotingPowerEvent } from "@ens-dis/domain";
@@ -24,13 +24,18 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
             lte(ensVotingPowerSnapshot.timestamp, to),
           ),
         )
-        .orderBy(asc(ensVotingPowerSnapshot.timestamp));
+        .orderBy(
+          asc(ensVotingPowerSnapshot.timestamp),
+          asc(ensVotingPowerSnapshot.blockNumber),
+          asc(ensVotingPowerSnapshot.logIndex),
+        );
 
       return rows.map((row) => ({
         delegate: row.accountId as Address,
         newBalance: wei(BigInt(row.votingPower)),
         timestamp: seconds(BigInt(row.timestamp)),
         blockNumber: blockNumber(BigInt(row.blockNumber)),
+        logIndex: row.logIndex,
       }));
     },
 
@@ -47,7 +52,11 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
             lte(ensVotingPowerSnapshot.timestamp, timestamp),
           ),
         )
-        .orderBy(desc(ensVotingPowerSnapshot.timestamp), desc(ensVotingPowerSnapshot.blockNumber))
+        .orderBy(
+          desc(ensVotingPowerSnapshot.timestamp),
+          desc(ensVotingPowerSnapshot.blockNumber),
+          desc(ensVotingPowerSnapshot.logIndex),
+        )
         .limit(1);
 
       if (rows.length === 0) return wei(0n);

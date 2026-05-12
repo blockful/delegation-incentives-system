@@ -40,12 +40,12 @@ export type ProposalStatus =
 
 /**
  * Statuses that count as finalized for the incentives pipeline.
- * Pending and active are excluded.
+ * Canceled proposals are excluded because they never reached a terminal
+ * governance outcome after voting.
  */
 export const FINALIZED_STATUSES: ReadonlySet<ProposalStatus> = new Set<ProposalStatus>([
   "executed",
   "defeated",
-  "canceled",
   "succeeded",
   "queued",
   "expired",
@@ -81,6 +81,7 @@ export interface VotingPowerEvent {
   readonly newBalance: Wei;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ export interface BalanceEvent {
   readonly delta: Wei;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -104,6 +106,7 @@ export interface Delegation {
   readonly delegate: Address;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -116,6 +119,7 @@ export interface MultiDelegatePosition {
   readonly balance: Wei;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
 }
 
 export interface Erc1155BalanceEvent {
@@ -125,6 +129,7 @@ export interface Erc1155BalanceEvent {
   readonly delta: Wei;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -136,6 +141,7 @@ export interface VestingPlan {
   readonly contractAddress: Address;
   readonly token: Address;
   readonly amount: Wei;
+  readonly createdAtTimestamp: Seconds;
 }
 
 export interface VestingNftOwnership {
@@ -143,6 +149,15 @@ export interface VestingNftOwnership {
   readonly owner: Address;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
+}
+
+export interface VestingBalanceEvent {
+  readonly planId: string;
+  readonly balance: Wei;
+  readonly timestamp: Seconds;
+  readonly blockNumber: BlockNumber;
+  readonly logIndex: number;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -169,6 +184,7 @@ export interface EligibleDelegator {
   readonly originalAddress: Address;
   readonly delegateAddress: Address;
   readonly source: DelegatorSource;
+  readonly vestingPlanId?: string;
 }
 
 export interface ConsolidatedDelegator {

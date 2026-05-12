@@ -24,7 +24,11 @@ export function createBalanceAdapter(db: Db): BalanceRepository {
             lte(ensBalanceEvent.timestamp, to),
           ),
         )
-        .orderBy(asc(ensBalanceEvent.timestamp));
+        .orderBy(
+          asc(ensBalanceEvent.timestamp),
+          asc(ensBalanceEvent.blockNumber),
+          asc(ensBalanceEvent.logIndex),
+        );
 
       return rows.map((row) => ({
         account: row.accountId as Address,
@@ -32,6 +36,7 @@ export function createBalanceAdapter(db: Db): BalanceRepository {
         delta: wei(BigInt(row.delta)),
         timestamp: seconds(BigInt(row.timestamp)),
         blockNumber: blockNumber(BigInt(row.blockNumber)),
+        logIndex: row.logIndex,
       }));
     },
 
@@ -48,7 +53,11 @@ export function createBalanceAdapter(db: Db): BalanceRepository {
             lte(ensBalanceEvent.timestamp, timestamp),
           ),
         )
-        .orderBy(desc(ensBalanceEvent.timestamp), desc(ensBalanceEvent.blockNumber))
+        .orderBy(
+          desc(ensBalanceEvent.timestamp),
+          desc(ensBalanceEvent.blockNumber),
+          desc(ensBalanceEvent.logIndex),
+        )
         .limit(1);
 
       if (rows.length === 0) return wei(0n);

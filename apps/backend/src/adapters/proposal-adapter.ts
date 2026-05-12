@@ -23,7 +23,7 @@ export function createProposalAdapter(db: Db): ProposalRepository {
       limit: number,
       beforeBlock?: BlockNumber,
     ): Promise<readonly Proposal[]> {
-      // Query 1: explicitly finalized proposals (executed, canceled, queued, etc.)
+      // Query 1: explicitly finalized proposals (succeeded/defeated and later post-vote states).
       const explicitRows = await db
         .select()
         .from(governanceProposal)

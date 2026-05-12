@@ -13,6 +13,7 @@ export const multiDelegateTransfer = makeTable("multi_delegate_transfer");
 
 // Hedgey Vesting
 export const vestingPlan = makeTable("vesting_plan");
+export const vestingNftOwnership = makeTable("vesting_nft_ownership");
 export const vestingRedemption = makeTable("vesting_redemption");
 
 // ENS Token

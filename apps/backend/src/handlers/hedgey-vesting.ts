@@ -1,5 +1,10 @@
 import { ponder } from "ponder:registry";
-import { vestingPlan, vestingRedemption, protocolMapping } from "ponder:schema";
+import {
+  vestingPlan,
+  vestingNftOwnership,
+  vestingRedemption,
+  protocolMapping,
+} from "ponder:schema";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ENS_TOKEN = "0xc18360217d8f7ab5e7c516566761ea12ce7f9d72";
@@ -30,6 +35,17 @@ export async function handlePlanCreated(event: any, context: any) {
     period,
     amountRedeemed: 0n,
     createdAtBlock: event.block.number,
+    createdAtTimestamp: event.block.timestamp,
+    createdAtLogIndex: event.log.logIndex,
+  });
+
+  await db.insert(vestingNftOwnership).values({
+    id: `${id}-${event.block.number}-${event.log.logIndex}`,
+    planId: id,
+    owner: recipientAddr,
+    blockNumber: event.block.number,
+    logIndex: event.log.logIndex,
+    timestamp: event.block.timestamp,
   });
 
   // Create protocol mapping for deduplication
@@ -70,6 +86,7 @@ export async function handlePlanRedeemed(event: any, context: any) {
     amountRedeemed,
     planRemainder,
     blockNumber: event.block.number,
+    logIndex: event.log.logIndex,
     timestamp: event.block.timestamp,
   });
 }
@@ -106,6 +123,15 @@ export async function handleHedgeyTransfer(event: any, context: any) {
       operatorAddress: toAddr,
     });
   }
+
+  await db.insert(vestingNftOwnership).values({
+    id: `${tokenId}-${event.block.number}-${event.log.logIndex}`,
+    planId: tokenId,
+    owner: toAddr,
+    blockNumber: event.block.number,
+    logIndex: event.log.logIndex,
+    timestamp: event.block.timestamp,
+  });
 }
 
 ponder.on("HedgeyVesting:Transfer", async ({ event, context }) => {

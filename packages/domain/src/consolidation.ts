@@ -7,6 +7,11 @@ import type {
   MultiDelegatePosition,
 } from "./types.js";
 
+export interface VestingPlanOwner {
+  readonly planId: string;
+  readonly owner: Address;
+}
+
 // ──────────────────────────────────────────────────────────
 // Step 8: Resolve eligible delegators from 3 sources
 // ──────────────────────────────────────────────────────────
@@ -21,7 +26,7 @@ export function resolveEligibleDelegators(
   directDelegations: readonly Delegation[],
   multiDelegatePositions: readonly MultiDelegatePosition[],
   vestingContractAddresses: ReadonlySet<Address>,
-  vestingNftOwners: ReadonlyMap<Address, readonly Address[]>,
+  vestingNftOwners: ReadonlyMap<Address, readonly VestingPlanOwner[]>,
   activeDelegates: ReadonlySet<Address>,
 ): EligibleDelegator[] {
   const results: EligibleDelegator[] = [];
@@ -32,14 +37,15 @@ export function resolveEligibleDelegators(
 
     if (vestingContractAddresses.has(d.delegator)) {
       // Hedgey: resolve vesting contract to NFT owner(s) — one entry per plan
-      const nftOwners = vestingNftOwners.get(d.delegator);
-      if (!nftOwners || nftOwners.length === 0) continue;
-      for (const nftOwner of nftOwners) {
+      const plans = vestingNftOwners.get(d.delegator);
+      if (!plans || plans.length === 0) continue;
+      for (const plan of plans) {
         results.push({
-          resolvedAddress: nftOwner,
+          resolvedAddress: plan.owner,
           originalAddress: d.delegator,
           delegateAddress: d.delegate,
           source: "hedgey",
+          vestingPlanId: plan.planId,
         });
       }
     } else {
