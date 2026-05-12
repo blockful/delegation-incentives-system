@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
 import { api } from '@/api'
+import { TransparencyStatsSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
 import { tokens } from '@/styles/tokens'
@@ -92,15 +92,6 @@ const StatGrid = styled.div`
   gap: ${tokens.spacing.md};
 `
 
-
-/* ─── Loading ─── */
-
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-`
 
 /* ─── Data ─── */
 
@@ -201,9 +192,7 @@ export function TransparencyPage() {
 
           {/* Live data stats */}
           {loading ? (
-            <LoadingWrapper>
-              <Spinner />
-            </LoadingWrapper>
+            <TransparencyStatsSkeleton />
           ) : (
             status.data &&
             tiers.data && (

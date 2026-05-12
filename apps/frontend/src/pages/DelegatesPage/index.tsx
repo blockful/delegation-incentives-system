@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
 import { useDelegates } from '@/features/delegates/useDelegates'
 import { useStats } from '@/features/stats/useStats'
-import { tokens, fadeInUp, Eyebrow, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, Eyebrow, ErrorMessage } from '@/styles'
+import { DelegateCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
 import { DelegateCard } from './components/DelegateCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
@@ -101,7 +101,7 @@ function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
 
 export function DelegatesPage() {
   const { data, loading, error } = useDelegates()
-  const { data: stats } = useStats()
+  const { data: stats, loading: statsLoading } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
 
@@ -148,21 +148,21 @@ export function DelegatesPage() {
         </HeaderBlock>
 
         <StatsBarWrapper>
-          <StatsBar
-            activeDelegateCount={stats?.activeDelegateCount}
-            totalDelegatedEns={stats?.totalDelegatedEns}
-            holdersEarning={stats?.holdersEarning}
-          />
+          {statsLoading ? (
+            <StatsBarSkeleton />
+          ) : (
+            <StatsBar
+              activeDelegateCount={stats?.activeDelegateCount}
+              totalDelegatedEns={stats?.totalDelegatedEns}
+              holdersEarning={stats?.holdersEarning}
+            />
+          )}
         </StatsBarWrapper>
       </TopSection>
 
       <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
 
-      {loading && (
-        <LoadingWrapper>
-          <Spinner />
-        </LoadingWrapper>
-      )}
+      {loading && <DelegateCardsSkeleton />}
 
       {error && <ErrorMessage>Failed to load delegates: {error}</ErrorMessage>}
 

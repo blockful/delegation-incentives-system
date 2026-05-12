@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
+import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { tokens, fadeInUp, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { StatCard } from '@/components/shared/StatCard'
 import { useDashboardData } from './useDashboardData'
 import { EarningsStrip } from './sections/EarningsStrip'
@@ -69,7 +69,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   const { data, loading, error } = useDashboardData(address)
 
   if (loading) {
-    return <Page><LoadingWrapper><Spinner /></LoadingWrapper></Page>
+    return <DashboardPageSkeleton />
   }
   if (error) {
     return <Page><ErrorMessage>Failed to load dashboard: {error}</ErrorMessage></Page>

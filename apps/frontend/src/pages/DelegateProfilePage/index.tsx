@@ -1,12 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
 import { useEnsName, useEnsAddress } from 'wagmi'
+import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { useDelegate } from '@/features/delegates/useDelegate'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
-import { tokens, fadeInUp, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount } from '@/utils/format'
 
 function formatVotingPower(vpWei: string): string {
@@ -224,11 +224,7 @@ export function DelegateProfilePage() {
   })
 
   if (loading || ensLoading) {
-    return (
-      <Page>
-        <LoadingWrapper><Spinner /></LoadingWrapper>
-      </Page>
-    )
+    return <DelegateProfileSkeleton />
   }
 
   if (error || !delegate) {

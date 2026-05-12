@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
 import { api, ApiClientError } from '@/api'
 import type {
@@ -14,10 +13,11 @@ import type {
   RoundDetailResponse,
   RoundStatus,
 } from '@/api/types'
+import { RoundDetailPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { CopyableAddress } from '@/components/shared/CopyableAddress'
-import { tokens, fadeInUp, Eyebrow, PageTitle, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, Eyebrow, PageTitle, ErrorMessage } from '@/styles'
 import { formatEnsAmount, formatUtcMonthRange, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
 import {
@@ -931,13 +931,7 @@ export function RoundDetailPage() {
   }
 
   if (round.loading) {
-    return (
-      <Page>
-        <LoadingWrapper>
-          <Spinner />
-        </LoadingWrapper>
-      </Page>
-    )
+    return <RoundDetailPageSkeleton />
   }
 
   if (!Number.isInteger(roundNumber) || roundNumber <= 0) {

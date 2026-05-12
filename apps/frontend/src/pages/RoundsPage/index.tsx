@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
-import { Spinner } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
+import { RoundsPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { tokens, fadeInUp, Eyebrow, PageTitle, LoadingWrapper, ErrorMessage } from '@/styles'
+import { tokens, fadeInUp, Eyebrow, PageTitle, ErrorMessage } from '@/styles'
 import { formatEnsAmount, formatUtcDate, formatUtcMonthRange } from '@/utils/format'
 import { TierTable } from './components/TierTable'
 import { RoundCard } from './components/RoundCard'
@@ -350,13 +350,7 @@ export function RoundsPage() {
   }
 
   if (tiersLoading || roundList.loading) {
-    return (
-      <Page>
-        <LoadingWrapper>
-          <Spinner />
-        </LoadingWrapper>
-      </Page>
-    )
+    return <RoundsPageSkeleton />
   }
 
   if (tiersError || roundList.error) {

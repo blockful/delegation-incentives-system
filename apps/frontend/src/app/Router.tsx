@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { Spinner } from '@ensdomains/thorin'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { DelegatesPage } from '@/pages/DelegatesPage'
@@ -17,7 +17,7 @@ const Dashboard3 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard3'
 const Dashboard4 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard4'))
 
 function LazyFallback() {
-  return <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}><Spinner /></div>
+  return <DashboardPageSkeleton compact />
 }
 
 export function Router() {

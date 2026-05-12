@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { Button, Spinner } from '@ensdomains/thorin'
+import { Button } from '@ensdomains/thorin'
 import { isAddress } from 'viem'
 import { fadeInUp } from '@/styles'
 import { useLottery } from '@/features/lottery/useLottery'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { LotteryPageSkeleton } from '@/components/shared/PageSkeletons'
 import { CopyableAddress } from '@/components/shared/CopyableAddress'
 import { StepList } from '@/components/shared/StepList'
 import { TrophyIcon } from '@/components/shared/icons/TrophyIcon'
@@ -309,13 +310,6 @@ const EmptyState = styled.div`
   color: ${tokens.color.darkGray};
   line-height: 1.6;
   text-align: center;
-`
-
-const LoadingWrap = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 320px;
 `
 
 const ErrorCard = styled(Panel)`
@@ -841,14 +835,7 @@ export function LotteryPage() {
   const currentRound = data?.rounds.find((round) => round.isCurrent)
 
   if (loading) {
-    return (
-      <Page>
-        <HeaderBlock />
-        <LoadingWrap>
-          <Spinner />
-        </LoadingWrap>
-      </Page>
-    )
+    return <LotteryPageSkeleton />
   }
 
   if (error) {

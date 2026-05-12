@@ -1,27 +1,12 @@
 import { useCallback } from 'react'
-import { Spinner } from '@ensdomains/thorin'
-import styled from 'styled-components'
-import { tokens } from '@/styles/tokens'
 import { api } from '@/api'
+import { LandingPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { ErrorMessage } from '@/styles'
 import { DisconnectedLanding } from './states/DisconnectedLanding'
 import { ConnectedLanding } from './states/ConnectedLanding'
 import { DelegatedLanding } from './states/DelegatedLanding'
-
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-`
-
-const ErrorMessage = styled.p`
-  text-align: center;
-  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl};
-  color: ${tokens.color.negative};
-  font-size: ${tokens.font.size.lg};
-`
 
 export function LandingPage() {
   const fetchTiers = useCallback(() => api.tierProgression(), [])
@@ -31,11 +16,7 @@ export function LandingPage() {
   const walletState = useWalletState()
 
   if (tiers.loading || round.loading) {
-    return (
-      <LoadingWrapper>
-        <Spinner />
-      </LoadingWrapper>
-    )
+    return <LandingPageSkeleton />
   }
 
   if (tiers.error || !tiers.data) {

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
-import { Spinner, Button } from '@ensdomains/thorin'
+import { Button } from '@ensdomains/thorin'
+import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -38,13 +39,6 @@ const Page = styled.div`
     padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
     gap: ${tokens.spacing.lg};
   }
-`
-
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 300px;
 `
 
 const ErrorMsg = styled.p`
@@ -495,13 +489,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   const { data, loading, error } = useDashboardData(address)
 
   if (loading) {
-    return (
-      <Page>
-        <LoadingWrapper>
-          <Spinner />
-        </LoadingWrapper>
-      </Page>
-    )
+    return <DashboardPageSkeleton compact />
   }
 
   if (error) {
