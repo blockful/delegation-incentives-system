@@ -9,6 +9,7 @@ import rounds from "./routes/rounds.js";
 import tiers from "./routes/tiers.js";
 import distributions from "./routes/distributions.js";
 import stats from "./routes/stats.js";
+import { startAutomaticDistributionScheduler } from "./distribution-scheduler.js";
 
 const app = new OpenAPIHono();
 
@@ -46,5 +47,7 @@ app.notFound((c) =>
     404,
   ),
 );
+
+startAutomaticDistributionScheduler();
 
 export default app;

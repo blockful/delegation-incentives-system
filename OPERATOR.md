@@ -47,18 +47,20 @@ Swagger UI with all endpoints: `http://localhost:3310/docs`
 
 ## How cycles work
 
-**There are no hardcoded program dates.** The system computes a distribution for any past configured month, automatically, on first access.
+**There are no hardcoded program dates.** Configure valid rounds with `ROUND_MONTHS`. In normal backend runs, the automatic distribution scheduler computes ended configured months once Ponder reports readiness.
 
-- Computation is **triggered automatically** on the first `GET /distributions/<month>` after the month ends.
+- Computation is **triggered automatically by the backend scheduler**. It scans every minute.
+- The scheduler waits for Ponder `/ready` before computing and only attempts rounds one minute after their UTC month-end.
+- Operators can still trigger computation immediately with `POST /distributions/<month>/compute`.
 - The result is **cached forever** — subsequent requests are served from the database, no recomputation.
 - You can force a recompute by deleting the cached record first (see below).
 
 **Practical flow for the 90-day pilot (Feb–Apr 2026):**
 
-At the end of each month, once the chain is fully indexed for that month, simply fetch the distribution:
+Keep the backend running. After each configured month ends and Ponder is ready, the scheduler computes and stores the result. Then review the stored distribution:
 
 ```bash
-curl http://localhost:3310/distributions/2026-02   # triggers compute on first call
+curl http://localhost:3310/distributions/2026-02
 curl http://localhost:3310/distributions/2026-03
 curl http://localhost:3310/distributions/2026-04
 ```
@@ -67,17 +69,19 @@ Then export the payout list for each month and execute the transfers.
 
 ---
 
-## Triggering a distribution
+## Triggering a distribution manually
 
-### 1. Fetch (auto-computes on first access)
+Manual triggering is still useful if you do not want to wait for the next scheduler scan.
 
 ```bash
-curl http://localhost:3310/distributions/2026-03
+curl -X POST http://localhost:3310/distributions/2026-03/compute \
+  -H 'content-type: application/json' \
+  -d '{}'
 ```
 
-On first call after month-end, the pipeline runs automatically and the result is cached. Returns the full distribution JSON including all payouts and lottery results. Subsequent calls return the cached result instantly.
+If `DISTRIBUTION_ADMIN_TOKEN` is set, include either `x-distribution-admin-token: <token>` or `Authorization: Bearer <token>`.
 
-### 2. Review
+### Review
 
 ```bash
 # Full JSON with every address and amount
@@ -173,7 +177,11 @@ Or directly in SQL:
 DELETE FROM distribution_result WHERE month = '2026-03';
 ```
 
-The next `GET /distributions/2026-03` will automatically recompute.
+The scheduler will recompute on the next scan. To recompute immediately:
+
+```bash
+pnpm --dir apps/backend distribution:run -- --month 2026-03 --force
+```
 
 ---
 

@@ -39,6 +39,7 @@ pnpm --filter @ens-dis/backend dev
 | `RPC_URL` | Ethereum mainnet RPC (required) |
 | `DATABASE_URL` | PostgreSQL connection string (required) |
 | `BACKEND_PORT` | API port (default: 42069) |
+| `ROUND_MONTHS` | Comma-separated configured round months, e.g. `2026-03,2026-04,2026-05` |
 
 ## API Endpoints
 
@@ -54,6 +55,8 @@ Swagger UI at `GET /docs`. OpenAPI 3.1 spec at `GET /doc`.
 | `POST` | `/distributions/{month}/compute` | Run the pipeline for `YYYY-MM` |
 | `GET` | `/distributions/{month}` | Fetch a stored distribution (JSON) |
 | `GET` | `/distributions/{month}/csv` | Download distribution as CSV |
+
+The backend also starts an automatic distribution scheduler in normal runs. It waits for Ponder readiness, then scans every minute and computes any configured `ROUND_MONTHS` that ended at least one minute ago and are not already cached.
 
 ## Documentation
 

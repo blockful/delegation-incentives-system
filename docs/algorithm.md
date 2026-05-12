@@ -15,7 +15,7 @@ The pool size is determined by month-over-month growth in aggregate delegated vo
 
 ## Pipeline Steps
 
-The pipeline is implemented in `packages/domain/src/pipeline.ts` and triggered automatically on the first `GET /distributions/{month}` request after the month ends.
+The pipeline is implemented in `packages/domain/src/pipeline.ts`. In normal backend runs, the automatic distribution scheduler waits for Ponder readiness, scans every minute, and computes configured rounds one minute after month-end. Operators can also trigger the same path manually with `POST /distributions/{month}/compute`.
 
 ### Step 1 — Time boundaries
 
