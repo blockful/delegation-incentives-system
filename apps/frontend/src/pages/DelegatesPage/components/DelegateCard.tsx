@@ -6,7 +6,6 @@ import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles'
-import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 
 interface DelegateCardProps {
   delegate: DelegateDetail
@@ -100,7 +99,7 @@ const ActionsBlock = styled.div`
   margin-top: auto;
 `
 
-const DelegateAction = styled.a`
+const DelegateAction = styled.button`
   width: 100%;
   padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
   border-radius: ${tokens.radius.sm};
@@ -109,11 +108,11 @@ const DelegateAction = styled.a`
   color: ${tokens.color.white};
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
+  cursor: pointer;
   transition:
     background ${tokens.transition.fast},
     border-color ${tokens.transition.fast};
   text-align: center;
-  text-decoration: none;
 
   &:hover {
     background: ${tokens.color.accent};
@@ -173,7 +172,10 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
     address: delegate.address as `0x${string}`,
   })
   const ensName = delegate.ensName ?? resolvedEnsName ?? null
-  const delegateUrl = getAnticaptureDelegateUrl(delegate.address)
+
+  const handleDelegate = () => {
+    // TODO: call relayer for gasless delegation
+  }
 
   return (
     <StyledCard>
@@ -215,8 +217,8 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
         {isDelegated ? (
           <DelegatedStatus>Delegated</DelegatedStatus>
         ) : (
-          <DelegateAction href={delegateUrl} target="_blank" rel="noopener noreferrer">
-            Delegate on Anticapture <FreeTag>Free</FreeTag>
+          <DelegateAction type="button" onClick={handleDelegate}>
+            Delegate <FreeTag>Free</FreeTag>
           </DelegateAction>
         )}
         <ProfileLink to={`/delegates/${ensName ?? delegate.address}`}>

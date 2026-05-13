@@ -95,7 +95,7 @@ const CtaWrapper = styled.div`
   margin-top: ${tokens.spacing.sm};
 `
 
-const DelegateAction = styled.a`
+const DelegateAction = styled.button`
   width: 100%;
   padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
   border-radius: ${tokens.radius.md};
@@ -104,11 +104,11 @@ const DelegateAction = styled.a`
   color: ${tokens.color.white};
   font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
+  cursor: pointer;
   transition:
     background ${tokens.transition.base},
     box-shadow ${tokens.transition.base};
   box-shadow: 0 4px 12px rgba(82, 152, 255, 0.3);
-  text-decoration: none;
   text-align: center;
 
   &:hover {
@@ -261,6 +261,10 @@ export function DelegateProfilePage() {
     : 0
   const delegateUrl = getAnticaptureDelegateUrl(delegate.address)
 
+  const handleDelegate = () => {
+    // TODO: call relayer for gasless delegation
+  }
+
   return (
     <Page>
       <BackLink to="/delegates">← All delegates</BackLink>
@@ -279,8 +283,8 @@ export function DelegateProfilePage() {
           {isDelegated ? (
             <DelegatedStatus>Delegated</DelegatedStatus>
           ) : (
-            <DelegateAction href={delegateUrl} target="_blank" rel="noopener noreferrer">
-              Delegate on Anticapture <FreeTag>Free</FreeTag>
+            <DelegateAction type="button" onClick={handleDelegate}>
+              Delegate <FreeTag>Free</FreeTag>
             </DelegateAction>
           )}
           {!isDelegated && <CtaHint>Gas sponsored by the incentives program</CtaHint>}
