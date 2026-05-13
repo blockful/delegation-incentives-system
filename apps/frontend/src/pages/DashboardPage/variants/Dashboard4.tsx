@@ -653,7 +653,7 @@ function BalanceStrip({
       <BalanceLeft>
         <BalanceValue>{formatBalance(balanceEns)}</BalanceValue>
         <BalanceUnit>ENS</BalanceUnit>
-        <InfoTooltip text="Average of your ENS balance over 6 months. Hold longer, earn more." />
+        <InfoTooltip text="Average of your ENS balance over 180 days. Hold longer, earn more." />
       </BalanceLeft>
       <PayoutBadge>+{formatPayout(expectedPayout)} ENS this round</PayoutBadge>
     </BalanceRow>
@@ -672,7 +672,7 @@ function NowVsNextComparison({
     poolSizeEns: string
     estimatedApyPct: string
     additionalVPNeeded: string
-    requiredAVP: string
+    requiredTotalVP: string
     isCurrent: boolean
     isUnlocked: boolean
   }[]
@@ -695,8 +695,8 @@ function NowVsNextComparison({
 
   const vpProgress = nextTier
     ? computeVpProgress(
-        currentTier.requiredAVP,
-        nextTier.requiredAVP,
+        currentTier.requiredTotalVP,
+        nextTier.requiredTotalVP,
         nextTier.additionalVPNeeded,
       )
     : 100
@@ -762,7 +762,7 @@ function NowVsNextComparison({
               <NeededLabel>{vpNeededStr} more ENS delegation needed</NeededLabel>
             )}
           </ProgressSection>
-          <ShareLink to="/delegates">
+          <ShareLink to="/voters">
             <Button size="small" colorStyle="bluePrimary" width="auto">
               Spread the word →
             </Button>
@@ -811,7 +811,7 @@ function NowVsNextComparison({
         <ShareText>
           Every new delegation helps everyone earn more
         </ShareText>
-        <ShareButtonLink to="/delegates">
+        <ShareButtonLink to="/voters">
           <Button size="small" colorStyle="bluePrimary" width="auto">
             Spread the word
           </Button>

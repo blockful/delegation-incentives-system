@@ -120,7 +120,7 @@ describe("processMultiDelegateTransfer", () => {
     const fakeDb = makeFakeDb()
     await processMultiDelegateTransfer({ db: fakeDb.db as any, ...BASE_PARAMS })
     const record = fakeDb.stores.get("multi_delegate_transfer")!.get("tx-1")
-    expect(record.delegate).toBe(DELEGATE_1)
+    expect(record.voter).toBe(DELEGATE_1)
     expect(record.amount).toBe(100n)
     expect(record.blockNumber).toBe(1000n)
   })
@@ -262,7 +262,7 @@ describe("handleProxyDeployed", () => {
     await handleProxyDeployed(event as any, makeContext(fakeDb.db))
     const proxy = fakeDb.stores.get("multi_delegate_proxy")!.get(BOB)
     expect(proxy).toBeDefined()
-    expect(proxy.delegate).toBe(ALICE)
+    expect(proxy.voter).toBe(ALICE)
   })
 
   it("stores deployer as transaction.from (normalized)", async () => {
@@ -283,7 +283,7 @@ describe("handleProxyDeployed", () => {
     const fakeDb = makeFakeDb()
     fakeDb.stores
       .get("multi_delegate_proxy")!
-      .set(BOB, { id: BOB, delegate: "original", deployer: "original", createdAtBlock: 0n })
+      .set(BOB, { id: BOB, voter: "original", deployer: "original", createdAtBlock: 0n })
     const event = {
       args: { delegate: ALICE, proxyAddress: BOB },
       block: { number: 999n, timestamp: 1n },
@@ -291,7 +291,7 @@ describe("handleProxyDeployed", () => {
       log: { logIndex: 0 },
     }
     await handleProxyDeployed(event as any, makeContext(fakeDb.db))
-    expect(fakeDb.stores.get("multi_delegate_proxy")!.get(BOB).delegate).toBe("original")
+    expect(fakeDb.stores.get("multi_delegate_proxy")!.get(BOB).voter).toBe("original")
   })
 })
 

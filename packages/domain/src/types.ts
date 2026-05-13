@@ -73,11 +73,11 @@ export interface Vote {
 }
 
 // ──────────────────────────────────────────────────────────
-// Voting-power history (DelegateVotesChanged)
+// Voting-power history (mirrors on-chain DelegateVotesChanged)
 // ──────────────────────────────────────────────────────────
 
 export interface VotingPowerEvent {
-  readonly delegate: Address;
+  readonly voter: Address;
   readonly newBalance: Wei;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
@@ -98,12 +98,12 @@ export interface BalanceEvent {
 }
 
 // ──────────────────────────────────────────────────────────
-// Delegation (DelegateChanged)
+// Delegation (mirrors on-chain DelegateChanged)
 // ──────────────────────────────────────────────────────────
 
 export interface Delegation {
-  readonly delegator: Address;
-  readonly delegate: Address;
+  readonly tokenHolder: Address;
+  readonly voter: Address;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
   readonly logIndex: number;
@@ -115,7 +115,7 @@ export interface Delegation {
 
 export interface MultiDelegatePosition {
   readonly holder: Address;
-  readonly delegate: Address;
+  readonly voter: Address;
   readonly balance: Wei;
   readonly timestamp: Seconds;
   readonly blockNumber: BlockNumber;
@@ -124,7 +124,7 @@ export interface MultiDelegatePosition {
 
 export interface Erc1155BalanceEvent {
   readonly holder: Address;
-  readonly delegate: Address;
+  readonly voter: Address;
   readonly balance: Wei;
   readonly delta: Wei;
   readonly timestamp: Seconds;
@@ -170,26 +170,26 @@ export interface WalletAlias {
 }
 
 // ──────────────────────────────────────────────────────────
-// Delegator source
+// Token-holder source
 // ──────────────────────────────────────────────────────────
 
-export type DelegatorSource = "direct" | "multidelegate" | "hedgey";
+export type TokenHolderSource = "direct" | "multidelegate" | "hedgey";
 
 // ──────────────────────────────────────────────────────────
 // Pipeline domain types
 // ──────────────────────────────────────────────────────────
 
-export interface EligibleDelegator {
+export interface EligibleTokenHolder {
   readonly resolvedAddress: Address;
   readonly originalAddress: Address;
-  readonly delegateAddress: Address;
-  readonly source: DelegatorSource;
+  readonly voterAddress: Address;
+  readonly source: TokenHolderSource;
   readonly vestingPlanId?: string;
 }
 
-export interface ConsolidatedDelegator {
+export interface ConsolidatedTokenHolder {
   readonly resolvedAddress: Address;
-  readonly entries: readonly EligibleDelegator[];
+  readonly entries: readonly EligibleTokenHolder[];
 }
 
 export interface RewardAllocation {
@@ -199,8 +199,8 @@ export interface RewardAllocation {
 
 export interface CombinedReward {
   readonly address: Address;
-  readonly delegateReward: Wei;
-  readonly delegatorReward: Wei;
+  readonly voterReward: Wei;
+  readonly tokenHolderReward: Wei;
   readonly total: Wei;
 }
 
@@ -232,10 +232,10 @@ export interface PoolTier {
   readonly maxGrowthPct: number;
   /** Total reward pool size in Wei. */
   readonly poolSize: Wei;
-  /** Per-delegate cap = 1% of poolSize. */
-  readonly delegateCap: Wei;
-  /** Per-delegator cap = 5% of poolSize. */
-  readonly delegatorCap: Wei;
+  /** Per-voter cap = 1% of poolSize. */
+  readonly voterCap: Wei;
+  /** Per-token-holder cap = 5% of poolSize. */
+  readonly tokenHolderCap: Wei;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -265,9 +265,9 @@ export interface DistributionMetadata {
   readonly vpGrowthPct: string;
   readonly tier: number;
   readonly poolSize: Wei;
-  readonly delegateCap: Wei;
-  readonly delegatorCap: Wei;
-  readonly activeDelegateCount: number;
+  readonly voterCap: Wei;
+  readonly tokenHolderCap: Wei;
+  readonly activeVoterCount: number;
   readonly finalizedProposalIds: readonly string[];
 }
 
@@ -283,7 +283,7 @@ export interface DistributionResult {
 export interface DeduplicationLog {
   readonly multiDelegate: readonly {
     readonly erc1155Holder: Address;
-    readonly delegate: Address;
+    readonly voter: Address;
     readonly amount: Wei;
   }[];
   readonly hedgey: readonly {

@@ -634,7 +634,7 @@ function TierStepLadder({
     poolSizeEns: string
     estimatedApyPct: string
     additionalVPNeeded: string
-    requiredAVP: string
+    requiredTotalVP: string
     isCurrent: boolean
     isUnlocked: boolean
   }[]
@@ -651,8 +651,8 @@ function TierStepLadder({
 
   const vpProgress = nextTier
     ? computeVpProgress(
-        currentTier.requiredAVP,
-        nextTier.requiredAVP,
+        currentTier.requiredTotalVP,
+        nextTier.requiredTotalVP,
         nextTier.additionalVPNeeded,
       )
     : 100
@@ -732,7 +732,7 @@ function TierStepLadder({
 
       {!isMaxTier && nextTier && (
         <ShareCta>
-          <ShareLink to="/delegates">
+          <ShareLink to="/voters">
             <Button
               size="small"
               colorStyle="bluePrimary"

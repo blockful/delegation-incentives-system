@@ -131,21 +131,21 @@ export interface ProtocolMapping {
   originalAddress: Address;
   resolvedAddress: Address;
   delegateAddress: Address;
-  source: DelegatorSource;
+  source: TokenHolderSource;
 }
 
-export type DelegatorSource = "direct" | "multidelegate" | "hedgey";
+export type TokenHolderSource = "direct" | "multidelegate" | "hedgey";
 
-export interface EligibleDelegator {
+export interface EligibleTokenHolder {
   resolvedAddress: Address;
   originalAddress: Address;
   delegateAddress: Address;
-  source: DelegatorSource;
+  source: TokenHolderSource;
 }
 
-export interface ConsolidatedDelegator {
+export interface ConsolidatedTokenHolder {
   resolvedAddress: Address;
-  sources: EligibleDelegator[];
+  sources: EligibleTokenHolder[];
 }
 
 export interface RewardAllocation {
@@ -155,8 +155,8 @@ export interface RewardAllocation {
 
 export interface CombinedReward {
   address: Address;
-  delegateReward: Wei;
-  delegatorReward: Wei;
+  voterReward: Wei;
+  tokenHolderReward: Wei;
   total: Wei;
 }
 
@@ -204,9 +204,9 @@ export interface DistributionMetadata {
   vpGrowthBps: BasisPoints;
   tier: number;
   poolSize: Wei;
-  delegateCap: Wei;
-  delegatorCap: Wei;
-  activeDelegateCount: number;
+  voterCap: Wei;
+  tokenHolderCap: Wei;
+  activeVoterCount: number;
   finalizedProposalIds: string[];
 }
 
@@ -230,18 +230,18 @@ export interface DeduplicationLog {
 ```typescript
 import { wei, bps, type Wei, type BasisPoints, type PoolTier } from "./types.js";
 
-export const ACTIVE_THRESHOLD = 7;
-export const PROPOSAL_WINDOW = 10;
+export const ACTIVE_VOTE_THRESHOLD = 7;
+export const PROPOSAL_WINDOW_SIZE = 10;
 
-export const DELEGATE_POOL_BPS = bps(1000n);   // 10%
-export const DELEGATOR_POOL_BPS = bps(9000n);  // 90%
+export const VOTER_POOL_BPS = bps(1000n);          // 10%
+export const TOKEN_HOLDER_POOL_BPS = bps(9000n);   // 90%
 
-export const DELEGATE_CAP_BPS = bps(100n);     // 1% of R
-export const DELEGATOR_CAP_BPS = bps(500n);    // 5% of R
+export const VOTER_CAP_BPS = bps(100n);            // 1% of R
+export const TOKEN_HOLDER_CAP_BPS = bps(500n);     // 5% of R
 
 export const TWB_WINDOW_SECONDS = 180n * 24n * 3600n; // 15,552,000 seconds
 
-export const MIN_PAYOUT = wei(1_000_000_000_000_000_000n); // 1 ENS
+export const MIN_REWARD_THRESHOLD = wei(1_000_000_000_000_000_000n); // 1 ENS
 export const LOTTERY_BUCKET_TARGET = wei(10_000_000_000_000_000_000n); // 10 ENS
 
 export const BPS_BASE = 10_000n;
@@ -389,7 +389,7 @@ Ponder event handlers that populate the schema tables from on-chain events.
 
 - [ ] Implement handlers for: `Transfer`, `DelegateChanged`, `DelegateVotesChanged`
 - [ ] Transfer: update `ens_balance` (upsert current balance), insert `ens_balance_event` (with delta)
-- [ ] DelegateChanged: update `ens_delegation` (upsert delegator→delegate), insert `ens_delegation_event`
+- [ ] DelegateChanged: update `ens_delegation` (upsert tokenHolder→voter), insert `ens_delegation_event`
 - [ ] DelegateVotesChanged: insert `ens_voting_power_snapshot` (delegate, newBalance, timestamp)
 - [ ] Run typecheck
 
@@ -436,15 +436,15 @@ Ponder event handlers that populate the schema tables from on-chain events.
 
 Pure functions for Steps 1–6 of the pipeline.
 
-### Task 3.1: Active delegate identification (Steps 2-3)
+### Task 3.1: Active voter identification (Steps 2-3)
 
 **Files:**
-- Create: `packages/domain/src/active-delegates.ts`
-- Create: `packages/domain/test/unit/active-delegates.test.ts`
+- Create: `packages/domain/src/active-voters.ts`
+- Create: `packages/domain/test/unit/active-voters.test.ts`
 
 - [ ] Write tests: 10 proposals, delegates with varying vote counts, threshold = 7
 - [ ] Test edge cases: exactly 7 votes, 6 votes, fewer than 10 proposals
-- [ ] Implement `identifyActiveDelegates(proposals, votes)` → Set<Address>
+- [ ] Implement `identifyActiveVoters(proposals, votes)` → Set<Address>
 - [ ] Run tests
 
 ### Task 3.2: Pool tier selection (Steps 4-5)
@@ -456,7 +456,7 @@ Pure functions for Steps 1–6 of the pipeline.
 - [ ] Write tests: growth at each tier boundary, negative growth, zero vpStart
 - [ ] Implement `computeVpGrowth(vpStart, vpEnd)` → BasisPoints
 - [ ] Implement `selectPoolTier(growthBps)` → PoolTier
-- [ ] Implement `computeCaps(poolSize)` → { delegateCap, delegatorCap }
+- [ ] Implement `computeCaps(poolSize)` → { voterCap, tokenHolderCap }
 - [ ] Run tests
 
 ### Task 3.3: Time-weighted balance (Step 10 core math)
@@ -483,7 +483,7 @@ Pure functions for Steps 1–6 of the pipeline.
 
 ### Task 3.5: Commit Phase 3
 
-- [ ] `git add -A && git commit -m "phase 3: core domain calculations — active delegates, pool sizing, TWB, TWAP"`
+- [ ] `git add -A && git commit -m "phase 3: core domain calculations — active voters, pool sizing, TWB, TWAP"`
 
 ---
 
@@ -504,25 +504,25 @@ Pure functions for Steps 7–14.
 - [ ] Property test: sum of output always equals sum of input
 - [ ] Run tests
 
-### Task 4.2: Delegate reward allocation (Step 7)
+### Task 4.2: Voter reward allocation (Step 7)
 
 **Files:**
-- Create: `packages/domain/src/delegate-rewards.ts`
-- Create: `packages/domain/test/unit/delegate-rewards.test.ts`
+- Create: `packages/domain/src/voter-rewards.ts`
+- Create: `packages/domain/test/unit/voter-rewards.test.ts`
 
 - [ ] Write tests: proportional allocation, cap enforcement
-- [ ] Implement `computeDelegateRewards(delegateTWAPs, poolSize)` → RewardAllocation[]
+- [ ] Implement `computeVoterRewards(voterAVPs, poolSize)` → RewardAllocation[]
 - [ ] Uses: 10% of pool, pro-rata by TWAP, cap at 1% of R
 - [ ] Run tests
 
-### Task 4.3: Delegator reward allocation (Step 11)
+### Task 4.3: Token-holder reward allocation (Step 11)
 
 **Files:**
-- Create: `packages/domain/src/delegator-rewards.ts`
-- Create: `packages/domain/test/unit/delegator-rewards.test.ts`
+- Create: `packages/domain/src/token-holder-rewards.ts`
+- Create: `packages/domain/test/unit/token-holder-rewards.test.ts`
 
 - [ ] Write tests: proportional allocation, cap enforcement
-- [ ] Implement `computeDelegatorRewards(delegatorTWBs, poolSize)` → RewardAllocation[]
+- [ ] Implement `computeTokenHolderRewards(tokenHolderTWBs, poolSize)` → RewardAllocation[]
 - [ ] Uses: 90% of pool, pro-rata by TWB, cap at 5% of R
 - [ ] Run tests
 
@@ -533,8 +533,8 @@ Pure functions for Steps 7–14.
 - Create: `packages/domain/test/unit/consolidation.test.ts`
 
 - [ ] Write tests: direct only, mixed sources, Hedgey resolution, wallet aliases, transitive aliases, cycle detection
-- [ ] Implement `resolveEligibleDelegators(directDelegators, multiDelegatePositions, vestingContracts, vestingNftOwners)` → EligibleDelegator[]
-- [ ] Implement `consolidateDelegators(eligible, walletAliases)` → ConsolidatedDelegator[]
+- [ ] Implement `resolveEligibleTokenHolders(directTokenHolders, multiDelegatePositions, vestingContracts, vestingNftOwners)` → EligibleTokenHolder[]
+- [ ] Implement `consolidateTokenHolders(eligible, walletAliases)` → ConsolidatedTokenHolder[]
 - [ ] Implement `resolveAliases(address, aliasMap)` with cycle detection
 - [ ] Run tests
 
@@ -556,8 +556,8 @@ Pure functions for Steps 7–14.
 - Create: `packages/domain/src/combine-rewards.ts`
 - Create: `packages/domain/test/unit/combine-rewards.test.ts`
 
-- [ ] Write tests: delegate only, delegator only, both, threshold split
-- [ ] Implement `combineRewards(delegateRewards, delegatorRewards)` → CombinedReward[]
+- [ ] Write tests: voter only, token holder only, both, threshold split
+- [ ] Implement `combineRewards(voterRewards, tokenHolderRewards)` → CombinedReward[]
 - [ ] Implement `applyThreshold(combined, minPayout)` → { directPayouts, lotteryEntries }
 - [ ] Run tests
 
@@ -609,7 +609,7 @@ Full pipeline orchestrator, adapters, output writers.
 - Create: `apps/backend/test/unit/output/csv-writer.test.ts`
 
 - [ ] JSON writer: DistributionResult → JSON file matching PRD Section 4 schema
-- [ ] CSV writer: DistributionResult → CSV with columns: address, delegate_reward, delegator_reward, combined_reward, role, payout_type
+- [ ] CSV writer: DistributionResult → CSV with columns: address, voter_reward, token_holder_reward, combined_reward, role, payout_type
 - [ ] Tests for both
 - [ ] Run tests
 
@@ -642,12 +642,12 @@ Hono REST API serving frontend.
 - [ ] Health endpoint
 - [ ] Run typecheck
 
-### Task 6.2: Active delegates endpoint
+### Task 6.2: Active voters endpoint
 
 **Files:**
 - Create: `apps/backend/src/api/routes/delegates.ts`
 
-- [ ] `GET /delegates/active` — list active delegates with VP, vote count, delegator count
+- [ ] `GET /voters/active` — list active voters with VP, vote count, token-holder count
 - [ ] Run typecheck
 
 ### Task 6.3: Eligibility endpoint
@@ -655,7 +655,7 @@ Hono REST API serving frontend.
 **Files:**
 - Create: `apps/backend/src/api/routes/eligibility.ts`
 
-- [ ] `GET /eligibility/:address` — check delegation to active delegate
+- [ ] `GET /eligibility/:address` — check delegation to active voter
 - [ ] Run typecheck
 
 ### Task 6.4: Reward estimate + APY endpoints
@@ -664,7 +664,7 @@ Hono REST API serving frontend.
 - Create: `apps/backend/src/api/routes/rewards.ts`
 - Create: `apps/backend/src/api/routes/apy.ts`
 
-- [ ] `GET /rewards/estimate/:address` — estimated delegate + delegator reward
+- [ ] `GET /rewards/estimate/:address` — estimated voter + token-holder reward
 - [ ] `GET /apy/estimate/:address` — projected APY per tier
 - [ ] Run typecheck
 

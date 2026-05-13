@@ -1,13 +1,13 @@
 import { useState, useMemo, useCallback } from 'react'
 import styled from 'styled-components'
-import { useDelegates } from '@/features/delegates/useDelegates'
+import { useVoters } from '@/features/voters/useVoters'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, Eyebrow, ErrorMessage } from '@/styles'
-import { DelegateCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
-import { DelegateCard } from './components/DelegateCard'
+import { VoterCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
+import { VoterCard } from './components/VoterCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
-import type { DelegateDetail } from '@/api/types'
+import type { VoterDetail } from '@/api/types'
 
 const Page = styled.div`
   max-width: ${tokens.maxWidth.section};
@@ -61,7 +61,7 @@ const HeaderBlock = styled.div`
   min-width: 0;
 `
 
-const DelegatesPageTitle = styled.h1`
+const VotersPageTitle = styled.h1`
   font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.black};
   color: ${tokens.color.darkBlue};
@@ -73,7 +73,7 @@ const DelegatesPageTitle = styled.h1`
   }
 `
 
-const DelegatesDescription = styled.p`
+const VotersDescription = styled.p`
   font-size: ${tokens.font.size.xl};
   line-height: 1.6;
   color: ${tokens.color.darkGray};
@@ -90,8 +90,8 @@ const StatsBarWrapper = styled.div`
   }
 `
 
-function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
-  const copy = [...delegates]
+function shuffled(voters: VoterDetail[]): VoterDetail[] {
+  const copy = [...voters]
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
@@ -99,15 +99,15 @@ function shuffled(delegates: DelegateDetail[]): DelegateDetail[] {
   return copy
 }
 
-export function DelegatesPage() {
-  const { data, loading, error } = useDelegates()
+export function VotersPage() {
+  const { data, loading, error } = useVoters()
   const { data: stats, loading: statsLoading } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
 
   const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
 
-  const delegates = useMemo(() => {
+  const voters = useMemo(() => {
     if (!data) return null
 
     if (sort.field === 'random') return shuffled(data)
@@ -140,11 +140,11 @@ export function DelegatesPage() {
       <TopSection>
         <HeaderBlock>
           <Eyebrow>Delegate Your Tokens</Eyebrow>
-          <DelegatesPageTitle>Delegate to someone who shows up</DelegatesPageTitle>
-          <DelegatesDescription>
-            Choose a delegate who votes on at least 7 out of 10 proposals to
-            maximize your rewards.
-          </DelegatesDescription>
+          <VotersPageTitle>Delegate to someone who shows up</VotersPageTitle>
+          <VotersDescription>
+            Choose an active voter — they cast votes on at least 7 of the last
+            10 proposals — to maximize your rewards.
+          </VotersDescription>
         </HeaderBlock>
 
         <StatsBarWrapper>
@@ -152,7 +152,7 @@ export function DelegatesPage() {
             <StatsBarSkeleton />
           ) : (
             <StatsBar
-              activeDelegateCount={stats?.activeDelegateCount}
+              activeVoterCount={stats?.activeVoterCount}
               totalDelegatedEns={stats?.totalDelegatedEns}
               holdersEarning={stats?.holdersEarning}
             />
@@ -162,14 +162,14 @@ export function DelegatesPage() {
 
       <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
 
-      {loading && <DelegateCardsSkeleton />}
+      {loading && <VoterCardsSkeleton />}
 
-      {error && <ErrorMessage>Failed to load delegates: {error}</ErrorMessage>}
+      {error && <ErrorMessage>Failed to load voters: {error}</ErrorMessage>}
 
-      {delegates && (
+      {voters && (
         <Grid>
-          {delegates.map((d) => (
-            <DelegateCard key={d.address} delegate={d} />
+          {voters.map((v) => (
+            <VoterCard key={v.address} voter={v} />
           ))}
         </Grid>
       )}

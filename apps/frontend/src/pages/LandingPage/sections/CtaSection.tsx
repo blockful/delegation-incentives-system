@@ -90,9 +90,9 @@ export function CtaSection() {
           {'Delegate in under a minute.\nGas is sponsored. Rewards are automatic.'}
         </Subtitle>
         <Actions>
-          <RouterLink to="/delegates" $fullWidthMobile>
+          <RouterLink to="/voters" $fullWidthMobile>
             <Button colorStyle="bluePrimary">
-              Delegate to an Active Delegate &rarr;
+              Delegate to an Active Voter &rarr;
             </Button>
           </RouterLink>
           <RouterLink to="/rounds" $fullWidthMobile>

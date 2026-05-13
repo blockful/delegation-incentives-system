@@ -9,10 +9,10 @@ import {
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /**
- * Derive the delegate address from an ERC1155 token ID.
- * The token ID is the uint256 representation of the delegate's address.
+ * Derive the voter address from an ERC1155 token ID.
+ * The token ID is the uint256 representation of the voter's address.
  */
-function delegateFromTokenId(tokenId: bigint): string {
+function voterFromTokenId(tokenId: bigint): string {
   return ("0x" + tokenId.toString(16).padStart(40, "0")).toLowerCase();
 }
 
@@ -48,14 +48,14 @@ export async function processMultiDelegateTransfer(params: {
 
   const fromAddr = from.toLowerCase();
   const toAddr = to.toLowerCase();
-  const delegate = delegateFromTokenId(tokenId);
+  const voter = voterFromTokenId(tokenId);
 
   // Always record the transfer event
   await db.insert(multiDelegateTransfer).values({
     id: transferId,
     from: fromAddr,
     to: toAddr,
-    delegate,
+    voter,
     amount: value,
     blockNumber,
     logIndex,
@@ -65,7 +65,7 @@ export async function processMultiDelegateTransfer(params: {
 
   // --- Decrement sender's position (skip zero address = mint) ---
   if (fromAddr !== ZERO_ADDRESS) {
-    const posId = `${fromAddr}-${delegate}`;
+    const posId = `${fromAddr}-${voter}`;
     const existing = await db.find(multiDelegatePosition, { id: posId });
 
     if (existing) {
@@ -80,7 +80,7 @@ export async function processMultiDelegateTransfer(params: {
           .values({
             id: posId,
             owner: fromAddr,
-            delegate,
+            voter,
             amount: newAmount,
             lastUpdatedBlock: blockNumber,
           })
@@ -94,14 +94,14 @@ export async function processMultiDelegateTransfer(params: {
 
   // --- Increment receiver's position (skip zero address = burn) ---
   if (toAddr !== ZERO_ADDRESS) {
-    const posId = `${toAddr}-${delegate}`;
+    const posId = `${toAddr}-${voter}`;
 
     await db
       .insert(multiDelegatePosition)
       .values({
         id: posId,
         owner: toAddr,
-        delegate,
+        voter,
         amount: value,
         lastUpdatedBlock: blockNumber,
       })
@@ -111,14 +111,14 @@ export async function processMultiDelegateTransfer(params: {
       }));
 
     // Record protocol mapping for deduplication tracking.
-    // The delegate address is used as childAddress — proxy lookup is not
+    // The voter address is used as childAddress — proxy lookup is not
     // possible here because multiDelegateProxy is keyed by proxyAddress
     // and Ponder handlers only support primary-key lookups.
     await db
       .insert(protocolMapping)
       .values({
         id: `multi_delegate-${posId}`,
-        childAddress: delegate,
+        childAddress: voter,
         operatorAddress: toAddr,
         protocol: "multi_delegate",
       })
@@ -136,7 +136,7 @@ export async function handleProxyDeployed(event: any, context: any) {
     .insert(multiDelegateProxy)
     .values({
       id: proxyAddress.toLowerCase(),
-      delegate: delegate.toLowerCase(),
+      voter: delegate.toLowerCase(),
       deployer: (event.transaction.from as string).toLowerCase(),
       createdAtBlock: event.block.number,
     })

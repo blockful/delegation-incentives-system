@@ -1,11 +1,11 @@
-**TL;DR:** ENS is safer when voting power sits with active delegates, not idle wallets. We propose a 90-day pilot that pays incentives to both active delegates and their delegators. Guardrails: (1) a balance-per-second factor for delegators (capped at 180 days) to reduce sybils, (2) a 1 ENS minimum payout per address to avoid inefficient micro-transfers, and (3) payout caps per-delegate and per-delegator to avoid concentration and strengthen long-term capture cost.
+**TL;DR:** ENS is safer when voting power sits with active voters, not idle wallets. We propose a 90-day pilot that pays incentives to both active voters and their token holders. Guardrails: (1) a balance-per-second factor for token holders (capped at 180 days) to reduce sybils, (2) a 1 ENS minimum payout per address to avoid inefficient micro-transfers, and (3) payout caps per-voter and per-token-holder to avoid concentration and strengthen long-term capture cost.
 
 ---
 
 ## Why this matters
 
 * More active voting power raises capture cost and reduces capture risks.
-* A strong base of active delegates reduces reliance on emergency mechanisms.
+* A strong base of active voters reduces reliance on emergency mechanisms.
 * We incentivise for sustained activity, not outcomes, particular vote choices, or one-time votes.
 
 ---
@@ -18,9 +18,9 @@
 
 **Payout cadence**: Monthly, with public snapshots and distribution files.
 
-**Metric for allocation amount**: Voting power increase MoM on active delegates (more that 7 votes in the last 10 proposals)
+**Metric for allocation amount**: Voting power increase MoM on active voters (more that 7 votes in the last 10 proposals)
 
-|Active VP Increase|ENS Total|Dollar value*|Delegate Cap|Holder Cap|
+|Active VP Increase|ENS Total|Dollar value*|Voter Cap|Token-Holder Cap|
 | --- | --- | --- | --- | --- |
 |0-10%|5000|$50k|50|250|
 |10-20%|8000|$80k|80|400|
@@ -34,11 +34,11 @@
 
 ### Who earns?
 
-* Active Delegates and their Delegators.
+* Active Voters and their Token Holders.
 
-### Active Delegate threshold
+### Active Voter threshold
 
-* An active delegate is an address that voted on at least 7 of the last 10 on-chain proposals (rolling).
+* An active voter is an address that voted on at least 7 of the last 10 on-chain proposals (rolling).
 
 ---
 
@@ -53,7 +53,7 @@ Reasoning:
 **Details**
 
 * Sponsored gas for redelegations using delegateBySig.
-* Featured list of active delegates (meeting thresholds) with transparent stats.
+* Featured list of active voters (meeting thresholds) with transparent stats.
 * Progress dashboard: live redelegations, active VP growth, and countdown to Round distributions.
 
 ---
@@ -65,29 +65,29 @@ Reasoning:
 
 Let **R** be the monthly reward pool (in ENS).
 
-## 1) Delegate pool — **10% of R**
+## 1) Voter pool — **10% of R**
 
-Split among **Active Delegates**, proportional to the average voting power they held that month.
+Split among **Active Voters**, proportional to the average voting power they held that month.
 
-* **AVP(j)** = average voting power held by Active Delegate j during the month
-* **Σ_k AVP(k)** = sum of AVP across all Active Delegates
-* **delegate_reward(j)** = AVP(j) / Σ_k AVP(k) * (10% of R)
+* **AVP(j)** = average voting power held by Active Voter j during the month
+* **Σ_k AVP(k)** = sum of AVP across all Active Voters
+* **voter_reward(j)** = AVP(j) / Σ_k AVP(k) * (10% of R)
 
 
 
-**Per-delegate cap:** `min(delegate_reward, 1% of R)`.
+**Per-voter cap:** `min(voter_reward, 1% of R)`.
 
-Excess from caps is redistributed pro-rata within the delegate pool to those still under cap (repeat until no one breaches the cap).
+Excess from caps is redistributed pro-rata within the voter pool to those still under cap (repeat until no one breaches the cap).
 
 ---
 
-## 2) Delegator pool — **90% of R**
+## 2) Token-holder pool — **90% of R**
 
-Split among **delegators who are delegated to an Active Delegate at distribution time**, using **time-weighted ENS balance over the last 180 days**.
+Split among **token holders who are delegated to an Active Voter at distribution time**, using **time-weighted ENS balance over the last 180 days**.
 
 ### Eligibility
 
-A delegator is eligible if, **at the distribution cutoff**, their address is **delegated to an Active Delegate**.
+A token holder is eligible if, **at the distribution cutoff**, their address is **delegated to an Active Voter**.
 
 ### Definitions
 
@@ -97,15 +97,15 @@ This is measured based on the initial balance and each transaction in the period
 
 ### Reward formula
 
-* **delegator_reward(i)** =  TW(i) / ΣW  * (0.90 * R)
+* **token_holder_reward(i)** =  TW(i) / ΣW  * (0.90 * R)
 
 
 
-If you are delegated to an **Active Delegate at distribution time**, your reward is based on your **average ENS balance over the last 180 days**. Your share equals your 180-day average balance divided by the total sum of 180-day average balances of all eligible delegators, multiplied by **90% of the monthly ENS rewards pool**.
+If you are delegated to an **Active Voter at distribution time**, your reward is based on your **average ENS balance over the last 180 days**. Your share equals your 180-day average balance divided by the total sum of 180-day average balances of all eligible token holders, multiplied by **90% of the monthly ENS rewards pool**.
 
-**Per-delegator cap:** `min(delegator_reward(i), 5% of R)`.
+**Per-token-holder cap:** `min(token_holder_reward(i), 5% of R)`.
 
-Excess from caps is redistributed pro-rata within the delegator pool to those still under cap (repeat until no one breaches the cap).
+Excess from caps is redistributed pro-rata within the token-holder pool to those still under cap (repeat until no one breaches the cap).
 
 ---
 
@@ -117,7 +117,7 @@ Rewards are **viewpoint-neutral**, meaning they don’t benefit a specific type 
 
 To make the program interesting for holders to re-engage governance, we have aimed for high APYs, using the holders that don’t reach the individual reward cap as reference.
 
-Our goal is to make the program more rewarding as delegations increase, so every delegate and delegator is incentivised to support this growth. Without the result based increase, holders would be better off trying to avoid delegation growth to keep more of the pool for themselves.
+Our goal is to make the program more rewarding as delegations increase, so every delegate and token holder is incentivised to support this growth. Without the result based increase, holders would be better off trying to avoid delegation growth to keep more of the pool for themselves.
 
 All APYs mentioned here are approximates, as they will vary by many influences such as new delegates qualifying as active, new holders delegating and specially by whales hitting the individual reward caps.
 
@@ -125,17 +125,17 @@ We’ve run simulations on past datasets of the ENS token and governor contracts
 
 * There are 55 qualifying delegates
   * Of those, 26 have more than 10 ENS in VP
-* There are 8 holders above 50000 ENS delegating to active delegates
-* There are 51 holders above 1000 ENS delegating to active delegates
-* There are 710 holders above 100 ENS delegating to active delegates
-* There are over 12645 holders delegating to active delegates
+* There are 8 holders above 50000 ENS delegating to active voters
+* There are 51 holders above 1000 ENS delegating to active voters
+* There are 710 holders above 100 ENS delegating to active voters
+* There are over 12645 holders delegating to active voters
   * Of those, 1176 have more than 10 ENS delegated
 * With 5000 ENS being distributed for that scenario, we’d achieve an expected APY of ~4%
 * With a 10% increase, that APY would already fall to around ~3%
 * With a 10% increase threshold to increase the rewards pool from 5000 to 8000, that APY would already reach ~5.7%
 * The same logic was applied to each range in the table below
 
-|% increase|ENS Total|Dollar value|Delegate Cap|Holder Cap|Uncapped Holder APY|
+|% increase|ENS Total|Dollar value|Voter Cap|Token-Holder Cap|Uncapped Holder APY|
 | --- | --- | --- | --- | --- | --- |
 |0-10%|5000|$50k|50|250|4%|
 |10-20%|8000|$80k|80|400|5,75%|
@@ -161,7 +161,7 @@ In order to avoid over expending on transfer costs as we are talking of a mainne
 
 Without any increase, and looking at an APY of 4%, that would mean anyone delegating ~290 ENS tokens or less. With delegation increases leading to pool increases those numbers will change, with a 10% increase having address under ~200 ENS getting in the lottery and at 30% addresses under ~125 ENS.
 
-* Minimum payout: If an address’s calculated payout (delegate or delegator) is < 1 ENS, it is not sent as a separate payment because such micro-transfers are operationally negative (gas/ops overhead and dilution of attention).
+* Minimum payout: If an address’s calculated payout (delegate or token holder) is < 1 ENS, it is not sent as a separate payment because such micro-transfers are operationally negative (gas/ops overhead and dilution of attention).
 * Lottery mechanism (executed together with the normal distribution):
   * All sub-1 ENS calculated payouts are pooled together into groups that approach 10 ENS each.
   * Each pool awards a single prize of up to 10 ENS.
@@ -198,8 +198,8 @@ We will be tracking some metrics to improve our learnings over this first versio
 
 * Lightweight delegation UI:
   * user can check their rewards for this round
-  * if they have no reward, get prompted to delegate to an active delegate
-  * highlights active delegates with random display ordering for fairness
+  * if they have no reward, get prompted to delegate to an active voter
+  * highlights active voters with random display ordering for fairness
   * shows countdown to next distribution
   * displays prior round results
   * built-in delegation flows
@@ -228,7 +228,7 @@ We will be tracking some metrics to improve our learnings over this first versio
 
 Does this over-reward whales?
 
-It pays for getting voting power used. Inactive VP earns zero. The time weighted balance factor reduces the impact of creating sybils. Caps (1% for delegates, 5% for delegators) further limit concentration on whales.
+It pays for getting voting power used. Inactive VP earns zero. The time weighted balance factor reduces the impact of creating sybils. Caps (1% for delegates, 5% for token holders) further limit concentration on whales.
 
 Why a 1 ENS minimum?
 
@@ -246,7 +246,7 @@ Sub-1 ENS transfers are inefficient (gas/ops) and create many tiny payouts. The 
 * February: Program start.
 * Month 1: First distribution + results.
 * Months 2–3: Two more rounds.
-* Month 3 review: Evaluate (i) % of supply delegated to actives, (ii) number of actives, (iii) dispersion improvements (Gini/Nakamoto), (iv) delegator churn/time-in-delegate, (v) incidents.
+* Month 3 review: Evaluate (i) % of supply delegated to actives, (ii) number of actives, (iii) dispersion improvements (Gini/Nakamoto), (iv) token holder churn/time-in-delegate, (v) incidents.
 
 ---
 

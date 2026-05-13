@@ -2,15 +2,14 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
 import {
   POOL_TIERS,
-  DELEGATOR_POOL_BPS,
-  BPS_BASE,
+  computeTierAprPct,
+  wei,
 } from "@ens-dis/domain";
 import {
-  fetchActiveDelegates,
+  fetchActiveVoters,
   fetchCurrentVpGrowth,
   formatEns,
   findTierIndex,
-  getActiveVpTotal,
 } from "../helpers.js";
 
 const TierEntrySchema = z.object({
@@ -18,23 +17,23 @@ const TierEntrySchema = z.object({
   momGrowthMinPct: z.string().openapi({ example: "0" }),
   momGrowthMaxPct: z.string().openapi({ example: "10" }),
   poolSizeEns: z.string().openapi({ example: "5000.000000000000000000" }),
-  delegateCapEns: z.string().openapi({ example: "50.000000000000000000" }),
-  delegatorCapEns: z.string().openapi({ example: "250.000000000000000000" }),
+  voterCapEns: z.string().openapi({ example: "50.000000000000000000" }),
+  tokenHolderCapEns: z.string().openapi({ example: "250.000000000000000000" }),
   isCurrent: z.boolean(),
   isUnlocked: z.boolean(),
   additionalVPNeeded: z.string().openapi({ description: "Wei needed above current VP to reach this tier", example: "0" }),
-  requiredAVP: z.string().openapi({ description: "VP threshold to enter this tier (wei)", example: "110000000000000000000000" }),
-  estimatedApyPct: z.string().openapi({ description: "Estimated delegator APY at this tier", example: "12.50" }),
+  requiredTotalVP: z.string().openapi({ description: "VP threshold to enter this tier (wei)", example: "110000000000000000000000" }),
+  estimatedAprPct: z.string().openapi({ description: "Estimated token-holder APR at this tier (calibrated against round-start VP)", example: "12.50" }),
 });
 
 const TierProgressionResponse = z.object({
-  currentAVP: z.string().openapi({ description: "Current active VP (wei)", example: "107230000000000000000000" }),
-  previousAVP: z.string().openapi({ description: "Active VP at month start (wei)", example: "100000000000000000000000" }),
+  currentTotalVP: z.string().openapi({ description: "Current total VP held by active voters (wei)", example: "107230000000000000000000" }),
+  previousTotalVP: z.string().openapi({ description: "Total VP at month start (wei)", example: "100000000000000000000000" }),
   currentGrowthBps: z.string().openapi({ example: "723" }),
   currentGrowthPct: z.string().openapi({ example: "7.23" }),
   currentTierIndex: z.number().openapi({ example: 0 }),
-  activeDelegateCount: z.number().openapi({ example: 25 }),
-  maxDelegatorApyPct: z.string().openapi({ description: "Highest estimated delegator APY across all tiers", example: "54.00" }),
+  activeVoterCount: z.number().openapi({ example: 25 }),
+  maxTokenHolderAprPct: z.string().openapi({ description: "Highest estimated token-holder APR across all tiers", example: "54.00" }),
   tiers: z.array(TierEntrySchema),
 });
 
@@ -44,7 +43,7 @@ const route = createRoute({
   tags: ["Tiers"],
   summary: "Tier progression and current VP growth",
   description:
-    "Returns all tier definitions with current unlock state, VP thresholds, estimated APY, and overall VP growth.",
+    "Returns all tier definitions with current unlock state, VP thresholds, estimated APR, and overall VP growth.",
   responses: {
     200: {
       description: "Tier progression data",
@@ -61,64 +60,56 @@ const app = new OpenAPIHono();
 
 app.openapi(route, async (c) => {
   try {
-    const { activeDelegates } = await fetchActiveDelegates(db);
+    const { activeVoters } = await fetchActiveVoters(db);
     const { vpStart, vpEnd, growthPct } = await fetchCurrentVpGrowth(
       db,
-      activeDelegates,
-      activeDelegates,
+      activeVoters,
+      activeVoters,
     );
-    const totalVp = await getActiveVpTotal(db, activeDelegates);
 
     const vpStartBig = vpStart as bigint;
     const vpEndBig = vpEnd as bigint;
     const currentTierIndex = findTierIndex(growthPct);
     const growthBps = Math.round(growthPct * 100);
 
-    let maxDelegatorApy = 0;
+    let maxTokenHolderApr = 0;
 
     const tiers = POOL_TIERS.map((tier, index) => {
-      const requiredAVP =
+      const requiredTotalVP =
         (vpStartBig * (100n + BigInt(tier.minGrowthPct))) / 100n;
 
-      const diff = requiredAVP - vpEndBig;
+      const diff = requiredTotalVP - vpEndBig;
       const additionalVPNeeded = diff > 0n ? diff : 0n;
 
-      // Estimated delegator APY: (delegatorPool * 12 / totalVP) * 100
-      let estimatedApyPct = "0.00";
-      if (totalVp > 0n) {
-        const delegatorPool = (tier.poolSize * (DELEGATOR_POOL_BPS as bigint)) / (BPS_BASE as bigint);
-        // APY in basis points: delegatorPool * 12 * 10000 / totalVp
-        const apyBps = (delegatorPool * 1200n * 100n) / totalVp;
-        estimatedApyPct = (Number(apyBps) / 100).toFixed(2);
-      }
+      const estimatedAprPct = computeTierAprPct(tier, wei(vpStartBig));
 
-      const apyNum = parseFloat(estimatedApyPct);
-      if (apyNum > maxDelegatorApy) maxDelegatorApy = apyNum;
+      const aprNum = parseFloat(estimatedAprPct);
+      if (aprNum > maxTokenHolderApr) maxTokenHolderApr = aprNum;
 
       return {
         index,
         momGrowthMinPct: tier.minGrowthPct.toString(),
         momGrowthMaxPct: tier.maxGrowthPct === Infinity ? "Infinity" : tier.maxGrowthPct.toString(),
         poolSizeEns: formatEns(tier.poolSize as bigint),
-        delegateCapEns: formatEns(tier.delegateCap as bigint),
-        delegatorCapEns: formatEns(tier.delegatorCap as bigint),
+        voterCapEns: formatEns(tier.voterCap as bigint),
+        tokenHolderCapEns: formatEns(tier.tokenHolderCap as bigint),
         isCurrent: index === currentTierIndex,
         isUnlocked: index <= currentTierIndex,
         additionalVPNeeded: additionalVPNeeded.toString(),
-        requiredAVP: requiredAVP.toString(),
-        estimatedApyPct,
+        requiredTotalVP: requiredTotalVP.toString(),
+        estimatedAprPct,
       };
     });
 
     return c.json(
       {
-        currentAVP: vpEndBig.toString(),
-        previousAVP: vpStartBig.toString(),
+        currentTotalVP: vpEndBig.toString(),
+        previousTotalVP: vpStartBig.toString(),
         currentGrowthBps: growthBps.toString(),
         currentGrowthPct: growthPct.toFixed(2),
         currentTierIndex,
-        activeDelegateCount: activeDelegates.size,
-        maxDelegatorApyPct: maxDelegatorApy.toFixed(2),
+        activeVoterCount: activeVoters.size,
+        maxTokenHolderAprPct: maxTokenHolderApr.toFixed(2),
         tiers,
       },
       200,

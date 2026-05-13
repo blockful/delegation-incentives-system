@@ -90,7 +90,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
       <MainGrid>
         <Column>
           <div>
-            <SectionLabel>Your Earnings</SectionLabel>
+            <SectionLabel>Your Rewards</SectionLabel>
             <EarningsStrip
               earnedEns={apy.estimatedMonthlyRewardEns}
               apyPct={apy.estimatedApyPct}
@@ -118,7 +118,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           </div>
 
           <div>
-            <SectionLabel>Share Your Earnings</SectionLabel>
+            <SectionLabel>Share Your Rewards</SectionLabel>
             <Column>
               <RoundProgressCard
                 roundNumber={round.roundNumber}

@@ -10,7 +10,6 @@ import type {
   MultiDelegatePosition,
   Proposal,
   Seconds,
-  VestingNftOwnership,
   VestingPlan,
   Vote,
   VotingPowerEvent,
@@ -18,7 +17,7 @@ import type {
   Wei,
 } from "../../src/types.js";
 import { blockNumber, seconds, wei } from "../../src/types.js";
-import { MIN_PAYOUT } from "../../src/config.js";
+import { MIN_REWARD_THRESHOLD } from "../../src/config.js";
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -38,18 +37,18 @@ const RANDAO =
 // Addresses
 // ─────────────────────────────────────────────────────────────
 
-const delegate1: Address = "0xD100000000000000000000000000000000000001";
-const delegate2: Address = "0xD200000000000000000000000000000000000002";
-const delegate3: Address = "0xD300000000000000000000000000000000000003";
-const inactiveDelegate1: Address = "0xD400000000000000000000000000000000000004";
-const inactiveDelegate2: Address = "0xD500000000000000000000000000000000000005";
+const voter1: Address = "0xD100000000000000000000000000000000000001";
+const voter2: Address = "0xD200000000000000000000000000000000000002";
+const voter3: Address = "0xD300000000000000000000000000000000000003";
+const inactiveVoter1: Address = "0xD400000000000000000000000000000000000004";
+const inactiveVoter2: Address = "0xD500000000000000000000000000000000000005";
 
-// Direct delegators
-const directDelegator1: Address = "0xA100000000000000000000000000000000000001";
-const directDelegator2: Address = "0xA200000000000000000000000000000000000002";
-const directDelegator3: Address = "0xA300000000000000000000000000000000000003";
-const directDelegator4: Address = "0xA400000000000000000000000000000000000004";
-const directDelegator5: Address = "0xA500000000000000000000000000000000000005";
+// Direct token holders
+const directTokenHolder1: Address = "0xA100000000000000000000000000000000000001";
+const directTokenHolder2: Address = "0xA200000000000000000000000000000000000002";
+const directTokenHolder3: Address = "0xA300000000000000000000000000000000000003";
+const directTokenHolder4: Address = "0xA400000000000000000000000000000000000004";
+const directTokenHolder5: Address = "0xA500000000000000000000000000000000000005";
 
 // MultiDelegate holders
 const multiHolder1: Address = "0xB100000000000000000000000000000000000001";
@@ -59,9 +58,9 @@ const multiHolder2: Address = "0xB200000000000000000000000000000000000002";
 const vestingContract1: Address = "0xC100000000000000000000000000000000000001";
 const hedgeyBeneficiary: Address = "0xC200000000000000000000000000000000000002";
 
-// Wallet alias: directDelegator5 is a secondary of directDelegator4
-const aliasPrimary = directDelegator4;
-const aliasSecondary = directDelegator5;
+// Wallet alias: directTokenHolder5 is a secondary of directTokenHolder4
+const aliasPrimary = directTokenHolder4;
+const aliasSecondary = directTokenHolder5;
 
 // ─────────────────────────────────────────────────────────────
 // Proposals (10 finalized)
@@ -87,7 +86,7 @@ const proposals: Proposal[] = Array.from({ length: 10 }, (_, i) =>
 );
 
 // ─────────────────────────────────────────────────────────────
-// Votes: 3 active delegates vote 7+ times, 2 inactive vote <7
+// Votes: 3 active voters vote 7+ times, 2 inactive vote <7
 // ─────────────────────────────────────────────────────────────
 
 function makeVote(
@@ -104,16 +103,16 @@ function makeVote(
 }
 
 const votes: Vote[] = [
-  // delegate1 votes on all 10
-  ...proposals.map((p) => makeVote(delegate1, p.id)),
-  // delegate2 votes on first 8
-  ...proposals.slice(0, 8).map((p) => makeVote(delegate2, p.id)),
-  // delegate3 votes on first 7
-  ...proposals.slice(0, 7).map((p) => makeVote(delegate3, p.id)),
-  // inactiveDelegate1 votes on 5 (below threshold)
-  ...proposals.slice(0, 5).map((p) => makeVote(inactiveDelegate1, p.id)),
-  // inactiveDelegate2 votes on 3
-  ...proposals.slice(0, 3).map((p) => makeVote(inactiveDelegate2, p.id)),
+  // voter1 votes on all 10
+  ...proposals.map((p) => makeVote(voter1, p.id)),
+  // voter2 votes on first 8
+  ...proposals.slice(0, 8).map((p) => makeVote(voter2, p.id)),
+  // voter3 votes on first 7
+  ...proposals.slice(0, 7).map((p) => makeVote(voter3, p.id)),
+  // inactiveVoter1 votes on 5 (below threshold)
+  ...proposals.slice(0, 5).map((p) => makeVote(inactiveVoter1, p.id)),
+  // inactiveVoter2 votes on 3
+  ...proposals.slice(0, 3).map((p) => makeVote(inactiveVoter2, p.id)),
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -121,46 +120,45 @@ const votes: Vote[] = [
 // ─────────────────────────────────────────────────────────────
 
 const directDelegations: Delegation[] = [
-  // 5 direct delegators to active delegates
   {
-    delegator: directDelegator1,
-    delegate: delegate1,
+    tokenHolder: directTokenHolder1,
+    voter: voter1,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
     logIndex: 0,
   },
   {
-    delegator: directDelegator2,
-    delegate: delegate1,
+    tokenHolder: directTokenHolder2,
+    voter: voter1,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
     logIndex: 0,
   },
   {
-    delegator: directDelegator3,
-    delegate: delegate2,
+    tokenHolder: directTokenHolder3,
+    voter: voter2,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
     logIndex: 0,
   },
   {
-    delegator: directDelegator4,
-    delegate: delegate2,
+    tokenHolder: directTokenHolder4,
+    voter: voter2,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
     logIndex: 0,
   },
   {
-    delegator: directDelegator5,
-    delegate: delegate3,
+    tokenHolder: directTokenHolder5,
+    voter: voter3,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
     logIndex: 0,
   },
-  // Vesting contract delegating to delegate3
+  // Vesting contract delegating to voter3
   {
-    delegator: vestingContract1,
-    delegate: delegate3,
+    tokenHolder: vestingContract1,
+    voter: voter3,
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
     logIndex: 0,
@@ -174,7 +172,7 @@ const directDelegations: Delegation[] = [
 const multiPositions: MultiDelegatePosition[] = [
   {
     holder: multiHolder1,
-    delegate: delegate1,
+    voter: voter1,
     balance: wei(500n * ENS),
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
@@ -182,7 +180,7 @@ const multiPositions: MultiDelegatePosition[] = [
   },
   {
     holder: multiHolder2,
-    delegate: delegate2,
+    voter: voter2,
     balance: wei(300n * ENS),
     timestamp: MONTH_START,
     blockNumber: blockNumber(100n),
@@ -216,22 +214,22 @@ const walletAliases: WalletAlias[] = [
 // VP events & balances
 // ─────────────────────────────────────────────────────────────
 
-// Each active delegate has stable VP: 1000 ENS throughout the month.
+// Each active voter has stable VP: 1000 ENS throughout the month.
 // Start-of-month aggregate: 3 * 1000 = 3000 ENS
 // End-of-month aggregate: 3 * 1000 = 3000 ENS (0% growth -> tier 0)
-const VP_PER_DELEGATE = 1000n * ENS;
+const VP_PER_VOTER = 1000n * ENS;
 
-// Direct delegators each hold 100 ENS throughout the TWB window.
+// Direct token holders each hold 100 ENS throughout the TWB window.
 // multiHolder1: 500 ENS, multiHolder2: 300 ENS
 // vestingContract1: 800 ENS
-// These are large enough to cross MIN_PAYOUT when multiplied by pool share.
+// These are large enough to cross MIN_REWARD_THRESHOLD when multiplied by pool share.
 const DIRECT_BALANCE = 100n * ENS;
 const MULTI1_BALANCE = 500n * ENS;
 const MULTI2_BALANCE = 300n * ENS;
 const VESTING_BALANCE = 800n * ENS;
 
-// Make directDelegator3 hold a tiny balance so its reward falls under MIN_PAYOUT
-// => should go to lottery
+// Make directTokenHolder3 hold a tiny balance so its reward falls under
+// MIN_REWARD_THRESHOLD => should go to lottery
 const TINY_BALANCE = 1n; // 1 wei -- guaranteed sub-threshold
 
 // ─────────────────────────────────────────────────────────────
@@ -266,7 +264,7 @@ function createMockDataSource(): IncentivesDataSource {
 
     // ── VotingPowerRepository ───────────────────────────────
     async getVpEventsInRange(
-      _delegate: Address,
+      _voter: Address,
       _from: Seconds,
       _to: Seconds,
     ): Promise<readonly VotingPowerEvent[]> {
@@ -274,21 +272,21 @@ function createMockDataSource(): IncentivesDataSource {
       return [];
     },
     async getVpAtTimestamp(
-      delegate: Address,
+      voter: Address,
       _timestamp: Seconds,
     ): Promise<Wei> {
-      const activeDelegates = new Set([delegate1, delegate2, delegate3]);
-      if (activeDelegates.has(delegate)) return wei(VP_PER_DELEGATE);
+      const activeVoters = new Set([voter1, voter2, voter3]);
+      if (activeVoters.has(voter)) return wei(VP_PER_VOTER);
       return wei(0n);
     },
     async getAggregateVpAtTimestamp(
-      delegates: readonly Address[],
+      voters: readonly Address[],
       _timestamp: Seconds,
     ): Promise<Wei> {
-      const activeDelegates = new Set([delegate1, delegate2, delegate3]);
+      const activeVoters = new Set([voter1, voter2, voter3]);
       let total = 0n;
-      for (const d of delegates) {
-        if (activeDelegates.has(d)) total += VP_PER_DELEGATE;
+      for (const v of voters) {
+        if (activeVoters.has(v)) total += VP_PER_VOTER;
       }
       return wei(total);
     },
@@ -305,14 +303,13 @@ function createMockDataSource(): IncentivesDataSource {
       account: Address,
       _timestamp: Seconds,
     ): Promise<Wei> {
-      if (account === directDelegator3) return wei(TINY_BALANCE);
+      if (account === directTokenHolder3) return wei(TINY_BALANCE);
       if (account === vestingContract1) return wei(VESTING_BALANCE);
-      // Direct delegators
       const directSet = new Set([
-        directDelegator1,
-        directDelegator2,
-        directDelegator4,
-        directDelegator5,
+        directTokenHolder1,
+        directTokenHolder2,
+        directTokenHolder4,
+        directTokenHolder5,
       ]);
       if (directSet.has(account)) return wei(DIRECT_BALANCE);
       return wei(0n);
@@ -320,7 +317,7 @@ function createMockDataSource(): IncentivesDataSource {
 
     // ── DelegationRepository ────────────────────────────────
     async getDelegationsToAtTimestamp(
-      _delegates: readonly Address[],
+      _voters: readonly Address[],
       _timestamp: Seconds,
     ): Promise<readonly Delegation[]> {
       return directDelegations;
@@ -328,14 +325,14 @@ function createMockDataSource(): IncentivesDataSource {
 
     // ── MultiDelegateRepository ─────────────────────────────
     async getPositionsAtTimestamp(
-      _delegates: readonly Address[],
+      _voters: readonly Address[],
       _timestamp: Seconds,
     ): Promise<readonly MultiDelegatePosition[]> {
       return multiPositions;
     },
     async getErc1155BalanceEventsInRange(
       _holder: Address,
-      _delegate: Address,
+      _voter: Address,
       _from: Seconds,
       _to: Seconds,
     ): Promise<readonly Erc1155BalanceEvent[]> {
@@ -343,7 +340,7 @@ function createMockDataSource(): IncentivesDataSource {
     },
     async getErc1155BalanceAtTimestamp(
       holder: Address,
-      _delegate: Address,
+      _voter: Address,
       _timestamp: Seconds,
     ): Promise<Wei> {
       if (holder === multiHolder1) return wei(MULTI1_BALANCE);
@@ -401,7 +398,7 @@ describe("runDistributionPipeline", () => {
     expect(result.metadata.month).toBe(MONTH);
     expect(result.metadata.monthStart).toBe(MONTH_START);
     expect(result.metadata.monthEnd).toBe(MONTH_END);
-    expect(result.metadata.activeDelegateCount).toBe(3);
+    expect(result.metadata.activeVoterCount).toBe(3);
     expect(result.metadata.finalizedProposalIds).toHaveLength(10);
 
     // 0% growth -> tier 0 (pool = 5000 ENS)
@@ -410,24 +407,22 @@ describe("runDistributionPipeline", () => {
     expect(result.metadata.poolSize).toBe(wei(5_000n * ENS));
   });
 
-  it("identifies exactly 3 active delegates (voted 7+ times)", async () => {
+  it("identifies exactly 3 active voters (voted 7+ times)", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
 
-    expect(result.metadata.activeDelegateCount).toBe(3);
+    expect(result.metadata.activeVoterCount).toBe(3);
   });
 
-  it("delegate rewards + delegator rewards never exceed pool size", async () => {
+  it("voter rewards + token-holder rewards never exceed pool size", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
 
-    // Sum all direct payout totals
     let directTotal = 0n;
     for (const r of result.rewards) {
       directTotal += r.total as bigint;
     }
 
-    // Sum all lottery prizes
     let lotteryTotal = 0n;
     for (const bucket of result.lottery.buckets) {
       lotteryTotal += bucket.prize as bigint;
@@ -436,70 +431,63 @@ describe("runDistributionPipeline", () => {
     const grandTotal = directTotal + lotteryTotal;
     const poolSize = result.metadata.poolSize as bigint;
 
-    // Cap redistribution can leave a remainder unallocated when every
-    // positive-weight recipient has reached their cap.
     expect(grandTotal).toBeGreaterThan(0n);
     expect(grandTotal).toBeLessThanOrEqual(poolSize);
   });
 
   it("produces lottery entries for sub-threshold participants", async () => {
-    // With few delegators and a large pool, cap redistribution pushes
+    // With few token holders and a large pool, cap redistribution pushes
     // everyone above threshold. To verify the lottery path, we create a
-    // scenario with many equal-weight delegators plus one tiny holder.
+    // scenario with many equal-weight token holders plus one tiny holder.
     // With 25+ equal-weight holders, no one hits the 5% cap, so the
     // tiny holder's pro-rata share stays near zero (sub-threshold).
-    const manyDelegators: Address[] = Array.from(
+    const manyTokenHolders: Address[] = Array.from(
       { length: 25 },
       (_, i) =>
         `0xEE${i.toString(16).padStart(38, "0")}` as Address,
     );
-    const tinyDelegator: Address =
+    const tinyTokenHolder: Address =
       "0xFF00000000000000000000000000000000000001";
 
-    const manyDelegations: Delegation[] = manyDelegators.map((d) => ({
-      delegator: d,
-      delegate: delegate1,
+    const manyDelegations: Delegation[] = manyTokenHolders.map((d) => ({
+      tokenHolder: d,
+      voter: voter1,
       timestamp: MONTH_START,
       blockNumber: blockNumber(100n),
       logIndex: 0,
     }));
     manyDelegations.push({
-      delegator: tinyDelegator,
-      delegate: delegate1,
+      tokenHolder: tinyTokenHolder,
+      voter: voter1,
       timestamp: MONTH_START,
       blockNumber: blockNumber(100n),
       logIndex: 0,
     });
 
     const ds = createMockDataSource();
-    // Override delegation and balance sources
     ds.getDelegationsToAtTimestamp = async () => manyDelegations;
     ds.getPositionsAtTimestamp = async () => [];
     ds.getVestingContractAddresses = async () => [];
     ds.getAliases = async () => [];
     ds.getBalanceAtTimestamp = async (account: Address) => {
-      if (account === tinyDelegator) return wei(1n); // 1 wei
-      if (manyDelegators.includes(account)) return wei(100n * ENS);
-      // VP queries for delegates
-      const activeDelegates = new Set([delegate1, delegate2, delegate3]);
-      if (activeDelegates.has(account)) return wei(0n);
+      if (account === tinyTokenHolder) return wei(1n); // 1 wei
+      if (manyTokenHolders.includes(account)) return wei(100n * ENS);
+      const activeVoters = new Set([voter1, voter2, voter3]);
+      if (activeVoters.has(account)) return wei(0n);
       return wei(0n);
     };
 
     const result = await runDistributionPipeline(MONTH, ds);
 
-    // tinyDelegator should be sub-threshold and NOT in direct payouts
     const directAddresses = result.rewards.map((r) => r.address);
-    expect(directAddresses).not.toContain(tinyDelegator);
+    expect(directAddresses).not.toContain(tinyTokenHolder);
 
-    // Should have lottery buckets containing tinyDelegator
     expect(result.lottery.buckets.length).toBeGreaterThanOrEqual(1);
     const allLotteryAddresses = result.lottery.buckets.flatMap((b) =>
       b.entries.map((e) => e.address),
     );
-    expect(allLotteryAddresses).toContain(tinyDelegator);
+    expect(allLotteryAddresses).toContain(tinyTokenHolder);
 
-    // Each bucket has a valid winner
     for (const bucket of result.lottery.buckets) {
       expect(bucket.winner).toBeDefined();
       const bucketAddresses = bucket.entries.map((e) => e.address);
@@ -538,9 +526,6 @@ describe("runDistributionPipeline", () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
 
-    // directDelegator5 (aliasSecondary) should be consolidated under
-    // directDelegator4 (aliasPrimary). We should not see directDelegator5
-    // as a separate reward entry.
     const allAddresses = [
       ...result.rewards.map((r) => r.address),
       ...result.lottery.buckets.flatMap((b) =>
@@ -549,18 +534,17 @@ describe("runDistributionPipeline", () => {
     ];
 
     expect(allAddresses).not.toContain(aliasSecondary);
-    // The primary should appear (either as direct payout or lottery)
     expect(allAddresses).toContain(aliasPrimary);
   });
 
-  it("returns empty result when no active delegates", async () => {
+  it("returns empty result when no active voters", async () => {
     const ds = createMockDataSource();
-    // Override to return no votes -> no active delegates
+    // Override to return no votes -> no active voters
     ds.getVotesForProposals = async () => [];
 
     const result = await runDistributionPipeline(MONTH, ds);
 
-    expect(result.metadata.activeDelegateCount).toBe(0);
+    expect(result.metadata.activeVoterCount).toBe(0);
     expect(result.rewards).toHaveLength(0);
     expect(result.lottery.buckets).toHaveLength(0);
   });
@@ -570,7 +554,7 @@ describe("runDistributionPipeline", () => {
     const result = await runDistributionPipeline(MONTH, ds);
 
     for (const r of result.rewards) {
-      expect((r.total as bigint) >= (MIN_PAYOUT as bigint)).toBe(true);
+      expect((r.total as bigint) >= (MIN_REWARD_THRESHOLD as bigint)).toBe(true);
     }
   });
 
@@ -593,7 +577,6 @@ describe("runDistributionPipeline", () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
 
-    // hedgeyBeneficiary should appear in either rewards or lottery
     const allAddresses = [
       ...result.rewards.map((r) => r.address),
       ...result.lottery.buckets.flatMap((b) =>
@@ -607,7 +590,7 @@ describe("runDistributionPipeline", () => {
     const ds = createMockDataSource();
     const planOwner1: Address = "0xC300000000000000000000000000000000000003";
     const planOwner2: Address = "0xC400000000000000000000000000000000000004";
-    const backgroundDelegators: Address[] = Array.from(
+    const backgroundTokenHolders: Address[] = Array.from(
       { length: 20 },
       (_, i) =>
         `0xF${i.toString(16).padStart(39, "0")}` as Address,
@@ -615,15 +598,15 @@ describe("runDistributionPipeline", () => {
 
     ds.getDelegationsToAtTimestamp = async () => [
       {
-        delegator: vestingContract1,
-        delegate: delegate1,
+        tokenHolder: vestingContract1,
+        voter: voter1,
         timestamp: MONTH_START,
         blockNumber: blockNumber(100n),
         logIndex: 0,
       },
-      ...backgroundDelegators.map((delegator) => ({
-        delegator,
-        delegate: delegate1,
+      ...backgroundTokenHolders.map((tokenHolder) => ({
+        tokenHolder,
+        voter: voter1,
         timestamp: MONTH_START,
         blockNumber: blockNumber(100n),
         logIndex: 0,
@@ -653,7 +636,7 @@ describe("runDistributionPipeline", () => {
     ds.getPlanBalanceAtTimestamp = async (planId: string) =>
       planId === "plan-100" ? wei(100n * ENS) : wei(300n * ENS);
     ds.getBalanceAtTimestamp = async (account: Address) => {
-      if (backgroundDelegators.includes(account)) return wei(1000n * ENS);
+      if (backgroundTokenHolders.includes(account)) return wei(1000n * ENS);
       if (account === vestingContract1) return wei(1_000_000n * ENS);
       return wei(0n);
     };
@@ -662,15 +645,15 @@ describe("runDistributionPipeline", () => {
     const rewardsByAddress = new Map(
       result.rewards.map((reward) => [reward.address, reward]),
     );
-    const delegatorPool = 4_500n * ENS;
+    const tokenHolderSubPool = 4_500n * ENS;
     const totalTwb = (20n * 1000n + 100n + 300n) * ENS;
-    const expectedPlan1 = (100n * ENS * delegatorPool) / totalTwb;
-    const expectedPlan2 = (300n * ENS * delegatorPool) / totalTwb;
+    const expectedPlan1 = (100n * ENS * tokenHolderSubPool) / totalTwb;
+    const expectedPlan2 = (300n * ENS * tokenHolderSubPool) / totalTwb;
 
-    expect(rewardsByAddress.get(planOwner1)?.delegatorReward).toBe(
+    expect(rewardsByAddress.get(planOwner1)?.tokenHolderReward).toBe(
       wei(expectedPlan1),
     );
-    expect(rewardsByAddress.get(planOwner2)?.delegatorReward).toBe(
+    expect(rewardsByAddress.get(planOwner2)?.tokenHolderReward).toBe(
       wei(expectedPlan2),
     );
   });

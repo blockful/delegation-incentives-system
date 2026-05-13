@@ -667,7 +667,7 @@ function bucketList(entries: AddressLotteryEntry[]): string {
 function hasDirectReward(round: RoundDetailResponse): boolean {
   const reward = round.addressReward
   if (!reward) return false
-  return Number(reward.delegateRewardEns) > 0 || Number(reward.tokenHolderRewardEns) > 0
+  return Number(reward.voterRewardEns) > 0 || Number(reward.tokenHolderRewardEns) > 0
 }
 
 function buildRoundPath(round: RoundDetailResponse, activeAddress: string, activeAddressValid: boolean): string {

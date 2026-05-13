@@ -7,12 +7,12 @@
 
 ## TL;DR
 
-ENS proposes a 90-day pilot paying incentives to active delegates and their delegators.
+ENS proposes a 90-day pilot paying incentives to active voters and their token holders.
 
 Key guardrails:
-1. Time-weighted balance factors for delegators capped at 180 days (reduce sybil attacks)
+1. Time-weighted balance factors for token holders capped at 180 days (reduce sybil attacks)
 2. 1 ENS minimum payout (avoid inefficient micro-transfers → lottery instead)
-3. Per-delegate and per-delegator caps (prevent concentration)
+3. Per-voter and per-token-holder caps (prevent concentration)
 
 ---
 
@@ -21,12 +21,12 @@ Key guardrails:
 Builds on previous community feedback about incentivizing delegation. Key changes from earlier discussions:
 - Success metrics reporting integrated into the program
 - Shift from simple holding calculations to time-weighted balance metrics
-- Delegate rewards now use time-weighted balance over round periods
+- Voter rewards now use time-weighted balance over round periods
 
 ## Why This Matters
 
 - Increased active voting power raises the cost of capturing governance
-- Strong delegate base reduces reliance on emergency mechanisms
+- Strong base of active voters reduces reliance on emergency mechanisms
 - Incentives reward sustained activity, not specific voting outcomes
 
 ---
@@ -43,43 +43,43 @@ Builds on previous community feedback about incentivizing delegation. Key change
 
 ## Metric-Based Allocation
 
-Monthly ENS pool size depends on month-over-month (MoM) increase in **active delegated voting power (AVP)**:
+Monthly ENS pool size depends on month-over-month (MoM) increase in the **voting power held by active voters (AVP)**:
 
-| VP Increase | Pool (ENS) | Delegate Cap | Holder Cap | Approx APY |
-|-------------|-----------|--------------|------------|------------|
-| 0 – 10%     | 5,000     | 50           | 250        | ~4%        |
-| 10 – 20%    | 8,000     | 80           | 400        | ~5.75%     |
-| 20 – 30%    | 10,000    | 100          | 500        | ~6.5%      |
-| 30 – 50%    | 15,000    | 150          | 750        | ~9%        |
-| 50 – 75%    | 20,000    | 200          | 1,000      | ~10.5%     |
-| 75 – 100%   | 25,000    | 250          | 1,250      | ~11.28%    |
-| Above 100%  | 30,000    | 300          | 1,500      | —          |
+| VP Increase | Pool (ENS) | Voter Cap | Token-Holder Cap | Approx APY |
+|-------------|-----------|-----------|------------------|------------|
+| 0 – 10%     | 5,000     | 50        | 250              | ~4%        |
+| 10 – 20%    | 8,000     | 80        | 400              | ~5.75%     |
+| 20 – 30%    | 10,000    | 100       | 500              | ~6.5%      |
+| 30 – 50%    | 15,000    | 150       | 750              | ~9%        |
+| 50 – 75%    | 20,000    | 200       | 1,000            | ~10.5%     |
+| 75 – 100%   | 25,000    | 250       | 1,250            | ~11.28%    |
+| Above 100%  | 30,000    | 300       | 1,500            | —          |
 
-- **Delegate cap** = 1% of monthly pool
-- **Delegator (holder) cap** = 5% of monthly pool
+- **Voter cap** = 1% of monthly pool
+- **Token-holder cap** = 5% of monthly pool
 
 ---
 
 ## Eligibility
 
-**Active Delegate:** Voted on at least **7 of the last 10** on-chain proposals (rolling window)
+**Active Voter:** Voted on at least **7 of the last 10** on-chain proposals (rolling window)
 
 ---
 
 ## Reward Pool Structure
 
-### Delegate Pool — 10% of monthly rewards
+### Voter Pool — 10% of monthly rewards
 
 - Split proportionally by **average voting power held during the month**
-- Per-delegate cap: 1% of monthly pool
-- Excess from capped delegates redistributed pro-rata to uncapped delegates
+- Per-voter cap: 1% of monthly pool
+- Excess from capped voters redistributed pro-rata to uncapped voters
 
-### Delegator Pool — 90% of monthly rewards
+### Token-Holder Pool — 90% of monthly rewards
 
-- Distributed to addresses delegated to active delegates at distribution cutoff
+- Distributed to addresses delegated to active voters at distribution cutoff
 - Calculated using **180-day time-weighted average ENS balance** (per-second precision, using transfer events)
-- Per-delegator cap: 5% of monthly pool
-- Excess redistributed pro-rata within delegator pool
+- Per-token-holder cap: 5% of monthly pool
+- Excess redistributed pro-rata within token-holder pool
 
 ---
 
@@ -115,7 +115,7 @@ Payouts **under 1 ENS** are converted to lottery entries:
 
 ## Key Guardrails
 
-- Only on-chain votes count toward active delegate qualification
+- Only on-chain votes count toward active-voter qualification
 - No allowlist; self-delegation eligible if criteria met
 - No preference for vote direction
 - Reward-neutral mechanics (participation + time-weighted balance only)
@@ -127,7 +127,7 @@ Payouts **under 1 ENS** are converted to lottery entries:
 ## Supporting Campaign
 
 - 5 ETH sponsored gas for redelegations via `delegateBySig`
-- Featured list of qualifying active delegates with transparent stats
+- Featured list of qualifying active voters with transparent stats
 - Live dashboard: redelegations, active VP growth, distribution countdown
 
 ---
@@ -135,7 +135,7 @@ Payouts **under 1 ENS** are converted to lottery entries:
 ## Implementation Details
 
 **Indexing & Data:**
-- Tracks proposal participation per delegate
+- Tracks proposal participation per voter
 - Tracks all delegation events
 - Tracks balance changes over time
 - Data published monthly as CSV/JSON files
@@ -169,7 +169,7 @@ Payouts **under 1 ENS** are converted to lottery entries:
 
 ### On caps (nick.eth criticism)
 
-Per-delegate and per-delegator caps are "pointless and counterproductive" — trivially circumvented and create incentives to split tokens across accounts. Response: caps + deduplication together reduce concentration while deduplication prevents naive splitting.
+Per-voter and per-token-holder caps were described in the thread as "pointless and counterproductive" — trivially circumvented and creating incentives to split tokens across accounts. Response: caps + deduplication together reduce concentration while deduplication prevents naive splitting.
 
 ### On whale concentration
 

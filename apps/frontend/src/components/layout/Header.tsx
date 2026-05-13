@@ -229,7 +229,7 @@ const MobileNavLink = styled(NavLink)`
 
 const publicNavItems = [
   { to: '/', label: 'Home' },
-  { to: '/delegates', label: 'Delegates' },
+  { to: '/voters', label: 'Voters' },
   { to: '/rounds', label: 'Rounds' },
   { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },

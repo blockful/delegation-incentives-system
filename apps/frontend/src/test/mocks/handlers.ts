@@ -2,9 +2,9 @@ import { http, HttpResponse } from 'msw'
 
 import {
   statusFixture,
-  delegatesFixture,
+  votersFixture,
   roundsFixture,
-  eligibleDelegatorFixture,
+  eligibleTokenHolderFixture,
   apyFixture,
   distributionFixture,
   roundInfoFixture,
@@ -17,8 +17,8 @@ import {
 export const handlers = [
   http.get('/api/stats', () => HttpResponse.json(statusFixture)),
 
-  http.get('/api/delegates/active', () =>
-    HttpResponse.json(delegatesFixture),
+  http.get('/api/voters/active', () =>
+    HttpResponse.json(votersFixture),
   ),
 
   http.get('/api/tiers/progression', () =>
@@ -26,7 +26,7 @@ export const handlers = [
   ),
 
   http.get('/api/eligibility/:address', () =>
-    HttpResponse.json(eligibleDelegatorFixture),
+    HttpResponse.json(eligibleTokenHolderFixture),
   ),
 
   http.get('/api/apy/:address', () => HttpResponse.json(apyFixture)),

@@ -23,22 +23,22 @@ function makeResult(
       vpGrowthPct: "20.0",
       tier: 2,
       poolSize: wei(50000000000000000000000n),
-      delegateCap: wei(500000000000000000000n),
-      delegatorCap: wei(2500000000000000000000n),
-      activeDelegateCount: 42,
+      voterCap: wei(500000000000000000000n),
+      tokenHolderCap: wei(2500000000000000000000n),
+      activeVoterCount: 42,
       finalizedProposalIds: ["12345", "67890"],
     },
     rewards: [
       {
         address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        delegateReward: wei(100000000000000000000n),
-        delegatorReward: wei(50000000000000000000n),
+        voterReward: wei(100000000000000000000n),
+        tokenHolderReward: wei(50000000000000000000n),
         total: wei(150000000000000000000n),
       },
       {
         address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        delegateReward: wei(0n),
-        delegatorReward: wei(25000000000000000000n),
+        voterReward: wei(0n),
+        tokenHolderReward: wei(25000000000000000000n),
         total: wei(25000000000000000000n),
       },
     ],
@@ -87,8 +87,8 @@ describe("distributionToJson", () => {
     expect(parsed.metadata.vpStart).toBe("1000000000000000000000");
     expect(parsed.metadata.vpEnd).toBe("1200000000000000000000");
     expect(parsed.metadata.poolSize).toBe("50000000000000000000000");
-    expect(parsed.metadata.delegateCap).toBe("500000000000000000000");
-    expect(parsed.metadata.delegatorCap).toBe("2500000000000000000000");
+    expect(parsed.metadata.voterCap).toBe("500000000000000000000");
+    expect(parsed.metadata.tokenHolderCap).toBe("2500000000000000000000");
   });
 
   it("serializes reward Wei values as decimal strings", () => {
@@ -96,11 +96,11 @@ describe("distributionToJson", () => {
     const json = distributionToJson(result);
     const parsed = JSON.parse(json);
 
-    expect(parsed.rewards[0].delegateReward).toBe("100000000000000000000");
-    expect(parsed.rewards[0].delegatorReward).toBe("50000000000000000000");
+    expect(parsed.rewards[0].voterReward).toBe("100000000000000000000");
+    expect(parsed.rewards[0].tokenHolderReward).toBe("50000000000000000000");
     expect(parsed.rewards[0].total).toBe("150000000000000000000");
-    expect(parsed.rewards[1].delegateReward).toBe("0");
-    expect(parsed.rewards[1].delegatorReward).toBe("25000000000000000000");
+    expect(parsed.rewards[1].voterReward).toBe("0");
+    expect(parsed.rewards[1].tokenHolderReward).toBe("25000000000000000000");
   });
 
   it("serializes lottery prize as decimal string", () => {
@@ -123,7 +123,7 @@ describe("distributionToJson", () => {
     expect(parsed.metadata.randaoValue).toBe("0xabc123");
     expect(parsed.metadata.vpGrowthPct).toBe("20.0");
     expect(parsed.metadata.tier).toBe(2);
-    expect(parsed.metadata.activeDelegateCount).toBe(42);
+    expect(parsed.metadata.activeVoterCount).toBe(42);
     expect(parsed.metadata.finalizedProposalIds).toEqual(["12345", "67890"]);
   });
 
@@ -146,7 +146,7 @@ describe("distributionToJson", () => {
         multiDelegate: [
           {
             erc1155Holder: "0x1111111111111111111111111111111111111111",
-            delegate: "0x2222222222222222222222222222222222222222",
+            voter: "0x2222222222222222222222222222222222222222",
             amount: wei(10n),
           },
         ],

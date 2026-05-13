@@ -38,22 +38,21 @@ Check that both are healthy:
 ```bash
 curl http://localhost:3310/health          # Ponder internal health
 curl http://localhost:3310/api/health      # {"status":"ok"}
-curl http://localhost:3310/delegates/active
+curl http://localhost:3310/voters/active
 ```
 
 Swagger UI with all endpoints: `http://localhost:3310/docs`
 
 ---
 
-## How cycles work
+## How rounds work
 
 **There are no hardcoded program dates.** Configure valid rounds with `ROUND_MONTHS`. In normal backend runs, the automatic distribution scheduler computes ended configured months once Ponder reports readiness.
 
 - Computation is **triggered automatically by the backend scheduler**. It scans every minute.
 - The scheduler waits for Ponder `/ready` before computing and only attempts rounds one minute after their UTC month-end.
-- Operators can still trigger computation immediately with `POST /distributions/<month>/compute`.
 - The result is **cached forever** — subsequent requests are served from the database, no recomputation.
-- You can force a recompute by deleting the cached record first (see below).
+- You can force a recompute by deleting the cached record (see below); the scheduler will recompute on its next scan.
 
 **Practical flow for the 90-day pilot (Feb–Apr 2026):**
 
@@ -69,19 +68,9 @@ Then export the payout list for each month and execute the transfers.
 
 ---
 
-## Triggering a distribution manually
+## Reviewing a distribution
 
-Manual triggering is still useful if you do not want to wait for the next scheduler scan.
-
-```bash
-curl -X POST http://localhost:3310/distributions/2026-03/compute \
-  -H 'content-type: application/json' \
-  -d '{}'
-```
-
-If `DISTRIBUTION_ADMIN_TOKEN` is set, include either `x-distribution-admin-token: <token>` or `Authorization: Bearer <token>`.
-
-### Review
+Once the scheduler has computed a month, retrieve the result:
 
 ```bash
 # Full JSON with every address and amount
@@ -92,11 +81,11 @@ curl http://localhost:3310/distributions/2026-03/csv \
   -o distribution-2026-03.csv
 ```
 
-CSV columns: `address`, `amount_wei`, `amount_ens`, `role` (`delegate` or `delegator`).
+CSV columns: `address`, `amount_wei`, `amount_ens`, `role` (`voter` or `token_holder`).
 
 Lottery winners are included in the CSV at their prize amount. The original sub-threshold entries they beat are listed in the JSON only (for auditability).
 
-### 3. Verify before paying
+### Verify before paying
 
 Key things to check in the JSON `metadata`:
 
@@ -104,10 +93,10 @@ Key things to check in the JSON `metadata`:
 |---|---|
 | `totalDistributed` | ≤ pool tier's `poolSize` |
 | `randaoSeed` | Non-zero (post-merge block was found) |
-| `activeDelegateCount` | Looks plausible vs. recent governance activity |
+| `activeVoterCount` | Looks plausible vs. recent governance activity |
 | `computedAt` | After month-end (never compute mid-month) |
 
-### 4. List all computed months
+### List all computed months
 
 ```bash
 curl http://localhost:3310/distributions
@@ -118,9 +107,9 @@ curl http://localhost:3310/distributions
 
 ## Pool tiers
 
-The monthly pool size is determined by how much the aggregate delegated voting power grew month-over-month:
+The monthly pool size is determined by how much the total voting power held by active voters grew month-over-month:
 
-| MoM Growth | Pool | Delegate cap (per entity) | Delegator cap (per entity) |
+| MoM Growth | Pool | Voter cap (per entity) | Token-holder cap (per entity) |
 |---|---|---|---|
 | 0–10% | 5,000 ENS | 50 ENS | 250 ENS |
 | 10–20% | 8,000 ENS | 80 ENS | 400 ENS |
@@ -130,7 +119,7 @@ The monthly pool size is determined by how much the aggregate delegated voting p
 | 75–100% | 25,000 ENS | 250 ENS | 1,250 ENS |
 | 100%+ | 30,000 ENS | 300 ENS | 1,500 ENS |
 
-Split: **10% to active delegates**, **90% to their delegators**.
+Split: **10% to active voters**, **90% to their token holders**.
 
 Check the current tier at any time:
 
@@ -146,7 +135,7 @@ Before caps are applied, the system consolidates addresses that belong to the sa
 
 **Protocol mappings** (auto-indexed): ERC20MultiDelegate proxy addresses and Hedgey vesting contract addresses are automatically mapped to their operator/owner during indexing. No manual action needed.
 
-**Wallet aliases** (manual): If you know that two EOAs belong to the same entity (e.g. a delegate's hot wallet and cold wallet), insert them into the `wallet_alias` table before running computation.
+**Wallet aliases** (manual): If you know that two EOAs belong to the same entity (e.g. a voter's hot wallet and cold wallet), insert them into the `wallet_alias` table before running computation.
 
 ```sql
 INSERT INTO wallet_alias (secondary_address, primary_address, source)
@@ -177,11 +166,7 @@ Or directly in SQL:
 DELETE FROM distribution_result WHERE month = '2026-03';
 ```
 
-The scheduler will recompute on the next scan. To recompute immediately:
-
-```bash
-pnpm --dir apps/backend distribution:run -- --month 2026-03 --force
-```
+The scheduler will recompute on its next scan (within ~60s, once Ponder reports ready).
 
 ---
 
@@ -196,13 +181,13 @@ curl http://localhost:3310/eligibility/0xABCD...
 ```json
 {
   "eligible": true,
-  "isActiveDelegate": false,
-  "isDelegatorToActiveDelegate": true,
+  "isActiveVoter": false,
+  "isTokenHolderOfActiveVoter": true,
   "delegatedTo": "0x..."
 }
 ```
 
-Active delegate status is based on the **last 10 concluded proposals** with a threshold of **7/10 votes**.
+Active-voter status is based on the **last 10 concluded proposals** with a threshold of **7/10 votes**.
 
 ---
 

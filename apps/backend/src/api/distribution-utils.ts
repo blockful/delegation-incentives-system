@@ -1,6 +1,6 @@
 import {
   LOTTERY_BUCKET_TARGET,
-  MIN_PAYOUT,
+  MIN_REWARD_THRESHOLD,
   POOL_TIERS,
   type DistributionResult,
 } from "@ens-dis/domain";
@@ -25,8 +25,8 @@ export interface DistributionSnapshot {
   poolSizeEns: string;
   totalDistributed: string;
   totalDistributedEns: string;
-  activeDelegateCount: number;
-  eligibleDelegatorCount: number;
+  activeVoterCount: number;
+  eligibleTokenHolderCount: number;
   lotteryBucketCount: number;
   lotteryEntryCount: number;
   lotteryParticipantCount: number;
@@ -40,7 +40,7 @@ export interface RewardRank {
   rank: number;
   address: string;
   ensName: string | null;
-  role: "delegate" | "token_holder";
+  role: "voter" | "token_holder";
   reward: string;
   rewardEns: string;
   source: "direct" | "lottery" | "combined";
@@ -50,8 +50,8 @@ export interface RewardRank {
 
 export interface AddressRewardBreakdown {
   address: string;
-  delegateReward: string;
-  delegateRewardEns: string;
+  voterReward: string;
+  voterRewardEns: string;
   tokenHolderReward: string;
   tokenHolderRewardEns: string;
   lotteryReward: string;
@@ -112,13 +112,13 @@ export function reviveDistributionResult(obj: any): DistributionResult {
       vpStart: BigInt(obj.metadata.vpStart),
       vpEnd: BigInt(obj.metadata.vpEnd),
       poolSize: BigInt(obj.metadata.poolSize),
-      delegateCap: BigInt(obj.metadata.delegateCap),
-      delegatorCap: BigInt(obj.metadata.delegatorCap),
+      voterCap: BigInt(obj.metadata.voterCap),
+      tokenHolderCap: BigInt(obj.metadata.tokenHolderCap),
     },
     rewards: obj.rewards.map((r: any) => ({
       ...r,
-      delegateReward: BigInt(r.delegateReward),
-      delegatorReward: BigInt(r.delegatorReward),
+      voterReward: BigInt(r.voterReward),
+      tokenHolderReward: BigInt(r.tokenHolderReward),
       total: BigInt(r.total),
     })),
     lottery: {
@@ -159,13 +159,13 @@ export function distributionToApiResponse(parsed: ParsedDistribution) {
   const { result, row } = parsed;
   const meta = result.metadata;
   const tierConfig = POOL_TIERS[meta.tier] ?? POOL_TIERS[0];
-  const minPayout = MIN_PAYOUT as bigint;
+  const minReward = MIN_REWARD_THRESHOLD as bigint;
 
   const directPayouts = result.rewards
-    .filter((r) => (r.total as bigint) >= minPayout)
+    .filter((r) => (r.total as bigint) >= minReward)
     .map((r) => {
-      const role: "delegate" | "delegator" =
-        (r.delegateReward as bigint) > 0n ? "delegate" : "delegator";
+      const role: "voter" | "token_holder" =
+        (r.voterReward as bigint) > 0n ? "voter" : "token_holder";
       return {
         address: r.address,
         ensName: null as string | null,
@@ -184,13 +184,13 @@ export function distributionToApiResponse(parsed: ParsedDistribution) {
       address: e.address,
       ensName: null as string | null,
       originalAmount: (e.amount as bigint).toString(),
-      role: "delegator" as const,
+      role: "token_holder" as const,
     })),
   }));
 
   const totalDistributed = getTotalDistributed(result);
-  const eligibleDelegatorCount = result.rewards.filter(
-    (r) => (r.delegatorReward as bigint) > 0n,
+  const eligibleTokenHolderCount = result.rewards.filter(
+    (r) => (r.tokenHolderReward as bigint) > 0n,
   ).length;
   const growthPct = Number.parseFloat(meta.vpGrowthPct);
   const momGrowthBps = Number.isFinite(growthPct)
@@ -208,12 +208,12 @@ export function distributionToApiResponse(parsed: ParsedDistribution) {
           ? "Infinity"
           : (tierConfig.maxGrowthPct * 100).toString(),
         poolSize: (tierConfig.poolSize as bigint).toString(),
-        delegateCap: (tierConfig.delegateCap as bigint).toString(),
-        delegatorCap: (tierConfig.delegatorCap as bigint).toString(),
+        voterCap: (tierConfig.voterCap as bigint).toString(),
+        tokenHolderCap: (tierConfig.tokenHolderCap as bigint).toString(),
       },
       momGrowthBps,
-      activeDelegateCount: meta.activeDelegateCount,
-      eligibleDelegatorCount,
+      activeVoterCount: meta.activeVoterCount,
+      eligibleTokenHolderCount,
       computedAt: computedAtToIso(row.computedAt),
       randaoSeed: meta.randaoValue,
     },
@@ -226,8 +226,8 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
   const { result, row } = parsed;
   const meta = result.metadata;
   const totalDistributed = getTotalDistributed(result);
-  const eligibleDelegatorCount = result.rewards.filter(
-    (r) => (r.delegatorReward as bigint) > 0n,
+  const eligibleTokenHolderCount = result.rewards.filter(
+    (r) => (r.tokenHolderReward as bigint) > 0n,
   ).length;
   const lotteryStats = getLotteryStats(result);
 
@@ -239,8 +239,8 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
     poolSizeEns: formatEns(meta.poolSize as bigint),
     totalDistributed: totalDistributed.toString(),
     totalDistributedEns: formatEns(totalDistributed),
-    activeDelegateCount: meta.activeDelegateCount,
-    eligibleDelegatorCount,
+    activeVoterCount: meta.activeVoterCount,
+    eligibleTokenHolderCount,
     lotteryBucketCount: lotteryStats.bucketCount,
     lotteryEntryCount: lotteryStats.entryCount,
     lotteryParticipantCount: lotteryStats.participantCount,
@@ -305,15 +305,15 @@ export function getAddressReward(
   rawAddress: string,
 ): AddressRewardBreakdown {
   const address = rawAddress.toLowerCase();
-  let delegateReward = 0n;
+  let voterReward = 0n;
   let tokenHolderReward = 0n;
   let lotteryReward = 0n;
   let hadEligibilitySignal = false;
 
   for (const reward of parsed.result.rewards) {
     if (reward.address.toLowerCase() !== address) continue;
-    delegateReward += reward.delegateReward as bigint;
-    tokenHolderReward += reward.delegatorReward as bigint;
+    voterReward += reward.voterReward as bigint;
+    tokenHolderReward += reward.tokenHolderReward as bigint;
     hadEligibilitySignal = true;
   }
 
@@ -331,7 +331,7 @@ export function getAddressReward(
     }
   }
 
-  const totalReward = delegateReward + tokenHolderReward + lotteryReward;
+  const totalReward = voterReward + tokenHolderReward + lotteryReward;
   const status = totalReward > 0n
     ? "paid"
     : hadEligibilitySignal
@@ -340,8 +340,8 @@ export function getAddressReward(
 
   return {
     address,
-    delegateReward: delegateReward.toString(),
-    delegateRewardEns: formatEns(delegateReward),
+    voterReward: voterReward.toString(),
+    voterRewardEns: formatEns(voterReward),
     tokenHolderReward: tokenHolderReward.toString(),
     tokenHolderRewardEns: formatEns(tokenHolderReward),
     lotteryReward: lotteryReward.toString(),
@@ -352,21 +352,21 @@ export function getAddressReward(
   };
 }
 
-export function getTopDelegateRewards(
+export function getTopVoterRewards(
   parsed: ParsedDistribution,
   limit = 10,
 ): RewardRank[] {
   return parsed.result.rewards
-    .filter((reward) => (reward.delegateReward as bigint) > 0n)
-    .sort((a, b) => compareBigIntDesc(a.delegateReward as bigint, b.delegateReward as bigint))
+    .filter((reward) => (reward.voterReward as bigint) > 0n)
+    .sort((a, b) => compareBigIntDesc(a.voterReward as bigint, b.voterReward as bigint))
     .slice(0, limit)
     .map((reward, index) => ({
       rank: index + 1,
       address: reward.address,
       ensName: null,
-      role: "delegate",
-      reward: (reward.delegateReward as bigint).toString(),
-      rewardEns: formatEns(reward.delegateReward as bigint),
+      role: "voter",
+      reward: (reward.voterReward as bigint).toString(),
+      rewardEns: formatEns(reward.voterReward as bigint),
       source: "direct",
       votingPower: null,
       delegationCount: null,
@@ -380,11 +380,11 @@ export function getTopTokenHolderRewards(
   const totals = new Map<string, { direct: bigint; lottery: bigint }>();
 
   for (const reward of parsed.result.rewards) {
-    const delegatorReward = reward.delegatorReward as bigint;
-    if (delegatorReward <= 0n) continue;
+    const tokenHolderReward = reward.tokenHolderReward as bigint;
+    if (tokenHolderReward <= 0n) continue;
     const address = reward.address.toLowerCase();
     const existing = totals.get(address) ?? { direct: 0n, lottery: 0n };
-    existing.direct += delegatorReward;
+    existing.direct += tokenHolderReward;
     totals.set(address, existing);
   }
 
@@ -428,10 +428,10 @@ export function getTopTokenHolderRewards(
 
 function getTotalDistributed(result: DistributionResult): bigint {
   let totalDistributed = 0n;
-  const minPayout = MIN_PAYOUT as bigint;
+  const minReward = MIN_REWARD_THRESHOLD as bigint;
 
   for (const reward of result.rewards) {
-    if ((reward.total as bigint) >= minPayout) {
+    if ((reward.total as bigint) >= minReward) {
       totalDistributed += reward.total as bigint;
     }
   }

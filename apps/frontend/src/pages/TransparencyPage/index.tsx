@@ -201,7 +201,7 @@ export function TransparencyPage() {
                   Round {CURRENT_ROUND} · Program Data
                 </SectionLabel>
                 <StatGrid>
-                  <StatCard label="Active Delegates" value={status.data.activeDelegateCount} />
+                  <StatCard label="Active Voters" value={status.data.activeVoterCount} />
                   <StatCard label="ENS Delegated" value={`${formatEnsCompact(status.data.totalDelegatedEns)} ENS`} />
                   <StatCard label="Wallets Earning" value={status.data.holdersEarning} />
                   <StatCard label="Current Tier" value={`Tier ${tiers.data.currentTierIndex + 1}`} />

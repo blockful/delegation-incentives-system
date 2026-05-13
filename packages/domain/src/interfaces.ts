@@ -7,7 +7,6 @@ import type {
   MultiDelegatePosition,
   Proposal,
   Seconds,
-  VestingNftOwnership,
   VestingBalanceEvent,
   VestingPlan,
   Vote,
@@ -43,25 +42,25 @@ export interface VoteRepository {
 }
 
 export interface VotingPowerRepository {
-  /** All DelegateVotesChanged events for `delegate` in [from, to]. */
+  /** All voting-power events for `voter` in [from, to]. */
   getVpEventsInRange(
-    delegate: Address,
+    voter: Address,
     from: Seconds,
     to: Seconds,
   ): Promise<readonly VotingPowerEvent[]>;
 
-  /** Most recent VP for `delegate` at or before `timestamp`. */
+  /** Most recent VP for `voter` at or before `timestamp`. */
   getVpAtTimestamp(
-    delegate: Address,
+    voter: Address,
     timestamp: Seconds,
   ): Promise<Wei>;
 
   /**
-   * Sum of VP across all `delegates` at or before `timestamp`.
-   * Each delegate contributes their most recent DelegateVotesChanged.newBalance.
+   * Sum of VP across all `voters` at or before `timestamp`.
+   * Each voter contributes their most recent VP snapshot.
    */
   getAggregateVpAtTimestamp(
-    delegates: readonly Address[],
+    voters: readonly Address[],
     timestamp: Seconds,
   ): Promise<Wei>;
 }
@@ -83,37 +82,37 @@ export interface BalanceRepository {
 
 export interface DelegationRepository {
   /**
-   * All delegations pointing to any address in `delegates` at `timestamp`.
-   * Returns the delegator-side of each delegation mapping.
+   * All delegations pointing to any address in `voters` at `timestamp`.
+   * Returns the token-holder-side of each delegation mapping.
    */
   getDelegationsToAtTimestamp(
-    delegates: readonly Address[],
+    voters: readonly Address[],
     timestamp: Seconds,
   ): Promise<readonly Delegation[]>;
 }
 
 export interface MultiDelegateRepository {
   /**
-   * All ERC1155 positions (balance > 0) whose delegate is in `delegates`
+   * All ERC1155 positions (balance > 0) whose voter is in `voters`
    * at `timestamp`.
    */
   getPositionsAtTimestamp(
-    delegates: readonly Address[],
+    voters: readonly Address[],
     timestamp: Seconds,
   ): Promise<readonly MultiDelegatePosition[]>;
 
-  /** ERC1155 balance-change events for (holder, delegate) in [from, to]. */
+  /** ERC1155 balance-change events for (holder, voter) in [from, to]. */
   getErc1155BalanceEventsInRange(
     holder: Address,
-    delegate: Address,
+    voter: Address,
     from: Seconds,
     to: Seconds,
   ): Promise<readonly Erc1155BalanceEvent[]>;
 
-  /** Most recent ERC1155 balance for (holder, delegate) at or before `timestamp`. */
+  /** Most recent ERC1155 balance for (holder, voter) at or before `timestamp`. */
   getErc1155BalanceAtTimestamp(
     holder: Address,
-    delegate: Address,
+    voter: Address,
     timestamp: Seconds,
   ): Promise<Wei>;
 }

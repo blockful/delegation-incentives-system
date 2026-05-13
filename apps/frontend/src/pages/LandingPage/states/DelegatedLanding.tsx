@@ -11,7 +11,7 @@ interface DelegatedLandingProps {
 }
 
 export function DelegatedLanding({ tierData, roundData }: DelegatedLandingProps) {
-  const currentApyPct = tierData.maxDelegatorApyPct
+  const currentApyPct = tierData.maxTokenHolderApyPct
 
   return (
     <>

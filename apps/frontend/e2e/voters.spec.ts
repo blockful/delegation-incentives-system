@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Delegates Page', () => {
+test.describe('Voters Page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/delegates')
+    await page.goto('/voters')
   })
 
   test('renders page heading', async ({ page }) => {
@@ -17,13 +17,13 @@ test.describe('Delegates Page', () => {
     await expect(page.getByRole('button', { name: /Random/i })).toBeVisible()
   })
 
-  test('renders delegate cards after loading', async ({ page }) => {
-    // Wait for delegate cards to appear — they contain ENS names or addresses
+  test('renders voter cards after loading', async ({ page }) => {
+    // Wait for voter cards to appear — they contain ENS names or addresses
     await expect(page.getByText(/\.eth|0x/).first()).toBeVisible({ timeout: 15000 })
   })
 
   test('renders stats bar', async ({ page }) => {
-    await expect(page.getByText('active delegates', { exact: true })).toBeVisible()
+    await expect(page.getByText('active voters', { exact: true })).toBeVisible()
     await expect(page.getByText('wallets earning', { exact: true })).toBeVisible()
   })
 })

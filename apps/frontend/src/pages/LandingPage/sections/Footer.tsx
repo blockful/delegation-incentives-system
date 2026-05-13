@@ -110,7 +110,7 @@ export function Footer() {
 
           <Nav>
             <NavLink to="/#how-it-works">How It Works</NavLink>
-            <NavLink to="/delegates">Active Delegates</NavLink>
+            <NavLink to="/voters">Active Voters</NavLink>
             <NavLink to="/rounds">Rounds</NavLink>
             <NavLink to="/lottery">Lottery</NavLink>
             <NavLink to="/transparency">Verify Data</NavLink>

@@ -1,29 +1,29 @@
 import { screen, waitFor } from '@testing-library/react'
 import { renderApp } from '@/test/utils'
-import { DelegatesPage } from './index'
+import { VotersPage } from './index'
 
-describe('DelegatesPage', () => {
+describe('VotersPage', () => {
   it('renders page heading', () => {
-    renderApp(<DelegatesPage />)
+    renderApp(<VotersPage />)
     expect(
       screen.getByText('Delegate to someone who shows up'),
     ).toBeInTheDocument()
   })
 
   it('renders stats bar fields from /stats fixture', async () => {
-    renderApp(<DelegatesPage />)
+    renderApp(<VotersPage />)
     await waitFor(() => {
       expect(screen.getByText('47')).toBeInTheDocument()
     })
-    expect(screen.getByText('active delegates')).toBeInTheDocument()
+    expect(screen.getByText('active voters')).toBeInTheDocument()
     expect(screen.getByText('1.3M')).toBeInTheDocument()
     expect(screen.getByText('ENS delegated')).toBeInTheDocument()
     expect(screen.getByText('412')).toBeInTheDocument()
     expect(screen.getByText('wallets earning')).toBeInTheDocument()
   })
 
-  it('renders delegate cards after loading', async () => {
-    renderApp(<DelegatesPage />)
+  it('renders voter cards after loading', async () => {
+    renderApp(<VotersPage />)
     await waitFor(() => {
       expect(screen.getByText('0x1234…5678')).toBeInTheDocument()
     })
@@ -32,7 +32,7 @@ describe('DelegatesPage', () => {
   })
 
   it('renders sort controls', () => {
-    renderApp(<DelegatesPage />)
+    renderApp(<VotersPage />)
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
     expect(screen.getByText('Activity')).toBeInTheDocument()
     expect(screen.getByText(/Random/)).toBeInTheDocument()

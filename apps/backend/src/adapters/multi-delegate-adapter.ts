@@ -18,12 +18,12 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
   return {
     async getPositionsAtTimestamp(
-      delegates: readonly Address[],
+      voters: readonly Address[],
       timestamp: Seconds,
     ): Promise<readonly MultiDelegatePosition[]> {
-      if (delegates.length === 0) return [];
+      if (voters.length === 0) return [];
 
-      const lowerDelegates = delegates.map((d) => d.toLowerCase());
+      const lowerVoters = voters.map((d) => d.toLowerCase());
 
       // Reconstruct historical positions from transfer events up to timestamp.
       const rows = await db
@@ -31,13 +31,13 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
         .from(multiDelegateTransfer)
         .where(
           and(
-            inArray(multiDelegateTransfer.delegate, lowerDelegates),
+            inArray(multiDelegateTransfer.voter, lowerVoters),
             lte(multiDelegateTransfer.timestamp, timestamp),
           ),
         );
 
-      // Aggregate balances per (owner, delegate) pair.
-      const balances = new Map<string, { owner: string; delegate: string; balance: bigint; maxBlock: bigint; maxLogIndex: number }>();
+      // Aggregate balances per (owner, voter) pair.
+      const balances = new Map<string, { owner: string; voter: string; balance: bigint; maxBlock: bigint; maxLogIndex: number }>();
 
       for (const row of rows) {
         const fromAddr = row.from.toLowerCase();
@@ -48,7 +48,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
 
         // Credit the receiver (skip zero address — mints have from=zero)
         if (toAddr !== ZERO_ADDRESS) {
-          const key = `${toAddr}-${row.delegate}`;
+          const key = `${toAddr}-${row.voter}`;
           const existing = balances.get(key);
           if (existing) {
             existing.balance += amount;
@@ -60,13 +60,13 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
               existing.maxLogIndex = logIndex;
             }
           } else {
-            balances.set(key, { owner: toAddr, delegate: row.delegate, balance: amount, maxBlock: block, maxLogIndex: logIndex });
+            balances.set(key, { owner: toAddr, voter: row.voter, balance: amount, maxBlock: block, maxLogIndex: logIndex });
           }
         }
 
         // Debit the sender (skip zero address — burns have to=zero)
         if (fromAddr !== ZERO_ADDRESS) {
-          const key = `${fromAddr}-${row.delegate}`;
+          const key = `${fromAddr}-${row.voter}`;
           const existing = balances.get(key);
           if (existing) {
             existing.balance -= amount;
@@ -78,7 +78,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
               existing.maxLogIndex = logIndex;
             }
           } else {
-            balances.set(key, { owner: fromAddr, delegate: row.delegate, balance: -amount, maxBlock: block, maxLogIndex: logIndex });
+            balances.set(key, { owner: fromAddr, voter: row.voter, balance: -amount, maxBlock: block, maxLogIndex: logIndex });
           }
         }
       }
@@ -88,7 +88,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
         if (entry.balance > 0n) {
           results.push({
             holder: entry.owner as Address,
-            delegate: entry.delegate as Address,
+            voter: entry.voter as Address,
             balance: wei(entry.balance),
             timestamp: seconds(0n),
             blockNumber: blockNumber(entry.maxBlock),
@@ -101,21 +101,21 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
 
     async getErc1155BalanceEventsInRange(
       holder: Address,
-      delegate: Address,
+      voter: Address,
       from: Seconds,
       to: Seconds,
     ): Promise<readonly Erc1155BalanceEvent[]> {
       const lowerHolder = holder.toLowerCase();
-      const lowerDelegate = delegate.toLowerCase();
+      const lowerVoter = voter.toLowerCase();
 
-      // Get all transfers involving this holder+delegate pair in the time range.
+      // Get all transfers involving this holder+voter pair in the time range.
       // Transfers where holder is `to` (incoming) or `from` (outgoing).
       const rows = await db
         .select()
         .from(multiDelegateTransfer)
         .where(
           and(
-            eq(multiDelegateTransfer.delegate, lowerDelegate),
+            eq(multiDelegateTransfer.voter, lowerVoter),
             gte(multiDelegateTransfer.timestamp, from),
             lte(multiDelegateTransfer.timestamp, to),
             or(
@@ -133,7 +133,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
       // Get the balance just before the range to compute running totals
       const priorBalance = await this.getErc1155BalanceAtTimestamp(
         holder,
-        delegate,
+        voter,
         seconds(from - 1n),
       );
 
@@ -156,7 +156,7 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
 
         return {
           holder: holder,
-          delegate: delegate,
+          voter: voter,
           balance: runningBalance,
           delta: wei(delta),
           timestamp: seconds(BigInt(row.timestamp)),
@@ -168,19 +168,19 @@ export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
 
     async getErc1155BalanceAtTimestamp(
       holder: Address,
-      delegate: Address,
+      voter: Address,
       timestamp: Seconds,
     ): Promise<Wei> {
       // Reconstruct historical balance from transfer events up to timestamp.
       const lowerHolder = holder.toLowerCase();
-      const lowerDelegate = delegate.toLowerCase();
+      const lowerVoter = voter.toLowerCase();
 
       const rows = await db
         .select()
         .from(multiDelegateTransfer)
         .where(
           and(
-            eq(multiDelegateTransfer.delegate, lowerDelegate),
+            eq(multiDelegateTransfer.voter, lowerVoter),
             lte(multiDelegateTransfer.timestamp, timestamp),
             or(
               eq(multiDelegateTransfer.from, lowerHolder),

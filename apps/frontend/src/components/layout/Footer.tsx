@@ -100,7 +100,7 @@ export function Footer() {
           </BrandBlock>
           <Nav>
             <FooterLink to="/">How It Works</FooterLink>
-            <FooterLink to="/delegates">Delegates</FooterLink>
+            <FooterLink to="/voters">Voters</FooterLink>
             <FooterLink to="/rounds">Rounds</FooterLink>
             <FooterLink to="/lottery">Lottery</FooterLink>
             <FooterLink to="/transparency">Transparency</FooterLink>

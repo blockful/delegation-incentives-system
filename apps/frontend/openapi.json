@@ -3,23 +3,23 @@
   "info": {
     "title": "ENS Delegation Incentives API",
     "version": "1.0.0",
-    "description": "API for the ENS delegation incentives system — active delegates, eligibility, reward estimates, APY, tiers, rounds, and distribution history."
+    "description": "API for the ENS delegation incentives system — active voters, eligibility, reward estimates, APY, tiers, rounds, and distribution history."
   },
   "components": {
     "schemas": {},
     "parameters": {}
   },
   "paths": {
-    "/delegates/active": {
+    "/voters/active": {
       "get": {
         "tags": [
-          "Delegates"
+          "Voters"
         ],
-        "summary": "List active delegates",
-        "description": "Returns delegates who meet the voting activity threshold, sorted by voting power descending.",
+        "summary": "List active voters",
+        "description": "Returns voters who meet the voting activity threshold, sorted by voting power descending.",
         "responses": {
           "200": {
-            "description": "Active delegates list",
+            "description": "Active voters list",
             "content": {
               "application/json": {
                 "schema": {
@@ -28,7 +28,7 @@
                     "count": {
                       "type": "number"
                     },
-                    "delegates": {
+                    "voters": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -78,7 +78,7 @@
                               true
                             ]
                           },
-                          "delegatorCount": {
+                          "tokenHolderCount": {
                             "type": "number",
                             "example": 42
                           },
@@ -87,7 +87,7 @@
                               "string",
                               "null"
                             ],
-                            "description": "ISO 8601 timestamp of the delegate's earliest vote",
+                            "description": "ISO 8601 timestamp of the voter's earliest vote",
                             "example": "2024-01-15T00:00:00.000Z"
                           }
                         },
@@ -98,7 +98,7 @@
                           "votingPower",
                           "votesInLast10",
                           "last10ProposalsVoted",
-                          "delegatorCount",
+                          "tokenHolderCount",
                           "activeSince"
                         ]
                       }
@@ -106,7 +106,7 @@
                   },
                   "required": [
                     "count",
-                    "delegates"
+                    "voters"
                   ]
                 }
               }
@@ -139,7 +139,7 @@
           "Eligibility"
         ],
         "summary": "Check delegation eligibility",
-        "description": "Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active delegate.",
+        "description": "Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active voter.",
         "parameters": [
           {
             "schema": {
@@ -169,10 +169,10 @@
                         "null"
                       ]
                     },
-                    "isActiveDelegate": {
+                    "isActiveVoter": {
                       "type": "boolean"
                     },
-                    "isDelegatorToActiveDelegate": {
+                    "isTokenHolderOfActiveVoter": {
                       "type": "boolean"
                     },
                     "eligible": {
@@ -208,8 +208,8 @@
                   "required": [
                     "address",
                     "ensName",
-                    "isActiveDelegate",
-                    "isDelegatorToActiveDelegate",
+                    "isActiveVoter",
+                    "isTokenHolderOfActiveVoter",
                     "eligible",
                     "delegatedTo",
                     "delegatedToEnsName",
@@ -264,7 +264,7 @@
           "Rewards"
         ],
         "summary": "Estimate rewards for an address",
-        "description": "Estimates delegate and delegator rewards for the current month based on current VP, delegation state, and tier.",
+        "description": "Estimates voter and token-holder rewards for the current month based on current VP, delegation state, and tier.",
         "parameters": [
           {
             "schema": {
@@ -284,11 +284,11 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "delegateReward": {
+                    "voterReward": {
                       "type": "string",
                       "example": "500000000000000000000"
                     },
-                    "delegatorReward": {
+                    "tokenHolderReward": {
                       "type": "string",
                       "example": "150000000000000000000"
                     },
@@ -305,8 +305,8 @@
                     }
                   },
                   "required": [
-                    "delegateReward",
-                    "delegatorReward",
+                    "voterReward",
+                    "tokenHolderReward",
                     "combinedReward",
                     "aboveThreshold",
                     "currentTier"
@@ -354,13 +354,13 @@
         }
       }
     },
-    "/apy/{address}": {
+    "/apr/{address}": {
       "get": {
         "tags": [
-          "APY"
+          "APR"
         ],
-        "summary": "Estimate APY and rewards for an address",
-        "description": "Returns role, delegation info, estimated monthly reward, APY, and lottery qualification for the given address.",
+        "summary": "Estimate APR and rewards for an address",
+        "description": "Returns role, delegation info, estimated monthly reward, APR, and lottery qualification for the given address.",
         "parameters": [
           {
             "schema": {
@@ -374,7 +374,7 @@
         ],
         "responses": {
           "200": {
-            "description": "APY estimate",
+            "description": "APR estimate",
             "content": {
               "application/json": {
                 "schema": {
@@ -398,8 +398,8 @@
                     "role": {
                       "type": "string",
                       "enum": [
-                        "delegate",
-                        "delegator",
+                        "voter",
+                        "token_holder",
                         "ineligible"
                       ]
                     },
@@ -427,7 +427,7 @@
                     "estimatedMonthlyRewardEns": {
                       "type": "string"
                     },
-                    "estimatedApyPct": {
+                    "estimatedAprPct": {
                       "type": "string"
                     },
                     "userShareWei": {
@@ -453,7 +453,7 @@
                     "delegatedToAvatarUrl",
                     "poolSizeEns",
                     "estimatedMonthlyRewardEns",
-                    "estimatedApyPct",
+                    "estimatedAprPct",
                     "userShareWei",
                     "totalShareWei",
                     "currentBalanceEns",
@@ -704,13 +704,13 @@
                               "null"
                             ]
                           },
-                          "activeDelegateCount": {
+                          "activeVoterCount": {
                             "type": [
                               "number",
                               "null"
                             ]
                           },
-                          "eligibleDelegatorCount": {
+                          "eligibleTokenHolderCount": {
                             "type": [
                               "number",
                               "null"
@@ -786,8 +786,8 @@
                           "poolSizeEns",
                           "totalDistributed",
                           "totalDistributedEns",
-                          "activeDelegateCount",
-                          "eligibleDelegatorCount",
+                          "activeVoterCount",
+                          "eligibleTokenHolderCount",
                           "lotteryBucketCount",
                           "lotteryEntryCount",
                           "lotteryParticipantCount",
@@ -964,13 +964,13 @@
                         "null"
                       ]
                     },
-                    "activeDelegateCount": {
+                    "activeVoterCount": {
                       "type": [
                         "number",
                         "null"
                       ]
                     },
-                    "eligibleDelegatorCount": {
+                    "eligibleTokenHolderCount": {
                       "type": [
                         "number",
                         "null"
@@ -1047,10 +1047,10 @@
                             "unavailable"
                           ]
                         },
-                        "delegateReward": {
+                        "voterReward": {
                           "type": "string"
                         },
-                        "delegateRewardEns": {
+                        "voterRewardEns": {
                           "type": "string"
                         },
                         "tokenHolderReward": {
@@ -1075,8 +1075,8 @@
                       "required": [
                         "address",
                         "rewardStatus",
-                        "delegateReward",
-                        "delegateRewardEns",
+                        "voterReward",
+                        "voterRewardEns",
                         "tokenHolderReward",
                         "tokenHolderRewardEns",
                         "lotteryReward",
@@ -1085,7 +1085,7 @@
                         "totalRewardEns"
                       ]
                     },
-                    "topDelegateRewards": {
+                    "topVoterRewards": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -1105,7 +1105,7 @@
                           "role": {
                             "type": "string",
                             "enum": [
-                              "delegate",
+                              "voter",
                               "token_holder"
                             ]
                           },
@@ -1169,7 +1169,7 @@
                           "role": {
                             "type": "string",
                             "enum": [
-                              "delegate",
+                              "voter",
                               "token_holder"
                             ]
                           },
@@ -1393,8 +1393,8 @@
                     "poolSizeEns",
                     "totalDistributed",
                     "totalDistributedEns",
-                    "activeDelegateCount",
-                    "eligibleDelegatorCount",
+                    "activeVoterCount",
+                    "eligibleTokenHolderCount",
                     "lotteryBucketCount",
                     "lotteryEntryCount",
                     "lotteryParticipantCount",
@@ -1403,7 +1403,7 @@
                     "lotteryPrizeEns",
                     "computedAt",
                     "addressReward",
-                    "topDelegateRewards",
+                    "topVoterRewards",
                     "topTokenHolderRewards",
                     "lottery"
                   ]
@@ -1604,13 +1604,13 @@
                         "null"
                       ]
                     },
-                    "activeDelegateCount": {
+                    "activeVoterCount": {
                       "type": [
                         "number",
                         "null"
                       ]
                     },
-                    "eligibleDelegatorCount": {
+                    "eligibleTokenHolderCount": {
                       "type": [
                         "number",
                         "null"
@@ -1687,10 +1687,10 @@
                             "unavailable"
                           ]
                         },
-                        "delegateReward": {
+                        "voterReward": {
                           "type": "string"
                         },
-                        "delegateRewardEns": {
+                        "voterRewardEns": {
                           "type": "string"
                         },
                         "tokenHolderReward": {
@@ -1715,8 +1715,8 @@
                       "required": [
                         "address",
                         "rewardStatus",
-                        "delegateReward",
-                        "delegateRewardEns",
+                        "voterReward",
+                        "voterRewardEns",
                         "tokenHolderReward",
                         "tokenHolderRewardEns",
                         "lotteryReward",
@@ -1725,7 +1725,7 @@
                         "totalRewardEns"
                       ]
                     },
-                    "topDelegateRewards": {
+                    "topVoterRewards": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -1745,7 +1745,7 @@
                           "role": {
                             "type": "string",
                             "enum": [
-                              "delegate",
+                              "voter",
                               "token_holder"
                             ]
                           },
@@ -1809,7 +1809,7 @@
                           "role": {
                             "type": "string",
                             "enum": [
-                              "delegate",
+                              "voter",
                               "token_holder"
                             ]
                           },
@@ -2033,8 +2033,8 @@
                     "poolSizeEns",
                     "totalDistributed",
                     "totalDistributedEns",
-                    "activeDelegateCount",
-                    "eligibleDelegatorCount",
+                    "activeVoterCount",
+                    "eligibleTokenHolderCount",
                     "lotteryBucketCount",
                     "lotteryEntryCount",
                     "lotteryParticipantCount",
@@ -2043,7 +2043,7 @@
                     "lotteryPrizeEns",
                     "computedAt",
                     "addressReward",
-                    "topDelegateRewards",
+                    "topVoterRewards",
                     "topTokenHolderRewards",
                     "lottery"
                   ]
@@ -2114,7 +2114,7 @@
           "Tiers"
         ],
         "summary": "Tier progression and current VP growth",
-        "description": "Returns all tier definitions with current unlock state, VP thresholds, estimated APY, and overall VP growth.",
+        "description": "Returns all tier definitions with current unlock state, VP thresholds, estimated APR, and overall VP growth.",
         "responses": {
           "200": {
             "description": "Tier progression data",
@@ -2123,14 +2123,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "currentAVP": {
+                    "currentTotalVP": {
                       "type": "string",
-                      "description": "Current active VP (wei)",
+                      "description": "Current total VP held by active voters (wei)",
                       "example": "107230000000000000000000"
                     },
-                    "previousAVP": {
+                    "previousTotalVP": {
                       "type": "string",
-                      "description": "Active VP at month start (wei)",
+                      "description": "Total VP at month start (wei)",
                       "example": "100000000000000000000000"
                     },
                     "currentGrowthBps": {
@@ -2145,13 +2145,13 @@
                       "type": "number",
                       "example": 0
                     },
-                    "activeDelegateCount": {
+                    "activeVoterCount": {
                       "type": "number",
                       "example": 25
                     },
-                    "maxDelegatorApyPct": {
+                    "maxTokenHolderAprPct": {
                       "type": "string",
-                      "description": "Highest estimated delegator APY across all tiers",
+                      "description": "Highest estimated token-holder APR across all tiers",
                       "example": "54.00"
                     },
                     "tiers": {
@@ -2175,11 +2175,11 @@
                             "type": "string",
                             "example": "5000.000000000000000000"
                           },
-                          "delegateCapEns": {
+                          "voterCapEns": {
                             "type": "string",
                             "example": "50.000000000000000000"
                           },
-                          "delegatorCapEns": {
+                          "tokenHolderCapEns": {
                             "type": "string",
                             "example": "250.000000000000000000"
                           },
@@ -2194,14 +2194,14 @@
                             "description": "Wei needed above current VP to reach this tier",
                             "example": "0"
                           },
-                          "requiredAVP": {
+                          "requiredTotalVP": {
                             "type": "string",
                             "description": "VP threshold to enter this tier (wei)",
                             "example": "110000000000000000000000"
                           },
-                          "estimatedApyPct": {
+                          "estimatedAprPct": {
                             "type": "string",
-                            "description": "Estimated delegator APY at this tier",
+                            "description": "Estimated token-holder APR at this tier (calibrated against round-start VP)",
                             "example": "12.50"
                           }
                         },
@@ -2210,25 +2210,25 @@
                           "momGrowthMinPct",
                           "momGrowthMaxPct",
                           "poolSizeEns",
-                          "delegateCapEns",
-                          "delegatorCapEns",
+                          "voterCapEns",
+                          "tokenHolderCapEns",
                           "isCurrent",
                           "isUnlocked",
                           "additionalVPNeeded",
-                          "requiredAVP",
-                          "estimatedApyPct"
+                          "requiredTotalVP",
+                          "estimatedAprPct"
                         ]
                       }
                     }
                   },
                   "required": [
-                    "currentAVP",
-                    "previousAVP",
+                    "currentTotalVP",
+                    "previousTotalVP",
                     "currentGrowthBps",
                     "currentGrowthPct",
                     "currentTierIndex",
-                    "activeDelegateCount",
-                    "maxDelegatorApyPct",
+                    "activeVoterCount",
+                    "maxTokenHolderAprPct",
                     "tiers"
                   ]
                 }
@@ -2341,10 +2341,10 @@
                                   "unavailable"
                                 ]
                               },
-                              "delegateReward": {
+                              "voterReward": {
                                 "type": "string"
                               },
-                              "delegateRewardEns": {
+                              "voterRewardEns": {
                                 "type": "string"
                               },
                               "tokenHolderReward": {
@@ -2374,8 +2374,8 @@
                               "roundStatus",
                               "distributionDataStatus",
                               "rewardStatus",
-                              "delegateReward",
-                              "delegateRewardEns",
+                              "voterReward",
+                              "voterRewardEns",
                               "tokenHolderReward",
                               "tokenHolderRewardEns",
                               "lotteryReward",
@@ -2611,207 +2611,13 @@
         }
       }
     },
-    "/distributions/{month}/compute": {
-      "post": {
-        "tags": [
-          "Distributions"
-        ],
-        "summary": "Compute and store a monthly distribution",
-        "description": "Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d{4}-\\d{2}$",
-              "example": "2026-03"
-            },
-            "required": true,
-            "name": "month",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "force": {
-                    "type": "boolean",
-                    "description": "Recompute and overwrite an existing cached result",
-                    "example": false
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Distribution was already cached, computed, or skipped because the round has not ended",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "month": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "cached",
-                        "computed",
-                        "skipped"
-                      ]
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "computedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "tierIndex": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "poolSize": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "poolSizeEns": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "totalDistributed": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "totalDistributedEns": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "activeDelegateCount": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "eligibleDelegatorCount": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "rewardCount": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "lotteryBucketCount": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "month",
-                    "status",
-                    "computedAt",
-                    "tierIndex",
-                    "poolSize",
-                    "poolSizeEns",
-                    "totalDistributed",
-                    "totalDistributedEns",
-                    "activeDelegateCount",
-                    "eligibleDelegatorCount",
-                    "rewardCount",
-                    "lotteryBucketCount"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid admin token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown configured month",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/stats": {
       "get": {
         "tags": [
           "System"
         ],
         "summary": "System statistics",
-        "description": "Returns active delegate count, total indexed proposals, and available distribution months.",
+        "description": "Returns active voter count, total indexed proposals, and available distribution months.",
         "responses": {
           "200": {
             "description": "System stats",
@@ -2820,7 +2626,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "activeDelegateCount": {
+                    "activeVoterCount": {
                       "type": "number",
                       "example": 25
                     },
@@ -2840,17 +2646,17 @@
                     },
                     "totalDelegatedEns": {
                       "type": "string",
-                      "description": "Total ENS held by active delegates (sum of latest VP snapshots), formatted as ENS string",
+                      "description": "Total ENS held by active voters (sum of latest VP snapshots), formatted as ENS string",
                       "example": "1250000.000000000000000000"
                     },
                     "holdersEarning": {
                       "type": "number",
-                      "description": "Current count of active delegates plus unique direct delegators to active delegates with a positive ENS balance. This is live delegation state, not finalized round payout recipients.",
+                      "description": "Current count of active voters plus unique direct token holders of active voters with a positive ENS balance. This is live delegation state, not finalized round payout recipients.",
                       "example": 412
                     }
                   },
                   "required": [
-                    "activeDelegateCount",
+                    "activeVoterCount",
                     "proposalCount",
                     "cachedDistributions",
                     "totalDelegatedEns",

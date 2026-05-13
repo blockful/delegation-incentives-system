@@ -25,83 +25,83 @@ function alloc(address: Address, ens: bigint): RewardAllocation {
 // ---------------------------------------------------------------------------
 
 describe("combineRewards", () => {
-  it("handles delegate rewards only", () => {
-    const delegateRewards: RewardAllocation[] = [
+  it("handles voter rewards only", () => {
+    const voterRewards: RewardAllocation[] = [
       alloc(alice, 5n),
       alloc(bob, 3n),
     ];
 
-    const result = combineRewards(delegateRewards, []);
+    const result = combineRewards(voterRewards, []);
 
     expect(result).toHaveLength(2);
 
     const aliceReward = result.find((r) => r.address === alice)!;
-    expect(aliceReward.delegateReward).toBe(wei(5n * ENS));
-    expect(aliceReward.delegatorReward).toBe(wei(0n));
+    expect(aliceReward.voterReward).toBe(wei(5n * ENS));
+    expect(aliceReward.tokenHolderReward).toBe(wei(0n));
     expect(aliceReward.total).toBe(wei(5n * ENS));
 
     const bobReward = result.find((r) => r.address === bob)!;
-    expect(bobReward.delegateReward).toBe(wei(3n * ENS));
-    expect(bobReward.delegatorReward).toBe(wei(0n));
+    expect(bobReward.voterReward).toBe(wei(3n * ENS));
+    expect(bobReward.tokenHolderReward).toBe(wei(0n));
     expect(bobReward.total).toBe(wei(3n * ENS));
   });
 
-  it("handles delegator rewards only", () => {
-    const delegatorRewards: RewardAllocation[] = [
+  it("handles token-holder rewards only", () => {
+    const tokenHolderRewards: RewardAllocation[] = [
       alloc(alice, 10n),
       alloc(carol, 7n),
     ];
 
-    const result = combineRewards([], delegatorRewards);
+    const result = combineRewards([], tokenHolderRewards);
 
     expect(result).toHaveLength(2);
 
     const aliceReward = result.find((r) => r.address === alice)!;
-    expect(aliceReward.delegateReward).toBe(wei(0n));
-    expect(aliceReward.delegatorReward).toBe(wei(10n * ENS));
+    expect(aliceReward.voterReward).toBe(wei(0n));
+    expect(aliceReward.tokenHolderReward).toBe(wei(10n * ENS));
     expect(aliceReward.total).toBe(wei(10n * ENS));
   });
 
   it("combines both pools when addresses overlap", () => {
-    const delegateRewards: RewardAllocation[] = [alloc(alice, 2n)];
-    const delegatorRewards: RewardAllocation[] = [alloc(alice, 8n)];
+    const voterRewards: RewardAllocation[] = [alloc(alice, 2n)];
+    const tokenHolderRewards: RewardAllocation[] = [alloc(alice, 8n)];
 
-    const result = combineRewards(delegateRewards, delegatorRewards);
+    const result = combineRewards(voterRewards, tokenHolderRewards);
 
     expect(result).toHaveLength(1);
     expect(result[0].address).toBe(alice);
-    expect(result[0].delegateReward).toBe(wei(2n * ENS));
-    expect(result[0].delegatorReward).toBe(wei(8n * ENS));
+    expect(result[0].voterReward).toBe(wei(2n * ENS));
+    expect(result[0].tokenHolderReward).toBe(wei(8n * ENS));
     expect(result[0].total).toBe(wei(10n * ENS));
   });
 
-  it("self-delegating active delegate gets both rewards combined", () => {
-    // Alice is both an active delegate (gets delegate reward)
-    // and a delegator to herself (gets delegator reward)
-    const delegateRewards: RewardAllocation[] = [alloc(alice, 3n)];
-    const delegatorRewards: RewardAllocation[] = [alloc(alice, 12n)];
+  it("self-delegating active voter gets both rewards combined", () => {
+    // Alice is both an active voter (gets voter reward)
+    // and a token holder of herself (gets token-holder reward)
+    const voterRewards: RewardAllocation[] = [alloc(alice, 3n)];
+    const tokenHolderRewards: RewardAllocation[] = [alloc(alice, 12n)];
 
-    const result = combineRewards(delegateRewards, delegatorRewards);
+    const result = combineRewards(voterRewards, tokenHolderRewards);
 
     expect(result).toHaveLength(1);
     const r = result[0];
     expect(r.address).toBe(alice);
-    expect(r.delegateReward).toBe(wei(3n * ENS));
-    expect(r.delegatorReward).toBe(wei(12n * ENS));
+    expect(r.voterReward).toBe(wei(3n * ENS));
+    expect(r.tokenHolderReward).toBe(wei(12n * ENS));
     expect(r.total).toBe(wei(15n * ENS));
   });
 
   it("handles mix of overlapping and non-overlapping addresses", () => {
-    const delegateRewards: RewardAllocation[] = [
+    const voterRewards: RewardAllocation[] = [
       alloc(alice, 2n),
       alloc(bob, 1n),
     ];
-    const delegatorRewards: RewardAllocation[] = [
+    const tokenHolderRewards: RewardAllocation[] = [
       alloc(alice, 5n),
       alloc(carol, 4n),
     ];
 
-    const result = combineRewards(delegateRewards, delegatorRewards);
+    const result = combineRewards(voterRewards, tokenHolderRewards);
 
     expect(result).toHaveLength(3);
 
@@ -109,12 +109,12 @@ describe("combineRewards", () => {
     expect(aliceR.total).toBe(wei(7n * ENS));
 
     const bobR = result.find((r) => r.address === bob)!;
-    expect(bobR.delegateReward).toBe(wei(1n * ENS));
-    expect(bobR.delegatorReward).toBe(wei(0n));
+    expect(bobR.voterReward).toBe(wei(1n * ENS));
+    expect(bobR.tokenHolderReward).toBe(wei(0n));
 
     const carolR = result.find((r) => r.address === carol)!;
-    expect(carolR.delegateReward).toBe(wei(0n));
-    expect(carolR.delegatorReward).toBe(wei(4n * ENS));
+    expect(carolR.voterReward).toBe(wei(0n));
+    expect(carolR.tokenHolderReward).toBe(wei(4n * ENS));
   });
 
   it("returns empty array when both pools are empty", () => {
@@ -132,8 +132,8 @@ describe("applyMinimumThreshold", () => {
     const combined: CombinedReward[] = [
       {
         address: alice,
-        delegateReward: wei(1n * ENS),
-        delegatorReward: wei(0n),
+        voterReward: wei(1n * ENS),
+        tokenHolderReward: wei(0n),
         total: wei(1n * ENS),
       },
     ];
@@ -151,8 +151,8 @@ describe("applyMinimumThreshold", () => {
     const combined: CombinedReward[] = [
       {
         address: bob,
-        delegateReward: wei(halfEns),
-        delegatorReward: wei(0n),
+        voterReward: wei(halfEns),
+        tokenHolderReward: wei(0n),
         total: wei(halfEns),
       },
     ];
@@ -170,20 +170,20 @@ describe("applyMinimumThreshold", () => {
     const combined: CombinedReward[] = [
       {
         address: alice,
-        delegateReward: wei(2n * ENS),
-        delegatorReward: wei(3n * ENS),
+        voterReward: wei(2n * ENS),
+        tokenHolderReward: wei(3n * ENS),
         total: wei(5n * ENS),
       },
       {
         address: bob,
-        delegateReward: wei(0n),
-        delegatorReward: wei(ENS / 10n),
+        voterReward: wei(0n),
+        tokenHolderReward: wei(ENS / 10n),
         total: wei(ENS / 10n),
       },
       {
         address: carol,
-        delegateReward: wei(1n * ENS),
-        delegatorReward: wei(0n),
+        voterReward: wei(1n * ENS),
+        tokenHolderReward: wei(0n),
         total: wei(1n * ENS),
       },
     ];
@@ -204,8 +204,8 @@ describe("applyMinimumThreshold", () => {
     const combined: CombinedReward[] = [
       {
         address: alice,
-        delegateReward: wei(ENS / 2n),
-        delegatorReward: wei(ENS / 2n),
+        voterReward: wei(ENS / 2n),
+        tokenHolderReward: wei(ENS / 2n),
         total: wei(ENS),
       },
     ];
@@ -222,8 +222,8 @@ describe("applyMinimumThreshold", () => {
     const combined: CombinedReward[] = [
       {
         address: alice,
-        delegateReward: wei(justUnder),
-        delegatorReward: wei(0n),
+        voterReward: wei(justUnder),
+        tokenHolderReward: wei(0n),
         total: wei(justUnder),
       },
     ];

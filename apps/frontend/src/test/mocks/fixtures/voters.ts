@@ -1,15 +1,15 @@
-import type { ActiveDelegatesResponse } from '@/api/types'
+import type { ActiveVotersResponse } from '@/api/types'
 
-export const delegatesFixture: ActiveDelegatesResponse = {
+export const votersFixture: ActiveVotersResponse = {
   count: 3,
-  delegates: [
+  voters: [
     {
       address: '0x1234567890abcdef1234567890abcdef12345678',
       ensName: null,
       avatarUrl: null,
       votingPower: '500000000000000000000',
       votesInLast10: 8,
-      delegatorCount: 12,
+      tokenHolderCount: 12,
       activeSince: null,
       last10ProposalsVoted: [true, true, true, false, true, true, true, true, false, true],
     },
@@ -19,7 +19,7 @@ export const delegatesFixture: ActiveDelegatesResponse = {
       avatarUrl: null,
       votingPower: '300000000000000000000',
       votesInLast10: 10,
-      delegatorCount: 8,
+      tokenHolderCount: 8,
       activeSince: null,
       last10ProposalsVoted: [true, true, true, true, true, true, true, true, true, true],
     },
@@ -29,7 +29,7 @@ export const delegatesFixture: ActiveDelegatesResponse = {
       avatarUrl: null,
       votingPower: '200000000000000000000',
       votesInLast10: 8,
-      delegatorCount: 5,
+      tokenHolderCount: 5,
       activeSince: null,
       last10ProposalsVoted: [true, false, true, true, true, true, true, false, true, true],
     },

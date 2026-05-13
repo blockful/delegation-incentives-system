@@ -6,8 +6,8 @@ import {
 } from "ponder:schema";
 import {
   getLastFinalizedProposals,
-  PROPOSAL_WINDOW,
-  ACTIVE_THRESHOLD,
+  PROPOSAL_WINDOW_SIZE,
+  ACTIVE_VOTE_THRESHOLD,
   POOL_TIERS,
   FINALIZED_STATUSES,
   computeVpGrowthPct,
@@ -27,9 +27,9 @@ type Db = typeof db;
 
 const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES];
 
-/** Fetch active delegates from the current indexed state. */
-export async function fetchActiveDelegates(database: Db): Promise<{
-  activeDelegates: Set<Address>;
+/** Fetch active voters from the current indexed state. */
+export async function fetchActiveVoters(database: Db): Promise<{
+  activeVoters: Set<Address>;
   proposals: Proposal[];
   proposalIds: string[];
   voteCounts: Map<Address, number>;
@@ -41,7 +41,7 @@ export async function fetchActiveDelegates(database: Db): Promise<{
     .from(governanceProposal)
     .where(inArray(governanceProposal.status, FINALIZED_STATUS_LIST))
     .orderBy(desc(governanceProposal.finalizedTimestamp))
-    .limit(PROPOSAL_WINDOW);
+    .limit(PROPOSAL_WINDOW_SIZE);
 
   const proposals: Proposal[] = proposalRows.map((row) => ({
     id: row.id,
@@ -51,7 +51,7 @@ export async function fetchActiveDelegates(database: Db): Promise<{
     endBlock: blockNumber(BigInt(row.endBlock)),
   }));
 
-  const windowProposals = getLastFinalizedProposals(proposals, PROPOSAL_WINDOW);
+  const windowProposals = getLastFinalizedProposals(proposals, PROPOSAL_WINDOW_SIZE);
 
   // 2. Get all votes for those proposals
   const proposalIds = windowProposals.map((p) => p.id);
@@ -79,38 +79,38 @@ export async function fetchActiveDelegates(database: Db): Promise<{
   }
 
   const voteCounts = new Map<Address, number>();
-  const activeDelegates = new Set<Address>();
+  const activeVoters = new Set<Address>();
 
   for (const [voter, proposalsVoted] of voterProposals) {
     const count = proposalsVoted.size;
     voteCounts.set(voter, count);
-    if (count >= ACTIVE_THRESHOLD) {
-      activeDelegates.add(voter);
+    if (count >= ACTIVE_VOTE_THRESHOLD) {
+      activeVoters.add(voter);
     }
   }
 
-  return { activeDelegates, proposals: windowProposals, proposalIds, voteCounts, voterProposals };
+  return { activeVoters, proposals: windowProposals, proposalIds, voteCounts, voterProposals };
 }
 
 /** Fetch current VP growth (estimates start-of-current-month to now). */
 export async function fetchCurrentVpGrowth(
   database: Db,
-  activeDelegatesStart: Set<Address>,
-  activeDelegatesEnd: Set<Address>,
+  activeVotersStart: Set<Address>,
+  activeVotersEnd: Set<Address>,
 ): Promise<{
   vpStart: Wei;
   vpEnd: Wei;
   growthPct: number;
   tier: PoolTier;
 }> {
-  // vpEnd: latest VP snapshot per delegate (current state)
-  const endDelegates = [...activeDelegatesEnd];
+  // vpEnd: latest VP snapshot per voter (current state)
+  const endVoters = [...activeVotersEnd];
   let vpEnd = 0n;
-  for (const delegate of endDelegates) {
+  for (const voter of endVoters) {
     const rows = await database
       .select({ votingPower: ensVotingPowerSnapshot.votingPower })
       .from(ensVotingPowerSnapshot)
-      .where(eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()))
+      .where(eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()))
       .orderBy(desc(ensVotingPowerSnapshot.timestamp))
       .limit(1);
     if (rows.length > 0) {
@@ -123,15 +123,15 @@ export async function fetchCurrentVpGrowth(
   const [year, monthNum] = monthStr.split("-").map(Number);
   const monthStartTs = BigInt(Math.floor(Date.UTC(year, monthNum - 1, 1) / 1000));
 
-  const startDelegates = [...activeDelegatesStart];
+  const startVoters = [...activeVotersStart];
   let vpStart = 0n;
-  for (const delegate of startDelegates) {
+  for (const voter of startVoters) {
     const rows = await database
       .select({ votingPower: ensVotingPowerSnapshot.votingPower })
       .from(ensVotingPowerSnapshot)
       .where(
         and(
-          eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()),
+          eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()),
           lte(ensVotingPowerSnapshot.timestamp, monthStartTs),
         ),
       )
@@ -202,14 +202,14 @@ export function findTierIndex(growthPct: number): number {
   return 0;
 }
 
-/** Get total VP for a set of active delegates. */
-export async function getActiveVpTotal(database: Db, activeDelegates: Set<Address>): Promise<bigint> {
+/** Get total VP for a set of active voters. */
+export async function getActiveVpTotal(database: Db, activeVoters: Set<Address>): Promise<bigint> {
   let total = 0n;
-  for (const delegate of activeDelegates) {
+  for (const voter of activeVoters) {
     const rows = await database
       .select({ votingPower: ensVotingPowerSnapshot.votingPower })
       .from(ensVotingPowerSnapshot)
-      .where(eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()))
+      .where(eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()))
       .orderBy(desc(ensVotingPowerSnapshot.timestamp))
       .limit(1);
     if (rows.length > 0) {

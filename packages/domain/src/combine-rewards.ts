@@ -1,55 +1,55 @@
 import type { Address, Wei, CombinedReward, RewardAllocation } from "./types.js";
 import { wei } from "./types.js";
-import { MIN_PAYOUT } from "./config.js";
+import { MIN_REWARD_THRESHOLD } from "./config.js";
 
 // ──────────────────────────────────────────────────────────
 // Steps 12-13: Combine rewards and apply threshold
 // ──────────────────────────────────────────────────────────
 
 /**
- * Combine delegate and delegator rewards per address.
+ * Combine voter and token-holder rewards per address.
  * An address may appear in one or both pools.
  */
 export function combineRewards(
-  delegateRewards: readonly RewardAllocation[],
-  delegatorRewards: readonly RewardAllocation[],
+  voterRewards: readonly RewardAllocation[],
+  tokenHolderRewards: readonly RewardAllocation[],
 ): CombinedReward[] {
   const map = new Map<
     Address,
-    { delegateReward: bigint; delegatorReward: bigint }
+    { voterReward: bigint; tokenHolderReward: bigint }
   >();
 
-  for (const r of delegateRewards) {
+  for (const r of voterRewards) {
     const existing = map.get(r.address);
     if (existing) {
-      existing.delegateReward += r.reward as bigint;
+      existing.voterReward += r.reward as bigint;
     } else {
       map.set(r.address, {
-        delegateReward: r.reward as bigint,
-        delegatorReward: 0n,
+        voterReward: r.reward as bigint,
+        tokenHolderReward: 0n,
       });
     }
   }
 
-  for (const r of delegatorRewards) {
+  for (const r of tokenHolderRewards) {
     const existing = map.get(r.address);
     if (existing) {
-      existing.delegatorReward += r.reward as bigint;
+      existing.tokenHolderReward += r.reward as bigint;
     } else {
       map.set(r.address, {
-        delegateReward: 0n,
-        delegatorReward: r.reward as bigint,
+        voterReward: 0n,
+        tokenHolderReward: r.reward as bigint,
       });
     }
   }
 
   const results: CombinedReward[] = [];
-  for (const [address, { delegateReward, delegatorReward }] of map) {
+  for (const [address, { voterReward, tokenHolderReward }] of map) {
     results.push({
       address,
-      delegateReward: wei(delegateReward),
-      delegatorReward: wei(delegatorReward),
-      total: wei(delegateReward + delegatorReward),
+      voterReward: wei(voterReward),
+      tokenHolderReward: wei(tokenHolderReward),
+      total: wei(voterReward + tokenHolderReward),
     });
   }
 
@@ -57,8 +57,8 @@ export function combineRewards(
 }
 
 /**
- * Split combined rewards into direct payouts (>= MIN_PAYOUT) and
- * lottery entries (< MIN_PAYOUT).
+ * Split combined rewards into direct payouts (>= MIN_REWARD_THRESHOLD) and
+ * lottery entries (< MIN_REWARD_THRESHOLD).
  */
 export function applyMinimumThreshold(
   combined: readonly CombinedReward[],
@@ -70,7 +70,7 @@ export function applyMinimumThreshold(
   const lotteryEntries: { address: Address; amount: Wei }[] = [];
 
   for (const r of combined) {
-    if ((r.total as bigint) >= (MIN_PAYOUT as bigint)) {
+    if ((r.total as bigint) >= (MIN_REWARD_THRESHOLD as bigint)) {
       directPayouts.push(r);
     } else {
       lotteryEntries.push({ address: r.address, amount: r.total });

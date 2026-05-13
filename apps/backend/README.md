@@ -13,19 +13,19 @@ The ENS governance token (ERC20Votes). Indexing provides per-second balance hist
 
 **Indexed events**:
 - `Transfer` — Tracks all ENS token transfers; maintains running balances per address and records balance change events for 180-day TWB computation
-- `DelegateChanged` — Records delegation changes (delegator → delegate) used by the backend to determine eligible delegators
-- `DelegateVotesChanged` — Records voting power snapshots used for delegate reward calculations
+- `DelegateChanged` — Records delegation changes (token holder → voter) used by the backend to determine eligible token holders. The on-chain event signature still names these fields `delegator` and `delegate`.
+- `DelegateVotesChanged` — Records voting power snapshots used for active-voter reward calculations
 
 ### ERC20MultiDelegate
 
 **Address**: `0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446`
 **Start Block**: 18,564,837
 
-Allows users to deposit ENS tokens and delegate to multiple delegates simultaneously. Creates proxy addresses per delegate and mints ERC1155 receipt tokens.
+Allows users to deposit ENS tokens and delegate to multiple voters simultaneously. Creates proxy addresses per voter and mints ERC1155 receipt tokens.
 
 **Indexed events**:
-- `ProxyDeployed` — Records proxy-to-delegate mappings
-- `TransferSingle` / `TransferBatch` — Tracks ERC1155 position changes (token ID = delegate address as uint256)
+- `ProxyDeployed` — Records proxy-to-voter mappings
+- `TransferSingle` / `TransferBatch` — Tracks ERC1155 position changes (token ID = voter address as uint256)
 - `DelegationProcessed` — Available for supplementary tracking
 
 **Why it matters**: Without this indexer, each proxy appears as a separate account. The indexer traces each proxy back to the depositor so rewards route correctly and TWBs are consolidated.
@@ -50,11 +50,11 @@ ENS tokens sit inside the vesting contract. The beneficiary holds an ERC721 NFT 
 |---|---|
 | `ens_balance` | Current ENS token balance per address (running state) |
 | `ens_balance_event` | Historical balance changes from Transfer events |
-| `ens_delegation` | Current delegation mapping (delegator → delegate) |
+| `ens_delegation` | Current delegation mapping (token holder → voter) |
 | `ens_delegation_event` | Historical delegation changes |
 | `ens_voting_power_snapshot` | Voting power changes from DelegateVotesChanged |
-| `multi_delegate_proxy` | Proxy address → delegate mapping |
-| `multi_delegate_position` | Current ERC1155 positions (owner, delegate, amount) |
+| `multi_delegate_proxy` | Proxy address → voter mapping |
+| `multi_delegate_position` | Current ERC1155 positions (owner, voter, amount) |
 | `multi_delegate_transfer` | Historical transfer log |
 | `vesting_plan` | Active vesting plans with schedule parameters |
 | `vesting_redemption` | Redemption event history |

@@ -16,13 +16,13 @@ export interface HealthResponse {
   status: "ok";
 }
 export type StatusResponse = GetJson<"/stats">;
-export type ActiveDelegatesResponse = GetJson<"/delegates/active">;
+export type ActiveVotersResponse = GetJson<"/voters/active">;
 export type EligibilityResponse = GetJson<"/eligibility/{address}">;
 export type TierProgressionResponse = GetJson<"/tiers/progression">;
 export type ApyEstimateResponse = GetJson<"/apy/{address}">;
 export type RoundInfoResponse = GetJson<"/rounds/current">;
 
-export type DelegateDetail = ActiveDelegatesResponse["delegates"][number];
+export type VoterDetail = ActiveVotersResponse["voters"][number];
 export type TierEntry = TierProgressionResponse["tiers"][number];
 
 /**
@@ -34,14 +34,14 @@ export interface Payout {
   ensName: string | null;
   amount: string;
   amountEns: string;
-  role: "delegate" | "delegator";
+  role: "voter" | "token_holder";
 }
 
 export interface LotteryEntry {
   address: string;
   ensName: string | null;
   originalAmount: string;
-  role: "delegate" | "delegator";
+  role: "voter" | "token_holder";
 }
 
 export interface LotteryPool {
@@ -59,12 +59,12 @@ export interface DistributionMetadata {
     momGrowthMinBps: string;
     momGrowthMaxBps: string;
     poolSize: string;
-    delegateCap: string;
-    delegatorCap: string;
+    voterCap: string;
+    tokenHolderCap: string;
   };
   momGrowthBps: string;
-  activeDelegateCount: number;
-  eligibleDelegatorCount: number;
+  activeVoterCount: number;
+  eligibleTokenHolderCount: number;
   computedAt: string;
   randaoSeed: string;
 }
@@ -97,8 +97,8 @@ export interface RoundSummary {
   poolSizeEns: string | null
   totalDistributed: string | null
   totalDistributedEns: string | null
-  activeDelegateCount: number | null
-  eligibleDelegatorCount: number | null
+  activeVoterCount: number | null
+  eligibleTokenHolderCount: number | null
   lotteryBucketCount: number | null
   lotteryEntryCount: number | null
   lotteryParticipantCount: number | null
@@ -117,7 +117,7 @@ export interface RewardRank {
   rank: number
   address: string
   ensName: string | null
-  role: 'delegate' | 'token_holder'
+  role: 'voter' | 'token_holder'
   reward: string
   rewardEns: string
   source: 'direct' | 'lottery' | 'combined'
@@ -128,8 +128,8 @@ export interface RewardRank {
 export interface AddressRoundReward {
   address: string
   rewardStatus: RewardStatus
-  delegateReward: string
-  delegateRewardEns: string
+  voterReward: string
+  voterRewardEns: string
   tokenHolderReward: string
   tokenHolderRewardEns: string
   lotteryReward: string
@@ -180,7 +180,7 @@ export interface LotteryDetail {
 
 export interface RoundDetailResponse extends RoundSummary {
   addressReward: AddressRoundReward | null
-  topDelegateRewards: RewardRank[]
+  topVoterRewards: RewardRank[]
   topTokenHolderRewards: RewardRank[]
   lottery: LotteryDetail | null
 }
@@ -193,8 +193,8 @@ export interface AddressDistributionRound {
   roundStatus: RoundStatus
   distributionDataStatus: DistributionDataStatus
   rewardStatus: RewardStatus
-  delegateReward: string
-  delegateRewardEns: string
+  voterReward: string
+  voterRewardEns: string
   tokenHolderReward: string
   tokenHolderRewardEns: string
   lotteryReward: string

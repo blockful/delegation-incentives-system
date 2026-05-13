@@ -10,7 +10,7 @@ type Db = typeof PonderDb;
 export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
   return {
     async getVpEventsInRange(
-      delegate: Address,
+      voter: Address,
       from: Seconds,
       to: Seconds,
     ): Promise<readonly VotingPowerEvent[]> {
@@ -19,7 +19,7 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
         .from(ensVotingPowerSnapshot)
         .where(
           and(
-            eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()),
+            eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()),
             gte(ensVotingPowerSnapshot.timestamp, from),
             lte(ensVotingPowerSnapshot.timestamp, to),
           ),
@@ -31,7 +31,7 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
         );
 
       return rows.map((row) => ({
-        delegate: row.accountId as Address,
+        voter: row.voterId as Address,
         newBalance: wei(BigInt(row.votingPower)),
         timestamp: seconds(BigInt(row.timestamp)),
         blockNumber: blockNumber(BigInt(row.blockNumber)),
@@ -40,7 +40,7 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
     },
 
     async getVpAtTimestamp(
-      delegate: Address,
+      voter: Address,
       timestamp: Seconds,
     ): Promise<Wei> {
       const rows = await db
@@ -48,7 +48,7 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
         .from(ensVotingPowerSnapshot)
         .where(
           and(
-            eq(ensVotingPowerSnapshot.accountId, delegate.toLowerCase()),
+            eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()),
             lte(ensVotingPowerSnapshot.timestamp, timestamp),
           ),
         )
@@ -64,15 +64,15 @@ export function createVotingPowerAdapter(db: Db): VotingPowerRepository {
     },
 
     async getAggregateVpAtTimestamp(
-      delegates: readonly Address[],
+      voters: readonly Address[],
       timestamp: Seconds,
     ): Promise<Wei> {
-      if (delegates.length === 0) return wei(0n);
+      if (voters.length === 0) return wei(0n);
 
-      // For each delegate, get most recent VP at or before timestamp
+      // For each voter, get most recent VP at or before timestamp
       let total = 0n;
-      for (const delegate of delegates) {
-        const vp = await this.getVpAtTimestamp(delegate, timestamp);
+      for (const voter of voters) {
+        const vp = await this.getVpAtTimestamp(voter, timestamp);
         total += vp;
       }
       return wei(total);

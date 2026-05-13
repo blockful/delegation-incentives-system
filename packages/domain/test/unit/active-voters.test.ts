@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   getLastFinalizedProposals,
-  identifyActiveDelegates,
-} from "../../src/active-delegates.js";
+  identifyActiveVoters,
+} from "../../src/active-voters.js";
 import type { Address, Proposal, Vote } from "../../src/types.js";
 import {
   FINALIZED_STATUSES,
@@ -82,7 +82,7 @@ describe("getLastFinalizedProposals", () => {
     expect(result).toEqual([]);
   });
 
-  it("uses PROPOSAL_WINDOW (10) as default limit", () => {
+  it("uses PROPOSAL_WINDOW_SIZE (10) as default limit", () => {
     const proposals = Array.from({ length: 20 }, (_, i) =>
       makeProposal(`p${i}`, (i + 1) * 100),
     );
@@ -105,9 +105,9 @@ describe("getLastFinalizedProposals", () => {
 });
 
 // ---------------------------------------------------------------------------
-// identifyActiveDelegates
+// identifyActiveVoters
 // ---------------------------------------------------------------------------
-describe("identifyActiveDelegates", () => {
+describe("identifyActiveVoters", () => {
   const proposals = Array.from({ length: 10 }, (_, i) =>
     makeProposal(`p${i}`, (i + 1) * 100),
   );
@@ -116,25 +116,25 @@ describe("identifyActiveDelegates", () => {
   const bob: Address = "0xBob00000000000000000000000000000000000002";
   const carol: Address = "0xCarol000000000000000000000000000000000003";
 
-  it("delegate who voted on all 10 proposals is active", () => {
+  it("voter who voted on all 10 proposals is active", () => {
     const votes = proposals.map((p) => makeVote(alice, p.id));
 
-    const active = identifyActiveDelegates(proposals, votes);
+    const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(true);
     expect(active.size).toBe(1);
   });
 
-  it("delegate who voted on exactly 7 proposals is active", () => {
+  it("voter who voted on exactly 7 proposals is active", () => {
     const votes = proposals.slice(0, 7).map((p) => makeVote(alice, p.id));
 
-    const active = identifyActiveDelegates(proposals, votes);
+    const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(true);
   });
 
-  it("delegate who voted on 6 proposals is not active", () => {
+  it("voter who voted on 6 proposals is not active", () => {
     const votes = proposals.slice(0, 6).map((p) => makeVote(alice, p.id));
 
-    const active = identifyActiveDelegates(proposals, votes);
+    const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(false);
     expect(active.size).toBe(0);
   });
@@ -143,11 +143,11 @@ describe("identifyActiveDelegates", () => {
     const fiveProposals = proposals.slice(0, 5);
     const votes = fiveProposals.map((p) => makeVote(alice, p.id));
 
-    const active = identifyActiveDelegates(fiveProposals, votes);
+    const active = identifyActiveVoters(fiveProposals, votes);
     expect(active.size).toBe(0);
   });
 
-  it("multiple delegates with different vote counts", () => {
+  it("multiple voters with different vote counts", () => {
     const votes = [
       // Alice votes on all 10
       ...proposals.map((p) => makeVote(alice, p.id)),
@@ -157,15 +157,15 @@ describe("identifyActiveDelegates", () => {
       ...proposals.slice(0, 3).map((p) => makeVote(carol, p.id)),
     ];
 
-    const active = identifyActiveDelegates(proposals, votes);
+    const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(true);
     expect(active.has(bob)).toBe(true);
     expect(active.has(carol)).toBe(false);
     expect(active.size).toBe(2);
   });
 
-  it("empty votes returns no active delegates", () => {
-    const active = identifyActiveDelegates(proposals, []);
+  it("empty votes returns no active voters", () => {
+    const active = identifyActiveVoters(proposals, []);
     expect(active.size).toBe(0);
   });
 
@@ -178,7 +178,7 @@ describe("identifyActiveDelegates", () => {
       makeVote(alice, "unknown-3"),
     ];
 
-    const active = identifyActiveDelegates(proposals, votes);
+    const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(false);
   });
 
@@ -190,7 +190,7 @@ describe("identifyActiveDelegates", () => {
       ...proposals.slice(0, 6).map((p) => makeVote(alice, p.id)),
     ];
 
-    const active = identifyActiveDelegates(proposals, votes);
+    const active = identifyActiveVoters(proposals, votes);
     // Still only 6 distinct proposals — not active
     expect(active.has(alice)).toBe(false);
   });
@@ -198,7 +198,7 @@ describe("identifyActiveDelegates", () => {
   it("respects a custom threshold", () => {
     const votes = proposals.slice(0, 3).map((p) => makeVote(alice, p.id));
 
-    const active = identifyActiveDelegates(proposals, votes, 3);
+    const active = identifyActiveVoters(proposals, votes, 3);
     expect(active.has(alice)).toBe(true);
   });
 });

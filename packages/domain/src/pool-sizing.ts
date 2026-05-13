@@ -16,7 +16,7 @@ export function computeVpGrowthPct(vpStart: Wei, vpEnd: Wei): number {
 /**
  * Select the pool tier based on VP growth percentage.
  * Negative growth maps to the first tier (0-10%).
- * Returns the matching PoolTier including poolSize, delegateCap, delegatorCap.
+ * Returns the matching PoolTier including poolSize, voterCap, tokenHolderCap.
  */
 export function selectPoolTier(growthPct: number): PoolTier {
   if (growthPct < 0) return POOL_TIERS[0];

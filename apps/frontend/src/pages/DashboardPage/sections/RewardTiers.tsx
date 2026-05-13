@@ -178,8 +178,8 @@ export function RewardTiers({
   const nextTier = tiers[currentTierIndex + 1]
   const isMaxTier = currentTierIndex >= tiers.length - 1
   const vpProgress = computeVpProgress(
-    currentTier.requiredAVP,
-    nextTier?.requiredAVP,
+    currentTier.requiredTotalVP,
+    nextTier?.requiredTotalVP,
     nextTier?.additionalVPNeeded,
   )
 
@@ -235,7 +235,7 @@ export function RewardTiers({
               <ProgressFill $pct={vpProgress} />
             </ProgressTrack>
           </ProgressInfo>
-          <ShareLink to="/delegates">
+          <ShareLink to="/voters">
             <Button size="small" colorStyle="bluePrimary" width="auto">
               Share &amp; grow the pool
             </Button>

@@ -2,7 +2,7 @@ import { env } from '@/config/env'
 import type {
   HealthResponse,
   StatusResponse,
-  ActiveDelegatesResponse,
+  ActiveVotersResponse,
   EligibilityResponse,
   TierProgressionResponse,
   ApyEstimateResponse,
@@ -55,7 +55,7 @@ export const api = {
 
   status: () => request<StatusResponse>("/stats"),
 
-  activeDelegates: () => request<ActiveDelegatesResponse>("/delegates/active"),
+  activeVoters: () => request<ActiveVotersResponse>("/voters/active"),
 
   eligibility: (address: string) =>
     request<EligibilityResponse>(`/eligibility/${address}`),

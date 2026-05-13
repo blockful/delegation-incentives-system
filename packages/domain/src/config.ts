@@ -5,11 +5,11 @@ import { bps, seconds, wei } from "./types.js";
 // Activity thresholds
 // ──────────────────────────────────────────────────────────
 
-/** Minimum votes in the proposal window to qualify as an active delegate. */
-export const ACTIVE_THRESHOLD = 7;
+/** Minimum votes in the proposal window to qualify as an active voter. */
+export const ACTIVE_VOTE_THRESHOLD = 7;
 
 /** Number of recent finalized proposals considered for activity. */
-export const PROPOSAL_WINDOW = 10;
+export const PROPOSAL_WINDOW_SIZE = 10;
 
 // ──────────────────────────────────────────────────────────
 // Pool split (basis points, 10 000 = 100%)
@@ -17,17 +17,17 @@ export const PROPOSAL_WINDOW = 10;
 
 export const BPS_BASE: BasisPoints = bps(10_000n);
 
-/** 10% of monthly pool goes to delegates. */
-export const DELEGATE_POOL_BPS: BasisPoints = bps(1_000n);
+/** 10% of monthly pool goes to active voters. */
+export const VOTER_POOL_BPS: BasisPoints = bps(1_000n);
 
-/** 90% of monthly pool goes to delegators. */
-export const DELEGATOR_POOL_BPS: BasisPoints = bps(9_000n);
+/** 90% of monthly pool goes to eligible token holders. */
+export const TOKEN_HOLDER_POOL_BPS: BasisPoints = bps(9_000n);
 
-/** Per-delegate cap = 1% of pool. */
-export const DELEGATE_CAP_BPS: BasisPoints = bps(100n);
+/** Per-voter cap = 1% of pool. */
+export const VOTER_CAP_BPS: BasisPoints = bps(100n);
 
-/** Per-delegator cap = 5% of pool. */
-export const DELEGATOR_CAP_BPS: BasisPoints = bps(500n);
+/** Per-token-holder cap = 5% of pool. */
+export const TOKEN_HOLDER_CAP_BPS: BasisPoints = bps(500n);
 
 // ──────────────────────────────────────────────────────────
 // Time-Weighted Balance window
@@ -37,13 +37,13 @@ export const DELEGATOR_CAP_BPS: BasisPoints = bps(500n);
 export const TWB_WINDOW_SECONDS: Seconds = seconds(15_552_000n);
 
 // ──────────────────────────────────────────────────────────
-// Payout thresholds
+// Reward thresholds
 // ──────────────────────────────────────────────────────────
 
 const ENS = 10n ** 18n;
 
 /** Minimum combined reward for a direct payout (1 ENS). */
-export const MIN_PAYOUT: Wei = wei(1n * ENS);
+export const MIN_REWARD_THRESHOLD: Wei = wei(1n * ENS);
 
 /** Target size for lottery buckets (10 ENS). */
 export const LOTTERY_BUCKET_TARGET: Wei = wei(10n * ENS);
@@ -58,9 +58,9 @@ function tier(
   poolEns: bigint,
 ): PoolTier {
   const poolSize = wei(poolEns * ENS);
-  const delegateCap = wei((poolEns * ENS) / 100n);
-  const delegatorCap = wei((poolEns * ENS * 5n) / 100n);
-  return { minGrowthPct, maxGrowthPct, poolSize, delegateCap, delegatorCap };
+  const voterCap = wei((poolEns * ENS) / 100n);
+  const tokenHolderCap = wei((poolEns * ENS * 5n) / 100n);
+  return { minGrowthPct, maxGrowthPct, poolSize, voterCap, tokenHolderCap };
 }
 
 /**

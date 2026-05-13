@@ -209,7 +209,7 @@ describe("ENSToken:DelegateChanged", () => {
     }
     await handleDelegateChanged(event as any, makeContext(fakeDb.db))
     const delegation = fakeDb.stores.get("ens_delegation")!.get(ALICE)
-    expect(delegation.delegateId).toBe(BOB)
+    expect(delegation.voterId).toBe(BOB)
   })
 
   it("uses 0 delegatedValue when no balance record exists", async () => {
@@ -237,7 +237,7 @@ describe("ENSToken:DelegateChanged", () => {
     expect(evt.delegatedValue).toBe(1000n)
   })
 
-  it("records fromDelegateId and toDelegateId in delegation event", async () => {
+  it("records fromVoterId and toVoterId in delegation event", async () => {
     const event = {
       args: { delegator: ALICE, fromDelegate: BOB, toDelegate: ALICE },
       block: { number: 500n, timestamp: 1n },
@@ -246,8 +246,8 @@ describe("ENSToken:DelegateChanged", () => {
     }
     await handleDelegateChanged(event as any, makeContext(fakeDb.db))
     const evt = fakeDb.stores.get("ens_delegation_event")!.get("0xfoo-3")
-    expect(evt.fromDelegateId).toBe(BOB)
-    expect(evt.toDelegateId).toBe(ALICE)
+    expect(evt.fromVoterId).toBe(BOB)
+    expect(evt.toVoterId).toBe(ALICE)
   })
 })
 
@@ -264,7 +264,7 @@ describe("ENSToken:DelegateVotesChanged", () => {
     }
     await handleDelegateVotesChanged(event as any, makeContext(fakeDb.db))
     const snap = fakeDb.stores.get("ens_voting_power_snapshot")!.get("0xfeed-3")
-    expect(snap.accountId).toBe(ALICE)
+    expect(snap.voterId).toBe(ALICE)
     expect(snap.votingPower).toBe(150n)
     expect(snap.delta).toBe(50n)
     expect(snap.deltaMod).toBe(50n)

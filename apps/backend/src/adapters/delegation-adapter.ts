@@ -10,32 +10,32 @@ type Db = typeof PonderDb;
 export function createDelegationAdapter(db: Db): DelegationRepository {
   return {
     async getDelegationsToAtTimestamp(
-      delegates: readonly Address[],
+      voters: readonly Address[],
       timestamp: Seconds,
     ): Promise<readonly Delegation[]> {
-      if (delegates.length === 0) return [];
+      if (voters.length === 0) return [];
 
-      const lowerDelegates = delegates.map((d) => d.toLowerCase());
+      const lowerVoters = voters.map((d) => d.toLowerCase());
 
-      // Find the latest delegation event per delegator before the timestamp,
-      // then filter to those whose toDelegateId is in the target set.
+      // Find the latest delegation event per token holder before the timestamp,
+      // then filter to those whose toVoterId is in the target set.
       const latestTs = db
         .select({
-          delegatorId: ensDelegationEvent.delegatorId,
+          tokenHolderId: ensDelegationEvent.tokenHolderId,
           maxTs: sql<bigint>`MAX(${ensDelegationEvent.timestamp})`.as("max_ts"),
         })
         .from(ensDelegationEvent)
         .where(lte(ensDelegationEvent.timestamp, timestamp))
-        .groupBy(ensDelegationEvent.delegatorId)
+        .groupBy(ensDelegationEvent.tokenHolderId)
         .as("latest_ts");
 
-      // Fetch all events at the max timestamp per delegator (no delegate filter
+      // Fetch all events at the max timestamp per token holder (no voter filter
       // yet — we must dedup by blockNumber first to avoid keeping a stale
-      // same-timestamp event whose toDelegateId happens to match).
+      // same-timestamp event whose toVoterId happens to match).
       const rows = await db
         .select({
-          delegatorId: ensDelegationEvent.delegatorId,
-          toDelegateId: ensDelegationEvent.toDelegateId,
+          tokenHolderId: ensDelegationEvent.tokenHolderId,
+          toVoterId: ensDelegationEvent.toVoterId,
           timestamp: ensDelegationEvent.timestamp,
           blockNumber: ensDelegationEvent.blockNumber,
           logIndex: ensDelegationEvent.logIndex,
@@ -44,32 +44,32 @@ export function createDelegationAdapter(db: Db): DelegationRepository {
         .innerJoin(
           latestTs,
           and(
-            eq(ensDelegationEvent.delegatorId, latestTs.delegatorId),
+            eq(ensDelegationEvent.tokenHolderId, latestTs.tokenHolderId),
             eq(ensDelegationEvent.timestamp, latestTs.maxTs),
           ),
         );
 
-      // Deduplicate same-timestamp ties: keep highest blockNumber/logIndex per delegator.
+      // Deduplicate same-timestamp ties: keep highest blockNumber/logIndex per token holder.
       const deduped = new Map<string, (typeof rows)[0]>();
       for (const row of rows) {
-        const existing = deduped.get(row.delegatorId);
+        const existing = deduped.get(row.tokenHolderId);
         if (
           !existing ||
           BigInt(row.blockNumber) > BigInt(existing.blockNumber) ||
           (BigInt(row.blockNumber) === BigInt(existing.blockNumber) &&
             row.logIndex > existing.logIndex)
         ) {
-          deduped.set(row.delegatorId, row);
+          deduped.set(row.tokenHolderId, row);
         }
       }
 
-      // Now filter to delegators whose latest delegation targets our delegate set.
-      const delegateSet = new Set(lowerDelegates);
+      // Now filter to token holders whose latest delegation targets our voter set.
+      const voterSet = new Set(lowerVoters);
       return [...deduped.values()]
-        .filter((row) => delegateSet.has(row.toDelegateId.toLowerCase()))
+        .filter((row) => voterSet.has(row.toVoterId.toLowerCase()))
         .map((row) => ({
-          delegator: row.delegatorId as Address,
-          delegate: row.toDelegateId as Address,
+          tokenHolder: row.tokenHolderId as Address,
+          voter: row.toVoterId as Address,
           timestamp: seconds(BigInt(row.timestamp)),
           blockNumber: blockNumber(BigInt(row.blockNumber)),
           logIndex: row.logIndex,

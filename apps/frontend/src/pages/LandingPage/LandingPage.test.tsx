@@ -41,7 +41,7 @@ describe('LandingPage', () => {
   })
 
   it('shows current APY in hero from tier data', async () => {
-    // Fixture: maxDelegatorApyPct='5400.00'
+    // Fixture: maxTokenHolderApyPct='5400.00'
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(screen.getByText('5400.00% APY')).toBeInTheDocument()

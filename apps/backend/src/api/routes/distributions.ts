@@ -3,12 +3,6 @@ import { db } from "ponder:api";
 import { distributionResult } from "ponder:schema";
 import { desc } from "drizzle-orm";
 import { distributionToCsv } from "../../output/csv-writer.js";
-import {
-  DistributionComputeError,
-  computeAndStoreDistribution,
-  type ComputeDistributionOptions,
-  type ComputeDistributionResponse,
-} from "../distribution-compute.js";
 import { normalizeAddress } from "../helpers.js";
 import {
   distributionToApiResponse,
@@ -45,8 +39,8 @@ const AddressDistributionRoundSchema = z.object({
   roundStatus: z.enum(["live", "ended", "pending", "paid"]),
   distributionDataStatus: z.enum(["available", "in_progress", "missing", "not_started"]),
   rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
-  delegateReward: z.string(),
-  delegateRewardEns: z.string(),
+  voterReward: z.string(),
+  voterRewardEns: z.string(),
   tokenHolderReward: z.string(),
   tokenHolderRewardEns: z.string(),
   lotteryReward: z.string(),
@@ -58,22 +52,6 @@ const AddressDistributionRoundSchema = z.object({
 const AddressDistributionHistoryResponse = z.object({
   address: z.string(),
   rounds: z.array(AddressDistributionRoundSchema),
-});
-
-const ComputeDistributionResponseSchema = z.object({
-  month: z.string(),
-  status: z.enum(["cached", "computed", "skipped"]),
-  reason: z.string().optional(),
-  computedAt: z.string().nullable(),
-  tierIndex: z.number().nullable(),
-  poolSize: z.string().nullable(),
-  poolSizeEns: z.string().nullable(),
-  totalDistributed: z.string().nullable(),
-  totalDistributedEns: z.string().nullable(),
-  activeDelegateCount: z.number().nullable(),
-  eligibleDelegatorCount: z.number().nullable(),
-  rewardCount: z.number().nullable(),
-  lotteryBucketCount: z.number().nullable(),
 });
 
 type AddressDistributionRewardStatus =
@@ -91,8 +69,8 @@ interface AddressDistributionRound {
   roundStatus: RoundStatus;
   distributionDataStatus: DistributionDataStatus;
   rewardStatus: AddressDistributionRewardStatus;
-  delegateReward: string;
-  delegateRewardEns: string;
+  voterReward: string;
+  voterRewardEns: string;
   tokenHolderReward: string;
   tokenHolderRewardEns: string;
   lotteryReward: string;
@@ -103,11 +81,6 @@ interface AddressDistributionRound {
 
 export interface DistributionRouteDeps {
   getRows?: () => Promise<DistributionStorageRow[]>;
-  computeDistribution?: (
-    month: string,
-    options: ComputeDistributionOptions,
-  ) => Promise<ComputeDistributionResponse>;
-  adminToken?: string | null;
   now?: () => Date;
 }
 
@@ -212,54 +185,9 @@ const csvRoute = createRoute({
   },
 });
 
-const computeRoute = createRoute({
-  method: "post",
-  path: "/distributions/{month}/compute",
-  tags: ["Distributions"],
-  summary: "Compute and store a monthly distribution",
-  description:
-    "Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.",
-  request: {
-    params: MonthParam,
-    body: {
-      required: false,
-      content: {
-        "application/json": {
-          schema: z.object({
-            force: z.boolean().optional().openapi({
-              description: "Recompute and overwrite an existing cached result",
-              example: false,
-            }),
-          }),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "Distribution was already cached, computed, or skipped because the round has not ended",
-      content: { "application/json": { schema: ComputeDistributionResponseSchema } },
-    },
-    401: {
-      description: "Missing or invalid admin token",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
-    },
-    404: {
-      description: "Unknown configured month",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
-    },
-    500: {
-      description: "Internal server error",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
-    },
-  },
-});
-
 export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
   const app = new OpenAPIHono();
   const getRows = deps.getRows ?? getStoredDistributionRows;
-  const computeDistribution = deps.computeDistribution ?? computeAndStoreDistribution;
-  const adminToken = deps.adminToken ?? process.env.DISTRIBUTION_ADMIN_TOKEN ?? null;
   const getNow = deps.now ?? (() => new Date());
 
   app.openapi(listRoute, async (c) => {
@@ -327,42 +255,7 @@ export function createDistributionsApp(deps: DistributionRouteDeps = {}) {
     }
   });
 
-  app.openapi(computeRoute, async (c) => {
-    try {
-      const { month } = c.req.valid("param");
-      if (!isComputeAuthorized(c, adminToken)) {
-        return c.json({ error: "Unauthorized" }, 401);
-      }
-
-      const body = await c.req.json().catch(() => ({}));
-      const result = await computeDistribution(month, {
-        force: body?.force === true,
-        now: getNow(),
-      });
-
-      return c.json(result, 200);
-    } catch (err) {
-      if (err instanceof DistributionComputeError) {
-        const status = err.status === 404 ? 404 : 500;
-        return c.json({ error: err.message }, status);
-      }
-
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
-    }
-  });
-
   return app;
-}
-
-function isComputeAuthorized(c: any, adminToken: string | null): boolean {
-  if (!adminToken) return true;
-
-  const headerToken = c.req.header("x-distribution-admin-token");
-  if (headerToken === adminToken) return true;
-
-  const authorization = c.req.header("authorization");
-  return authorization === `Bearer ${adminToken}`;
 }
 
 function buildAddressDistributionHistory(
@@ -396,8 +289,8 @@ function buildAddressDistributionHistory(
             rewardStatus: (timing.distributionDataStatus === "in_progress"
               ? "pending"
               : "unavailable") as AddressDistributionRewardStatus,
-            delegateReward: "0",
-            delegateRewardEns: "0.000000000000000000",
+            voterReward: "0",
+            voterRewardEns: "0.000000000000000000",
             tokenHolderReward: "0",
             tokenHolderRewardEns: "0.000000000000000000",
             lotteryReward: "0",
@@ -417,8 +310,8 @@ function buildAddressDistributionHistory(
           roundStatus: timing.status,
           distributionDataStatus: timing.distributionDataStatus,
           rewardStatus: reward.status,
-          delegateReward: reward.delegateReward,
-          delegateRewardEns: reward.delegateRewardEns,
+          voterReward: reward.voterReward,
+          voterRewardEns: reward.voterRewardEns,
           tokenHolderReward: reward.tokenHolderReward,
           tokenHolderRewardEns: reward.tokenHolderRewardEns,
           lotteryReward: reward.lotteryReward,

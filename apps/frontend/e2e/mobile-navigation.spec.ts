@@ -26,7 +26,7 @@ test.describe('Mobile navigation', () => {
     // Click the visible "Delegates" link in the drawer
     await page.getByRole('link', { name: 'Delegates', exact: true }).first().click()
 
-    await expect(page).toHaveURL(/\/delegates/)
+    await expect(page).toHaveURL(/\/voters/)
     await expect(page.getByRole('button', { name: /open menu/i })).toBeVisible()
   })
 

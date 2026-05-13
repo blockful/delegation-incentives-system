@@ -17,7 +17,7 @@ function vpEvent(
   timestamp: bigint,
 ): VotingPowerEvent {
   return {
-    delegate: "0x1234567890abcdef1234567890abcdef12345678",
+    voter: "0x1234567890abcdef1234567890abcdef12345678",
     newBalance: wei(newBalance),
     timestamp: seconds(timestamp),
     blockNumber: blockNumber(0n),

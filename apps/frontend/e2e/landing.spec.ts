@@ -22,16 +22,16 @@ test.describe('Landing Page', () => {
     await expect(page.getByText(/Built by Blockful/)).toBeVisible({ timeout: 10000 })
   })
 
-  test('navigate to delegates from CTA', async ({ page }) => {
+  test('navigate to voters from CTA', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('link', { name: /Delegate Now/i }).first().click()
-    await expect(page).toHaveURL('/delegates')
+    await expect(page).toHaveURL('/voters')
   })
 
   test('navigate through all pages', async ({ page }) => {
     for (const path of [
       '/',
-      '/delegates',
+      '/voters',
       '/rounds',
       '/lottery',
       '/transparency',

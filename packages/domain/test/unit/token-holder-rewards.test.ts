@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { computeDelegatorRewards } from "../../src/delegator-rewards.js";
+import { computeTokenHolderRewards } from "../../src/token-holder-rewards.js";
 import type { Address, Wei } from "../../src/types.js";
 import { wei } from "../../src/types.js";
 import { applyBps } from "../../src/util/bigint-math.js";
-import { DELEGATOR_POOL_BPS, DELEGATOR_CAP_BPS } from "../../src/config.js";
+import { TOKEN_HOLDER_POOL_BPS, TOKEN_HOLDER_CAP_BPS } from "../../src/config.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -18,24 +18,24 @@ function totalRewards(allocations: { reward: Wei }[]): bigint {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe("computeDelegatorRewards", () => {
+describe("computeTokenHolderRewards", () => {
   it("returns empty array for empty input", () => {
-    const result = computeDelegatorRewards(new Map(), wei(1000n * ENS));
+    const result = computeTokenHolderRewards(new Map(), wei(1000n * ENS));
     expect(result).toEqual([]);
   });
 
   // ---------------------------------------------------------------------------
   // Proportional allocation without caps
   // ---------------------------------------------------------------------------
-  it("allocates proportionally when no delegator exceeds the cap", () => {
-    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000 ENS.
-    // 30 equal delegators -> each gets 30_000 ENS (below 50_000 cap).
+  it("allocates proportionally when no token holder exceeds the cap", () => {
+    // Pool = 1_000_000 ENS -> tokenHolderSubPool = 900_000, cap = 50_000 ENS.
+    // 30 equal token holders -> each gets 30_000 ENS (below 50_000 cap).
     const poolSize = wei(1_000_000n * ENS);
-    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS); // 900_000 ENS
-    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS); // 50_000 ENS
+    const tokenHolderSubPool = applyBps(poolSize, TOKEN_HOLDER_POOL_BPS); // 900_000 ENS
+    const tokenHolderCap = applyBps(poolSize, TOKEN_HOLDER_CAP_BPS); // 50_000 ENS
 
-    expect(delegatorPool).toBe(900_000n * ENS);
-    expect(delegatorCap).toBe(50_000n * ENS);
+    expect(tokenHolderSubPool).toBe(900_000n * ENS);
+    expect(tokenHolderCap).toBe(50_000n * ENS);
 
     const twbs = new Map<Address, Wei>();
     for (let i = 0; i < 30; i++) {
@@ -43,25 +43,25 @@ describe("computeDelegatorRewards", () => {
       twbs.set(addr, wei(100n * ENS));
     }
 
-    const result = computeDelegatorRewards(twbs, poolSize);
+    const result = computeTokenHolderRewards(twbs, poolSize);
 
     expect(result).toHaveLength(30);
-    expect(totalRewards(result)).toBe(delegatorPool);
+    expect(totalRewards(result)).toBe(tokenHolderSubPool);
 
     for (const r of result) {
-      expect(r.reward as bigint).toBeLessThanOrEqual(delegatorCap as bigint);
+      expect(r.reward as bigint).toBeLessThanOrEqual(tokenHolderCap as bigint);
       expect(r.reward).toBe(30_000n * ENS);
     }
   });
 
   it("allocates proportionally with different weights", () => {
-    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000 ENS.
-    // Three delegators: 10, 20, 30 weight -> total 60.
+    // Pool = 1_000_000 ENS -> tokenHolderSubPool = 900_000, cap = 50_000 ENS.
+    // Three token holders: 10, 20, 30 weight -> total 60.
     // Raw: 150_000, 300_000, 450_000.
     // All exceed cap, so redistribution will run.
     const poolSize = wei(1_000_000n * ENS);
-    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS);
-    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS);
+    const tokenHolderSubPool = applyBps(poolSize, TOKEN_HOLDER_POOL_BPS);
+    const tokenHolderCap = applyBps(poolSize, TOKEN_HOLDER_CAP_BPS);
 
     const twbs = new Map<Address, Wei>([
       ["0xaaaa", wei(10n * ENS)],
@@ -69,23 +69,23 @@ describe("computeDelegatorRewards", () => {
       ["0xcccc", wei(30n * ENS)],
     ]);
 
-    const result = computeDelegatorRewards(twbs, poolSize);
+    const result = computeTokenHolderRewards(twbs, poolSize);
 
-    expect(totalRewards(result)).toBeLessThanOrEqual(delegatorPool);
+    expect(totalRewards(result)).toBeLessThanOrEqual(tokenHolderSubPool);
     for (const r of result) {
-      expect(r.reward as bigint).toBeLessThanOrEqual(delegatorCap as bigint);
+      expect(r.reward as bigint).toBeLessThanOrEqual(tokenHolderCap as bigint);
     }
   });
 
   // ---------------------------------------------------------------------------
   // Cap enforcement
   // ---------------------------------------------------------------------------
-  it("enforces per-delegator cap and redistributes excess", () => {
-    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000.
+  it("enforces per-token-holder cap and redistributes excess", () => {
+    // Pool = 1_000_000 ENS -> tokenHolderSubPool = 900_000, cap = 50_000.
     // One whale with 90% weight, others share 10%.
     // Whale raw = 810_000 ENS >> cap of 50_000.
     const poolSize = wei(1_000_000n * ENS);
-    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS);
+    const tokenHolderCap = applyBps(poolSize, TOKEN_HOLDER_CAP_BPS);
 
     const twbs = new Map<Address, Wei>([
       ["0xaaaa", wei(9_000n * ENS)], // 90%
@@ -93,21 +93,21 @@ describe("computeDelegatorRewards", () => {
       ["0xcccc", wei(500n * ENS)], // 5%
     ]);
 
-    const result = computeDelegatorRewards(twbs, poolSize);
+    const result = computeTokenHolderRewards(twbs, poolSize);
 
     expect(result).toHaveLength(3);
     expect(totalRewards(result)).toBeLessThanOrEqual(900_000n * ENS);
 
     const byAddr = new Map(result.map((r) => [r.address, r.reward]));
-    expect(byAddr.get("0xaaaa")).toBe(delegatorCap);
+    expect(byAddr.get("0xaaaa")).toBe(tokenHolderCap);
   });
 
-  it("caps correctly with many small delegators and one whale", () => {
-    // Pool = 1_000_000 ENS -> delegatorPool = 900_000, cap = 50_000.
+  it("caps correctly with many small token holders and one whale", () => {
+    // Pool = 1_000_000 ENS -> tokenHolderSubPool = 900_000, cap = 50_000.
     // 1 whale (weight 95), 19 smalls (weight 5/19 ~= 0.26 each).
     const poolSize = wei(1_000_000n * ENS);
-    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS);
-    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS);
+    const tokenHolderSubPool = applyBps(poolSize, TOKEN_HOLDER_POOL_BPS);
+    const tokenHolderCap = applyBps(poolSize, TOKEN_HOLDER_CAP_BPS);
 
     const twbs = new Map<Address, Wei>();
     twbs.set("0x0000", wei(9_500n * ENS)); // whale
@@ -116,23 +116,23 @@ describe("computeDelegatorRewards", () => {
       twbs.set(addr, wei(500n * ENS / 19n));
     }
 
-    const result = computeDelegatorRewards(twbs, poolSize);
+    const result = computeTokenHolderRewards(twbs, poolSize);
 
-    expect(totalRewards(result)).toBe(delegatorPool);
+    expect(totalRewards(result)).toBe(tokenHolderSubPool);
     // Whale should be capped.
     const whaleReward = result.find((r) => r.address === "0x0000")!.reward;
     expect(whaleReward as bigint).toBeLessThanOrEqual(
-      (delegatorCap as bigint) + (delegatorPool as bigint), // capped + possible dust
+      (tokenHolderCap as bigint) + (tokenHolderSubPool as bigint), // capped + possible dust
     );
   });
 
   // ---------------------------------------------------------------------------
   // Pool size invariant
   // ---------------------------------------------------------------------------
-  it("sum of rewards equals delegator pool exactly", () => {
+  it("sum of rewards equals token-holder sub-pool exactly", () => {
     // Use prime numbers to maximize rounding issues.
     const poolSize = wei(777_773n * ENS);
-    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS);
+    const tokenHolderSubPool = applyBps(poolSize, TOKEN_HOLDER_POOL_BPS);
 
     const twbs = new Map<Address, Wei>();
     for (let i = 0; i < 30; i++) {
@@ -140,8 +140,8 @@ describe("computeDelegatorRewards", () => {
       twbs.set(addr, wei(100n * ENS));
     }
 
-    const result = computeDelegatorRewards(twbs, poolSize);
-    expect(totalRewards(result)).toBe(delegatorPool);
+    const result = computeTokenHolderRewards(twbs, poolSize);
+    expect(totalRewards(result)).toBe(tokenHolderSubPool);
   });
 
   // ---------------------------------------------------------------------------
@@ -155,7 +155,7 @@ describe("computeDelegatorRewards", () => {
       ["0xbbbb", wei(300n * ENS)],
     ]);
 
-    const result = computeDelegatorRewards(twbs, poolSize);
+    const result = computeTokenHolderRewards(twbs, poolSize);
     expect(result.map((r) => r.address)).toEqual([
       "0xaaaa",
       "0xbbbb",
@@ -164,20 +164,20 @@ describe("computeDelegatorRewards", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Single delegator
+  // Single token holder
   // ---------------------------------------------------------------------------
-  it("single delegator is capped and leaves the remainder unallocated", () => {
+  it("single token holder is capped and leaves the remainder unallocated", () => {
     const poolSize = wei(1_000_000n * ENS);
-    const delegatorPool = applyBps(poolSize, DELEGATOR_POOL_BPS); // 900_000 ENS
-    const delegatorCap = applyBps(poolSize, DELEGATOR_CAP_BPS); // 50_000 ENS
+    const tokenHolderSubPool = applyBps(poolSize, TOKEN_HOLDER_POOL_BPS); // 900_000 ENS
+    const tokenHolderCap = applyBps(poolSize, TOKEN_HOLDER_CAP_BPS); // 50_000 ENS
 
     const twbs = new Map<Address, Wei>([["0xaaaa", wei(1_000n * ENS)]]);
 
-    const result = computeDelegatorRewards(twbs, poolSize);
+    const result = computeTokenHolderRewards(twbs, poolSize);
 
     expect(result).toHaveLength(1);
-    expect(result[0].reward).toBe(delegatorCap);
-    expect(totalRewards(result)).toBe(delegatorCap);
-    expect(totalRewards(result)).toBeLessThan(delegatorPool as bigint);
+    expect(result[0].reward).toBe(tokenHolderCap);
+    expect(totalRewards(result)).toBe(tokenHolderCap);
+    expect(totalRewards(result)).toBeLessThan(tokenHolderSubPool as bigint);
   });
 });

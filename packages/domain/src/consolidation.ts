@@ -1,7 +1,7 @@
 import type {
   Address,
-  EligibleDelegator,
-  ConsolidatedDelegator,
+  EligibleTokenHolder,
+  ConsolidatedTokenHolder,
   WalletAlias,
   Delegation,
   MultiDelegatePosition,
@@ -13,47 +13,46 @@ export interface VestingPlanOwner {
 }
 
 // ──────────────────────────────────────────────────────────
-// Step 8: Resolve eligible delegators from 3 sources
+// Step 8: Resolve eligible token holders from 3 sources
 // ──────────────────────────────────────────────────────────
 
 /**
- * Build the list of eligible delegators from 3 sources:
- * - Direct delegators (from DelegateChanged events at month-end)
+ * Build the list of eligible token holders from 3 sources:
+ * - Direct token holders (from DelegateChanged events at month-end)
  * - MultiDelegate positions (ERC1155 holders)
  * - Hedgey vesting (vesting contracts delegating, resolved to NFT owner)
  */
-export function resolveEligibleDelegators(
+export function resolveEligibleTokenHolders(
   directDelegations: readonly Delegation[],
   multiDelegatePositions: readonly MultiDelegatePosition[],
   vestingContractAddresses: ReadonlySet<Address>,
   vestingNftOwners: ReadonlyMap<Address, readonly VestingPlanOwner[]>,
-  activeDelegates: ReadonlySet<Address>,
-): EligibleDelegator[] {
-  const results: EligibleDelegator[] = [];
+  activeVoters: ReadonlySet<Address>,
+): EligibleTokenHolder[] {
+  const results: EligibleTokenHolder[] = [];
 
   // Direct delegations (including Hedgey vesting contracts)
   for (const d of directDelegations) {
-    if (!activeDelegates.has(d.delegate)) continue;
+    if (!activeVoters.has(d.voter)) continue;
 
-    if (vestingContractAddresses.has(d.delegator)) {
+    if (vestingContractAddresses.has(d.tokenHolder)) {
       // Hedgey: resolve vesting contract to NFT owner(s) — one entry per plan
-      const plans = vestingNftOwners.get(d.delegator);
+      const plans = vestingNftOwners.get(d.tokenHolder);
       if (!plans || plans.length === 0) continue;
       for (const plan of plans) {
         results.push({
           resolvedAddress: plan.owner,
-          originalAddress: d.delegator,
-          delegateAddress: d.delegate,
+          originalAddress: d.tokenHolder,
+          voterAddress: d.voter,
           source: "hedgey",
           vestingPlanId: plan.planId,
         });
       }
     } else {
-      // Regular direct delegation
       results.push({
-        resolvedAddress: d.delegator,
-        originalAddress: d.delegator,
-        delegateAddress: d.delegate,
+        resolvedAddress: d.tokenHolder,
+        originalAddress: d.tokenHolder,
+        voterAddress: d.voter,
         source: "direct",
       });
     }
@@ -61,11 +60,11 @@ export function resolveEligibleDelegators(
 
   // MultiDelegate positions (ERC1155 holders)
   for (const pos of multiDelegatePositions) {
-    if (!activeDelegates.has(pos.delegate)) continue;
+    if (!activeVoters.has(pos.voter)) continue;
     results.push({
       resolvedAddress: pos.holder,
       originalAddress: pos.holder,
-      delegateAddress: pos.delegate,
+      voterAddress: pos.voter,
       source: "multidelegate",
     });
   }
@@ -112,10 +111,10 @@ function resolveAlias(
  * Apply wallet aliases and merge entries by resolved address.
  * Handles transitive aliases (A->B->C) with cycle detection.
  */
-export function consolidateDelegators(
-  eligible: readonly EligibleDelegator[],
+export function consolidateTokenHolders(
+  eligible: readonly EligibleTokenHolder[],
   aliases: readonly WalletAlias[],
-): ConsolidatedDelegator[] {
+): ConsolidatedTokenHolder[] {
   // Build alias map: secondary → primary
   const aliasMap = new Map<Address, Address>();
   for (const a of aliases) {
@@ -123,7 +122,7 @@ export function consolidateDelegators(
   }
 
   // Group by final resolved address
-  const groups = new Map<Address, EligibleDelegator[]>();
+  const groups = new Map<Address, EligibleTokenHolder[]>();
 
   for (const entry of eligible) {
     const finalAddress = resolveAlias(entry.resolvedAddress, aliasMap);
@@ -135,8 +134,7 @@ export function consolidateDelegators(
     group.push(entry);
   }
 
-  // Convert to ConsolidatedDelegator[]
-  const result: ConsolidatedDelegator[] = [];
+  const result: ConsolidatedTokenHolder[] = [];
   for (const [resolvedAddress, entries] of groups) {
     result.push({ resolvedAddress, entries });
   }

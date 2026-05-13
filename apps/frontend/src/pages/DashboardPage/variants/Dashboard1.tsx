@@ -583,7 +583,7 @@ function BalanceStrip({
   return (
     <BalanceRow>
       <BalanceLeft>
-        <InfoTooltip text="Your average ENS balance over the last 6 months. The longer you hold, the bigger your share of the reward pool.">
+        <InfoTooltip text="Your average ENS balance over the last 180 days. The longer you hold, the bigger your share of the reward pool.">
           <BalanceValue>{formatBalance(balanceEns)}</BalanceValue>
           <BalanceUnit>ENS</BalanceUnit>
         </InfoTooltip>
@@ -605,7 +605,7 @@ function TierProgression({
     poolSizeEns: string
     estimatedApyPct: string
     additionalVPNeeded: string
-    requiredAVP: string
+    requiredTotalVP: string
     isCurrent: boolean
     isUnlocked: boolean
   }[]
@@ -617,8 +617,8 @@ function TierProgression({
   const isMaxTier = currentTierIndex >= tierList.length - 1
   const vpProgress = nextTier
     ? computeVpProgress(
-        currentTier.requiredAVP,
-        nextTier.requiredAVP,
+        currentTier.requiredTotalVP,
+        nextTier.requiredTotalVP,
         nextTier.additionalVPNeeded,
       )
     : 100
@@ -692,7 +692,7 @@ function TierProgression({
               <ProgressFill $pct={vpProgress} />
             </ProgressTrack>
           </TierFooterInfo>
-          <ShareLink to="/delegates">
+          <ShareLink to="/voters">
             <Button size="small" colorStyle="bluePrimary" width="auto">
               Share &amp; earn more
             </Button>

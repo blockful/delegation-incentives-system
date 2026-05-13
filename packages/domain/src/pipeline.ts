@@ -9,17 +9,17 @@ import type {
   CombinedReward,
 } from "./types.js";
 import { wei, seconds } from "./types.js";
-import { TWB_WINDOW_SECONDS, PROPOSAL_WINDOW } from "./config.js";
+import { TWB_WINDOW_SECONDS, PROPOSAL_WINDOW_SIZE } from "./config.js";
 import { monthStartTimestamp, monthEndTimestamp } from "./util/time.js";
-import { identifyActiveDelegates } from "./active-delegates.js";
+import { identifyActiveVoters } from "./active-voters.js";
 import { computeVpGrowthPct, selectPoolTier } from "./pool-sizing.js";
 import { computeTimeWeightedBalance } from "./time-weighted-balance.js";
 import { computeTWAP } from "./twap-voting-power.js";
-import { computeDelegateRewards } from "./delegate-rewards.js";
-import { computeDelegatorRewards } from "./delegator-rewards.js";
+import { computeVoterRewards } from "./voter-rewards.js";
+import { computeTokenHolderRewards } from "./token-holder-rewards.js";
 import {
-  resolveEligibleDelegators,
-  consolidateDelegators,
+  resolveEligibleTokenHolders,
+  consolidateTokenHolders,
 } from "./consolidation.js";
 import { combineRewards, applyMinimumThreshold } from "./combine-rewards.js";
 import { runLottery } from "./lottery.js";
@@ -39,20 +39,20 @@ export async function runDistributionPipeline(
   // ── Step 2: Get finalized proposals ──────────────────────
   const proposalsAtStart = await dataSource.getFinalizedProposals(
     monthStart,
-    PROPOSAL_WINDOW,
+    PROPOSAL_WINDOW_SIZE,
     startBlock,
   );
   const proposalsAtEnd = await dataSource.getFinalizedProposals(
     monthEnd,
-    PROPOSAL_WINDOW,
+    PROPOSAL_WINDOW_SIZE,
     endBlock,
   );
 
-  // ── Step 3: Determine active delegates ───────────────────
+  // ── Step 3: Determine active voters ──────────────────────
   const votesAtStart = await dataSource.getVotesForProposals(
     proposalsAtStart.map((p) => p.id),
   );
-  const activeDelegatesStart = identifyActiveDelegates(
+  const activeVotersStart = identifyActiveVoters(
     proposalsAtStart,
     votesAtStart,
   );
@@ -60,23 +60,23 @@ export async function runDistributionPipeline(
   const votesAtEnd = await dataSource.getVotesForProposals(
     proposalsAtEnd.map((p) => p.id),
   );
-  const activeDelegatesEnd = identifyActiveDelegates(
+  const activeVotersEnd = identifyActiveVoters(
     proposalsAtEnd,
     votesAtEnd,
   );
 
-  // Early exit: no active delegates at end of month
-  if (activeDelegatesEnd.size === 0) {
+  // Early exit: no active voters at end of month
+  if (activeVotersEnd.size === 0) {
     return emptyResult(month, monthStart, monthEnd, startBlock, endBlock);
   }
 
   // ── Step 4: Compute VP growth ────────────────────────────
   const vpStart = await dataSource.getAggregateVpAtTimestamp(
-    [...activeDelegatesStart],
+    [...activeVotersStart],
     monthStart,
   );
   const vpEnd = await dataSource.getAggregateVpAtTimestamp(
-    [...activeDelegatesEnd],
+    [...activeVotersEnd],
     monthEnd,
   );
   const growthPct = computeVpGrowthPct(vpStart, vpEnd);
@@ -84,42 +84,42 @@ export async function runDistributionPipeline(
   // ── Step 5: Select pool tier ─────────────────────────────
   const tier = selectPoolTier(growthPct);
 
-  // ── Step 6: Compute TWAP VP for each active delegate ─────
-  const delegateTWAPs = new Map<Address, Wei>();
-  for (const delegate of activeDelegatesEnd) {
+  // ── Step 6: Compute AVP (TWAP VP) for each active voter ──
+  const voterAVPs = new Map<Address, Wei>();
+  for (const voter of activeVotersEnd) {
     const vpEvents = await dataSource.getVpEventsInRange(
-      delegate,
+      voter,
       monthStart,
       monthEnd,
     );
-    const initialVp = await dataSource.getVpAtTimestamp(delegate, monthStart);
-    const twap = computeTWAP(vpEvents, monthStart, monthEnd, initialVp);
-    delegateTWAPs.set(delegate, twap);
+    const initialVp = await dataSource.getVpAtTimestamp(voter, monthStart);
+    const avp = computeTWAP(vpEvents, monthStart, monthEnd, initialVp);
+    voterAVPs.set(voter, avp);
   }
 
-  // ── Step 7: Allocate delegate rewards ────────────────────
-  const delegateRewards = computeDelegateRewards(delegateTWAPs, tier.poolSize);
+  // ── Step 7: Allocate voter rewards ───────────────────────
+  const voterRewards = computeVoterRewards(voterAVPs, tier.poolSize);
 
-  // ── Step 8: Identify eligible delegators ─────────────────
-  const activeDelegatesList = [...activeDelegatesEnd];
+  // ── Step 8: Identify eligible token holders ──────────────
+  const activeVotersList = [...activeVotersEnd];
   const directDelegations = await dataSource.getDelegationsToAtTimestamp(
-    activeDelegatesList,
+    activeVotersList,
     monthEnd,
   );
   const multiDelegatePositions = await dataSource.getPositionsAtTimestamp(
-    activeDelegatesList,
+    activeVotersList,
     monthEnd,
   );
 
-  // Hedgey: find which vesting contracts are delegating to active delegates
+  // Hedgey: find which vesting contracts are delegating to active voters
   const vestingContractAddresses = await dataSource.getVestingContractAddresses();
   const vestingContractSet = new Set(vestingContractAddresses);
 
-  // Cross-reference: which delegators in directDelegations are vesting contracts
+  // Cross-reference: which token holders in directDelegations are vesting contracts
   const matchingContracts = new Set<Address>();
   for (const d of directDelegations) {
-    if (vestingContractSet.has(d.delegator)) {
-      matchingContracts.add(d.delegator);
+    if (vestingContractSet.has(d.tokenHolder)) {
+      matchingContracts.add(d.tokenHolder);
     }
   }
 
@@ -144,23 +144,23 @@ export async function runDistributionPipeline(
     }
   }
 
-  const eligible = resolveEligibleDelegators(
+  const eligible = resolveEligibleTokenHolders(
     directDelegations,
     multiDelegatePositions,
     vestingContractSet,
     nftOwnerMap,
-    activeDelegatesEnd,
+    activeVotersEnd,
   );
 
   // ── Step 9: Consolidate ──────────────────────────────────
   const aliases = await dataSource.getAliases();
-  const consolidated = consolidateDelegators(eligible, aliases);
+  const consolidated = consolidateTokenHolders(eligible, aliases);
 
-  // ── Step 10: Compute TWB per delegator ───────────────────
+  // ── Step 10: Compute TWB per token holder ────────────────
   const twbWindowStart = seconds(
     (monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint),
   );
-  const delegatorTWBs = new Map<Address, Wei>();
+  const tokenHolderTWBs = new Map<Address, Wei>();
 
   for (const group of consolidated) {
     let totalTwb = 0n;
@@ -194,14 +194,14 @@ export async function runDistributionPipeline(
           const erc1155Events =
             await dataSource.getErc1155BalanceEventsInRange(
               entry.originalAddress,
-              entry.delegateAddress,
+              entry.voterAddress,
               twbWindowStart,
               monthEnd,
             );
           const initialErc1155Balance =
             await dataSource.getErc1155BalanceAtTimestamp(
               entry.originalAddress,
-              entry.delegateAddress,
+              entry.voterAddress,
               twbWindowStart,
             );
           twb = computeTimeWeightedBalance(
@@ -218,7 +218,7 @@ export async function runDistributionPipeline(
         case "hedgey": {
           if (entry.vestingPlanId === undefined) {
             throw new Error(
-              `Missing vestingPlanId for Hedgey delegator ${entry.resolvedAddress}`,
+              `Missing vestingPlanId for Hedgey token holder ${entry.resolvedAddress}`,
             );
           }
 
@@ -250,18 +250,18 @@ export async function runDistributionPipeline(
     }
 
     if (totalTwb > 0n) {
-      delegatorTWBs.set(group.resolvedAddress, wei(totalTwb));
+      tokenHolderTWBs.set(group.resolvedAddress, wei(totalTwb));
     }
   }
 
-  // ── Step 11: Allocate delegator rewards ──────────────────
-  const delegatorRewards = computeDelegatorRewards(
-    delegatorTWBs,
+  // ── Step 11: Allocate token-holder rewards ───────────────
+  const tokenHolderRewards = computeTokenHolderRewards(
+    tokenHolderTWBs,
     tier.poolSize,
   );
 
   // ── Step 12: Combine rewards ─────────────────────────────
-  const combined = combineRewards(delegateRewards, delegatorRewards);
+  const combined = combineRewards(voterRewards, tokenHolderRewards);
 
   // ── Step 13: Apply threshold ─────────────────────────────
   const { directPayouts, lotteryEntries } = applyMinimumThreshold(combined);
@@ -283,9 +283,9 @@ export async function runDistributionPipeline(
     vpGrowthPct: growthPct.toFixed(2),
     tier: POOL_TIERS_INDEX(tier),
     poolSize: tier.poolSize,
-    delegateCap: tier.delegateCap,
-    delegatorCap: tier.delegatorCap,
-    activeDelegateCount: activeDelegatesEnd.size,
+    voterCap: tier.voterCap,
+    tokenHolderCap: tier.tokenHolderCap,
+    activeVoterCount: activeVotersEnd.size,
     finalizedProposalIds: proposalsAtEnd.map((p) => p.id),
   };
 
@@ -313,7 +313,7 @@ export async function runDistributionPipeline(
 import { POOL_TIERS } from "./config.js";
 import type {
   BlockNumber,
-  EligibleDelegator,
+  EligibleTokenHolder,
   WalletAlias,
 } from "./types.js";
 
@@ -342,9 +342,9 @@ function emptyResult(
       vpGrowthPct: "0.00",
       tier: 0,
       poolSize: wei(0n),
-      delegateCap: wei(0n),
-      delegatorCap: wei(0n),
-      activeDelegateCount: 0,
+      voterCap: wei(0n),
+      tokenHolderCap: wei(0n),
+      activeVoterCount: 0,
       finalizedProposalIds: [],
     },
     rewards: [],
@@ -354,7 +354,7 @@ function emptyResult(
 }
 
 function buildDeduplicationLog(
-  eligible: readonly EligibleDelegator[],
+  eligible: readonly EligibleTokenHolder[],
   aliases: readonly WalletAlias[],
   _nftOwnerMap: ReadonlyMap<
     Address,
@@ -366,12 +366,11 @@ function buildDeduplicationLog(
     .filter((e) => e.source === "multidelegate")
     .map((e) => ({
       erc1155Holder: e.originalAddress,
-      delegate: e.delegateAddress,
-      amount: wei(0n), // position balance not tracked in EligibleDelegator; logged for dedup tracking
+      voter: e.voterAddress,
+      amount: wei(0n),
     }));
 
   // Hedgey entries: map vesting contract -> NFT owner + planId
-  // We reconstruct from the eligible list and nftOwnerMap
   const hedgeyEntries = eligible.filter((e) => e.source === "hedgey");
   const hedgey = hedgeyEntries.map((e) => ({
     vestingContract: e.originalAddress,
@@ -391,21 +390,21 @@ function buildDeduplicationLog(
 export function validateDistributionResult(result: DistributionResult): void {
   let totalDistributed = 0n;
   const poolSize = result.metadata.poolSize as bigint;
-  const delegateCap = result.metadata.delegateCap as bigint;
-  const delegatorCap = result.metadata.delegatorCap as bigint;
+  const voterCap = result.metadata.voterCap as bigint;
+  const tokenHolderCap = result.metadata.tokenHolderCap as bigint;
 
   for (const reward of result.rewards) {
-    const delegateReward = reward.delegateReward as bigint;
-    const delegatorReward = reward.delegatorReward as bigint;
+    const voterReward = reward.voterReward as bigint;
+    const tokenHolderReward = reward.tokenHolderReward as bigint;
     const total = reward.total as bigint;
 
-    if (delegateReward > delegateCap) {
-      throw new Error(`Delegate reward exceeds cap for ${reward.address}`);
+    if (voterReward > voterCap) {
+      throw new Error(`Voter reward exceeds cap for ${reward.address}`);
     }
-    if (delegatorReward > delegatorCap) {
-      throw new Error(`Delegator reward exceeds cap for ${reward.address}`);
+    if (tokenHolderReward > tokenHolderCap) {
+      throw new Error(`Token-holder reward exceeds cap for ${reward.address}`);
     }
-    if (delegateReward + delegatorReward !== total) {
+    if (voterReward + tokenHolderReward !== total) {
       throw new Error(`Combined reward total mismatch for ${reward.address}`);
     }
 

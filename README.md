@@ -1,6 +1,6 @@
 # ENS Delegation Incentives System
 
-Monorepo for computing and distributing monthly ENS delegation incentive rewards. Active delegates and their delegators earn pro-rata shares of a tier-based reward pool determined by month-over-month growth in aggregate delegated voting power.
+Monorepo for computing and distributing monthly ENS delegation incentive rewards. Active voters and their token holders earn pro-rata shares of a tier-based reward pool determined by month-over-month growth in the total voting power held by active voters.
 
 ## Architecture
 
@@ -48,11 +48,10 @@ Swagger UI at `GET /docs`. OpenAPI 3.1 spec at `GET /doc`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/health` | `{"status": "ok"}` |
-| `GET` | `/delegates/active` | Addresses that voted on ≥ 7 of the last 10 proposals |
-| `GET` | `/eligibility/{address}` | Is this address an active delegate or delegator to one? |
+| `GET` | `/voters/active` | Addresses that voted on ≥ 7 of the last 10 proposals |
+| `GET` | `/eligibility/{address}` | Is this address an active voter or a token holder of one? |
 | `GET` | `/tiers/progression` | Current tier, VP needed for next tier, all tier thresholds |
 | `GET` | `/apy/{address}` | Estimated monthly reward and annualized APY |
-| `POST` | `/distributions/{month}/compute` | Run the pipeline for `YYYY-MM` |
 | `GET` | `/distributions/{month}` | Fetch a stored distribution (JSON) |
 | `GET` | `/distributions/{month}/csv` | Download distribution as CSV |
 
@@ -64,7 +63,7 @@ The backend also starts an automatic distribution scheduler in normal runs. It w
 |---|---|
 | [docs/algorithm.md](./docs/algorithm.md) | Full pipeline spec: each step, all formulas, pool tiers, TWB, cap redistribution, lottery |
 | [docs/integrations.md](./docs/integrations.md) | Protocol integrations: contracts indexed, events handled, how data feeds the pipeline |
-| [OPERATOR.md](./OPERATOR.md) | Operator guide: running a distribution cycle, CSV export, monitoring |
+| [OPERATOR.md](./OPERATOR.md) | Operator guide: running a distribution round, CSV export, monitoring |
 
 ## Tech Stack
 

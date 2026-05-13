@@ -8,14 +8,14 @@ import {
 } from "ponder:schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import {
-  DELEGATE_POOL_BPS,
-  DELEGATOR_POOL_BPS,
+  VOTER_POOL_BPS,
+  TOKEN_HOLDER_POOL_BPS,
   BPS_BASE,
-  MIN_PAYOUT,
+  MIN_REWARD_THRESHOLD,
   type Address,
 } from "@ens-dis/domain";
 import {
-  fetchActiveDelegates,
+  fetchActiveVoters,
   fetchCurrentVpGrowth,
   normalizeAddress,
   findTierIndex,
@@ -29,8 +29,8 @@ const AddressParam = z.object({
 });
 
 const RewardsResponse = z.object({
-  delegateReward: z.string().openapi({ example: "500000000000000000000" }),
-  delegatorReward: z.string().openapi({ example: "150000000000000000000" }),
+  voterReward: z.string().openapi({ example: "500000000000000000000" }),
+  tokenHolderReward: z.string().openapi({ example: "150000000000000000000" }),
   combinedReward: z.string().openapi({ example: "650000000000000000000" }),
   aboveThreshold: z.boolean(),
   currentTier: z.number().openapi({ example: 1 }),
@@ -42,7 +42,7 @@ const route = createRoute({
   tags: ["Rewards"],
   summary: "Estimate rewards for an address",
   description:
-    "Estimates delegate and delegator rewards for the current month based on current VP, delegation state, and tier.",
+    "Estimates voter and token-holder rewards for the current month based on current VP, delegation state, and tier.",
   request: { params: AddressParam },
   responses: {
     200: {
@@ -71,49 +71,49 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeDelegates } = await fetchActiveDelegates(db);
+    const { activeVoters } = await fetchActiveVoters(db);
     const { tier, growthPct } = await fetchCurrentVpGrowth(
       db,
-      activeDelegates,
-      activeDelegates,
+      activeVoters,
+      activeVoters,
     );
-    const totalVp = await getActiveVpTotal(db, activeDelegates);
+    const totalVp = await getActiveVpTotal(db, activeVoters);
 
-    let delegateReward = 0n;
-    let delegatorReward = 0n;
+    let voterReward = 0n;
+    let tokenHolderReward = 0n;
 
-    // --- Delegate reward ---
-    if (activeDelegates.has(address)) {
-      const delegatePool = (tier.poolSize * DELEGATE_POOL_BPS) / BPS_BASE;
+    // --- Voter reward ---
+    if (activeVoters.has(address)) {
+      const voterSubPool = (tier.poolSize * VOTER_POOL_BPS) / BPS_BASE;
 
       const vpRows = await db
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
-        .where(eq(ensVotingPowerSnapshot.accountId, address))
+        .where(eq(ensVotingPowerSnapshot.voterId, address))
         .orderBy(desc(ensVotingPowerSnapshot.timestamp))
         .limit(1);
 
       const myVp = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
 
       if (totalVp > 0n) {
-        const rawReward = (delegatePool * myVp) / totalVp;
-        delegateReward = rawReward < tier.delegateCap ? rawReward : tier.delegateCap;
+        const rawReward = (voterSubPool * myVp) / totalVp;
+        voterReward = rawReward < tier.voterCap ? rawReward : tier.voterCap;
       }
     }
 
-    // --- Delegator reward ---
+    // --- Token-holder reward ---
     let delegatingToActive = false;
     let myBalance = 0n;
 
     const delegationRows = await db
-      .select({ delegateId: ensDelegation.delegateId })
+      .select({ voterId: ensDelegation.voterId })
       .from(ensDelegation)
       .where(eq(ensDelegation.id, address))
       .limit(1);
 
     if (delegationRows.length > 0) {
-      const delegate = delegationRows[0].delegateId as Address;
-      if (activeDelegates.has(delegate)) {
+      const voter = delegationRows[0].voterId as Address;
+      if (activeVoters.has(voter)) {
         delegatingToActive = true;
 
         const balanceRows = await db
@@ -129,7 +129,7 @@ app.openapi(route, async (c) => {
 
     const multiPositions = await db
       .select({
-        delegate: multiDelegatePosition.delegate,
+        voter: multiDelegatePosition.voter,
         amount: multiDelegatePosition.amount,
       })
       .from(multiDelegatePosition)
@@ -141,27 +141,27 @@ app.openapi(route, async (c) => {
       );
 
     for (const pos of multiPositions) {
-      if (activeDelegates.has(pos.delegate as Address)) {
+      if (activeVoters.has(pos.voter as Address)) {
         delegatingToActive = true;
         myBalance += BigInt(pos.amount);
       }
     }
 
     if (delegatingToActive && myBalance > 0n && totalVp > 0n) {
-      const delegatorPool = (tier.poolSize * DELEGATOR_POOL_BPS) / BPS_BASE;
-      const rawReward = (delegatorPool * myBalance) / totalVp;
-      delegatorReward =
-        rawReward < tier.delegatorCap ? rawReward : tier.delegatorCap;
+      const tokenHolderSubPool = (tier.poolSize * TOKEN_HOLDER_POOL_BPS) / BPS_BASE;
+      const rawReward = (tokenHolderSubPool * myBalance) / totalVp;
+      tokenHolderReward =
+        rawReward < tier.tokenHolderCap ? rawReward : tier.tokenHolderCap;
     }
 
-    const combinedReward = delegateReward + delegatorReward;
+    const combinedReward = voterReward + tokenHolderReward;
 
     return c.json(
       {
-        delegateReward: delegateReward.toString(),
-        delegatorReward: delegatorReward.toString(),
+        voterReward: voterReward.toString(),
+        tokenHolderReward: tokenHolderReward.toString(),
         combinedReward: combinedReward.toString(),
-        aboveThreshold: combinedReward >= MIN_PAYOUT,
+        aboveThreshold: combinedReward >= MIN_REWARD_THRESHOLD,
         currentTier: findTierIndex(growthPct),
       },
       200,

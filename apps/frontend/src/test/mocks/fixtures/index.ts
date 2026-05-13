@@ -1,9 +1,9 @@
 export { statusFixture } from './status'
-export { delegatesFixture } from './delegates'
+export { votersFixture } from './voters'
 export { roundsFixture } from './rounds'
 export {
-  eligibleDelegateFixture,
-  eligibleDelegatorFixture,
+  eligibleActiveVoterFixture,
+  eligibleTokenHolderFixture,
   ineligibleFixture,
 } from './eligibility'
 export { apyFixture } from './apy'

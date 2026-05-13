@@ -488,7 +488,7 @@ function bucketList(entries: AddressLotteryEntry[]): string {
 function hasDirectReward(round: RoundDetailResponse): boolean {
   const reward = round.addressReward
   if (!reward) return false
-  return Number(reward.delegateRewardEns) > 0 || Number(reward.tokenHolderRewardEns) > 0
+  return Number(reward.voterRewardEns) > 0 || Number(reward.tokenHolderRewardEns) > 0
 }
 
 function buildAddressLotteryInsight(
@@ -1101,9 +1101,9 @@ export function RoundDetailPage() {
       <Section>
         <SectionHeader>
           <Eyebrow>Delegate Rewards</Eyebrow>
-          <RowCount>{rewardCountLabel(round.data.topDelegateRewards.length)}</RowCount>
+          <RowCount>{rewardCountLabel(round.data.topVoterRewards.length)}</RowCount>
         </SectionHeader>
-        <RankingTable rows={round.data.topDelegateRewards} />
+        <RankingTable rows={round.data.topVoterRewards} />
       </Section>
 
       <Section>

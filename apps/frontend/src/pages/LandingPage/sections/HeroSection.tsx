@@ -216,7 +216,7 @@ export function HeroSection({ currentApyPct }: HeroSectionProps) {
         Rewards are automatic, gas is sponsored.
         </Subtitle>
         <Actions>
-          <RouterLink to="/delegates">
+          <RouterLink to="/voters">
             <Button colorStyle="bluePrimary">
               Delegate Now &rarr;<FreeBadge>Free</FreeBadge>
             </Button>

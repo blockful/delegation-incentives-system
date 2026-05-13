@@ -18,8 +18,8 @@ function makeResponse(
     poolSizeEns: status === "skipped" ? null : "8000.000000000000000000",
     totalDistributed: status === "skipped" ? null : "155000000000000000000",
     totalDistributedEns: status === "skipped" ? null : "155.000000000000000000",
-    activeDelegateCount: status === "skipped" ? null : 42,
-    eligibleDelegatorCount: status === "skipped" ? null : 312,
+    activeVoterCount: status === "skipped" ? null : 42,
+    eligibleTokenHolderCount: status === "skipped" ? null : 312,
     rewardCount: status === "skipped" ? null : 3,
     lotteryBucketCount: status === "skipped" ? null : 1,
   };

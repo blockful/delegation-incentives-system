@@ -1,13 +1,13 @@
 import type { Address, Proposal, Vote } from "./types.js";
-import { ACTIVE_THRESHOLD, PROPOSAL_WINDOW } from "./config.js";
+import { ACTIVE_VOTE_THRESHOLD, PROPOSAL_WINDOW_SIZE } from "./config.js";
 
 /**
  * From a list of finalized proposals, take the last N (sorted by finalizedTimestamp desc).
- * Returns up to PROPOSAL_WINDOW proposals.
+ * Returns up to PROPOSAL_WINDOW_SIZE proposals.
  */
 export function getLastFinalizedProposals(
   proposals: readonly Proposal[],
-  limit: number = PROPOSAL_WINDOW,
+  limit: number = PROPOSAL_WINDOW_SIZE,
 ): Proposal[] {
   return [...proposals]
     .sort((a, b) => {
@@ -20,17 +20,16 @@ export function getLastFinalizedProposals(
 
 /**
  * Given the last N finalized proposals and all votes cast on them,
- * identify delegates who voted on >= ACTIVE_THRESHOLD of them.
- * Returns a Set of active delegate addresses.
+ * identify voters who voted on >= ACTIVE_VOTE_THRESHOLD of them.
+ * Returns a Set of active-voter addresses.
  */
-export function identifyActiveDelegates(
+export function identifyActiveVoters(
   proposals: readonly Proposal[],
   votes: readonly Vote[],
-  threshold: number = ACTIVE_THRESHOLD,
+  threshold: number = ACTIVE_VOTE_THRESHOLD,
 ): Set<Address> {
   const proposalIds = new Set(proposals.map((p) => p.id));
 
-  // Count how many distinct proposals each voter voted on.
   const voteCounts = new Map<Address, Set<string>>();
 
   for (const vote of votes) {

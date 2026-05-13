@@ -11,7 +11,7 @@ interface DisconnectedLandingProps {
 }
 
 export function DisconnectedLanding({ tierData, roundData }: DisconnectedLandingProps) {
-  const currentApyPct = tierData.maxDelegatorApyPct
+  const currentApyPct = tierData.maxTokenHolderApyPct
 
   return (
     <>

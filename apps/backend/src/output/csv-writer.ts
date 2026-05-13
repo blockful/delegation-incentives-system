@@ -1,18 +1,18 @@
 import type { DistributionResult } from "@ens-dis/domain";
 
 const CSV_HEADER =
-  "address,delegate_reward,delegator_reward,combined_reward,role,payout_type";
+  "address,voter_reward,token_holder_reward,combined_reward,role,payout_type";
 
 /**
  * Determine the role of a reward recipient based on their reward breakdown.
  */
 function getRole(
-  delegateReward: bigint,
-  delegatorReward: bigint,
+  voterReward: bigint,
+  tokenHolderReward: bigint,
 ): string {
-  if (delegateReward > 0n && delegatorReward > 0n) return "both";
-  if (delegateReward > 0n) return "delegate";
-  return "delegator";
+  if (voterReward > 0n && tokenHolderReward > 0n) return "both";
+  if (voterReward > 0n) return "voter";
+  return "token_holder";
 }
 
 /**
@@ -37,7 +37,7 @@ function escapeCsvField(value: string): string {
 /**
  * Serialize a DistributionResult to CSV format.
  *
- * Columns: address, delegate_reward, delegator_reward, combined_reward, role, payout_type
+ * Columns: address, voter_reward, token_holder_reward, combined_reward, role, payout_type
  *
  * - All Wei values are serialized as decimal strings.
  * - Includes both direct reward recipients and lottery winners.
@@ -56,10 +56,10 @@ export function distributionToCsv(result: DistributionResult): string {
     lines.push(
       [
         escapeCsvField(reward.address),
-        reward.delegateReward.toString(),
-        reward.delegatorReward.toString(),
+        reward.voterReward.toString(),
+        reward.tokenHolderReward.toString(),
         reward.total.toString(),
-        getRole(reward.delegateReward, reward.delegatorReward),
+        getRole(reward.voterReward, reward.tokenHolderReward),
         getPayoutType(lotteryWinners.has(reward.address.toLowerCase())),
       ].join(","),
     );
@@ -78,7 +78,7 @@ export function distributionToCsv(result: DistributionResult): string {
           "0",
           "0",
           bucket.prize.toString(),
-          "delegator",
+          "token_holder",
           "lottery",
         ].join(","),
       );

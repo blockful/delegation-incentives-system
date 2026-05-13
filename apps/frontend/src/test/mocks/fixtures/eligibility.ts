@@ -1,21 +1,21 @@
 import type { EligibilityResponse } from '@/api/types'
 
-export const eligibleDelegateFixture: EligibilityResponse = {
+export const eligibleActiveVoterFixture: EligibilityResponse = {
   address: '0x1234567890abcdef1234567890abcdef12345678',
   ensName: null,
-  isActiveDelegate: true,
-  isDelegatorToActiveDelegate: false,
+  isActiveVoter: true,
+  isTokenHolderOfActiveVoter: false,
   eligible: true,
   delegatedTo: null,
   delegatedToEnsName: null,
   source: null,
 }
 
-export const eligibleDelegatorFixture: EligibilityResponse = {
+export const eligibleTokenHolderFixture: EligibilityResponse = {
   address: '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
   ensName: null,
-  isActiveDelegate: false,
-  isDelegatorToActiveDelegate: true,
+  isActiveVoter: false,
+  isTokenHolderOfActiveVoter: true,
   eligible: true,
   delegatedTo: '0x1234567890abcdef1234567890abcdef12345678',
   delegatedToEnsName: null,
@@ -25,8 +25,8 @@ export const eligibleDelegatorFixture: EligibilityResponse = {
 export const ineligibleFixture: EligibilityResponse = {
   address: '0x0000000000000000000000000000000000000001',
   ensName: null,
-  isActiveDelegate: false,
-  isDelegatorToActiveDelegate: false,
+  isActiveVoter: false,
+  isTokenHolderOfActiveVoter: false,
   eligible: false,
   delegatedTo: null,
   delegatedToEnsName: null,

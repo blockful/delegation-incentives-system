@@ -159,7 +159,7 @@ export function EarningsStrip({
   const shareText = `I'm earning ${apyPct}% APY on my ENS by delegating to an active voter. Join the ENS Incentives Program!`
 
   return (
-    <Card aria-label="Your earnings">
+    <Card aria-label="Your rewards">
       <EarningsBlock>
         <EarnedValue>+{streamingEarnings}</EarnedValue>
         <EarnedSubtitle>ENS earned so far</EarnedSubtitle>
@@ -189,7 +189,7 @@ export function EarningsStrip({
           $primary
           onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank')}
         >
-          𝕏 Share your earnings
+          𝕏 Share your rewards
         </ShareButton>
         <ShareButton
           onClick={() => window.open(`https://t.me/share/url?text=${encodeURIComponent(shareText)}`, '_blank')}

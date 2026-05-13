@@ -131,15 +131,15 @@ describe("selectPoolTier", () => {
     expect(tier.maxGrowthPct).toBe(10);
   });
 
-  it("delegate cap is 1% of pool size", () => {
+  it("voter cap is 1% of pool size", () => {
     for (const tier of POOL_TIERS) {
-      expect(tier.delegateCap).toBe(wei(tier.poolSize / 100n));
+      expect(tier.voterCap).toBe(wei(tier.poolSize / 100n));
     }
   });
 
-  it("delegator cap is 5% of pool size", () => {
+  it("token-holder cap is 5% of pool size", () => {
     for (const tier of POOL_TIERS) {
-      expect(tier.delegatorCap).toBe(wei((tier.poolSize * 5n) / 100n));
+      expect(tier.tokenHolderCap).toBe(wei((tier.poolSize * 5n) / 100n));
     }
   });
 

@@ -1,8 +1,11 @@
+import { useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { useEnsName, useEnsAddress } from 'wagmi'
+import { api } from '@/api'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
-import { useDelegate } from '@/features/delegates/useDelegate'
+import { useAsync } from '@/hooks/useAsync'
+import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -213,7 +216,7 @@ function isAddress(value: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(value)
 }
 
-export function DelegateProfilePage() {
+export function VoterProfilePage() {
   const { address: param } = useParams<{ address: string }>()
   const rawParam = param ?? ''
   const isEnsParam = !isAddress(rawParam)
@@ -224,8 +227,12 @@ export function DelegateProfilePage() {
   })
 
   const resolvedAddr = isEnsParam ? (resolvedAddress ?? '') : rawParam
-  const { delegate, loading, error } = useDelegate(resolvedAddr)
+  const { voter, loading, error } = useVoter(resolvedAddr)
   const walletState = useWalletState()
+
+  const fetchTiers = useCallback(() => api.tierProgression(), [])
+  const tiers = useAsync(fetchTiers)
+  const apyPct = tiers.data?.maxTokenHolderApyPct ?? null
 
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
@@ -236,30 +243,30 @@ export function DelegateProfilePage() {
     return <DelegateProfileSkeleton />
   }
 
-  if (error || !delegate) {
+  if (error || !voter) {
     return (
       <Page>
-        <BackLink to="/delegates">← All delegates</BackLink>
+        <BackLink to="/voters">← All voters</BackLink>
         <ErrorMessage>
-          {error ?? 'Delegate not found. They may not be an active delegate in the incentives program.'}
+          {error ?? 'Voter not found. They may not be an active voter in the incentives program.'}
         </ErrorMessage>
       </Page>
     )
   }
 
-  const ensName = delegate.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
+  const ensName = voter.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
   const isDelegated =
     walletState.status === 'delegated' &&
-    walletState.delegatedTo.toLowerCase() === delegate.address.toLowerCase()
+    walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
 
-  const votingPercentage = delegate.last10ProposalsVoted.length > 0
+  const votingPercentage = voter.last10ProposalsVoted.length > 0
     ? Math.round(
-        (delegate.last10ProposalsVoted.filter(Boolean).length /
-          delegate.last10ProposalsVoted.length) *
+        (voter.last10ProposalsVoted.filter(Boolean).length /
+          voter.last10ProposalsVoted.length) *
           100
       )
     : 0
-  const delegateUrl = getAnticaptureDelegateUrl(delegate.address)
+  const delegateUrl = getAnticaptureDelegateUrl(voter.address)
 
   const handleDelegate = () => {
     // TODO: call relayer for gasless delegation
@@ -267,13 +274,13 @@ export function DelegateProfilePage() {
 
   return (
     <Page>
-      <BackLink to="/delegates">← All delegates</BackLink>
+      <BackLink to="/voters">← All voters</BackLink>
 
       <HeroCard>
         <Identity
-          address={delegate.address}
+          address={voter.address}
           ensName={ensName}
-          avatarUrl={delegate.avatarUrl}
+          avatarUrl={voter.avatarUrl}
           showAvatar
           avatarSize={96}
           layout="stack"
@@ -281,10 +288,13 @@ export function DelegateProfilePage() {
         />
         <CtaWrapper>
           {isDelegated ? (
-            <DelegatedStatus>Delegated</DelegatedStatus>
+            <DelegatedStatus>
+              {apyPct ? `Delegated · Earn up to ${apyPct}% APY` : 'Delegated'}
+            </DelegatedStatus>
           ) : (
             <DelegateAction type="button" onClick={handleDelegate}>
-              Delegate <FreeTag>Free</FreeTag>
+              {apyPct ? `Delegate — Earn up to ${apyPct}% APY` : 'Delegate'}{' '}
+              <FreeTag>Free</FreeTag>
             </DelegateAction>
           )}
           {!isDelegated && <CtaHint>Gas sponsored by the incentives program</CtaHint>}
@@ -293,20 +303,20 @@ export function DelegateProfilePage() {
 
       <StatsGrid>
         <StatCard>
-          <StatValue>{formatVotingPower(delegate.votingPower)} ENS</StatValue>
+          <StatValue>{formatVotingPower(voter.votingPower)} ENS</StatValue>
           <StatLabel>Voting Power</StatLabel>
         </StatCard>
         <StatCard>
-          <StatValue>{delegate.delegatorCount}</StatValue>
-          <StatLabel>Delegators</StatLabel>
+          <StatValue>{voter.tokenHolderCount}</StatValue>
+          <StatLabel>Token holders</StatLabel>
         </StatCard>
         <StatCard>
           <StatValue>{votingPercentage}%</StatValue>
           <StatLabel>Participation</StatLabel>
         </StatCard>
-        {delegate.activeSince && (
+        {voter.activeSince && (
           <StatCard>
-            <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
+            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
             <StatLabel>Active since</StatLabel>
           </StatCard>
         )}
@@ -314,7 +324,7 @@ export function DelegateProfilePage() {
 
       <VotingCard>
         <CardTitle>Voting Record (last 10 proposals)</CardTitle>
-        <ProposalBar votes={delegate.last10ProposalsVoted} />
+        <ProposalBar votes={voter.last10ProposalsVoted} />
       </VotingCard>
 
       <ExternalLink

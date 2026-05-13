@@ -4,6 +4,8 @@ This document describes every on-chain contract the system indexes, what events 
 
 The indexer runs on Ponder (v0.16) against Ethereum mainnet. Configuration is in `apps/backend/ponder.config.ts`.
 
+> **Note on protocol vs. app terminology.** Event signatures and contract-level fields use the on-chain protocol terms (`delegator`, `delegate`). Adapters map them to our app vocabulary — **voter** (the recipient of delegated voting power) and **token holder** (the holder of delegated tokens) — at the boundary with the domain pipeline.
+
 ---
 
 ## ENS Token
@@ -23,28 +25,28 @@ Tracks the ENS token balance of every address. On each transfer:
 
 Mints (`from = 0x0`) only update the receiver. Burns (`to = 0x0`) only update the sender.
 
-**Why this matters for the pipeline**: `ens_balance_event` is the source for the 180-day time-weighted balance (TWB) of delegators (Step 9). The TWB uses the history of balance changes, not the current balance, so point-in-time balance snapshots are insufficient.
+**Why this matters for the pipeline**: `ens_balance_event` is the source for the 180-day time-weighted balance (TWB) of token holders (Step 9). The TWB uses the history of balance changes, not the current balance, so point-in-time balance snapshots are insufficient.
 
 #### `DelegateChanged(delegator, fromDelegate, toDelegate)`
 
-Records that `delegator` re-delegated from `fromDelegate` to `toDelegate`. Two writes:
+Records that the token holder `delegator` re-delegated from `fromDelegate` to `toDelegate`. Two writes:
 
-1. `ens_delegation` (upsert by delegator): the current canonical delegate for this address.
+1. `ens_delegation` (upsert by token-holder address): the current canonical voter for this token holder.
 2. `ens_delegation_event` (append-only): full history of delegation changes, including the delegated value at the time of the event (read from `ens_balance` at event time).
 
-**Why this matters**: `ens_delegation_event` is used by `DelegationAdapter.getActiveDelegations` to determine who was delegating to an active delegate at `monthEnd`. The adapter loads all events with `timestamp ≤ monthEnd`, takes the **latest per delegator** (sorted by timestamp DESC), and filters to those whose latest delegation pointed to an active delegate — correctly excluding delegators who switched away mid-month.
+**Why this matters**: `ens_delegation_event` is used by `DelegationAdapter.getActiveDelegations` to determine who was delegating to an active voter at `monthEnd`. The adapter loads all events with `timestamp ≤ monthEnd`, takes the **latest per token holder** (sorted by timestamp DESC), and filters to those whose latest delegation pointed to an active voter — correctly excluding token holders who switched away mid-month.
 
 #### `DelegateVotesChanged(delegate, previousBalance, newBalance)`
 
-Records a change in a delegate's total voting power (triggered by transfers or delegation changes). Each event inserts a row in `ens_voting_power_snapshot` with:
-- `accountId` (the delegate)
+Records a change in a voter's total voting power (triggered by transfers or delegation changes). Each event inserts a row in `ens_voting_power_snapshot` with:
+- `accountId` (the voter)
 - `votingPower` (new cumulative VP)
 - `delta` (signed change)
 - `timestamp`
 
 **Why this matters**: `ens_voting_power_snapshot` is the source for:
-- Individual delegate AVP over the calendar month via TWAP (pipeline Step 5)
-- Point-in-time aggregate VP at month boundaries for MoM tier selection (pipeline Step 4) via `VotingPowerAdapter.getAggregateVotingPowerAt`
+- Individual active-voter AVP over the calendar month via TWAP (pipeline Step 5)
+- Point-in-time total VP at month boundaries for MoM tier selection (pipeline Step 4) via `VotingPowerAdapter.getAggregateVotingPowerAt`
 - Live APY estimates and tier progression via the same point-in-time query
 
 ---
@@ -67,13 +69,13 @@ Both are handled identically (the `WithParams` variant is an extended version wi
 - `support`: 0 = Against, 1 = For, 2 = Abstain
 - `weight`: voting power at the time of the vote
 
-**Why this matters**: `governance_vote` is consumed by `VoteAdapter.getVotesForProposals` in pipeline Step 2, which then feeds `identifyActiveDelegates` (Step 3). All three support values count — a delegate who votes Against or Abstains still satisfies the activity threshold.
+**Why this matters**: `governance_vote` is consumed by `VoteAdapter.getVotesForProposals` in pipeline Step 2, which then feeds `identifyActiveVoters` (Step 3). All three support values count — a voter who votes Against or Abstains still satisfies the activity threshold.
 
 #### `ProposalExecuted(proposalId)`, `ProposalDefeated(proposalId)`, `ProposalCanceled(proposalId)`
 
 Update the `status` field of the corresponding `governance_proposal` row to `"executed"`, `"defeated"`, or `"canceled"`.
 
-**Why this matters**: `ProposalAdapter.getRecentProposals` filters to `status != "active"` — only finalized proposals count toward the activity threshold. This prevents the count from changing mid-vote as delegates rush to vote before a proposal closes.
+**Why this matters**: `ProposalAdapter.getRecentProposals` filters to `status != "active"` — only finalized proposals count toward the activity threshold. This prevents the count from changing mid-vote as voters rush to vote before a proposal closes.
 
 ---
 
@@ -83,21 +85,21 @@ Update the `status` field of the corresponding `governance_proposal` row to `"ex
 **Start block**: 22,140,079
 **Handler**: `apps/backend/src/handlers/multiDelegate.ts`
 
-ERC20MultiDelegate allows a single holder to split their ENS delegation across multiple delegates. It works by deploying a lightweight proxy contract per (holder, delegate) pair. The proxy holds the ENS tokens and delegates them, while the holder retains economic ownership via ERC1155 tokens where each token ID encodes the delegate address.
+ERC20MultiDelegate allows a single holder to split their ENS delegation across multiple voters. It works by deploying a lightweight proxy contract per (holder, voter) pair. The proxy holds the ENS tokens and delegates them, while the holder retains economic ownership via ERC1155 tokens where each token ID encodes the voter address.
 
 ### Events
 
 #### `ProxyDeployed(delegate, proxyAddress)`
 
-Records that a proxy was deployed for `delegate` at `proxyAddress`. Stored in `multi_delegate_proxy`.
+Records that a proxy was deployed for the voter `delegate` at `proxyAddress`. Stored in `multi_delegate_proxy`.
 
-This is used to resolve proxy addresses back to their delegate during position tracking.
+This is used to resolve proxy addresses back to their voter during position tracking.
 
 #### `TransferSingle(operator, from, to, id, value)` and `TransferBatch(operator, from, to, ids, values)`
 
-The ERC1155 token ID encodes the delegate address (the lower 160 bits are the delegate's address). These events represent transfers of delegation positions.
+The ERC1155 token ID encodes the voter address (the lower 160 bits are the voter's address). These events represent transfers of delegation positions.
 
-**`from = 0x0`** (mint): a new delegation position is being created for `to`. An `onConflictDoUpdate` upsert accumulates `amount` for the `(toAddress, delegateAddress)` position in `multi_delegate_position`.
+**`from = 0x0`** (mint): a new delegation position is being created for `to`. An `onConflictDoUpdate` upsert accumulates `amount` for the `(toAddress, voterAddress)` position in `multi_delegate_position`.
 
 **`to = 0x0`** (burn): the position is being closed or reduced. The `amount` is decremented; if it reaches `0`, both the `multi_delegate_position` row and the corresponding `protocol_mapping` row are deleted (the stale mapping would otherwise persist and incorrectly deduplicate the former holder).
 
@@ -105,13 +107,13 @@ The ERC1155 token ID encodes the delegate address (the lower 160 bits are the de
 
 For each active `to` position, a `protocol_mapping` row is upserted:
 ```
-id:              multi_delegate-{toAddress}-{delegateAddress}
-childAddress:    proxyAddress (if a proxy exists for this delegate) or delegateAddress
+id:              multi_delegate-{toAddress}-{voterAddress}
+childAddress:    proxyAddress (if a proxy exists for this voter) or voterAddress
 operatorAddress: toAddress
 protocol:        "multi_delegate"
 ```
 
-**Why this matters for the pipeline**: When the pipeline sees that a proxy address holds ENS tokens, it needs to know the proxy's economic owner. `protocol_mapping` (populated here) provides that mapping. In Step 10, `consolidateDelegators` resolves proxy addresses to operators, merging their TWBs before cap enforcement. Without this, a holder using ERC20MultiDelegate would appear as multiple separate participants instead of one entity.
+**Why this matters for the pipeline**: When the pipeline sees that a proxy address holds ENS tokens, it needs to know the proxy's economic owner. `protocol_mapping` (populated here) provides that mapping. In Step 10, `consolidateTokenHolders` resolves proxy addresses to operators, merging their TWBs before cap enforcement. Without this, a holder using ERC20MultiDelegate would appear as multiple separate participants instead of one entity.
 
 #### `DelegationProcessed(owner, from, to, amount)`
 
@@ -168,9 +170,9 @@ Ponder handler (apps/backend/src/handlers/)
       ▼
 PostgreSQL tables (via ponder:schema)
       │
-      ├─ ens_balance_event        ──► BalanceAdapter       ──► Delegator TWB (Step 9)
+      ├─ ens_balance_event        ──► BalanceAdapter       ──► Token-holder TWB (Step 9)
       ├─ ens_delegation_event     ──► DelegationAdapter    ──► Active delegations (Step 7)
-      ├─ ens_voting_power_snapshot──► VotingPowerAdapter   ──► point-in-time AVP (Step 4), TWAP AVP (Step 5)
+      ├─ ens_voting_power_snapshot──► VotingPowerAdapter   ──► point-in-time total VP (Step 4), TWAP AVP (Step 5)
       ├─ governance_proposal      ──► ProposalAdapter      ──► Recent proposals (Step 2)
       ├─ governance_vote          ──► VoteAdapter          ──► Votes (Step 2)
       └─ protocol_mapping         ──► ProtocolMappingAdapter──► Consolidation (Step 10)
@@ -184,4 +186,4 @@ The `wallet_alias` table is not populated by any handler — it is managed manua
 
 All addresses are stored and queried in **lowercase** throughout the system. The `normalizeAddress` helper in `apps/backend/src/common/address.ts` applies `toLowerCase()` before every write. Adapters also normalize incoming query parameters. This prevents case-sensitivity mismatches when cross-referencing addresses across tables.
 
-The `tokenIdToAddress` helper decodes ERC1155 token IDs from ERC20MultiDelegate into their corresponding delegate address (the token ID is the delegate address cast to uint256).
+The `tokenIdToAddress` helper decodes ERC1155 token IDs from ERC20MultiDelegate into their corresponding voter address (the token ID is the voter address cast to uint256).

@@ -411,7 +411,7 @@ export function StatsBarSkeleton() {
   )
 }
 
-const DelegateGrid = styled(SkeletonRegion)`
+const VoterGrid = styled(SkeletonRegion)`
   display: grid;
   grid-template-columns: 1fr;
   gap: ${tokens.spacing.lg};
@@ -421,7 +421,7 @@ const DelegateGrid = styled(SkeletonRegion)`
   }
 `
 
-function DelegateCardSkeleton() {
+function VoterCardSkeleton() {
   return (
     <SkeletonCard $padding={tokens.spacing.xl} $gap={tokens.spacing.lg}>
       <SkeletonInline>
@@ -452,13 +452,13 @@ function DelegateCardSkeleton() {
   )
 }
 
-export function DelegateCardsSkeleton() {
+export function VoterCardsSkeleton() {
   return (
-    <DelegateGrid label="Loading delegates">
+    <VoterGrid label="Loading voters">
       {Array.from({ length: 6 }, (_, index) => (
-        <DelegateCardSkeleton key={index} />
+        <VoterCardSkeleton key={index} />
       ))}
-    </DelegateGrid>
+    </VoterGrid>
   )
 }
 

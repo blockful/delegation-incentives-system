@@ -11,7 +11,7 @@ interface ConnectedLandingProps {
 }
 
 export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps) {
-  const currentApyPct = tierData.maxDelegatorApyPct
+  const currentApyPct = tierData.maxTokenHolderApyPct
 
   return (
     <>

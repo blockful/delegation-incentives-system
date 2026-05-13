@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/delegates/active": {
+    "/voters/active": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,8 +12,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List active delegates
-         * @description Returns delegates who meet the voting activity threshold, sorted by voting power descending.
+         * List active voters
+         * @description Returns voters who meet the voting activity threshold, sorted by voting power descending.
          */
         get: {
             parameters: {
@@ -24,7 +24,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Active delegates list */
+                /** @description Active voters list */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -32,7 +32,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             count: number;
-                            delegates: {
+                            voters: {
                                 /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
                                 address: string;
                                 /** @example null */
@@ -60,9 +60,9 @@ export interface paths {
                                  */
                                 last10ProposalsVoted: boolean[];
                                 /** @example 42 */
-                                delegatorCount: number;
+                                tokenHolderCount: number;
                                 /**
-                                 * @description ISO 8601 timestamp of the delegate's earliest vote
+                                 * @description ISO 8601 timestamp of the voter's earliest vote
                                  * @example 2024-01-15T00:00:00.000Z
                                  */
                                 activeSince: string | null;
@@ -100,7 +100,7 @@ export interface paths {
         };
         /**
          * Check delegation eligibility
-         * @description Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active delegate.
+         * @description Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active voter.
          */
         get: {
             parameters: {
@@ -123,8 +123,8 @@ export interface paths {
                             /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
                             address: string;
                             ensName: string | null;
-                            isActiveDelegate: boolean;
-                            isDelegatorToActiveDelegate: boolean;
+                            isActiveVoter: boolean;
+                            isTokenHolderOfActiveVoter: boolean;
                             eligible: boolean;
                             /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
                             delegatedTo: string | null;
@@ -178,7 +178,7 @@ export interface paths {
         };
         /**
          * Estimate rewards for an address
-         * @description Estimates delegate and delegator rewards for the current month based on current VP, delegation state, and tier.
+         * @description Estimates voter and token-holder rewards for the current month based on current VP, delegation state, and tier.
          */
         get: {
             parameters: {
@@ -199,9 +199,9 @@ export interface paths {
                     content: {
                         "application/json": {
                             /** @example 500000000000000000000 */
-                            delegateReward: string;
+                            voterReward: string;
                             /** @example 150000000000000000000 */
-                            delegatorReward: string;
+                            tokenHolderReward: string;
                             /** @example 650000000000000000000 */
                             combinedReward: string;
                             aboveThreshold: boolean;
@@ -242,7 +242,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/apy/{address}": {
+    "/apr/{address}": {
         parameters: {
             query?: never;
             header?: never;
@@ -250,8 +250,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Estimate APY and rewards for an address
-         * @description Returns role, delegation info, estimated monthly reward, APY, and lottery qualification for the given address.
+         * Estimate APR and rewards for an address
+         * @description Returns role, delegation info, estimated monthly reward, APR, and lottery qualification for the given address.
          */
         get: {
             parameters: {
@@ -264,7 +264,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description APY estimate */
+                /** @description APR estimate */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -275,13 +275,13 @@ export interface paths {
                             ensName: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "delegate" | "delegator" | "ineligible";
+                            role: "voter" | "token_holder" | "ineligible";
                             delegatedTo: string | null;
                             delegatedToEnsName: string | null;
                             delegatedToAvatarUrl: string | null;
                             poolSizeEns: string;
                             estimatedMonthlyRewardEns: string;
-                            estimatedApyPct: string;
+                            estimatedAprPct: string;
                             userShareWei: string;
                             totalShareWei: string;
                             currentBalanceEns: string;
@@ -453,12 +453,12 @@ export interface paths {
                                 poolSizeEns: string | null;
                                 totalDistributed: string | null;
                                 totalDistributedEns: string | null;
-                                activeDelegateCount: number | null;
+                                activeVoterCount: number | null;
                                 /**
                                  * @description Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.
                                  * @example 312
                                  */
-                                eligibleDelegatorCount: number | null;
+                                eligibleTokenHolderCount: number | null;
                                 /**
                                  * @description Number of deterministic lottery buckets formed from sub-1 ENS entries.
                                  * @example 53
@@ -559,12 +559,12 @@ export interface paths {
                             poolSizeEns: string | null;
                             totalDistributed: string | null;
                             totalDistributedEns: string | null;
-                            activeDelegateCount: number | null;
+                            activeVoterCount: number | null;
                             /**
                              * @description Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.
                              * @example 312
                              */
-                            eligibleDelegatorCount: number | null;
+                            eligibleTokenHolderCount: number | null;
                             /**
                              * @description Number of deterministic lottery buckets formed from sub-1 ENS entries.
                              * @example 53
@@ -592,8 +592,8 @@ export interface paths {
                                 address: string;
                                 /** @enum {string} */
                                 rewardStatus: "paid" | "no_reward" | "not_eligible" | "pending" | "unavailable";
-                                delegateReward: string;
-                                delegateRewardEns: string;
+                                voterReward: string;
+                                voterRewardEns: string;
                                 tokenHolderReward: string;
                                 tokenHolderRewardEns: string;
                                 lotteryReward: string;
@@ -601,12 +601,12 @@ export interface paths {
                                 totalReward: string;
                                 totalRewardEns: string;
                             } | null;
-                            topDelegateRewards: {
+                            topVoterRewards: {
                                 rank: number;
                                 address: string;
                                 ensName: string | null;
                                 /** @enum {string} */
-                                role: "delegate" | "token_holder";
+                                role: "voter" | "token_holder";
                                 reward: string;
                                 rewardEns: string;
                                 /** @enum {string} */
@@ -619,7 +619,7 @@ export interface paths {
                                 address: string;
                                 ensName: string | null;
                                 /** @enum {string} */
-                                role: "delegate" | "token_holder";
+                                role: "voter" | "token_holder";
                                 reward: string;
                                 rewardEns: string;
                                 /** @enum {string} */
@@ -765,12 +765,12 @@ export interface paths {
                             poolSizeEns: string | null;
                             totalDistributed: string | null;
                             totalDistributedEns: string | null;
-                            activeDelegateCount: number | null;
+                            activeVoterCount: number | null;
                             /**
                              * @description Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.
                              * @example 312
                              */
-                            eligibleDelegatorCount: number | null;
+                            eligibleTokenHolderCount: number | null;
                             /**
                              * @description Number of deterministic lottery buckets formed from sub-1 ENS entries.
                              * @example 53
@@ -798,8 +798,8 @@ export interface paths {
                                 address: string;
                                 /** @enum {string} */
                                 rewardStatus: "paid" | "no_reward" | "not_eligible" | "pending" | "unavailable";
-                                delegateReward: string;
-                                delegateRewardEns: string;
+                                voterReward: string;
+                                voterRewardEns: string;
                                 tokenHolderReward: string;
                                 tokenHolderRewardEns: string;
                                 lotteryReward: string;
@@ -807,12 +807,12 @@ export interface paths {
                                 totalReward: string;
                                 totalRewardEns: string;
                             } | null;
-                            topDelegateRewards: {
+                            topVoterRewards: {
                                 rank: number;
                                 address: string;
                                 ensName: string | null;
                                 /** @enum {string} */
-                                role: "delegate" | "token_holder";
+                                role: "voter" | "token_holder";
                                 reward: string;
                                 rewardEns: string;
                                 /** @enum {string} */
@@ -825,7 +825,7 @@ export interface paths {
                                 address: string;
                                 ensName: string | null;
                                 /** @enum {string} */
-                                role: "delegate" | "token_holder";
+                                role: "voter" | "token_holder";
                                 reward: string;
                                 rewardEns: string;
                                 /** @enum {string} */
@@ -928,7 +928,7 @@ export interface paths {
         };
         /**
          * Tier progression and current VP growth
-         * @description Returns all tier definitions with current unlock state, VP thresholds, estimated APY, and overall VP growth.
+         * @description Returns all tier definitions with current unlock state, VP thresholds, estimated APR, and overall VP growth.
          */
         get: {
             parameters: {
@@ -947,15 +947,15 @@ export interface paths {
                     content: {
                         "application/json": {
                             /**
-                             * @description Current active VP (wei)
+                             * @description Current total VP held by active voters (wei)
                              * @example 107230000000000000000000
                              */
-                            currentAVP: string;
+                            currentTotalVP: string;
                             /**
-                             * @description Active VP at month start (wei)
+                             * @description Total VP at month start (wei)
                              * @example 100000000000000000000000
                              */
-                            previousAVP: string;
+                            previousTotalVP: string;
                             /** @example 723 */
                             currentGrowthBps: string;
                             /** @example 7.23 */
@@ -963,12 +963,12 @@ export interface paths {
                             /** @example 0 */
                             currentTierIndex: number;
                             /** @example 25 */
-                            activeDelegateCount: number;
+                            activeVoterCount: number;
                             /**
-                             * @description Highest estimated delegator APY across all tiers
+                             * @description Highest estimated token-holder APR across all tiers
                              * @example 54.00
                              */
-                            maxDelegatorApyPct: string;
+                            maxTokenHolderAprPct: string;
                             tiers: {
                                 /** @example 0 */
                                 index: number;
@@ -979,9 +979,9 @@ export interface paths {
                                 /** @example 5000.000000000000000000 */
                                 poolSizeEns: string;
                                 /** @example 50.000000000000000000 */
-                                delegateCapEns: string;
+                                voterCapEns: string;
                                 /** @example 250.000000000000000000 */
-                                delegatorCapEns: string;
+                                tokenHolderCapEns: string;
                                 isCurrent: boolean;
                                 isUnlocked: boolean;
                                 /**
@@ -993,12 +993,12 @@ export interface paths {
                                  * @description VP threshold to enter this tier (wei)
                                  * @example 110000000000000000000000
                                  */
-                                requiredAVP: string;
+                                requiredTotalVP: string;
                                 /**
-                                 * @description Estimated delegator APY at this tier
+                                 * @description Estimated token-holder APR at this tier (calibrated against round-start VP)
                                  * @example 12.50
                                  */
-                                estimatedApyPct: string;
+                                estimatedAprPct: string;
                             }[];
                         };
                     };
@@ -1066,8 +1066,8 @@ export interface paths {
                                 distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
                                 /** @enum {string} */
                                 rewardStatus: "paid" | "no_reward" | "not_eligible" | "pending" | "unavailable";
-                                delegateReward: string;
-                                delegateRewardEns: string;
+                                voterReward: string;
+                                voterRewardEns: string;
                                 tokenHolderReward: string;
                                 tokenHolderRewardEns: string;
                                 lotteryReward: string;
@@ -1260,105 +1260,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/distributions/{month}/compute": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Compute and store a monthly distribution
-         * @description Runs the domain distribution pipeline for an ended configured round and stores the result in distribution_result. Live or future rounds are skipped without writing. Set DISTRIBUTION_ADMIN_TOKEN to require authorization.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    month: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Recompute and overwrite an existing cached result
-                         * @example false
-                         */
-                        force?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description Distribution was already cached, computed, or skipped because the round has not ended */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            month: string;
-                            /** @enum {string} */
-                            status: "cached" | "computed" | "skipped";
-                            reason?: string;
-                            computedAt: string | null;
-                            tierIndex: number | null;
-                            poolSize: string | null;
-                            poolSizeEns: string | null;
-                            totalDistributed: string | null;
-                            totalDistributedEns: string | null;
-                            activeDelegateCount: number | null;
-                            eligibleDelegatorCount: number | null;
-                            rewardCount: number | null;
-                            lotteryBucketCount: number | null;
-                        };
-                    };
-                };
-                /** @description Missing or invalid admin token */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Unknown configured month */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/stats": {
         parameters: {
             query?: never;
@@ -1368,7 +1269,7 @@ export interface paths {
         };
         /**
          * System statistics
-         * @description Returns active delegate count, total indexed proposals, and available distribution months.
+         * @description Returns active voter count, total indexed proposals, and available distribution months.
          */
         get: {
             parameters: {
@@ -1387,7 +1288,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             /** @example 25 */
-                            activeDelegateCount: number;
+                            activeVoterCount: number;
                             /** @example 142 */
                             proposalCount: number;
                             /**
@@ -1398,12 +1299,12 @@ export interface paths {
                              */
                             cachedDistributions: string[];
                             /**
-                             * @description Total ENS held by active delegates (sum of latest VP snapshots), formatted as ENS string
+                             * @description Total ENS held by active voters (sum of latest VP snapshots), formatted as ENS string
                              * @example 1250000.000000000000000000
                              */
                             totalDelegatedEns: string;
                             /**
-                             * @description Current count of active delegates plus unique direct delegators to active delegates with a positive ENS balance. This is live delegation state, not finalized round payout recipients.
+                             * @description Current count of active voters plus unique direct token holders of active voters with a positive ENS balance. This is live delegation state, not finalized round payout recipients.
                              * @example 412
                              */
                             holdersEarning: number;

@@ -24,16 +24,16 @@ function makeResult(
       vpGrowthPct: "0.00",
       tier: 0,
       poolSize: wei(5_000n * ENS),
-      delegateCap: wei(50n * ENS),
-      delegatorCap: wei(250n * ENS),
-      activeDelegateCount: 1,
+      voterCap: wei(50n * ENS),
+      tokenHolderCap: wei(250n * ENS),
+      activeVoterCount: 1,
       finalizedProposalIds: ["1"],
     },
     rewards: [
       {
         address: alice,
-        delegateReward: wei(10n * ENS),
-        delegatorReward: wei(20n * ENS),
+        voterReward: wei(10n * ENS),
+        tokenHolderReward: wei(20n * ENS),
         total: wei(30n * ENS),
       },
     ],
@@ -63,8 +63,8 @@ describe("validateDistributionResult", () => {
       rewards: [
         {
           address: alice,
-          delegateReward: wei(51n * ENS),
-          delegatorReward: wei(0n),
+          voterReward: wei(51n * ENS),
+          tokenHolderReward: wei(0n),
           total: wei(51n * ENS),
         },
       ],

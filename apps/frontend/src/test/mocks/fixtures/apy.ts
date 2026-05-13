@@ -4,7 +4,7 @@ export const apyFixture: ApyEstimateResponse = {
   address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
   ensName: 'vitalik.eth',
   avatarUrl: null,
-  role: 'delegator',
+  role: 'token_holder',
   delegatedTo: '0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5',
   delegatedToEnsName: 'nick.eth',
   delegatedToAvatarUrl: null,

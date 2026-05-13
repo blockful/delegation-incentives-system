@@ -87,7 +87,7 @@ ponder.on("ENSToken:Transfer", async ({ event, context }) => {
 export async function handleDelegateChanged(event: any, context: any) {
   const { db } = context;
   const { delegator, fromDelegate, toDelegate } = event.args;
-  const delegatorAddr = delegator.toLowerCase();
+  const tokenHolderAddr = delegator.toLowerCase();
   const fromDelegateAddr = fromDelegate.toLowerCase();
   const toDelegateAddr = toDelegate.toLowerCase();
 
@@ -95,24 +95,24 @@ export async function handleDelegateChanged(event: any, context: any) {
   await db
     .insert(ensDelegation)
     .values({
-      id: delegatorAddr,
-      delegateId: toDelegateAddr,
+      id: tokenHolderAddr,
+      voterId: toDelegateAddr,
       lastUpdatedBlock: event.block.number,
     })
     .onConflictDoUpdate({
-      delegateId: toDelegateAddr,
+      voterId: toDelegateAddr,
       lastUpdatedBlock: event.block.number,
     });
 
-  // Look up the delegator's current token balance (may not exist yet)
-  const balanceRow = await db.find(ensBalance, { id: delegatorAddr });
+  // Look up the token holder's current balance (may not exist yet)
+  const balanceRow = await db.find(ensBalance, { id: tokenHolderAddr });
   const delegatedValue = balanceRow?.balance ?? 0n;
 
   await db.insert(ensDelegationEvent).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
-    delegatorId: delegatorAddr,
-    fromDelegateId: fromDelegateAddr,
-    toDelegateId: toDelegateAddr,
+    tokenHolderId: tokenHolderAddr,
+    fromVoterId: fromDelegateAddr,
+    toVoterId: toDelegateAddr,
     delegatedValue,
     blockNumber: event.block.number,
     logIndex: event.log.logIndex,
@@ -135,7 +135,7 @@ export async function handleDelegateVotesChanged(event: any, context: any) {
 
   await db.insert(ensVotingPowerSnapshot).values({
     id: `${event.transaction.hash}-${event.log.logIndex}`,
-    accountId: delegate.toLowerCase(),
+    voterId: delegate.toLowerCase(),
     votingPower: newBalance,
     delta,
     deltaMod,

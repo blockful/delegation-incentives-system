@@ -30,28 +30,28 @@ function makeDistributionRow(month = "2026-03"): DistributionStorageRow {
         vpGrowthPct: "20.00",
         tier: 1,
         poolSize: ens(8_000n),
-        delegateCap: ens(80n),
-        delegatorCap: ens(400n),
-        activeDelegateCount: 42,
+        voterCap: ens(80n),
+        tokenHolderCap: ens(400n),
+        activeVoterCount: 42,
         finalizedProposalIds: ["1", "2"],
       },
       rewards: [
         {
           address: ADDRESS_A,
-          delegateReward: ens(100n),
-          delegatorReward: "0",
+          voterReward: ens(100n),
+          tokenHolderReward: "0",
           total: ens(100n),
         },
         {
           address: ADDRESS_B,
-          delegateReward: "0",
-          delegatorReward: ens(25n),
+          voterReward: "0",
+          tokenHolderReward: ens(25n),
           total: ens(25n),
         },
         {
           address: ADDRESS_C,
-          delegateReward: ens(5n),
-          delegatorReward: ens(15n),
+          voterReward: ens(5n),
+          tokenHolderReward: ens(15n),
           total: ens(20n),
         },
       ],
@@ -93,8 +93,8 @@ function makeManyRewardsDistributionRow(
 
     return {
       address,
-      delegateReward: ens(rank),
-      delegatorReward: ens(rank),
+      voterReward: ens(rank),
+      tokenHolderReward: ens(rank),
       total: ens(rank * 2n),
     };
   });
@@ -223,10 +223,10 @@ describe("round reward responses", () => {
       lotteryRewardEns: "10.000000000000000000",
       totalRewardEns: "35.000000000000000000",
     });
-    expect(body.topDelegateRewards[0]).toMatchObject({
+    expect(body.topVoterRewards[0]).toMatchObject({
       rank: 1,
       address: ADDRESS_A,
-      role: "delegate",
+      role: "voter",
       rewardEns: "100.000000000000000000",
     });
     expect(body.topTokenHolderRewards[0]).toMatchObject({
@@ -277,9 +277,9 @@ describe("round reward responses", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.topDelegateRewards).toHaveLength(10);
+    expect(body.topVoterRewards).toHaveLength(10);
     expect(body.topTokenHolderRewards).toHaveLength(10);
-    expect(body.topDelegateRewards.at(-1)).toMatchObject({
+    expect(body.topVoterRewards.at(-1)).toMatchObject({
       rank: 10,
       rewardEns: "3.000000000000000000",
     });
@@ -298,9 +298,9 @@ describe("round reward responses", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.topDelegateRewards).toHaveLength(12);
+    expect(body.topVoterRewards).toHaveLength(12);
     expect(body.topTokenHolderRewards).toHaveLength(12);
-    expect(body.topDelegateRewards.at(-1)).toMatchObject({
+    expect(body.topVoterRewards.at(-1)).toMatchObject({
       rank: 12,
       rewardEns: "1.000000000000000000",
     });
@@ -331,7 +331,7 @@ describe("round reward responses", () => {
     expect(body.status).toBe("ended");
     expect(body.distributionDataStatus).toBe("missing");
     expect(body.addressReward.rewardStatus).toBe("unavailable");
-    expect(body.topDelegateRewards).toEqual([]);
+    expect(body.topVoterRewards).toEqual([]);
     expect(body.topTokenHolderRewards).toEqual([]);
     expect(body.lottery).toBeNull();
   });
@@ -384,93 +384,5 @@ describe("address-specific distributions", () => {
     ]).request("/distributions");
 
     expect(await res.json()).toEqual(["2026-04", "2026-03"]);
-  });
-});
-
-describe("distribution computation route", () => {
-  it("requires an admin token when configured", async () => {
-    const app = createDistributionsApp({
-      adminToken: "secret",
-      computeDistribution: async () => {
-        throw new Error("should not compute");
-      },
-    });
-
-    const res = await app.request("/distributions/2026-03/compute", {
-      method: "POST",
-      body: JSON.stringify({}),
-      headers: { "content-type": "application/json" },
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  it("runs the configured compute function and returns its summary", async () => {
-    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
-    const calls: Array<{ month: string; force?: boolean }> = [];
-    const app = createDistributionsApp({
-      adminToken: "secret",
-      now: () => new Date("2026-05-03T12:00:00.000Z"),
-      computeDistribution: async (month, options) => {
-        calls.push({ month, force: options.force });
-        return {
-          month,
-          status: "computed",
-          computedAt: "2026-05-03T12:00:00.000Z",
-          tierIndex: 1,
-          poolSize: ens(8_000n),
-          poolSizeEns: "8000.000000000000000000",
-          totalDistributed: ens(155n),
-          totalDistributedEns: "155.000000000000000000",
-          activeDelegateCount: 42,
-          eligibleDelegatorCount: 312,
-          rewardCount: 3,
-          lotteryBucketCount: 1,
-        };
-      },
-    });
-
-    const res = await app.request("/distributions/2026-04/compute", {
-      method: "POST",
-      body: JSON.stringify({ force: true }),
-      headers: {
-        "content-type": "application/json",
-        "x-distribution-admin-token": "secret",
-      },
-    });
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(calls).toEqual([{ month: "2026-04", force: true }]);
-    expect(body).toMatchObject({
-      month: "2026-04",
-      status: "computed",
-      totalDistributedEns: "155.000000000000000000",
-      rewardCount: 3,
-    });
-  });
-
-  it("skips a live round without computing even with force", async () => {
-    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
-    const app = createDistributionsApp({
-      now: () => new Date("2026-05-03T12:00:00.000Z"),
-    });
-
-    const res = await app.request("/distributions/2026-05/compute", {
-      method: "POST",
-      body: JSON.stringify({ force: true }),
-      headers: { "content-type": "application/json" },
-    });
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
-      month: "2026-05",
-      status: "skipped",
-      reason: "Round 2026-05 has not ended yet",
-      computedAt: null,
-      tierIndex: null,
-      totalDistributedEns: null,
-      rewardCount: null,
-    });
   });
 });

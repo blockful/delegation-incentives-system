@@ -29,8 +29,8 @@ export interface ComputeDistributionResponse {
   poolSizeEns: string | null;
   totalDistributed: string | null;
   totalDistributedEns: string | null;
-  activeDelegateCount: number | null;
-  eligibleDelegatorCount: number | null;
+  activeVoterCount: number | null;
+  eligibleTokenHolderCount: number | null;
   rewardCount: number | null;
   lotteryBucketCount: number | null;
 }
@@ -163,8 +163,8 @@ function getSkipResponse(
       poolSizeEns: null,
       totalDistributed: null,
       totalDistributedEns: null,
-      activeDelegateCount: null,
-      eligibleDelegatorCount: null,
+      activeVoterCount: null,
+      eligibleTokenHolderCount: null,
       rewardCount: null,
       lotteryBucketCount: null,
     };
@@ -188,8 +188,8 @@ function computeResponse(
     poolSizeEns: snapshot.poolSizeEns,
     totalDistributed: snapshot.totalDistributed,
     totalDistributedEns: snapshot.totalDistributedEns,
-    activeDelegateCount: snapshot.activeDelegateCount,
-    eligibleDelegatorCount: snapshot.eligibleDelegatorCount,
+    activeVoterCount: snapshot.activeVoterCount,
+    eligibleTokenHolderCount: snapshot.eligibleTokenHolderCount,
     rewardCount: parsed.result.rewards.length,
     lotteryBucketCount: parsed.result.lottery.buckets.length,
   };

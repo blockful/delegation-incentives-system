@@ -55,7 +55,7 @@ export function WalletStateProvider({ children }: { children: ReactNode }) {
       return { status: 'disconnected' }
     }
 
-    if (eligibility.data?.isDelegatorToActiveDelegate && eligibility.data.delegatedTo) {
+    if (eligibility.data?.isTokenHolderOfActiveVoter && eligibility.data.delegatedTo) {
       return {
         status: 'delegated',
         address,

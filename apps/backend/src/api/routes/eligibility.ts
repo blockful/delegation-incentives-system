@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
 import { ensDelegation, multiDelegatePosition, vestingPlan } from "ponder:schema";
 import { eq, and, sql } from "drizzle-orm";
-import { fetchActiveDelegates, normalizeAddress } from "../helpers.js";
+import { fetchActiveVoters, normalizeAddress } from "../helpers.js";
 
 const HEDGEY_VESTING_ADDRESS = "0x2cde9919e81b20b4b33dd562a48a84b54c48f00c";
 
@@ -15,8 +15,8 @@ const AddressParam = z.object({
 const EligibilityResponse = z.object({
   address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
   ensName: z.string().nullable(),
-  isActiveDelegate: z.boolean(),
-  isDelegatorToActiveDelegate: z.boolean(),
+  isActiveVoter: z.boolean(),
+  isTokenHolderOfActiveVoter: z.boolean(),
   eligible: z.boolean(),
   delegatedTo: z.string().nullable().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
   delegatedToEnsName: z.string().nullable(),
@@ -32,7 +32,7 @@ const route = createRoute({
   tags: ["Eligibility"],
   summary: "Check delegation eligibility",
   description:
-    "Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active delegate.",
+    "Checks whether an address is eligible for incentives by verifying it delegates (directly, via multi-delegate, or via Hedgey vesting) to an active voter.",
   request: { params: AddressParam },
   responses: {
     200: {
@@ -61,21 +61,21 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeDelegates } = await fetchActiveDelegates(db);
-    const isActiveDelegate = activeDelegates.has(address as `0x${string}`);
+    const { activeVoters } = await fetchActiveVoters(db);
+    const isActiveVoter = activeVoters.has(address as `0x${string}`);
 
     // 1. Direct delegation
     const delegationRows = await db
-      .select({ delegateId: ensDelegation.delegateId })
+      .select({ voterId: ensDelegation.voterId })
       .from(ensDelegation)
       .where(eq(ensDelegation.id, address))
       .limit(1);
 
     if (delegationRows.length > 0) {
-      const delegateTo = delegationRows[0].delegateId;
-      if (activeDelegates.has(delegateTo as `0x${string}`)) {
+      const delegateTo = delegationRows[0].voterId;
+      if (activeVoters.has(delegateTo as `0x${string}`)) {
         return c.json(
-          { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: delegateTo, delegatedToEnsName: null, source: "direct" as const },
+          { address, ensName: null, isActiveVoter, isTokenHolderOfActiveVoter: true, eligible: true, delegatedTo: delegateTo, delegatedToEnsName: null, source: "direct" as const },
           200,
         );
       }
@@ -83,14 +83,14 @@ app.openapi(route, async (c) => {
 
     // 2. Multi-delegate positions
     const multiPositions = await db
-      .select({ delegate: multiDelegatePosition.delegate, amount: multiDelegatePosition.amount })
+      .select({ voter: multiDelegatePosition.voter, amount: multiDelegatePosition.amount })
       .from(multiDelegatePosition)
       .where(and(eq(multiDelegatePosition.owner, address), sql`${multiDelegatePosition.amount} > 0`));
 
     for (const pos of multiPositions) {
-      if (activeDelegates.has(pos.delegate as `0x${string}`)) {
+      if (activeVoters.has(pos.voter as `0x${string}`)) {
         return c.json(
-          { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: pos.delegate, delegatedToEnsName: null, source: "multidelegate" as const },
+          { address, ensName: null, isActiveVoter, isTokenHolderOfActiveVoter: true, eligible: true, delegatedTo: pos.voter, delegatedToEnsName: null, source: "multidelegate" as const },
           200,
         );
       }
@@ -105,16 +105,16 @@ app.openapi(route, async (c) => {
 
     if (vestingPlans.length > 0) {
       const vestingDelegation = await db
-        .select({ delegateId: ensDelegation.delegateId })
+        .select({ voterId: ensDelegation.voterId })
         .from(ensDelegation)
         .where(eq(ensDelegation.id, HEDGEY_VESTING_ADDRESS))
         .limit(1);
 
       if (vestingDelegation.length > 0) {
-        const vestingDelegate = vestingDelegation[0].delegateId;
-        if (activeDelegates.has(vestingDelegate as `0x${string}`)) {
+        const vestingDelegate = vestingDelegation[0].voterId;
+        if (activeVoters.has(vestingDelegate as `0x${string}`)) {
           return c.json(
-            { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: true, eligible: true, delegatedTo: vestingDelegate, delegatedToEnsName: null, source: "hedgey_vesting" as const },
+            { address, ensName: null, isActiveVoter, isTokenHolderOfActiveVoter: true, eligible: true, delegatedTo: vestingDelegate, delegatedToEnsName: null, source: "hedgey_vesting" as const },
             200,
           );
         }
@@ -122,7 +122,7 @@ app.openapi(route, async (c) => {
     }
 
     return c.json(
-      { address, ensName: null, isActiveDelegate, isDelegatorToActiveDelegate: false, eligible: isActiveDelegate, delegatedTo: null, delegatedToEnsName: null, source: null },
+      { address, ensName: null, isActiveVoter, isTokenHolderOfActiveVoter: false, eligible: isActiveVoter, delegatedTo: null, delegatedToEnsName: null, source: null },
       200,
     );
   } catch (err) {

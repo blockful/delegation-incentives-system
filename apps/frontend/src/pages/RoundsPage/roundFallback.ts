@@ -36,8 +36,8 @@ export function buildRoundListFromCurrentRound(current: RoundInfoResponse): Roun
       poolSizeEns: offset === 0 ? current.poolSizeEns : null,
       totalDistributed: null,
       totalDistributedEns: null,
-      activeDelegateCount: null,
-      eligibleDelegatorCount: null,
+      activeVoterCount: null,
+      eligibleTokenHolderCount: null,
       lotteryBucketCount: null,
       lotteryEntryCount: null,
       lotteryParticipantCount: null,
@@ -81,7 +81,7 @@ export function buildRoundDetailFallback(
     addressReward: address
       ? buildUnavailableAddressReward(address, round.distributionDataStatus)
       : null,
-    topDelegateRewards: [],
+    topVoterRewards: [],
     topTokenHolderRewards: [],
     lottery: null,
   }
@@ -94,8 +94,8 @@ function buildUnavailableAddressReward(
   return {
     address,
     rewardStatus: distributionDataStatus === 'in_progress' ? 'pending' : 'unavailable',
-    delegateReward: '0',
-    delegateRewardEns: '0.000000000000000000',
+    voterReward: '0',
+    voterRewardEns: '0.000000000000000000',
     tokenHolderReward: '0',
     tokenHolderRewardEns: '0.000000000000000000',
     lotteryReward: '0',

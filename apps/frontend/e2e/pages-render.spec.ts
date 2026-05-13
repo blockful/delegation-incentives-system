@@ -24,11 +24,11 @@ test.describe('All pages render on mobile', () => {
     await expect(page.getByText('Tier #7')).toBeVisible({ timeout: 10000 })
   })
 
-  test('delegates page renders header and cards', async ({ page }) => {
-    await page.goto('/delegates')
+  test('voters page renders header and cards', async ({ page }) => {
+    await page.goto('/voters')
     await expect(page.getByText('Delegate Your Tokens')).toBeVisible()
     await expect(page.getByRole('heading', { name: /Delegate to someone who shows up/i })).toBeVisible()
-    await expect(page.getByText('active delegates', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('active voters', { exact: true })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('wallets earning', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /Random/i })).toBeVisible()
   })

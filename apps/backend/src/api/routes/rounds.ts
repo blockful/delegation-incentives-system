@@ -3,7 +3,7 @@ import { db } from "ponder:api";
 import { distributionResult } from "ponder:schema";
 import { POOL_TIERS } from "@ens-dis/domain";
 import {
-  fetchActiveDelegates,
+  fetchActiveVoters,
   fetchCurrentVpGrowth,
   findTierIndex,
   formatEns,
@@ -13,7 +13,7 @@ import {
   getAddressReward,
   getDistributionSnapshot,
   getLotteryDetail,
-  getTopDelegateRewards,
+  getTopVoterRewards,
   getTopTokenHolderRewards,
   parseDistributionRows,
   type DistributionStorageRow,
@@ -60,8 +60,8 @@ const RoundSummarySchema = z.object({
   poolSizeEns: z.string().nullable(),
   totalDistributed: z.string().nullable(),
   totalDistributedEns: z.string().nullable(),
-  activeDelegateCount: z.number().nullable(),
-  eligibleDelegatorCount: z.number().nullable().openapi({
+  activeVoterCount: z.number().nullable(),
+  eligibleTokenHolderCount: z.number().nullable().openapi({
     description: "Computed round count of direct payout rows with a positive token-holder reward. Excludes sub-1 ENS lottery entries and lottery-only winners.",
     example: 312,
   }),
@@ -95,7 +95,7 @@ const RewardRankSchema = z.object({
   rank: z.number(),
   address: z.string(),
   ensName: z.string().nullable(),
-  role: z.enum(["delegate", "token_holder"]),
+  role: z.enum(["voter", "token_holder"]),
   reward: z.string(),
   rewardEns: z.string(),
   source: z.enum(["direct", "lottery", "combined"]),
@@ -106,8 +106,8 @@ const RewardRankSchema = z.object({
 const AddressRoundRewardSchema = z.object({
   address: z.string(),
   rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
-  delegateReward: z.string(),
-  delegateRewardEns: z.string(),
+  voterReward: z.string(),
+  voterRewardEns: z.string(),
   tokenHolderReward: z.string(),
   tokenHolderRewardEns: z.string(),
   lotteryReward: z.string(),
@@ -161,7 +161,7 @@ const LotteryDetailSchema = z.object({
 
 const RoundDetailResponse = RoundSummarySchema.extend({
   addressReward: AddressRoundRewardSchema.nullable(),
-  topDelegateRewards: z.array(RewardRankSchema),
+  topVoterRewards: z.array(RewardRankSchema),
   topTokenHolderRewards: z.array(RewardRankSchema),
   lottery: LotteryDetailSchema.nullable(),
 });
@@ -206,11 +206,11 @@ async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
 }
 
 async function getCurrentTierSnapshot(): Promise<RoundTierSnapshot> {
-  const { activeDelegates } = await fetchActiveDelegates(db);
+  const { activeVoters } = await fetchActiveVoters(db);
   const { growthPct } = await fetchCurrentVpGrowth(
     db,
-    activeDelegates,
-    activeDelegates,
+    activeVoters,
+    activeVoters,
   );
   const tierIndex = findTierIndex(growthPct);
 
@@ -420,7 +420,7 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
           addressReward: address
             ? buildAddressRoundReward(address, parsed, summary.distributionDataStatus)
             : null,
-          topDelegateRewards: parsed ? getTopDelegateRewards(parsed, rewardLimit) : [],
+          topVoterRewards: parsed ? getTopVoterRewards(parsed, rewardLimit) : [],
           topTokenHolderRewards: parsed ? getTopTokenHolderRewards(parsed, rewardLimit) : [],
           lottery: parsed ? getLotteryDetail(parsed) : null,
         },
@@ -521,8 +521,8 @@ function buildRoundSummary({
     poolSizeEns,
     totalDistributed: snapshot?.totalDistributed ?? null,
     totalDistributedEns: snapshot?.totalDistributedEns ?? null,
-    activeDelegateCount: snapshot?.activeDelegateCount ?? null,
-    eligibleDelegatorCount: snapshot?.eligibleDelegatorCount ?? null,
+    activeVoterCount: snapshot?.activeVoterCount ?? null,
+    eligibleTokenHolderCount: snapshot?.eligibleTokenHolderCount ?? null,
     lotteryBucketCount: snapshot?.lotteryBucketCount ?? null,
     lotteryEntryCount: snapshot?.lotteryEntryCount ?? null,
     lotteryParticipantCount: snapshot?.lotteryParticipantCount ?? null,
@@ -546,8 +546,8 @@ function buildAddressRoundReward(
     return {
       address,
       rewardStatus,
-      delegateReward: "0",
-      delegateRewardEns: "0.000000000000000000",
+      voterReward: "0",
+      voterRewardEns: "0.000000000000000000",
       tokenHolderReward: "0",
       tokenHolderRewardEns: "0.000000000000000000",
       lotteryReward: "0",
@@ -561,8 +561,8 @@ function buildAddressRoundReward(
   return {
     address: reward.address,
     rewardStatus: reward.status,
-    delegateReward: reward.delegateReward,
-    delegateRewardEns: reward.delegateRewardEns,
+    voterReward: reward.voterReward,
+    voterRewardEns: reward.voterRewardEns,
     tokenHolderReward: reward.tokenHolderReward,
     tokenHolderRewardEns: reward.tokenHolderRewardEns,
     lotteryReward: reward.lotteryReward,

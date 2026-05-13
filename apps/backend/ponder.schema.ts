@@ -4,29 +4,29 @@ import { onchainTable, onchainEnum, index } from "ponder";
 
 export const multiDelegateProxy = onchainTable("multi_delegate_proxy", (t) => ({
   id: t.text().primaryKey(),           // proxy address
-  delegate: t.text().notNull(),
+  voter: t.text().notNull(),
   deployer: t.text().notNull(),         // derived from context
   createdAtBlock: t.bigint().notNull(),
 }), (table) => ({
-  delegateIdx: index().on(table.delegate),
+  voterIdx: index().on(table.voter),
 }));
 
 export const multiDelegatePosition = onchainTable("multi_delegate_position", (t) => ({
-  id: t.text().primaryKey(),           // `${owner}-${delegate}`
+  id: t.text().primaryKey(),           // `${owner}-${voter}`
   owner: t.text().notNull(),
-  delegate: t.text().notNull(),
+  voter: t.text().notNull(),
   amount: t.bigint().notNull(),
   lastUpdatedBlock: t.bigint().notNull(),
 }), (table) => ({
   ownerIdx: index().on(table.owner),
-  delegateIdx: index().on(table.delegate),
+  voterIdx: index().on(table.voter),
 }));
 
 export const multiDelegateTransfer = onchainTable("multi_delegate_transfer", (t) => ({
   id: t.text().primaryKey(),
   from: t.text().notNull(),
   to: t.text().notNull(),
-  delegate: t.text().notNull(),        // delegate address (derived from token id)
+  voter: t.text().notNull(),           // voter address (derived from token id)
   amount: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
@@ -35,7 +35,7 @@ export const multiDelegateTransfer = onchainTable("multi_delegate_transfer", (t)
 }), (table) => ({
   fromIdx: index().on(table.from),
   toIdx: index().on(table.to),
-  delegateIdx: index().on(table.delegate),
+  voterIdx: index().on(table.voter),
   timestampIdx: index().on(table.timestamp),
 }));
 
@@ -110,36 +110,36 @@ export const ensBalanceEvent = onchainTable("ens_balance_event", (t) => ({
   accountTimestampIdx: index().on(table.accountId, table.timestamp),
 }));
 
-/** Current delegation mapping — who each address delegates to */
+/** Current delegation mapping — who each token-holder address delegates to */
 export const ensDelegation = onchainTable("ens_delegation", (t) => ({
-  id: t.text().primaryKey(),           // delegator address
-  delegateId: t.text().notNull(),      // current delegate
+  id: t.text().primaryKey(),           // token-holder address
+  voterId: t.text().notNull(),         // current voter (recipient of delegation)
   lastUpdatedBlock: t.bigint().notNull(),
 }), (table) => ({
-  delegateIdx: index().on(table.delegateId),
+  voterIdx: index().on(table.voterId),
 }));
 
 /** Historical delegation changes from DelegateChanged events */
 export const ensDelegationEvent = onchainTable("ens_delegation_event", (t) => ({
   id: t.text().primaryKey(),           // `${txHash}-${logIndex}`
-  delegatorId: t.text().notNull(),
-  fromDelegateId: t.text().notNull(),
-  toDelegateId: t.text().notNull(),
-  delegatedValue: t.bigint().notNull(), // delegator's token balance at time of delegation
+  tokenHolderId: t.text().notNull(),
+  fromVoterId: t.text().notNull(),
+  toVoterId: t.text().notNull(),
+  delegatedValue: t.bigint().notNull(), // token-holder's balance at time of delegation
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
 }), (table) => ({
-  delegatorIdx: index().on(table.delegatorId),
-  toDelegateIdx: index().on(table.toDelegateId),
+  tokenHolderIdx: index().on(table.tokenHolderId),
+  toVoterIdx: index().on(table.toVoterId),
   timestampIdx: index().on(table.timestamp),
 }));
 
 /** Voting power snapshots from DelegateVotesChanged events */
 export const ensVotingPowerSnapshot = onchainTable("ens_voting_power_snapshot", (t) => ({
   id: t.text().primaryKey(),           // `${txHash}-${logIndex}`
-  accountId: t.text().notNull(),       // delegate whose VP changed
+  voterId: t.text().notNull(),         // voter whose VP changed
   votingPower: t.bigint().notNull(),   // new voting power
   delta: t.bigint().notNull(),         // change (newBalance - previousBalance)
   deltaMod: t.bigint().notNull(),      // absolute value of delta (for sorting/filtering)
@@ -148,9 +148,9 @@ export const ensVotingPowerSnapshot = onchainTable("ens_voting_power_snapshot", 
   timestamp: t.bigint().notNull(),
   transactionHash: t.text().notNull(),
 }), (table) => ({
-  accountIdx: index().on(table.accountId),
+  voterIdx: index().on(table.voterId),
   timestampIdx: index().on(table.timestamp),
-  accountTimestampIdx: index().on(table.accountId, table.timestamp),
+  voterTimestampIdx: index().on(table.voterId, table.timestamp),
 }));
 
 // ─── ENS Governor tables ─────────────────────────────────────────────────────

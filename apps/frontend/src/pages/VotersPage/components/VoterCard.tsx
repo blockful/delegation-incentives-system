@@ -1,14 +1,14 @@
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
-import type { DelegateDetail } from '@/api/types'
+import type { VoterDetail } from '@/api/types'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles'
 
-interface DelegateCardProps {
-  delegate: DelegateDetail
+interface VoterCardProps {
+  voter: VoterDetail
 }
 
 function formatVotingPower(vpWei: string): string {
@@ -162,16 +162,16 @@ const ProfileLink = styled(Link)`
   }
 `
 
-export function DelegateCard({ delegate }: DelegateCardProps) {
+export function VoterCard({ voter }: VoterCardProps) {
   const walletState = useWalletState()
   const isDelegated =
     walletState.status === 'delegated' &&
-    walletState.delegatedTo.toLowerCase() === delegate.address.toLowerCase()
+    walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
 
   const { data: resolvedEnsName } = useEnsName({
-    address: delegate.address as `0x${string}`,
+    address: voter.address as `0x${string}`,
   })
-  const ensName = delegate.ensName ?? resolvedEnsName ?? null
+  const ensName = voter.ensName ?? resolvedEnsName ?? null
 
   const handleDelegate = () => {
     // TODO: call relayer for gasless delegation
@@ -181,9 +181,9 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
     <StyledCard>
       <IdentityRow>
         <AddressIdentity
-          address={delegate.address}
+          address={voter.address}
           ensName={ensName}
-          avatarUrl={delegate.avatarUrl}
+          avatarUrl={voter.avatarUrl}
           showAvatar
           avatarSize={40}
           layout="stack"
@@ -193,21 +193,21 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
 
       <ProposalSection>
         <ProposalLabel>Last 10 proposals</ProposalLabel>
-        <ProposalBar votes={delegate.last10ProposalsVoted} />
+        <ProposalBar votes={voter.last10ProposalsVoted} />
       </ProposalSection>
 
       <StatsRow>
         <Stat>
-          <StatValue>{formatVotingPower(delegate.votingPower)}</StatValue>
+          <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
           <StatLabel>Voting Power</StatLabel>
         </Stat>
         <Stat>
-          <StatValue>{delegate.delegatorCount}</StatValue>
-          <StatLabel>Delegators</StatLabel>
+          <StatValue>{voter.tokenHolderCount}</StatValue>
+          <StatLabel>Token holders</StatLabel>
         </Stat>
-        {delegate.activeSince && (
+        {voter.activeSince && (
           <Stat>
-            <StatValue>{formatActiveSince(delegate.activeSince)}</StatValue>
+            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
             <StatLabel>Active since</StatLabel>
           </Stat>
         )}
@@ -221,7 +221,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
             Delegate <FreeTag>Free</FreeTag>
           </DelegateAction>
         )}
-        <ProfileLink to={`/delegates/${ensName ?? delegate.address}`}>
+        <ProfileLink to={`/voters/${ensName ?? voter.address}`}>
           View profile
         </ProfileLink>
       </ActionsBlock>

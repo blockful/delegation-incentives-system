@@ -19,7 +19,7 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/3\.95% APY/)).toBeInTheDocument()
     })
-    const earnings = screen.getByLabelText('Your earnings')
+    const earnings = screen.getByLabelText('Your rewards')
     expect(within(earnings).getByText(/\+\d+(\.\d)?/)).toBeInTheDocument()
     expect(screen.getByText('ENS earned so far')).toBeInTheDocument()
   })
