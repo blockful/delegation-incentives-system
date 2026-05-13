@@ -5,8 +5,9 @@
 #   ./scripts/force-recompute.sh 2026-03
 #
 # What it does:
-#   1. Deletes the cached distribution result from the database.
-#   2. Run pnpm --dir apps/backend distribution:run -- --month <month> --force
+#   Deletes the cached distribution result from the database. The backend's
+#   automatic distribution scheduler will recompute it on its next scan
+#   (within ~60 seconds, once Ponder reports ready).
 #
 # Prerequisites: DATABASE_URL must be set (either in .env or environment).
 
@@ -41,5 +42,4 @@ fi
 
 echo "Clearing cached distribution for $MONTH..."
 psql "$DATABASE_URL" -c "DELETE FROM distribution_result WHERE month = '$MONTH';"
-echo "Done. Recompute with:"
-echo "  pnpm --dir apps/backend distribution:run -- --month $MONTH --force"
+echo "Done. The backend scheduler will recompute on its next scan (~60s)."
