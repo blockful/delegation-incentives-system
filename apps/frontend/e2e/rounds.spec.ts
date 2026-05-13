@@ -7,7 +7,7 @@ test.describe('Rounds Page', () => {
 
   test('renders round heading with live tag', async ({ page }) => {
     await expect(
-      page.getByRole('heading', { name: /Round \d+ is/ }),
+      page.getByRole('heading', { level: 1, name: /Round \d+/ }),
     ).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('live').first()).toBeVisible()
   })
@@ -18,7 +18,7 @@ test.describe('Rounds Page', () => {
   })
 
   test('renders round history without contradicting the current live round', async ({ page }) => {
-    const heading = page.getByRole('heading', { name: /Round \d+ is/ })
+    const heading = page.getByRole('heading', { level: 1, name: /Round \d+/ })
     await expect(heading).toBeVisible({ timeout: 10000 })
 
     const roundName = (await heading.textContent())?.match(/Round \d+/)?.[0]
@@ -29,7 +29,7 @@ test.describe('Rounds Page', () => {
     await expect(currentRoundRow).not.toContainText('Apr 30')
     await expect(currentRoundRow).toContainText('5,000 ENS')
     await expect(currentRoundRow).toContainText(/[+-]?\d+(?:\.\d+)?%|Unavailable/)
-    await expect(currentRoundRow).toContainText(/Pending|Unavailable|winners/)
+    await expect(currentRoundRow).toContainText(/Pending|Unavailable|winner/)
     await expect(currentRoundRow).toContainText('No address')
     await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Your rewards')
     await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Lottery')
@@ -71,7 +71,7 @@ test.describe('Rounds Page', () => {
       await page.setViewportSize(viewport)
       await page.goto('/rounds')
       await expect(
-        page.getByRole('heading', { name: /Round \d+ is/ }),
+        page.getByRole('heading', { level: 1, name: /Round \d+/ }),
       ).toBeVisible({ timeout: 10000 })
 
       const overflow = await page.evaluate(() => {

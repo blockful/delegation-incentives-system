@@ -1,14 +1,11 @@
-import { createContext, useCallback, useMemo, type ReactNode } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { useAccount } from 'wagmi'
 import { useEnsName } from 'wagmi'
 import { mainnet } from 'viem/chains'
 import { useAsync } from '@/hooks/useAsync'
 import { api } from '@/api'
 import type { AppWalletState } from './wallet.types'
-
-export const WalletStateContext = createContext<AppWalletState>({
-  status: 'disconnected',
-})
+import { WalletStateContext } from './wallet.context'
 
 /**
  * Mock wallet states for development.

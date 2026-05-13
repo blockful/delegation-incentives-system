@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactElement, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { ThorinProvider } from '@/app/providers/ThorinProvider'
-import { WalletStateContext } from '@/features/wallet/WalletStateProvider'
+import { WalletStateContext } from '@/features/wallet/wallet.context'
 import type { AppWalletState } from '@/features/wallet/wallet.types'
 
 interface TestRenderOptions extends RenderOptions {

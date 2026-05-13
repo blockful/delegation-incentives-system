@@ -47,7 +47,7 @@ const SectionLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: ${tokens.color.darkGray};
   margin-bottom: ${tokens.spacing.md};
 `

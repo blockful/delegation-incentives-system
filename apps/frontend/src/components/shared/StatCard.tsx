@@ -19,7 +19,7 @@ const Label = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: ${tokens.color.darkGray};
 `
 

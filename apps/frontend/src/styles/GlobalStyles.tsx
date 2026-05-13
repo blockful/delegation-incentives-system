@@ -15,18 +15,23 @@ export const GlobalStyles = createGlobalStyle`
   body {
     color: ${tokens.color.text};
     background: ${tokens.color.surface};
-    /* ENS-style subtle radial gradient background */
-    background-image: radial-gradient(
-      ellipse 80% 60% at 50% -10%,
-      rgba(0, 128, 188, 0.04) 0%,
-      transparent 70%
-    );
-    background-attachment: fixed;
   }
 
-  /* Tighten heading letter-spacing per ENS brand guidelines */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   h1, h2, h3 {
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
   }
 
   /* Global link baseline */
@@ -34,6 +39,11 @@ export const GlobalStyles = createGlobalStyle`
     color: ${tokens.color.blue};
     font-weight: ${tokens.font.weight.medium};
     text-decoration: none;
+  }
+
+  :focus-visible {
+    outline: 3px solid rgba(82, 152, 255, 0.35);
+    outline-offset: 2px;
   }
 
   /* Tabular numbers for data-heavy interfaces */

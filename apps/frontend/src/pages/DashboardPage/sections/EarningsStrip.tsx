@@ -42,7 +42,7 @@ const EarnedValue = styled.span`
   color: ${tokens.color.positiveEmphasis};
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 
   @media (min-width: 768px) {
     font-size: 68px;
@@ -88,7 +88,7 @@ const TierBadge = styled.span`
   color: ${tokens.color.blue};
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 `
 
 const Pill = styled.div`

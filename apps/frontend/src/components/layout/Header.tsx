@@ -1,10 +1,14 @@
 import { useState, useCallback, useEffect } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
-import { Button, EnsSVG, Profile, WalletSVG, ExitSVG } from '@ensdomains/thorin'
-import { useAccount, useEnsName, useEnsAvatar, useDisconnect } from 'wagmi'
-import { appKit } from '@/app/providers/AppKitProvider'
+import { Button, EnsSVG, Profile, WalletSVG } from '@ensdomains/thorin'
+import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles/tokens'
+
+async function openWalletModal() {
+  const { appKit } = await import('@/app/providers/AppKitProvider')
+  appKit.open()
+}
 
 const StyledHeader = styled.header`
   display: flex;
@@ -54,7 +58,7 @@ const BrandText = styled.span`
 
 const DesktopNav = styled.nav`
   display: none;
-  gap: 20px;
+  gap: 6px;
 
   @media (min-width: 768px) {
     display: flex;
@@ -64,36 +68,28 @@ const DesktopNav = styled.nav`
 
 const navLinkStyles = css`
   position: relative;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 ${tokens.spacing.md};
+  border-radius: ${tokens.radius.sm};
   text-decoration: none;
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
-  transition: color ${tokens.transition.base};
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -4px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: ${tokens.color.blue};
-    border-radius: 1px;
-    transform: scaleX(0);
-    transition: transform ${tokens.transition.base};
-  }
+  transition:
+    background ${tokens.transition.fast},
+    color ${tokens.transition.fast};
 
   &:hover {
     color: ${tokens.color.darkBlue};
+    background: ${tokens.color.bgSubtle};
   }
 
   &.active {
-    color: ${tokens.color.blue};
+    color: ${tokens.color.darkBlue};
     font-weight: ${tokens.font.weight.medium};
-
-    &::after {
-      transform: scaleX(1);
-    }
+    background: ${tokens.color.lightBlue};
   }
 `
 
@@ -195,8 +191,6 @@ const MobileDrawer = styled.nav`
   top: 57px;
   left: 0;
   right: 0;
-  left: 0;
-  right: 0;
   background: ${tokens.color.surface};
   border-bottom: 1px solid ${tokens.color.border};
   padding: 8px 0;
@@ -233,7 +227,7 @@ const MobileNavLink = styled(NavLink)`
 
 const publicNavItems = [
   { to: '/', label: 'Home' },
-  { to: '/delegates', label: 'Active Delegates' },
+  { to: '/delegates', label: 'Delegates' },
   { to: '/rounds', label: 'Rounds' },
   { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },
@@ -243,22 +237,22 @@ const walletNavItems = [
   { to: '/dashboard', label: 'Dashboard' },
 ] as const
 
-function ConnectedAccount({ address }: { address: `0x${string}` }) {
-  const { data: ensName } = useEnsName({ address })
-  const { data: avatarUrl } = useEnsAvatar({ name: ensName ?? undefined })
-  const { disconnect } = useDisconnect()
-
+function ConnectedAccount({
+  address,
+  ensName,
+}: {
+  address: `0x${string}`
+  ensName?: string
+}) {
   return (
     <ProfileScaler>
       <Profile
         address={address}
         ensName={ensName ?? undefined}
-        avatar={avatarUrl ?? undefined}
         size="medium"
         alignDropdown="right"
         dropdownItems={[
-          { label: 'Account', onClick: () => appKit.open(), icon: <WalletSVG /> },
-          { label: 'Disconnect', onClick: () => disconnect(), color: 'red', icon: <ExitSVG /> },
+          { label: 'Account', onClick: () => { void openWalletModal() }, icon: <WalletSVG /> },
         ]}
       />
     </ProfileScaler>
@@ -266,9 +260,12 @@ function ConnectedAccount({ address }: { address: `0x${string}` }) {
 }
 
 export function Header() {
-  const { address, isConnected } = useAccount()
+  const walletState = useWalletState()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  const isConnected = walletState.status !== 'disconnected'
+  const address = isConnected ? walletState.address : undefined
+  const ensName = walletState.status === 'delegated' ? walletState.ensName : undefined
 
   const toggleMenu = useCallback(() => setMenuOpen((prev) => !prev), [])
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -313,12 +310,12 @@ export function Header() {
 
         <RightArea>
           {isConnected && address ? (
-            <ConnectedAccount address={address} />
+            <ConnectedAccount address={address} ensName={ensName} />
           ) : (
             <Button
               size="small"
               colorStyle="bluePrimary"
-              onClick={() => appKit.open()}
+              onClick={() => { void openWalletModal() }}
               prefix={<WalletSVG />}
             >
               <MobileOnly>Connect</MobileOnly>

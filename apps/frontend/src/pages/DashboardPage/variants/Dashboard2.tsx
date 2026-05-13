@@ -236,7 +236,7 @@ const Th = styled.span<{ $align?: 'right' }>`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: ${tokens.color.textMuted};
   text-align: ${({ $align }) => $align ?? 'left'};
 `

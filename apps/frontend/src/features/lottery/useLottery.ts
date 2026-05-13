@@ -8,20 +8,25 @@ export interface LotteryRoundResult {
   rounds: RoundSummary[]
 }
 
-function selectLotteryRound(rounds: RoundSummary[]): RoundSummary | null {
-  return rounds.find((round) =>
-    round.distributionDataStatus === 'available' &&
-    (round.lotteryBucketCount ?? 0) > 0
-  )
+function selectLotteryRound(rounds: RoundSummary[], roundNumber?: number): RoundSummary | null {
+  const requestedRound = roundNumber == null
+    ? null
+    : rounds.find((round) => round.roundNumber === roundNumber)
+
+  return requestedRound
+    ?? rounds.find((round) =>
+      round.distributionDataStatus === 'available' &&
+      (round.lotteryBucketCount ?? 0) > 0
+    )
     ?? rounds.find((round) => round.distributionDataStatus === 'available')
     ?? rounds.find((round) => round.isCurrent)
     ?? rounds[0]
     ?? null
 }
 
-async function fetchLotteryRound(address?: string): Promise<LotteryRoundResult | null> {
+async function fetchLotteryRound(address?: string, roundNumber?: number): Promise<LotteryRoundResult | null> {
   const roundList = await api.rounds()
-  const selectedRound = selectLotteryRound(roundList.rounds)
+  const selectedRound = selectLotteryRound(roundList.rounds, roundNumber)
   if (!selectedRound) return null
 
   const round = await api.round(selectedRound.roundNumber, address, {
@@ -34,7 +39,7 @@ async function fetchLotteryRound(address?: string): Promise<LotteryRoundResult |
   }
 }
 
-export function useLottery(address?: string) {
-  const fn = useCallback(() => fetchLotteryRound(address), [address])
+export function useLottery(address?: string, roundNumber?: number) {
+  const fn = useCallback(() => fetchLotteryRound(address, roundNumber), [address, roundNumber])
   return useAsync(fn)
 }

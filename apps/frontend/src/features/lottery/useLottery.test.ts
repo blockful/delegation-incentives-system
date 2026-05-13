@@ -36,4 +36,16 @@ describe('useLottery', () => {
     expect(result.current.data).toBeNull()
     expect(result.current.error).toBeNull()
   })
+
+  it('fetches an explicitly selected round when provided', async () => {
+    const { result } = renderHook(() => useLottery(undefined, 3))
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    expect(result.current.data).toBeDefined()
+    expect(result.current.data!.round.roundNumber).toBe(3)
+    expect(result.current.data!.round.lottery).toBeNull()
+  })
 })

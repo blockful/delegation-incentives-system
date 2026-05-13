@@ -46,7 +46,7 @@ const HeaderBlock = styled.div`
 const HeadingRow = styled.div`
   display: flex;
   align-items: center;
-  gap: ${tokens.spacing.lg};
+  gap: ${tokens.spacing.md};
   flex-wrap: wrap;
 `
 
@@ -56,7 +56,7 @@ const RoundsPageTitle = styled(PageTitle)`
   color: ${tokens.color.darkBlue};
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
+    font-size: ${tokens.font.size['4xl']};
   }
 `
 
@@ -79,15 +79,11 @@ const StatusBadge = styled.span<{ $status: RoundStatus }>`
     $status === 'live' || $status === 'paid'
       ? tokens.color.positiveEmphasis
       : tokens.color.darkGray};
-  font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
-  padding: 6px 18px 6px 12px;
-  border-radius: ${tokens.radius.sm};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  padding: 6px 10px;
+  border-radius: ${tokens.radius.pill};
   line-height: 1.2;
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
-  }
 `
 
 const LiveDot = styled.span`
@@ -98,11 +94,6 @@ const LiveDot = styled.span`
   background: ${tokens.color.positiveEmphasis};
   flex-shrink: 0;
   animation: ${livePulse} 1.8s ease-in-out infinite;
-
-  @media (min-width: 768px) {
-    width: 14px;
-    height: 14px;
-  }
 `
 
 const EmptyState = styled.p`
@@ -189,7 +180,10 @@ function formatLotteryCell(round: RoundSummary): string {
   const buckets = round.lotteryBucketCount?.toLocaleString('en-US') ?? '0'
   const entries = round.lotteryEntryCount.toLocaleString('en-US')
   const winners = round.lotteryWinnerCount.toLocaleString('en-US')
-  return `${buckets} buckets / ${entries} entries / ${winners} unique winners`
+  const bucketLabel = round.lotteryBucketCount === 1 ? 'bucket' : 'buckets'
+  const entryLabel = round.lotteryEntryCount === 1 ? 'entry' : 'entries'
+  const winnerLabel = round.lotteryWinnerCount === 1 ? 'winner' : 'winners'
+  return `${buckets} ${bucketLabel}, ${entries} ${entryLabel}, ${winners} ${winnerLabel}`
 }
 
 function formatVpGrowth(value: string | null): string {
@@ -389,10 +383,14 @@ export function RoundsPage() {
       <HeaderBlock>
         <Eyebrow>Rounds</Eyebrow>
         <HeadingRow>
-          <RoundsPageTitle aria-label={`Round ${currentRound.roundNumber} is ${currentRound.status}`}>
-            Round {currentRound.roundNumber} is
+          <RoundsPageTitle>
+            Round {currentRound.roundNumber}
           </RoundsPageTitle>
-          <StatusBadge $status={currentRound.status} aria-hidden="true">
+          <StatusBadge
+            $status={currentRound.status}
+            role="status"
+            aria-label={`Round ${currentRound.roundNumber} is ${headingStatus(currentRound.status)}`}
+          >
             {currentRound.status === 'live' ? <LiveDot /> : null}
             {headingStatus(currentRound.status)}
           </StatusBadge>

@@ -6,6 +6,7 @@ import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles'
+import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 
 interface DelegateCardProps {
   delegate: DelegateDetail
@@ -99,25 +100,38 @@ const ActionsBlock = styled.div`
   margin-top: auto;
 `
 
-const DelegatedButton = styled.button<{ $delegated: boolean }>`
+const DelegateAction = styled.a`
   width: 100%;
   padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
   border-radius: ${tokens.radius.sm};
-  border: 1px solid ${({ $delegated }) =>
-    $delegated ? tokens.color.positiveEmphasis : tokens.color.blue};
-  background: ${({ $delegated }) =>
-    $delegated ? tokens.color.tierHighlight : tokens.color.blue};
-  color: ${({ $delegated }) =>
-    $delegated ? tokens.color.positiveEmphasis : '#fff'};
+  border: 1px solid ${tokens.color.blue};
+  background: ${tokens.color.blue};
+  color: ${tokens.color.white};
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
-  cursor: ${({ $delegated }) => ($delegated ? 'default' : 'pointer')};
-  transition: all ${tokens.transition.fast};
+  transition:
+    background ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
   text-align: center;
+  text-decoration: none;
 
-  &:hover:not(:disabled) {
-    opacity: 0.85;
+  &:hover {
+    background: ${tokens.color.accent};
+    border-color: ${tokens.color.accent};
+    color: ${tokens.color.white};
   }
+`
+
+const DelegatedStatus = styled.span`
+  width: 100%;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.sm};
+  border: 1px solid ${tokens.color.positiveEmphasis};
+  background: ${tokens.color.tierHighlight};
+  color: ${tokens.color.positiveEmphasis};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  text-align: center;
 `
 
 const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
@@ -129,7 +143,7 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   margin-left: ${tokens.spacing.xs};
 `
 
@@ -159,6 +173,7 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
     address: delegate.address as `0x${string}`,
   })
   const ensName = delegate.ensName ?? resolvedEnsName ?? null
+  const delegateUrl = getAnticaptureDelegateUrl(delegate.address)
 
   return (
     <StyledCard>
@@ -197,11 +212,15 @@ export function DelegateCard({ delegate }: DelegateCardProps) {
       </StatsRow>
 
       <ActionsBlock>
-        <DelegatedButton $delegated={isDelegated} disabled={isDelegated}>
-          {isDelegated ? 'Delegated ✓' : <>Delegate <FreeTag>Free</FreeTag></>}
-        </DelegatedButton>
+        {isDelegated ? (
+          <DelegatedStatus>Delegated</DelegatedStatus>
+        ) : (
+          <DelegateAction href={delegateUrl} target="_blank" rel="noopener noreferrer">
+            Delegate on Anticapture <FreeTag>Free</FreeTag>
+          </DelegateAction>
+        )}
         <ProfileLink to={`/delegates/${ensName ?? delegate.address}`}>
-          Profile →
+          View profile
         </ProfileLink>
       </ActionsBlock>
     </StyledCard>

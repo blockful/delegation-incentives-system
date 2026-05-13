@@ -19,7 +19,6 @@ test.describe('Transparency Page', () => {
   })
 
   test('renders verify links', async ({ page }) => {
-    await expect(page.getByText('Verify Yourself')).toBeVisible()
     await expect(page.getByText('GitHub').first()).toBeVisible()
     await expect(page.getByText('Anticapture').first()).toBeVisible()
     await expect(page.getByText('Dune Analytics')).toBeVisible()
@@ -30,7 +29,7 @@ test.describe('Transparency Page', () => {
       page.getByText('How rewards are calculated'),
     ).toBeVisible()
     await expect(
-      page.getByText(/voting power delegated to active delegates/),
+      page.getByText(/180-day moving average/),
     ).toBeVisible()
   })
 })

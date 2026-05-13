@@ -165,9 +165,9 @@ export function RoundCard({
 
       <StatsGrid>
         <StatCard label="Pool" value={`${poolDisplay} ENS`} />
-        <StatCard label="Current Round Tier" value={currentTier} />
+        <StatCard label="Tier" value={currentTier} />
         <StatCard
-          label="Current APY"
+          label="APY"
           value={`${currentApyPct}%`}
           valueColor={tokens.color.positiveEmphasis}
         />

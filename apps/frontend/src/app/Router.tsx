@@ -1,23 +1,23 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
 import { LandingPage } from '@/pages/LandingPage'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { DelegatesPage } from '@/pages/DelegatesPage'
-import { DelegateProfilePage } from '@/pages/DelegateProfilePage'
-import { RoundsPage } from '@/pages/RoundsPage'
-import { RoundDetailPage } from '@/pages/RoundsPage/RoundDetailPage'
-import { LotteryPage } from '@/pages/LotteryPage'
-import { TransparencyPage } from '@/pages/TransparencyPage'
 
-const Dashboard1 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard1'))
-const Dashboard2 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard2'))
-const Dashboard3 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard3'))
-const Dashboard4 = lazy(() => import('@/pages/DashboardPage/variants/Dashboard4'))
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
+const DelegatesPage = lazy(() => import('@/pages/DelegatesPage').then((module) => ({ default: module.DelegatesPage })))
+const DelegateProfilePage = lazy(() => import('@/pages/DelegateProfilePage').then((module) => ({ default: module.DelegateProfilePage })))
+const RoundsPage = lazy(() => import('@/pages/RoundsPage').then((module) => ({ default: module.RoundsPage })))
+const RoundDetailPage = lazy(() => import('@/pages/RoundsPage/RoundDetailPage').then((module) => ({ default: module.RoundDetailPage })))
+const LotteryPage = lazy(() => import('@/pages/LotteryPage').then((module) => ({ default: module.LotteryPage })))
+const TransparencyPage = lazy(() => import('@/pages/TransparencyPage').then((module) => ({ default: module.TransparencyPage })))
 
-function LazyFallback() {
-  return <DashboardPageSkeleton compact />
+function LazyPage({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<DashboardPageSkeleton compact />}>
+      {children}
+    </Suspense>
+  )
 }
 
 export function Router() {
@@ -25,17 +25,13 @@ export function Router() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<LandingPage />} />
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="dashboard-1" element={<Suspense fallback={<LazyFallback />}><Dashboard1 /></Suspense>} />
-        <Route path="dashboard-2" element={<Suspense fallback={<LazyFallback />}><Dashboard2 /></Suspense>} />
-        <Route path="dashboard-3" element={<Suspense fallback={<LazyFallback />}><Dashboard3 /></Suspense>} />
-        <Route path="dashboard-4" element={<Suspense fallback={<LazyFallback />}><Dashboard4 /></Suspense>} />
-        <Route path="delegates" element={<DelegatesPage />} />
-        <Route path="delegates/:address" element={<DelegateProfilePage />} />
-        <Route path="rounds/:roundNumber" element={<RoundDetailPage />} />
-        <Route path="rounds" element={<RoundsPage />} />
-        <Route path="lottery" element={<LotteryPage />} />
-        <Route path="transparency" element={<TransparencyPage />} />
+        <Route path="dashboard" element={<LazyPage><DashboardPage /></LazyPage>} />
+        <Route path="delegates" element={<LazyPage><DelegatesPage /></LazyPage>} />
+        <Route path="delegates/:address" element={<LazyPage><DelegateProfilePage /></LazyPage>} />
+        <Route path="rounds/:roundNumber" element={<LazyPage><RoundDetailPage /></LazyPage>} />
+        <Route path="rounds" element={<LazyPage><RoundsPage /></LazyPage>} />
+        <Route path="lottery" element={<LazyPage><LotteryPage /></LazyPage>} />
+        <Route path="transparency" element={<LazyPage><TransparencyPage /></LazyPage>} />
       </Route>
     </Routes>
   )

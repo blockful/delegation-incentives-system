@@ -45,10 +45,10 @@ export const tokens = {
 
   radius: {
     sm: '8px',
-    card: '10px',
-    md: '12px',
-    lg: '16px',
-    xl: '20px',
+    card: '8px',
+    md: '8px',
+    lg: '8px',
+    xl: '8px',
     pill: '9999px',
   },
 
@@ -60,7 +60,6 @@ export const tokens = {
 
   font: {
     family: "'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    serif: "'EB Garamond', 'Georgia', serif",
     mono: "'Satoshi', monospace",
     size: {
       xs: '11px',

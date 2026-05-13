@@ -1,21 +1,23 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter } from 'react-router-dom'
-import { AppKitProvider } from './providers/AppKitProvider'
 import { ThorinProvider } from './providers/ThorinProvider'
-import { WalletStateProvider } from '@/features/wallet/WalletStateProvider'
 import { GlobalStyles } from '@/styles/GlobalStyles'
 import { Router } from './Router'
+import { LandingPageSkeleton } from '@/components/shared/PageSkeletons'
+
+const AppKitProvider = lazy(() => import('./providers/AppKitProvider').then((module) => ({ default: module.AppKitProvider })))
 
 export function App() {
   return (
-    <AppKitProvider>
-      <ThorinProvider>
-        <GlobalStyles />
-        <BrowserRouter>
-          <WalletStateProvider>
+    <ThorinProvider>
+      <GlobalStyles />
+      <BrowserRouter>
+        <Suspense fallback={<LandingPageSkeleton />}>
+          <AppKitProvider>
             <Router />
-          </WalletStateProvider>
-        </BrowserRouter>
-      </ThorinProvider>
-    </AppKitProvider>
+          </AppKitProvider>
+        </Suspense>
+      </BrowserRouter>
+    </ThorinProvider>
   )
 }

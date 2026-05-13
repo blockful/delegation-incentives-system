@@ -1403,7 +1403,7 @@ export interface paths {
                              */
                             totalDelegatedEns: string;
                             /**
-                             * @description Current count of active delegates plus unique direct delegators to active delegates. This is live delegation state, not finalized round payout recipients.
+                             * @description Current count of active delegates plus unique direct delegators to active delegates with a positive ENS balance. This is live delegation state, not finalized round payout recipients.
                              * @example 412
                              */
                             holdersEarning: number;

@@ -160,7 +160,7 @@ const SummaryLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 `
 
 const SummaryValue = styled.span`
@@ -245,7 +245,7 @@ const Th = styled.th`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkGray};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   border-bottom: 1px solid ${tokens.color.borderLight};
 `
 
@@ -268,7 +268,7 @@ const Td = styled.td`
       font-size: ${tokens.font.size.sm};
       font-weight: ${tokens.font.weight.bold};
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
     }
 
     &:last-child {
@@ -311,7 +311,7 @@ const MetaLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 `
 
 const MetaValue = styled.span`
@@ -1016,42 +1016,6 @@ export function RoundDetailPage() {
           <SummaryLabel>Address Earned</SummaryLabel>
           <SummaryValue>{formatAddressReward(round.data.addressReward)}</SummaryValue>
         </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Address Status</SummaryLabel>
-          <SummaryValue>
-            {round.data.addressReward
-              ? statusLabel(round.data.addressReward.rewardStatus)
-              : 'No address'}
-          </SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Active Delegates</SummaryLabel>
-          <SummaryValue>{round.data.activeDelegateCount ?? 'Unavailable'}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Direct Payout Holders</SummaryLabel>
-          <SummaryValue>{round.data.eligibleDelegatorCount ?? 'Unavailable'}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Lottery Entries</SummaryLabel>
-          <SummaryValue>{formatCount(round.data.lotteryEntryCount)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Lottery Buckets</SummaryLabel>
-          <SummaryValue>{formatCount(round.data.lotteryBucketCount)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Unique Lottery Winners</SummaryLabel>
-          <SummaryValue>{formatCount(round.data.lotteryWinnerCount)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Total Lottery Prizes</SummaryLabel>
-          <SummaryValue>{formatEns(round.data.lotteryPrizeEns, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Bucket Target</SummaryLabel>
-          <SummaryValue>{formatEns(round.data.lottery?.bucketTargetEns ?? null, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
-        </SummaryItem>
       </SummaryGrid>
 
       <Section>
@@ -1087,12 +1051,24 @@ export function RoundDetailPage() {
                 <MetaValue>{formatBlockNumber(round.data.lottery.seed.blockNumber)}</MetaValue>
               </MetaItem>
               <MetaItem>
-                <MetaLabel>Bucket Target</MetaLabel>
-                <MetaValue>{formatEns(round.data.lottery.bucketTargetEns, '0 ENS')}</MetaValue>
+                <MetaLabel>Total Lottery Prizes</MetaLabel>
+                <MetaValue>{formatEns(round.data.lotteryPrizeEns, '0 ENS')}</MetaValue>
               </MetaItem>
               <MetaItem>
                 <MetaLabel>Participants</MetaLabel>
                 <MetaValue>{round.data.lottery.participantCount.toLocaleString('en-US')}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Entries</MetaLabel>
+                <MetaValue>{formatCount(round.data.lotteryEntryCount)}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Winners</MetaLabel>
+                <MetaValue>{formatCount(round.data.lotteryWinnerCount)}</MetaValue>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Bucket Target</MetaLabel>
+                <MetaValue>{formatEns(round.data.lottery.bucketTargetEns, '0 ENS')}</MetaValue>
               </MetaItem>
               <MetaItem>
                 <MetaLabel>Algorithm</MetaLabel>

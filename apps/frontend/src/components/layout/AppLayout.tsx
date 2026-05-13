@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import { Header } from './Header'
-import { Footer } from '@/pages/LandingPage/sections/Footer'
+import { Footer } from './Footer'
 import { tokens } from '@/styles/tokens'
 
 const Main = styled.main<{ $fullWidth?: boolean }>`

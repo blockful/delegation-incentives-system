@@ -4,9 +4,9 @@ import { EnsSVG } from '@ensdomains/thorin'
 import { tokens } from '@/styles/tokens'
 
 const StyledFooter = styled.footer`
-  border-top: 1px solid ${tokens.color.border};
+  border-top: 1px solid ${tokens.color.borderLight};
   padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']};
-  background: ${tokens.color.surfaceAlt};
+  background: ${tokens.color.bgSubtle};
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['4xl']} ${tokens.spacing['4xl']};
@@ -48,7 +48,6 @@ const BrandText = styled.span`
 `
 
 const BrandSub = styled.span`
-  font-family: ${tokens.font.serif};
   font-size: ${tokens.font.size.base};
   color: ${tokens.color.textMuted};
 `
@@ -94,8 +93,8 @@ export function Footer() {
         <Top>
           <BrandBlock>
             <BrandRow>
-              <EnsSVG style={{ width: 20, height: 20 }} />
-              <BrandText>Incentives Program</BrandText>
+            <EnsSVG style={{ width: 20, height: 20 }} />
+            <BrandText>Incentives Program</BrandText>
             </BrandRow>
             <BrandSub>A security campaign for safer ENS governance</BrandSub>
           </BrandBlock>
@@ -104,7 +103,7 @@ export function Footer() {
             <FooterLink to="/delegates">Delegates</FooterLink>
             <FooterLink to="/rounds">Rounds</FooterLink>
             <FooterLink to="/lottery">Lottery</FooterLink>
-            <FooterLink to="/transparency">Verify</FooterLink>
+            <FooterLink to="/transparency">Transparency</FooterLink>
             <ExternalLink
               href="https://discuss.ens.domains"
               target="_blank"

@@ -71,7 +71,7 @@ const Th = styled.th`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkGray};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   border-bottom: 1px solid ${tokens.color.borderLight};
 `
 
@@ -94,7 +94,7 @@ const Td = styled.td`
       font-size: ${tokens.font.size.sm};
       font-weight: ${tokens.font.weight.bold};
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
     }
 
     &:last-child {

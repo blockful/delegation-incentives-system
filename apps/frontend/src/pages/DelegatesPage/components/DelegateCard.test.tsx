@@ -47,9 +47,12 @@ describe('DelegateCard', () => {
     expect(screen.getByText('9/10')).toBeInTheDocument()
   })
 
-  it('renders Delegate button when not delegated', () => {
+  it('renders delegation link when not delegated', () => {
     renderApp(<DelegateCard delegate={fullDelegate} />)
-    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Delegate on Anticapture' })).toHaveAttribute(
+      'href',
+      expect.stringContaining(fullDelegate.address),
+    )
   })
 
   it('omits Active since when activeSince is null', () => {

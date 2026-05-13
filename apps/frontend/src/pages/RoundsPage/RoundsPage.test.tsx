@@ -24,8 +24,8 @@ describe('RoundsPage', () => {
   it('renders the current round heading and tier table', async () => {
     renderApp(<RoundsPage />)
 
-    expect(await screen.findByRole('heading', { name: /Round 3 is live/i })).toBeInTheDocument()
-    expect(screen.getByText('live')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /Round 3/i })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: /Round 3 is live/i })).toHaveTextContent('live')
 
     const tierTable = await screen.findByTestId('tier-table')
     for (let i = 1; i <= 7; i++) {
@@ -57,7 +57,7 @@ describe('RoundsPage', () => {
     expect(within(history).queryByText('Status')).not.toBeInTheDocument()
 
     expect(within(history).getByText('Apr 1–30, 2026')).toBeInTheDocument()
-    expect(within(history).getByText('1 buckets / 2 entries / 1 unique winners')).toBeInTheDocument()
+    expect(within(history).getByText('1 bucket, 12 entries, 1 winner')).toBeInTheDocument()
     expect(within(history).getByText('Mar 1–31, 2026')).toBeInTheDocument()
     expect(screen.queryByText('+12.3456 ENS')).not.toBeInTheDocument()
   })
@@ -176,8 +176,8 @@ describe('RoundsPage', () => {
 
     renderApp(<RoundsPage />)
 
-    expect(await screen.findByRole('heading', { name: /Round 2 is paid/i })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: /round 2 is paid/i })).toHaveTextContent('Paid')
+    expect(await screen.findByRole('heading', { level: 1, name: /Round 2/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('status', { name: /round 2 is paid/i })[0]).toHaveTextContent('paid')
     expect(screen.queryByText('In progress')).not.toBeInTheDocument()
   })
 
@@ -222,7 +222,6 @@ describe('RoundDetailPage', () => {
     expect(screen.getByText('+20%')).toBeInTheDocument()
     expect(screen.getByText('155 ENS')).toBeInTheDocument()
     expect(screen.getAllByText('35 ENS').length).toBeGreaterThan(0)
-    expect(screen.getByText('Direct Payout Holders')).toBeInTheDocument()
     expect(screen.getByText('Total Lottery Prizes')).toBeInTheDocument()
     expect(screen.getByText('Address Lottery')).toBeInTheDocument()
     expect(screen.getByText('Won bucket #1')).toBeInTheDocument()
@@ -231,8 +230,8 @@ describe('RoundDetailPage', () => {
     expect(screen.getByText('Ethereum prevRandao')).toBeInTheDocument()
     expect(screen.getByText('keccak256(prevRandao, bucketIndex)')).toBeInTheDocument()
     expect(screen.getByText('#24,996,367')).toBeInTheDocument()
-    expect(screen.getAllByText('75%').length).toBeGreaterThan(0)
-    expect(screen.getByText('7.5 ENS')).toBeInTheDocument()
+    expect(screen.getAllByText('9.9%').length).toBeGreaterThan(0)
+    expect(screen.getByText('0.99 ENS')).toBeInTheDocument()
     expect(screen.getByText('Delegate Rewards')).toBeInTheDocument()
     expect(screen.getByText('Token Holder Rewards')).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: 'Previous round' })).toHaveAttribute(

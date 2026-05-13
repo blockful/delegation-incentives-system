@@ -5,6 +5,7 @@ coverage/
 *.tsbuildinfo
 .ponder/
 generated/
+.vercel/
 package-lock.json
 .worktrees/
 *.png

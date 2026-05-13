@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { createElement } from 'react'
-import { WalletStateContext } from './WalletStateProvider'
+import { WalletStateContext } from './wallet.context'
 import { useWalletState } from './useWalletState'
 import type { AppWalletState } from './wallet.types'
 

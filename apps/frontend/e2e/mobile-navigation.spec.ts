@@ -15,7 +15,7 @@ test.describe('Mobile navigation', () => {
 
     // Mobile drawer links should be visible
     await expect(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Dashboard', exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Delegates', exact: true }).first()).toBeVisible()
     await expect(page.getByRole('link', { name: 'Transparency', exact: true }).first()).toBeVisible()
   })
 

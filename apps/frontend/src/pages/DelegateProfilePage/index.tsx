@@ -7,6 +7,7 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
+import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { formatEnsAmount } from '@/utils/format'
 
 function formatVotingPower(vpWei: string): string {
@@ -94,30 +95,38 @@ const CtaWrapper = styled.div`
   margin-top: ${tokens.spacing.sm};
 `
 
-const DelegateButton = styled.button<{ $delegated: boolean }>`
+const DelegateAction = styled.a`
   width: 100%;
   padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
   border-radius: ${tokens.radius.md};
   border: none;
-  background: ${({ $delegated }) =>
-    $delegated ? tokens.color.tierHighlight : tokens.color.blue};
-  color: ${({ $delegated }) =>
-    $delegated ? tokens.color.positiveEmphasis : '#fff'};
+  background: ${tokens.color.blue};
+  color: ${tokens.color.white};
   font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
-  cursor: ${({ $delegated }) => ($delegated ? 'default' : 'pointer')};
-  transition: all ${tokens.transition.base};
-  box-shadow: ${({ $delegated }) =>
-    $delegated ? 'none' : '0 4px 12px rgba(82, 152, 255, 0.3)'};
+  transition:
+    background ${tokens.transition.base},
+    box-shadow ${tokens.transition.base};
+  box-shadow: 0 4px 12px rgba(82, 152, 255, 0.3);
+  text-decoration: none;
+  text-align: center;
 
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
+  &:hover {
+    color: ${tokens.color.white};
+    background: ${tokens.color.accent};
     box-shadow: 0 6px 20px rgba(82, 152, 255, 0.4);
   }
+`
 
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
+const DelegatedStatus = styled.span`
+  width: 100%;
+  padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
+  border-radius: ${tokens.radius.md};
+  background: ${tokens.color.tierHighlight};
+  color: ${tokens.color.positiveEmphasis};
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  text-align: center;
 `
 
 const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
@@ -129,7 +138,7 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   margin-left: ${tokens.spacing.xs};
 `
 
@@ -181,7 +190,7 @@ const CardTitle = styled.h2`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: ${tokens.color.darkGray};
   margin: 0 0 ${tokens.spacing.lg};
 `
@@ -250,6 +259,7 @@ export function DelegateProfilePage() {
           100
       )
     : 0
+  const delegateUrl = getAnticaptureDelegateUrl(delegate.address)
 
   return (
     <Page>
@@ -266,10 +276,14 @@ export function DelegateProfilePage() {
           size="xl"
         />
         <CtaWrapper>
-          <DelegateButton $delegated={isDelegated} disabled={isDelegated}>
-            {isDelegated ? 'Delegated ✓' : <>Delegate <FreeTag>Free</FreeTag></>}
-          </DelegateButton>
-          {!isDelegated && <CtaHint>No gas fees required</CtaHint>}
+          {isDelegated ? (
+            <DelegatedStatus>Delegated</DelegatedStatus>
+          ) : (
+            <DelegateAction href={delegateUrl} target="_blank" rel="noopener noreferrer">
+              Delegate on Anticapture <FreeTag>Free</FreeTag>
+            </DelegateAction>
+          )}
+          {!isDelegated && <CtaHint>Gas sponsored by the incentives program</CtaHint>}
         </CtaWrapper>
       </HeroCard>
 
@@ -300,7 +314,7 @@ export function DelegateProfilePage() {
       </VotingCard>
 
       <ExternalLink
-        href={`https://anticapture.com/ens/holders-and-delegates?tab=delegates&drawerAddress=${delegate.address}`}
+        href={delegateUrl}
         target="_blank"
         rel="noopener noreferrer"
       >

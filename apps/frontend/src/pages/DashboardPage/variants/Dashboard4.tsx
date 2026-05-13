@@ -244,7 +244,7 @@ const CardLabel = styled.span<{ $variant: 'now' | 'next' }>`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: ${({ $variant }) =>
     $variant === 'now' ? tokens.color.textMuted : tokens.color.accent};
 `

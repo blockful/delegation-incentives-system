@@ -12,6 +12,7 @@ import anticaptureIcon from '@/images/anticapture.svg'
 import duneIcon from '@/images/dune.svg'
 import { StatCard } from '@/components/shared/StatCard'
 import { StepList } from '@/components/shared/StepList'
+import { formatEnsCompact } from '@/utils/format'
 
 import { CURRENT_ROUND } from '@/config/round'
 
@@ -32,7 +33,7 @@ const HeroTitle = styled.h1`
   font-weight: ${tokens.font.weight.black};
   color: ${tokens.color.darkBlue};
   line-height: 1.15;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin: 0;
 
   @media (min-width: 768px) {
@@ -79,7 +80,7 @@ const SectionLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: ${tokens.color.darkGray};
 `
 
@@ -99,19 +100,19 @@ const VERIFY_LINKS: LinkCardItem[] = [
   {
     iconSrc: gitIcon,
     title: 'GitHub',
-    desc: 'Open source contracts & scripts',
+    desc: 'Source code and reward scripts',
     href: 'https://github.com/blockful-io/delegation-incentives-system',
   },
   {
     iconSrc: anticaptureIcon,
     title: 'Anticapture',
-    desc: 'Delegate activity & governance health',
+    desc: 'Delegate activity and governance data',
     href: 'https://anticapture.xyz',
   },
   {
     iconSrc: duneIcon,
     title: 'Dune Analytics',
-    desc: 'Live round data & payout breakdown',
+    desc: 'Round and payout dashboards',
     href: 'https://dune.com',
   },
 ]
@@ -172,8 +173,7 @@ export function TransparencyPage() {
         <Eyebrow>Transparency</Eyebrow>
         <HeroTitle>Verify everything on-chain</HeroTitle>
         <HeroDesc>
-          Every calculation is public. Every payout is verifiable. No trust
-          required, check it yourself.
+          Contracts, data sources, and reward logic are public so every round can be checked.
         </HeroDesc>
       </HeroBlock>
 
@@ -198,13 +198,13 @@ export function TransparencyPage() {
             tiers.data && (
               <Section>
                 <SectionLabel>
-                  Round {CURRENT_ROUND} · Live Data
+                  Round {CURRENT_ROUND} · Program Data
                 </SectionLabel>
                 <StatGrid>
-                  <StatCard label="Snapshot Block" value="—" />
-                  <StatCard label="Total Delegated" value={status.data.activeDelegateCount} />
-                  <StatCard label="Eligible Holders" value={status.data.proposalCount} />
-                  <StatCard label="Reward Pool" value={`Tier ${tiers.data.currentTierIndex + 1}`} />
+                  <StatCard label="Active Delegates" value={status.data.activeDelegateCount} />
+                  <StatCard label="ENS Delegated" value={`${formatEnsCompact(status.data.totalDelegatedEns)} ENS`} />
+                  <StatCard label="Wallets Earning" value={status.data.holdersEarning} />
+                  <StatCard label="Current Tier" value={`Tier ${tiers.data.currentTierIndex + 1}`} />
                 </StatGrid>
               </Section>
             )

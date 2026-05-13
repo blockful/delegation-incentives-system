@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { WalletStateContext } from './WalletStateProvider'
+import { WalletStateContext } from './wallet.context'
 
 export function useWalletState() {
   return useContext(WalletStateContext)

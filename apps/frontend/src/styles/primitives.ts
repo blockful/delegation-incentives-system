@@ -30,7 +30,7 @@ export const Eyebrow = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: ${tokens.color.darkGray};
 `
 
@@ -59,7 +59,6 @@ export const SectionHeading = styled.h2`
 `
 
 export const SectionSubheading = styled.p`
-  font-family: ${tokens.font.serif};
   font-size: ${tokens.font.size.lg};
   line-height: 1.6;
   color: ${tokens.color.textMuted};
@@ -69,7 +68,7 @@ export const SectionSubheading = styled.p`
 /* ─── Gradient text (ENS signature style) ─── */
 
 export const gradientTextStyles = css`
-  background: linear-gradient(135deg, ${tokens.color.blue} 0%, #44B4E0 100%);
+  background: linear-gradient(135deg, ${tokens.color.blue} 0%, ${tokens.color.accent} 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -143,7 +142,7 @@ export const StatLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: ${tokens.color.textMuted};
 `
 

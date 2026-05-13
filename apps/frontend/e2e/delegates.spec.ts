@@ -23,6 +23,7 @@ test.describe('Delegates Page', () => {
   })
 
   test('renders stats bar', async ({ page }) => {
-    await expect(page.getByText(/Active Delegates/i)).toBeVisible()
+    await expect(page.getByText('active delegates', { exact: true })).toBeVisible()
+    await expect(page.getByText('wallets earning', { exact: true })).toBeVisible()
   })
 })
