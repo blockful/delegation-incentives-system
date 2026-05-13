@@ -420,7 +420,7 @@ export function RoundsPage() {
             timeLeft={formatDaysRemaining(currentRound.daysRemaining)}
             poolSizeEns={currentRound.poolSizeEns ?? '0'}
             currentTier={currentRound.tierLabel ?? `Tier #${currentTierIndex + 1}`}
-            currentApyPct={currentTier?.estimatedApyPct ?? '0'}
+            currentAprPct={currentTier?.estimatedAprPct ?? '0'}
           />
           <RoundHistoryTable entries={roundHistory} />
         </LeftColumn>

@@ -11,11 +11,11 @@ interface DisconnectedLandingProps {
 }
 
 export function DisconnectedLanding({ tierData, roundData }: DisconnectedLandingProps) {
-  const currentApyPct = tierData.maxTokenHolderApyPct
+  const currentAprPct = tierData.maxTokenHolderAprPct
 
   return (
     <>
-      <HeroSection currentApyPct={currentApyPct} />
+      <HeroSection currentAprPct={currentAprPct} />
       <RoundStatusBar
         currentGrowthPct={roundData.vpGrowthPct}
         currentTierIndex={roundData.tierIndex}

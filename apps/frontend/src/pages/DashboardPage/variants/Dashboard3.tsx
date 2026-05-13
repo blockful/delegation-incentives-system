@@ -464,18 +464,18 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
   if (!data) return null
 
-  const { apy, tiers, round } = data
-  const delegatedTo = (apy.delegatedTo ?? address) as `0x${string}`
+  const { apr, tiers, round } = data
+  const delegatedTo = (apr.delegatedTo ?? address) as `0x${string}`
 
   return (
     <Page>
       <EarningsStrip
-        earnedEns={apy.estimatedMonthlyRewardEns}
-        apyPct={apy.estimatedApyPct}
+        earnedEns={apr.estimatedMonthlyRewardEns}
+        aprPct={apr.estimatedAprPct}
         tierIndex={tiers.currentTierIndex}
         delegatedTo={delegatedTo}
-        delegateEnsName={apy.delegatedToEnsName}
-        delegateAvatarUrl={apy.delegatedToAvatarUrl}
+        delegateEnsName={apr.delegatedToEnsName}
+        delegateAvatarUrl={apr.delegatedToAvatarUrl}
         roundStartDate={round.startDate}
         roundEndDate={round.endDate}
       />
@@ -489,21 +489,21 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
       />
 
       <BalanceStrip
-        balanceEns={apy.currentBalanceEns}
-        expectedPayout={apy.estimatedMonthlyRewardEns}
+        balanceEns={apr.currentBalanceEns}
+        expectedPayout={apr.estimatedMonthlyRewardEns}
       />
 
       <TierStepLadder
         tiers={tiers.tiers}
         currentTierIndex={tiers.currentTierIndex}
-        userEstimatedReward={apy.estimatedMonthlyRewardEns}
+        userEstimatedReward={apr.estimatedMonthlyRewardEns}
       />
 
-      {apy.qualifiesForLottery && (
+      {apr.qualifiesForLottery && (
         <LotteryBanner to="/lottery">
           <LotteryIcon aria-hidden>🎟️</LotteryIcon>
           <LotteryText>
-            Your <strong>{formatPayout(apy.estimatedMonthlyRewardEns)} ENS</strong> payout is below
+            Your <strong>{formatPayout(apr.estimatedMonthlyRewardEns)} ENS</strong> payout is below
             the 1 ENS minimum. It enters a <strong>10 ENS lottery pool</strong> drawn at round end.
           </LotteryText>
           <LotteryArrow aria-hidden>&rsaquo;</LotteryArrow>
@@ -517,7 +517,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
 function EarningsStrip({
   earnedEns,
-  apyPct,
+  aprPct,
   tierIndex,
   delegatedTo,
   delegateEnsName,
@@ -526,7 +526,7 @@ function EarningsStrip({
   roundEndDate,
 }: {
   earnedEns: string
-  apyPct: string
+  aprPct: string
   tierIndex: number
   delegatedTo: string
   delegateEnsName: string | null
@@ -552,7 +552,7 @@ function EarningsStrip({
       <StripTopRow>
         <EarnedValue>+{streamingEarnings} ENS</EarnedValue>
         <StripMeta>
-          {apyPct}% APY &middot; Tier {tierIndex + 1}
+          {aprPct}% APR &middot; Tier {tierIndex + 1}
         </StripMeta>
       </StripTopRow>
       <DelegateInfo>
@@ -632,7 +632,7 @@ function TierStepLadder({
   tiers: {
     index: number
     poolSizeEns: string
-    estimatedApyPct: string
+    estimatedAprPct: string
     additionalVPNeeded: string
     requiredTotalVP: string
     isCurrent: boolean
@@ -705,7 +705,7 @@ function TierStepLadder({
                   </StepPoolLabel>
                   <StepDots />
                   <StepStats>
-                    {tier.estimatedApyPct}% APY &rarr; {payoutPrefix}
+                    {tier.estimatedAprPct}% APR &rarr; {payoutPrefix}
                     {payoutStr} ENS/mo
                   </StepStats>
                   {isCurrent && <YouAreHere>&larr; You are here</YouAreHere>}

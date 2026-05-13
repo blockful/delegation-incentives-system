@@ -76,11 +76,11 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   }
   if (!data) return null
 
-  const { apy, tiers, round } = data
+  const { apr, tiers, round } = data
   const currentTierIndex = tiers.currentTierIndex
-  const delegatedTo = (apy.delegatedTo ?? address) as `0x${string}`
+  const delegatedTo = (apr.delegatedTo ?? address) as `0x${string}`
 
-  const balanceLabel = `${parseFloat(apy.currentBalanceEns).toFixed(2)} ENS`
+  const balanceLabel = `${parseFloat(apr.currentBalanceEns).toFixed(2)} ENS`
   const timeLeft = `${round.daysRemaining}d`
   const roundEndFormatted = formatShortDate(round.endDate)
   const poolLabel = `${Math.round(Number(tiers.tiers[currentTierIndex]?.poolSizeEns ?? 0) / 1000)}K ENS`
@@ -92,13 +92,13 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           <div>
             <SectionLabel>Your Rewards</SectionLabel>
             <EarningsStrip
-              earnedEns={apy.estimatedMonthlyRewardEns}
-              apyPct={apy.estimatedApyPct}
+              earnedEns={apr.estimatedMonthlyRewardEns}
+              aprPct={apr.estimatedAprPct}
               tierIndex={currentTierIndex}
               delegatedTo={delegatedTo}
-              delegateEnsName={apy.delegatedToEnsName ?? undefined}
-              delegateAvatarUrl={apy.delegatedToAvatarUrl ?? undefined}
-              balanceEns={apy.currentBalanceEns}
+              delegateEnsName={apr.delegatedToEnsName ?? undefined}
+              delegateAvatarUrl={apr.delegatedToAvatarUrl ?? undefined}
+              balanceEns={apr.currentBalanceEns}
               roundStartDate={round.startDate}
               roundEndDate={round.endDate}
               roundNumber={round.roundNumber}
@@ -124,8 +124,8 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
                 roundNumber={round.roundNumber}
                 percentComplete={round.percentComplete}
               />
-              {apy.qualifiesForLottery && (
-                <LotteryCard expectedPayout={apy.estimatedMonthlyRewardEns} />
+              {apr.qualifiesForLottery && (
+                <LotteryCard expectedPayout={apr.estimatedMonthlyRewardEns} />
               )}
             </Column>
           </div>
@@ -135,7 +135,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
       <RewardTiers
         tiers={tiers.tiers}
         currentTierIndex={currentTierIndex}
-        userEstimatedReward={apy.estimatedMonthlyRewardEns}
+        userEstimatedReward={apr.estimatedMonthlyRewardEns}
       />
     </Page>
   )

@@ -170,7 +170,7 @@ const Dot = styled.div<{ $filled: boolean; $isUnlocked: boolean }>`
       : tokens.color.middleGray};
 `
 
-const ApyText = styled.span<{ $isUnlocked: boolean }>`
+const AprText = styled.span<{ $isUnlocked: boolean }>`
   font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
   color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
@@ -232,7 +232,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
       <CopyBlock>
         <TitleBlock>
           <Eyebrow>The more people join, the more you earn</Eyebrow>
-          <Heading>Your APY grows when others delegate too</Heading>
+          <Heading>Your APR grows when others delegate too</Heading>
           <Description>
             This isn't a fixed yield. The reward pool unlocks higher tiers as
             more ENS gets delegated to active voters — so every person you
@@ -248,8 +248,8 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
       <TierCard data-testid="tier-table">
         {tiers.map((tier, i) => {
           const isLocked = !tier.isUnlocked
-          const apyLabel = tier.estimatedApyPct != null
-            ? `~${tier.estimatedApyPct}% APY`
+          const aprLabel = tier.estimatedAprPct != null
+            ? `~${tier.estimatedAprPct}% APR`
             : '—'
           return (
             <React.Fragment key={tier.index}>
@@ -267,7 +267,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
                       />
                     ))}
                   </Dots>
-                  <ApyText $isUnlocked={tier.isUnlocked}>{apyLabel}</ApyText>
+                  <AprText $isUnlocked={tier.isUnlocked}>{aprLabel}</AprText>
                   <StatusIcon>
                     {tier.isUnlocked ? (
                       <CheckSVG style={{ color: tokens.color.positiveEmphasis }} />

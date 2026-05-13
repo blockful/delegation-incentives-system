@@ -4,7 +4,7 @@ import type {
   ActiveVotersResponse,
   EligibilityResponse,
   TierProgressionResponse,
-  ApyEstimateResponse,
+  AprEstimateResponse,
   DistributionResponse,
   RoundInfoResponse,
   RoundListResponse,
@@ -23,7 +23,7 @@ const MOCK_TIERS: TierProgressionResponse = {
   currentGrowthPct: '12.40',
   currentTierIndex: 1,
   activeVoterCount: 47,
-  maxTokenHolderApyPct: '120.00',
+  maxTokenHolderAprPct: '120.00',
   tiers: [
     {
       index: 0,
@@ -36,7 +36,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: true,
       additionalVPNeeded: '0',
       requiredTotalVP: '1112000000000000000000000',
-      estimatedApyPct: '4.80',
+      estimatedAprPct: '4.80',
     },
     {
       index: 1,
@@ -49,7 +49,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: true,
       additionalVPNeeded: '0',
       requiredTotalVP: '1223200000000000000000000',
-      estimatedApyPct: '8.64',
+      estimatedAprPct: '8.64',
     },
     {
       index: 2,
@@ -62,7 +62,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '84200000000000000000000',
       requiredTotalVP: '1334400000000000000000000',
-      estimatedApyPct: '15.65',
+      estimatedAprPct: '15.65',
     },
     {
       index: 3,
@@ -75,7 +75,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '195400000000000000000000',
       requiredTotalVP: '1445600000000000000000000',
-      estimatedApyPct: '27.00',
+      estimatedAprPct: '27.00',
     },
     {
       index: 4,
@@ -88,7 +88,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '418000000000000000000000',
       requiredTotalVP: '1668000000000000000000000',
-      estimatedApyPct: '46.29',
+      estimatedAprPct: '46.29',
     },
     {
       index: 5,
@@ -101,7 +101,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '696000000000000000000000',
       requiredTotalVP: '1946000000000000000000000',
-      estimatedApyPct: '80.00',
+      estimatedAprPct: '80.00',
     },
     {
       index: 6,
@@ -114,7 +114,7 @@ const MOCK_TIERS: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '974000000000000000000000',
       requiredTotalVP: '2224000000000000000000000',
-      estimatedApyPct: '120.00',
+      estimatedAprPct: '120.00',
     },
   ],
 }
@@ -548,8 +548,8 @@ export const mockApi = {
 
   tierProgression: () => delay(MOCK_TIERS),
 
-  apy: (_address: string) =>
-    delay<ApyEstimateResponse>({
+  apr: (_address: string) =>
+    delay<AprEstimateResponse>({
       address: _address,
       ensName: null,
       avatarUrl: null,
@@ -559,7 +559,7 @@ export const mockApi = {
       delegatedToAvatarUrl: null,
       poolSizeEns: '1000',
       estimatedMonthlyRewardEns: '0',
-      estimatedApyPct: '0',
+      estimatedAprPct: '0',
       userShareWei: '0',
       totalShareWei: '0',
       currentBalanceEns: '0',

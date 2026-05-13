@@ -19,7 +19,7 @@ const RouterLink = styled(Link)`
 `
 
 interface HeroSectionProps {
-  currentApyPct: string
+  currentAprPct: string
 }
 
 const Section = styled.section`
@@ -118,7 +118,7 @@ const Particle = styled.div<{
   }
 `
 
-const ApyValue = styled.span`
+const AprValue = styled.span`
   display: inline-block;
   color: ${tokens.color.blue};
   background: ${tokens.color.lightBlueOpacity};
@@ -195,7 +195,7 @@ const PARTICLE_CONFIGS = [
   { id: 19, left: 96, size: 20, duration: 16, delay: 6.5  },
 ]
 
-export function HeroSection({ currentApyPct }: HeroSectionProps) {
+export function HeroSection({ currentAprPct }: HeroSectionProps) {
   return (
     <Section>
       <ParticlesLayer>
@@ -209,7 +209,7 @@ export function HeroSection({ currentApyPct }: HeroSectionProps) {
         <HeroEyebrow>ENS Governance &middot; 90-Day Pilot</HeroEyebrow>
         <Headline>
           Your ENS could be earning <br />{' '}
-          <ApyValue>{currentApyPct}% APY</ApyValue>
+          <AprValue>{currentAprPct}% APR</AprValue>
         </Headline>
         <Subtitle>
         Help secure ENS governance by delegating to an active voter.

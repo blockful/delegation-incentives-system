@@ -7,7 +7,7 @@ import { useStreamingCounter } from '@/hooks/useStreamingCounter'
 
 interface EarningsStripProps {
   earnedEns: string
-  apyPct: string
+  aprPct: string
   tierIndex: number
   delegatedTo: string
   delegateEnsName?: string
@@ -55,14 +55,14 @@ const EarnedSubtitle = styled.span`
   color: ${tokens.color.darkBlue};
 `
 
-const ApyRow = styled.div`
+const AprRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.sm};
   flex-wrap: wrap;
 `
 
-const ApyLabel = styled.span`
+const AprLabel = styled.span`
   font-size: ${tokens.font.size.base};
   color: ${tokens.color.darkGray};
 
@@ -139,7 +139,7 @@ const ShareButton = styled.button<{ $primary?: boolean }>`
 
 export function EarningsStrip({
   earnedEns,
-  apyPct,
+  aprPct,
   tierIndex,
   delegatedTo,
   delegateEnsName,
@@ -156,7 +156,7 @@ export function EarningsStrip({
   const displayName = delegateEnsName ?? resolvedName ?? truncateAddress(delegatedTo)
   const streamingEarnings = useStreamingCounter(earnedEns, roundStartDate, roundEndDate)
 
-  const shareText = `I'm earning ${apyPct}% APY on my ENS by delegating to an active voter. Join the ENS Incentives Program!`
+  const shareText = `I'm earning ${aprPct}% APR on my ENS by delegating to an active voter. Join the ENS Incentives Program!`
 
   return (
     <Card aria-label="Your rewards">
@@ -165,10 +165,10 @@ export function EarningsStrip({
         <EarnedSubtitle>ENS earned so far</EarnedSubtitle>
       </EarningsBlock>
 
-      <ApyRow>
-        <ApyLabel>Earning at <strong>{apyPct}% APY</strong></ApyLabel>
+      <AprRow>
+        <AprLabel>Earning at <strong>{aprPct}% APR</strong></AprLabel>
         <TierBadge>Tier {tierIndex + 1}</TierBadge>
-      </ApyRow>
+      </AprRow>
 
       <PillsRow>
         <Pill>

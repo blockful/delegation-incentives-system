@@ -148,7 +148,7 @@ const HOW_REWARDS_STEPS = [
   },
   {
     title: 'Tier assignment',
-    desc: 'Month-over-month growth in delegated VP unlocks tiers. Your tier is set at round start and determines APY.',
+    desc: 'Month-over-month growth in delegated VP unlocks tiers. Your tier is set at round start and determines APR.',
   },
   {
     title: 'Payout at round end',

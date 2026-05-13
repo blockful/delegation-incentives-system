@@ -7,7 +7,7 @@ export const roundsFixture: TierProgressionResponse = {
   currentGrowthPct: '12.40',
   currentTierIndex: 1,
   activeVoterCount: 47,
-  maxTokenHolderApyPct: '5400.00',
+  maxTokenHolderAprPct: '5400.00',
   tiers: [
     {
       index: 0,
@@ -20,7 +20,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: true,
       additionalVPNeeded: '0',
       requiredTotalVP: '0',
-      estimatedApyPct: '4.80',
+      estimatedAprPct: '4.80',
     },
     {
       index: 1,
@@ -33,7 +33,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: true,
       additionalVPNeeded: '0',
       requiredTotalVP: '1168600000000000000000000',
-      estimatedApyPct: '8.64',
+      estimatedAprPct: '8.64',
     },
     {
       index: 2,
@@ -46,7 +46,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '38000000000000000000000',
       requiredTotalVP: '1288000000000000000000000',
-      estimatedApyPct: '15.65',
+      estimatedAprPct: '15.65',
     },
     {
       index: 3,
@@ -59,7 +59,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '160000000000000000000000',
       requiredTotalVP: '1410000000000000000000000',
-      estimatedApyPct: '27.00',
+      estimatedAprPct: '27.00',
     },
     {
       index: 4,
@@ -72,7 +72,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '318000000000000000000000',
       requiredTotalVP: '1568000000000000000000000',
-      estimatedApyPct: '46.29',
+      estimatedAprPct: '46.29',
     },
     {
       index: 5,
@@ -85,7 +85,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '530000000000000000000000',
       requiredTotalVP: '1780000000000000000000000',
-      estimatedApyPct: '80.00',
+      estimatedAprPct: '80.00',
     },
     {
       index: 6,
@@ -98,7 +98,7 @@ export const roundsFixture: TierProgressionResponse = {
       isUnlocked: false,
       additionalVPNeeded: '750000000000000000000000',
       requiredTotalVP: '2000000000000000000000000',
-      estimatedApyPct: '120.00',
+      estimatedAprPct: '120.00',
     },
   ],
 }

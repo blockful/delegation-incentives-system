@@ -38,7 +38,7 @@ test.describe('All pages render on mobile', () => {
     // Use the eyebrow label which is always visible
     await expect(page.getByRole('heading', { level: 1, name: /Round \d+/i })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Round History')).toBeVisible()
-    await expect(page.getByText('APY Tiers')).toBeVisible()
+    await expect(page.getByText('APR Tiers')).toBeVisible()
   })
 
   test('lottery page renders hero and how-it-works', async ({ page }) => {

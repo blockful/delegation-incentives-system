@@ -13,7 +13,7 @@ it("emits OpenAPI spec to apps/frontend/openapi.json", () => {
       title: "ENS Delegation Incentives API",
       version: "1.0.0",
       description:
-        "API for the ENS delegation incentives system — active voters, eligibility, reward estimates, APY, tiers, rounds, and distribution history.",
+        "API for the ENS delegation incentives system — active voters, eligibility, reward estimates, APR, tiers, rounds, and distribution history.",
     },
   });
 

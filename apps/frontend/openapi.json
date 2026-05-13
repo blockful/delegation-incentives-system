@@ -3,7 +3,7 @@
   "info": {
     "title": "ENS Delegation Incentives API",
     "version": "1.0.0",
-    "description": "API for the ENS delegation incentives system — active voters, eligibility, reward estimates, APY, tiers, rounds, and distribution history."
+    "description": "API for the ENS delegation incentives system — active voters, eligibility, reward estimates, APR, tiers, rounds, and distribution history."
   },
   "components": {
     "schemas": {},

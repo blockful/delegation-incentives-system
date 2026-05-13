@@ -232,7 +232,7 @@ export function VoterProfilePage() {
 
   const fetchTiers = useCallback(() => api.tierProgression(), [])
   const tiers = useAsync(fetchTiers)
-  const apyPct = tiers.data?.maxTokenHolderApyPct ?? null
+  const aprPct = tiers.data?.maxTokenHolderAprPct ?? null
 
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
@@ -289,11 +289,11 @@ export function VoterProfilePage() {
         <CtaWrapper>
           {isDelegated ? (
             <DelegatedStatus>
-              {apyPct ? `Delegated · Earn up to ${apyPct}% APY` : 'Delegated'}
+              {aprPct ? `Delegated · Earn up to ${aprPct}% APR` : 'Delegated'}
             </DelegatedStatus>
           ) : (
             <DelegateAction type="button" onClick={handleDelegate}>
-              {apyPct ? `Delegate — Earn up to ${apyPct}% APY` : 'Delegate'}{' '}
+              {aprPct ? `Delegate — Earn up to ${aprPct}% APR` : 'Delegate'}{' '}
               <FreeTag>Free</FreeTag>
             </DelegateAction>
           )}

@@ -19,7 +19,7 @@ export type StatusResponse = GetJson<"/stats">;
 export type ActiveVotersResponse = GetJson<"/voters/active">;
 export type EligibilityResponse = GetJson<"/eligibility/{address}">;
 export type TierProgressionResponse = GetJson<"/tiers/progression">;
-export type ApyEstimateResponse = GetJson<"/apy/{address}">;
+export type AprEstimateResponse = GetJson<"/apr/{address}">;
 export type RoundInfoResponse = GetJson<"/rounds/current">;
 
 export type VoterDetail = ActiveVotersResponse["voters"][number];

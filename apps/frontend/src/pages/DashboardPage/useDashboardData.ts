@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
-import type { ApyEstimateResponse, TierProgressionResponse, RoundInfoResponse } from '@/api/types'
+import type { AprEstimateResponse, TierProgressionResponse, RoundInfoResponse } from '@/api/types'
 
 export interface DashboardData {
-  apy: ApyEstimateResponse
+  apr: AprEstimateResponse
   tiers: TierProgressionResponse
   round: RoundInfoResponse
 }
@@ -16,28 +16,28 @@ export interface DashboardState {
 }
 
 export function useDashboardData(address: `0x${string}`): DashboardState {
-  const fetchApy = useCallback(() => api.apy(address), [address])
+  const fetchApr = useCallback(() => api.apr(address), [address])
   const fetchTiers = useCallback(() => api.tierProgression(), [])
   const fetchRound = useCallback(() => api.currentRound(), [])
-  const apy = useAsync(fetchApy)
+  const apr = useAsync(fetchApr)
   const tiers = useAsync(fetchTiers)
   const round = useAsync(fetchRound)
 
-  if (apy.loading || tiers.loading || round.loading) {
+  if (apr.loading || tiers.loading || round.loading) {
     return { data: null, loading: true, error: null }
   }
 
-  const error = apy.error ?? tiers.error ?? round.error ?? null
+  const error = apr.error ?? tiers.error ?? round.error ?? null
   if (error) {
     return { data: null, loading: false, error }
   }
 
-  if (!apy.data || !tiers.data || !round.data) {
+  if (!apr.data || !tiers.data || !round.data) {
     return { data: null, loading: false, error: null }
   }
 
   return {
-    data: { apy: apy.data, tiers: tiers.data, round: round.data },
+    data: { apr: apr.data, tiers: tiers.data, round: round.data },
     loading: false,
     error: null,
   }

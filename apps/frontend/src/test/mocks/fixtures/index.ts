@@ -6,7 +6,7 @@ export {
   eligibleTokenHolderFixture,
   ineligibleFixture,
 } from './eligibility'
-export { apyFixture } from './apy'
+export { aprFixture } from './apr'
 export { distributionFixture } from './lottery'
 export { roundInfoFixture } from './roundInfo'
 export {

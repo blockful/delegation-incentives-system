@@ -40,11 +40,11 @@ describe('LandingPage', () => {
     })
   })
 
-  it('shows current APY in hero from tier data', async () => {
-    // Fixture: maxTokenHolderApyPct='5400.00'
+  it('shows current APR in hero from tier data', async () => {
+    // Fixture: maxTokenHolderAprPct='5400.00'
     renderApp(<LandingPage />)
     await waitFor(() => {
-      expect(screen.getByText('5400.00% APY')).toBeInTheDocument()
+      expect(screen.getByText('5400.00% APR')).toBeInTheDocument()
     })
   })
 

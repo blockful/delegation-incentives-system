@@ -5,7 +5,7 @@ import {
   votersFixture,
   roundsFixture,
   eligibleTokenHolderFixture,
-  apyFixture,
+  aprFixture,
   distributionFixture,
   roundInfoFixture,
   addressDistributionFixture,
@@ -29,7 +29,7 @@ export const handlers = [
     HttpResponse.json(eligibleTokenHolderFixture),
   ),
 
-  http.get('/api/apy/:address', () => HttpResponse.json(apyFixture)),
+  http.get('/api/apr/:address', () => HttpResponse.json(aprFixture)),
 
   http.get('/api/distributions', ({ request }) => {
     const url = new URL(request.url)

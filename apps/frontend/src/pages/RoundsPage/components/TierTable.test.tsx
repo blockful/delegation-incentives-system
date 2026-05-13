@@ -25,17 +25,17 @@ describe('TierTable', () => {
     expect(within(tierTable).getAllByText(/Tier #\d+/)).toHaveLength(7)
   })
 
-  it('shows APY for each tier', () => {
+  it('shows APR for each tier', () => {
     renderApp(
       <TierTable tiers={tiers} currentTierIndex={currentTierIndex} />,
     )
 
-    expect(screen.getByText('~4.80% APY')).toBeInTheDocument()
-    expect(screen.getByText('~8.64% APY')).toBeInTheDocument()
-    expect(screen.getByText('~15.65% APY')).toBeInTheDocument()
-    expect(screen.getByText('~27.00% APY')).toBeInTheDocument()
-    expect(screen.getByText('~46.29% APY')).toBeInTheDocument()
-    expect(screen.getByText('~80.00% APY')).toBeInTheDocument()
-    expect(screen.getByText('~120.00% APY')).toBeInTheDocument()
+    expect(screen.getByText('~4.80% APR')).toBeInTheDocument()
+    expect(screen.getByText('~8.64% APR')).toBeInTheDocument()
+    expect(screen.getByText('~15.65% APR')).toBeInTheDocument()
+    expect(screen.getByText('~27.00% APR')).toBeInTheDocument()
+    expect(screen.getByText('~46.29% APR')).toBeInTheDocument()
+    expect(screen.getByText('~80.00% APR')).toBeInTheDocument()
+    expect(screen.getByText('~120.00% APR')).toBeInTheDocument()
   })
 })

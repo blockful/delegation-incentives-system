@@ -13,7 +13,7 @@ interface RoundCardProps {
   timeLeft: string
   poolSizeEns: string
   currentTier: string
-  currentApyPct: string
+  currentAprPct: string
 }
 
 const Card = styled.div`
@@ -128,7 +128,7 @@ export function RoundCard({
   timeLeft,
   poolSizeEns,
   currentTier,
-  currentApyPct,
+  currentAprPct,
 }: RoundCardProps) {
   const progressPercent = clampPercent(percentComplete)
   const poolDisplay = formatEnsAmount(poolSizeEns, { maximumFractionDigits: 0 })
@@ -167,8 +167,8 @@ export function RoundCard({
         <StatCard label="Pool" value={`${poolDisplay} ENS`} />
         <StatCard label="Tier" value={currentTier} />
         <StatCard
-          label="APY"
-          value={`${currentApyPct}%`}
+          label="APR"
+          value={`${currentAprPct}%`}
           valueColor={tokens.color.positiveEmphasis}
         />
       </StatsGrid>

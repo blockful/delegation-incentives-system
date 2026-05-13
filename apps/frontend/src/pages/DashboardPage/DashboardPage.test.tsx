@@ -11,13 +11,13 @@ const CONNECTED_WALLET = {
 describe('DashboardPage', () => {
   it('does not render dashboard content when disconnected', () => {
     renderApp(<DashboardPage />)
-    expect(screen.queryByText(/% APY/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/% APR/)).not.toBeInTheDocument()
   })
 
   it('renders earnings when connected', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText(/3\.95% APY/)).toBeInTheDocument()
+      expect(screen.getByText(/3\.95% APR/)).toBeInTheDocument()
     })
     const earnings = screen.getByLabelText('Your rewards')
     expect(within(earnings).getByText(/\+\d+(\.\d)?/)).toBeInTheDocument()

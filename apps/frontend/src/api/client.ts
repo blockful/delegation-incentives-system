@@ -5,7 +5,7 @@ import type {
   ActiveVotersResponse,
   EligibilityResponse,
   TierProgressionResponse,
-  ApyEstimateResponse,
+  AprEstimateResponse,
   DistributionResponse,
   RoundInfoResponse,
   RoundListResponse,
@@ -62,7 +62,7 @@ export const api = {
 
   tierProgression: () => request<TierProgressionResponse>("/tiers/progression"),
 
-  apy: (address: string) => request<ApyEstimateResponse>(`/apy/${address}`),
+  apr: (address: string) => request<AprEstimateResponse>(`/apr/${address}`),
 
   distributionList: () => request<string[]>("/distributions"),
 

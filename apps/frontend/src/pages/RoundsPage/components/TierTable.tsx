@@ -38,7 +38,7 @@ const TierRow = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "label status"
-    "progress apy";
+    "progress apr";
   align-items: center;
   gap: ${tokens.spacing.sm};
   padding: 4px ${tokens.spacing.xs};
@@ -49,7 +49,7 @@ const TierRow = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
 
   @media (min-width: 480px) {
     grid-template-columns: minmax(76px, max-content) minmax(0, 1fr) auto auto;
-    grid-template-areas: "label progress apy status";
+    grid-template-areas: "label progress apr status";
   }
 `
 
@@ -99,8 +99,8 @@ const Dot = styled.div<{ $filled: boolean; $isUnlocked: boolean }>`
   }
 `
 
-const ApyText = styled.span<{ $isUnlocked: boolean }>`
-  grid-area: apy;
+const AprText = styled.span<{ $isUnlocked: boolean }>`
+  grid-area: apr;
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
   color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
@@ -136,18 +136,18 @@ const VisuallyHidden = styled.span`
 export function TierTable({ tiers, currentTierIndex }: TierTableProps) {
   return (
     <Container>
-      <Eyebrow>APY Tiers</Eyebrow>
-      <TierCard data-testid="tier-table" role="list" aria-label="APY tiers">
+      <Eyebrow>APR Tiers</Eyebrow>
+      <TierCard data-testid="tier-table" role="list" aria-label="APR tiers">
         {tiers.map((tier, i) => {
           const isLocked = !tier.isUnlocked
           const isCurrent = tier.index === currentTierIndex
-          const apyLabel = tier.estimatedApyPct != null ? `~${tier.estimatedApyPct}% APY` : '—'
+          const aprLabel = tier.estimatedAprPct != null ? `~${tier.estimatedAprPct}% APR` : '—'
           const poolLabel = `${formatEnsWhole(tier.poolSizeEns)} ENS`
           const statusLabel = tier.isUnlocked ? 'Unlocked' : 'Locked'
           const rowLabel = [
             `Tier #${tier.index + 1}`,
             `${poolLabel} pool`,
-            apyLabel,
+            aprLabel,
             statusLabel.toLowerCase(),
             isCurrent ? 'current tier' : null,
           ].filter(Boolean).join(', ')
@@ -172,7 +172,7 @@ export function TierTable({ tiers, currentTierIndex }: TierTableProps) {
                     <Dot key={j} $filled={j <= tier.index} $isUnlocked={tier.isUnlocked} />
                   ))}
                 </Dots>
-                <ApyText $isUnlocked={tier.isUnlocked}>{apyLabel}</ApyText>
+                <AprText $isUnlocked={tier.isUnlocked}>{aprLabel}</AprText>
                 <StatusIcon>
                   {tier.isUnlocked ? (
                     <CheckSVG aria-hidden="true" style={{ color: tokens.color.positiveEmphasis }} />

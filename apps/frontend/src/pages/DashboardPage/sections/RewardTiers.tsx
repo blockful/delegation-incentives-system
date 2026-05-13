@@ -89,7 +89,7 @@ const Dot = styled.div<{ $filled: boolean; $isUnlocked: boolean }>`
       : tokens.color.middleGray};
 `
 
-const ApyText = styled.span<{ $isUnlocked: boolean }>`
+const AprText = styled.span<{ $isUnlocked: boolean }>`
   font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
   color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
@@ -196,7 +196,7 @@ export function RewardTiers({
         {tiers.map((tier, i) => {
           const isLocked = !tier.isUnlocked
           const isCurrent = tier.index === currentTierIndex
-          const apyLabel = tier.estimatedApyPct != null ? `~${tier.estimatedApyPct}% APY` : '—'
+          const aprLabel = tier.estimatedAprPct != null ? `~${tier.estimatedAprPct}% APR` : '—'
 
           return (
             <div key={tier.index}>
@@ -210,7 +210,7 @@ export function RewardTiers({
                       <Dot key={j} $filled={j <= tier.index} $isUnlocked={tier.isUnlocked} />
                     ))}
                   </Dots>
-                  <ApyText $isUnlocked={tier.isUnlocked}>{apyLabel}</ApyText>
+                  <AprText $isUnlocked={tier.isUnlocked}>{aprLabel}</AprText>
                   <StatusIcon>
                     {tier.isUnlocked ? (
                       <CheckSVG style={{ color: tokens.color.positiveEmphasis }} />
@@ -229,7 +229,7 @@ export function RewardTiers({
         <Footer>
           <ProgressInfo>
             <ProgressText>
-              <strong>{formatVpNeeded(nextTier.additionalVPNeeded)} VP</strong> to Tier {nextTier.index + 1} at {nextTier.estimatedApyPct}% APY
+              <strong>{formatVpNeeded(nextTier.additionalVPNeeded)} VP</strong> to Tier {nextTier.index + 1} at {nextTier.estimatedAprPct}% APR
             </ProgressText>
             <ProgressTrack>
               <ProgressFill $pct={vpProgress} />
