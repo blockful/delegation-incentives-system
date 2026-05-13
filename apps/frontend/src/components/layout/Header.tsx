@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
 import { Button, EnsSVG, Profile, WalletSVG } from '@ensdomains/thorin'
+import { useEnsAvatar } from 'wagmi'
+import makeBlockie from 'ethereum-blockies-base64'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles/tokens'
 
@@ -244,11 +246,17 @@ function ConnectedAccount({
   address: `0x${string}`
   ensName?: string
 }) {
+  const { data: resolvedAvatar } = useEnsAvatar({
+    name: ensName,
+    query: { enabled: !!ensName },
+  })
+  const avatar = resolvedAvatar ?? makeBlockie(address)
   return (
     <ProfileScaler>
       <Profile
         address={address}
         ensName={ensName ?? undefined}
+        avatar={avatar}
         size="medium"
         alignDropdown="right"
         dropdownItems={[
