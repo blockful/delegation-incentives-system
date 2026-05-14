@@ -17,6 +17,8 @@
 - Backend has **no `/api` prefix** on routes. All routes (e.g. `/voters/active`, `/eligibility/:address`) live at the root. The `/api` you may see in `.env.example` is a frontend-side base path used only by the dev proxy.
 - Ponder **reserves** `/health`, `/status`, `/ready`, `/metrics`, `/client`. Use `/health` for Railway's healthcheck (the empty `src/api/routes/health.ts` is just a placeholder; Ponder serves the real one).
 - Backend `dev` and `start` scripts source `../../.env` at the repo root. On Railway there is no `.env` file — env vars come from Railway's UI, and the `set -a; . ../../.env 2>/dev/null` in the start script silently no-ops when the file doesn't exist (good — don't change it).
+- The same scripts contain a `PORT=${BACKEND_PORT:-${PORT:-42069}}` expansion. This is load-bearing for Railway: it lets the platform-injected `PORT` flow through to Ponder when `BACKEND_PORT` is unset. The original version `${BACKEND_PORT:-42069}` overrode Railway's `PORT` and caused all healthchecks to fail — do not regress this.
+- The root `package.json` `prepare` script ends with `2>/dev/null || true`. This is required because Railway/Docker builds don't have a `.git` dir, and `pnpm install` runs `prepare` after install — if `prepare` fails, the whole install aborts.
 - Indexer start blocks go back to Oct 2021 (`ENSToken: startBlock: 13533418`). First backfill will take hours and many RPC requests. Plan accordingly.
 - Existing Vercel project URL (staging): `https://delegation-incentives-system-fronte.vercel.app/`.
 - Reown project ID (staging): `f20e5aaee61b5e6c0c2489d292cb670b`.
