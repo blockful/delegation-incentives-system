@@ -23,11 +23,6 @@ import {
 } from './roundFallback'
 
 const Page = styled.div`
-  background: ${tokens.color.surfaceMat};
-  min-height: calc(100vh - 80px);
-`
-
-const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
@@ -74,7 +69,6 @@ const SnapshotEyebrow = styled.span`
   z-index: 1;
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
 `
@@ -483,13 +477,11 @@ export function RoundsPage() {
   if (!currentRound) {
     return (
       <Page>
-        <Inner>
           <HeaderBlock>
             <Eyebrow>Rounds</Eyebrow>
             <RoundsPageTitle>No rounds configured</RoundsPageTitle>
             <EmptyState>Round history is unavailable.</EmptyState>
           </HeaderBlock>
-        </Inner>
       </Page>
     )
   }
@@ -511,7 +503,6 @@ export function RoundsPage() {
 
   return (
     <Page>
-      <Inner>
         <HeaderBlock>
           <Eyebrow>Rounds</Eyebrow>
           <HeadingRow>
@@ -593,7 +584,6 @@ export function RoundsPage() {
             </SnapshotLink>
           </SnapshotCard>
         </Grid>
-      </Inner>
     </Page>
   )
 }

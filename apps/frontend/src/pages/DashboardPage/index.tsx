@@ -19,11 +19,6 @@ import { formatShortDate } from '@/utils/dashboard'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 
 const Page = styled.div`
-  background: ${tokens.color.surfaceMat};
-  min-height: calc(100vh - 80px);
-`
-
-const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
@@ -88,7 +83,6 @@ const SectionLabel = styled.span`
   display: block;
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
   margin-bottom: ${tokens.spacing.md};
@@ -126,7 +120,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
     return <DashboardPageSkeleton />
   }
   if (error) {
-    return <Page><Inner><ErrorMessage>Failed to load dashboard: {error}</ErrorMessage></Inner></Page>
+    return <Page><ErrorMessage>Failed to load dashboard: {error}</ErrorMessage></Page>
   }
   if (!data) return null
 
@@ -148,7 +142,6 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
 
   return (
     <Page>
-      <Inner>
         <GreetingRow>
           <Greeting>
             {timeOfDayGreeting()}, <strong>{greetingName}</strong>
@@ -224,7 +217,6 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           currentTierIndex={currentTierIndex}
           userEstimatedReward={apr.estimatedMonthlyRewardEns}
         />
-      </Inner>
     </Page>
   )
 }

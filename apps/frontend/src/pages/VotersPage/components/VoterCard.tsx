@@ -93,17 +93,8 @@ const ProposalSection = styled.div`
 `
 
 const ProposalLabel = styled.span`
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: ${tokens.spacing.sm};
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
-`
-
-const ProposalCount = styled.strong`
-  color: ${tokens.color.darkBlue};
-  font-weight: ${tokens.font.weight.bold};
 `
 
 const StatsRow = styled.div`
@@ -133,7 +124,6 @@ const StatValue = styled.span`
 const StatLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   color: ${tokens.color.darkGray};
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: ${tokens.font.weight.semibold};
 `
@@ -196,7 +186,6 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   background: rgba(255, 255, 255, 0.25);
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0;
   margin-left: ${tokens.spacing.xs};
 `
@@ -268,10 +257,7 @@ export function VoterCard({ voter }: VoterCardProps) {
       {bio && <BioRow>{bio}</BioRow>}
 
       <ProposalSection>
-        <ProposalLabel>
-          <span>Last 10 proposals</span>
-          <ProposalCount>{votedCount}/10 voted</ProposalCount>
-        </ProposalLabel>
+        <ProposalLabel>Last 10 proposals</ProposalLabel>
         <ProposalBar votes={voter.last10ProposalsVoted} />
       </ProposalSection>
 

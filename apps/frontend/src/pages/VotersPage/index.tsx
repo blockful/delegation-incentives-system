@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useVoters } from '@/features/voters/useVoters'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, Eyebrow, ErrorMessage } from '@/styles'
@@ -10,11 +12,6 @@ import { StatsBar } from './components/StatsBar'
 import type { VoterDetail } from '@/api/types'
 
 const Page = styled.div`
-  background: ${tokens.color.surfaceMat};
-  min-height: calc(100vh - 80px);
-`
-
-const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
@@ -194,12 +191,11 @@ const FilterGroup = styled.div`
 `
 
 const FilterLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
   flex-shrink: 0;
+  margin-right: ${tokens.spacing.xs};
 `
 
 const FilterChip = styled.button<{ $active: boolean }>`
@@ -342,7 +338,6 @@ export function VotersPage() {
 
   return (
     <Page>
-      <Inner>
         <TopSection>
           <HeaderBlock>
             <Eyebrow>Delegate Your Tokens</Eyebrow>
@@ -367,7 +362,9 @@ export function VotersPage() {
 
         <Toolbar>
           <SearchRow>
-            <SearchIcon aria-hidden>🔍</SearchIcon>
+            <SearchIcon aria-hidden>
+              <FontAwesomeIcon icon={faMagnifyingGlass} />
+            </SearchIcon>
             <SearchInput
               type="search"
               placeholder="Search by ENS name or 0x address…"
@@ -377,7 +374,7 @@ export function VotersPage() {
             />
             {search.length > 0 && (
               <ClearButton type="button" onClick={() => setSearch('')} aria-label="Clear search">
-                ×
+                <FontAwesomeIcon icon={faXmark} />
               </ClearButton>
             )}
           </SearchRow>
@@ -437,7 +434,6 @@ export function VotersPage() {
             ))}
           </Grid>
         )}
-      </Inner>
     </Page>
   )
 }

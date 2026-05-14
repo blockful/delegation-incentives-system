@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCopy, faCheck, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
+import { faXTwitter } from '@fortawesome/free-brands-svg-icons'
 import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
 import { api } from '@/api'
 import { MOCK_ENS_PROFILES, MOCK_ENS_TO_ADDRESS } from '@/api/mock'
@@ -109,11 +112,6 @@ const subtleBreathe = keyframes`
 /* ─── Layout ─── */
 
 const Page = styled.div`
-  background: ${tokens.color.surfaceMat};
-  min-height: calc(100vh - 80px);
-`
-
-const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   padding: ${tokens.spacing.lg} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
@@ -240,7 +238,6 @@ const CopiedFlash = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.status.success.fg};
-  text-transform: uppercase;
   letter-spacing: 0.04em;
 `
 
@@ -341,7 +338,6 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   background: rgba(255, 255, 255, 0.2);
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-left: ${tokens.spacing.sm};
 `
@@ -387,7 +383,6 @@ const StatValue = styled.span`
 const StatLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
 `
@@ -423,7 +418,6 @@ const SectionEyebrow = styled.span`
   display: block;
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
 `
@@ -508,7 +502,6 @@ const RewardCard = styled.a`
 const RewardEyebrow = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
 `
@@ -682,12 +675,10 @@ export function VoterProfilePage() {
   if (error || !voter) {
     return (
       <Page>
-        <Inner>
-          <BackLink to="/voters">All voters</BackLink>
-          <ErrorMessage>
-            {error ?? 'Voter not found. They may not be an active voter in the incentives program.'}
-          </ErrorMessage>
-        </Inner>
+        <BackLink to="/voters">All voters</BackLink>
+        <ErrorMessage>
+          {error ?? 'Voter not found. They may not be an active voter in the incentives program.'}
+        </ErrorMessage>
       </Page>
     )
   }
@@ -713,7 +704,6 @@ export function VoterProfilePage() {
 
   return (
     <Page>
-      <Inner>
         <BackLink to="/voters">All voters</BackLink>
 
         {/* ─── Hero billboard ─── */}
@@ -736,11 +726,13 @@ export function VoterProfilePage() {
                 <HeroName>{ensName ?? truncateAddress(voter.address)}</HeroName>
                 <AddressChip onClick={handleCopy} type="button" aria-label="Copy address">
                   {copied ? (
-                    <CopiedFlash>✓ Copied</CopiedFlash>
+                    <CopiedFlash>
+                      <FontAwesomeIcon icon={faCheck} /> Copied
+                    </CopiedFlash>
                   ) : (
                     <>
                       {truncateAddress(voter.address)}
-                      <span aria-hidden style={{ opacity: 0.6 }}>⧉</span>
+                      <FontAwesomeIcon icon={faCopy} style={{ opacity: 0.6 }} />
                     </>
                   )}
                 </AddressChip>
@@ -749,32 +741,39 @@ export function VoterProfilePage() {
 
             {bio && <Bio>{bio}</Bio>}
 
-            {(twitterUrl || webUrl) && (
-              <VerifiedChips>
-                {twitterUrl && (
-                  <Chip
-                    href={twitterUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Twitter / X profile (from ENS record)"
-                  >
-                    <ChipMark>𝕏</ChipMark>
-                    @{twitter!.replace(/^@/, '')}
-                  </Chip>
-                )}
-                {webUrl && (
-                  <Chip
-                    href={webUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Website (from ENS record)"
-                  >
-                    <ChipMark>↗</ChipMark>
-                    {url}
-                  </Chip>
-                )}
-              </VerifiedChips>
-            )}
+            <VerifiedChips>
+              {twitterUrl && (
+                <Chip
+                  href={twitterUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Twitter / X profile (from ENS record)"
+                >
+                  <FontAwesomeIcon icon={faXTwitter} />
+                  @{twitter!.replace(/^@/, '')}
+                </Chip>
+              )}
+              {webUrl && (
+                <Chip
+                  href={webUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Website (from ENS record)"
+                >
+                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                  {url}
+                </Chip>
+              )}
+              <Chip href={delegateUrl} target="_blank" rel="noopener noreferrer">
+                Anticapture <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              </Chip>
+              <Chip href={etherscanUrl} target="_blank" rel="noopener noreferrer">
+                Etherscan <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              </Chip>
+              <Chip href={ensAppUrl} target="_blank" rel="noopener noreferrer">
+                ENS profile <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              </Chip>
+            </VerifiedChips>
           </HeroIdentity>
 
           <HeroCta>
@@ -813,8 +812,8 @@ export function VoterProfilePage() {
 
           <StatCardSurface>
             <StatLabel>Participation</StatLabel>
-            <StatValue>{votedCount}<span style={{ color: tokens.color.darkGray, fontWeight: tokens.font.weight.medium }}>/10</span></StatValue>
-            <StatSub>{votingPercentage}% of last 10 proposals</StatSub>
+            <StatValue>{votingPercentage}%</StatValue>
+            <StatSub>recent activity rate</StatSub>
           </StatCardSurface>
 
           {activeSinceParts ? (
@@ -892,19 +891,6 @@ export function VoterProfilePage() {
           )}
         </SectionCard>
 
-        {/* ─── Verification row ─── */}
-        <VerificationRow>
-          <VerifyChip href={delegateUrl} target="_blank" rel="noopener noreferrer">
-            Anticapture <VerifyArrow>↗</VerifyArrow>
-          </VerifyChip>
-          <VerifyChip href={etherscanUrl} target="_blank" rel="noopener noreferrer">
-            Etherscan <VerifyArrow>↗</VerifyArrow>
-          </VerifyChip>
-          <VerifyChip href={ensAppUrl} target="_blank" rel="noopener noreferrer">
-            ENS profile <VerifyArrow>↗</VerifyArrow>
-          </VerifyChip>
-        </VerificationRow>
-      </Inner>
     </Page>
   )
 }

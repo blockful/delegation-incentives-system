@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTrophy } from '@fortawesome/free-solid-svg-icons'
 import { isAddress } from 'viem'
 import { fadeInUp } from '@/styles'
 import { useLottery } from '@/features/lottery/useLottery'
@@ -42,27 +44,19 @@ interface AddressLotteryStatus {
 
 const Page = styled.div`
   width: 100%;
-  background: ${tokens.color.surfaceMat};
-  min-height: calc(100vh - 80px);
   animation: ${fadeInUp} 0.4s ease both;
 `
 
-const HeaderBand = styled.section`
-  position: relative;
-  width: 100%;
-  background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.surfaceMat});
-  border-bottom: 1px solid ${tokens.color.borderLight};
-  overflow: hidden;
+const HeaderContent = styled.div`
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: -120px;
-    right: -120px;
-    width: 360px;
-    height: 360px;
-    background: radial-gradient(circle, ${tokens.color.lightBlueOpacity}, transparent 60%);
-    pointer-events: none;
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']} ${tokens.spacing.xl};
   }
 `
 
@@ -71,34 +65,18 @@ const PrizePill = styled.div`
   align-items: center;
   gap: 6px;
   align-self: flex-start;
-  padding: 6px 14px;
+  padding: 4px 12px;
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.status.success.bg};
   border: 1px solid ${tokens.color.status.success.border};
   color: ${tokens.color.status.success.fg};
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  position: relative;
-  z-index: 1;
-  box-shadow: ${tokens.shadow.soft};
+  letter-spacing: 0;
 `
 
 const PrizePillSparkle = styled.span`
   font-size: ${tokens.font.size.base};
-`
-
-const HeaderContent = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl} ${tokens.spacing['3xl']};
-  display: grid;
-  gap: ${tokens.spacing.lg};
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['6xl']} ${tokens.spacing['2xl']} ${tokens.spacing['4xl']};
-  }
 `
 
 const Eyebrow = styled.span`
@@ -106,7 +84,6 @@ const Eyebrow = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   letter-spacing: 0;
-  text-transform: uppercase;
 `
 
 const Title = styled.h1`
@@ -140,12 +117,13 @@ const CurrentRoundNote = styled.p`
 const Content = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl} ${tokens.spacing['7xl']};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
   display: grid;
-  gap: ${tokens.spacing['3xl']};
+  gap: ${tokens.spacing['2xl']};
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
+    padding: ${tokens.spacing.xl} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
+    gap: ${tokens.spacing['3xl']};
   }
 `
 
@@ -306,7 +284,6 @@ const OptionLabel = styled.span`
   color: ${tokens.color.darkGray};
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0;
 `
 
@@ -542,7 +519,6 @@ const Th = styled.th`
   color: ${tokens.color.darkGray};
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0;
   border-bottom: 1px solid ${tokens.color.borderLight};
 `
@@ -845,25 +821,25 @@ function HeaderBlock({
   const currentRoundNote = round ? getCurrentRoundNote(currentRound, round) : null
 
   return (
-    <HeaderBand>
-      <HeaderContent>
-        <Eyebrow>Lottery</Eyebrow>
-        <PrizePill>
-          <PrizePillSparkle aria-hidden>✨</PrizePillSparkle>
-          Win up to 10 ENS
-        </PrizePill>
-        <Title>Lottery buckets</Title>
-        <Description>
-          Sub-1-ENS payouts pool into ~10 ENS buckets. RANDAO seeds a weighted draw at round close, and one winner takes each bucket. Inspect any wallet, round, or bucket below.
-        </Description>
-        {round ? (
-          <CurrentRoundNote>
-            Showing Round {round.roundNumber}: {formatUtcMonthRange(round.startDate, round.endDate)}.
-            {currentRoundNote ? ` ${currentRoundNote}` : ''}
-          </CurrentRoundNote>
-        ) : null}
-      </HeaderContent>
-    </HeaderBand>
+    <HeaderContent>
+      <Eyebrow>Lottery</Eyebrow>
+      <Title>Lottery buckets</Title>
+      <PrizePill>
+        <PrizePillSparkle aria-hidden>
+          <FontAwesomeIcon icon={faTrophy} />
+        </PrizePillSparkle>
+        Win up to 10 ENS
+      </PrizePill>
+      <Description>
+        Sub-1-ENS payouts pool into ~10 ENS buckets. RANDAO seeds a weighted draw at round close, and one winner takes each bucket. Inspect any wallet, round, or bucket below.
+      </Description>
+      {round ? (
+        <CurrentRoundNote>
+          Showing Round {round.roundNumber}: {formatUtcMonthRange(round.startDate, round.endDate)}.
+          {currentRoundNote ? ` ${currentRoundNote}` : ''}
+        </CurrentRoundNote>
+      ) : null}
+    </HeaderContent>
   )
 }
 

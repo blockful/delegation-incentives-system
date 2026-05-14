@@ -304,8 +304,8 @@ export function Header() {
         </Brand>
 
         <DesktopNav>
-          {publicNavItems.filter((item) => item.to !== '/').map(({ to, label }) => (
-            <StyledNavLink key={to} to={to}>
+          {publicNavItems.map(({ to, label }) => (
+            <StyledNavLink key={to} to={to} end={to === '/'}>
               {label}
             </StyledNavLink>
           ))}

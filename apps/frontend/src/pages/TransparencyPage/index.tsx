@@ -1,5 +1,7 @@
 import { useCallback } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faShieldHalved } from '@fortawesome/free-solid-svg-icons'
 import { api } from '@/api'
 import { TransparencyStatsSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
@@ -17,11 +19,6 @@ import { formatEnsCompact } from '@/utils/format'
 import { CURRENT_ROUND } from '@/config/round'
 
 const Page = styled.div`
-  background: ${tokens.color.surfaceMat};
-  min-height: calc(100vh - 80px);
-`
-
-const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
@@ -80,7 +77,6 @@ const HeroEyebrow = styled.span`
   color: ${tokens.color.status.success.fg};
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.06em;
 `
 
@@ -121,17 +117,14 @@ const HeroStat = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: ${tokens.spacing.lg};
-  background: ${tokens.color.surfaceMat};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  border-left: 2px solid ${tokens.color.borderLight};
   min-width: 0;
 `
 
 const HeroStatLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
 `
@@ -187,7 +180,6 @@ const Section = styled.section`
 const SectionEyebrow = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
   letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
 `
@@ -276,10 +268,9 @@ export function TransparencyPage() {
 
   return (
     <Page>
-      <Inner>
         <HeroCard>
           <HeroEyebrow>
-            <span aria-hidden>🛡️</span>
+            <FontAwesomeIcon icon={faShieldHalved} />
             Transparency
           </HeroEyebrow>
           <HeroTitle>Verify everything on-chain</HeroTitle>
@@ -334,7 +325,6 @@ export function TransparencyPage() {
             <StepList steps={HOW_REWARDS_STEPS} />
           </Section>
         </Grid>
-      </Inner>
     </Page>
   )
 }
