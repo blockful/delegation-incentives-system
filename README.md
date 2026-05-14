@@ -43,11 +43,13 @@ pnpm --filter @ens-dis/backend dev
 
 ## API Endpoints
 
-Swagger UI at `GET /docs`. OpenAPI 3.1 spec at `GET /doc`.
+Routes are served at the root (no `/api` prefix on the backend). Frontends configure a base via `VITE_API_BASE_URL` if they want one.
+
+Scalar API reference at `GET /docs`. OpenAPI 3.0 spec at `GET /openapi.json`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/health` | `{"status": "ok"}` |
+| `GET` | `/health` | Ponder's built-in liveness check (use this for Railway/uptime probes) |
 | `GET` | `/voters/active` | Addresses that voted on ≥ 7 of the last 10 proposals |
 | `GET` | `/eligibility/{address}` | Is this address an active voter or a token holder of one? |
 | `GET` | `/tiers/progression` | Current tier, VP needed for next tier, all tier thresholds |
