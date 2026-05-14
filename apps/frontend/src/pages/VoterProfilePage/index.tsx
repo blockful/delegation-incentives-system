@@ -1,17 +1,30 @@
-import { useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import styled from 'styled-components'
-import { useEnsName, useEnsAddress } from 'wagmi'
+import { useCallback, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import styled, { keyframes } from 'styled-components'
+import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
 import { api } from '@/api'
+import { MOCK_ENS_PROFILES, MOCK_ENS_TO_ADDRESS } from '@/api/mock'
+import { env } from '@/config/env'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
+import { BackLink } from '@/components/shared/BackLink'
+import { StatStrip } from '@/components/shared/StatStrip'
+import { ToneCallout } from '@/components/shared/ToneCallout'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
-import { formatEnsAmount } from '@/utils/format'
+import { formatEnsAmount, truncateAddress } from '@/utils/format'
+import type { RoundSummary } from '@/api/types'
+
+interface RewardHistoryEntry {
+  roundNumber: number
+  month: string
+  totalRewardEns: string
+  rewardStatus: 'paid' | 'no_reward' | 'not_eligible' | 'pending' | 'unavailable'
+}
 
 function formatVotingPower(vpWei: string): string {
   const ens = Number(vpWei) / 1e18
@@ -28,192 +41,563 @@ function formatVotingPower(vpWei: string): string {
   return formatEnsAmount(ens)
 }
 
-function formatActiveSince(iso: string): string {
+function formatActiveSince(iso: string): { primary: string; secondary: string } {
   const date = new Date(iso)
+  const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  const now = new Date()
+  const months = Math.max(
+    0,
+    (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth())
+  )
+  const years = Math.floor(months / 12)
+  const remMonths = months % 12
+  let secondary = ''
+  if (years > 0 && remMonths > 0) secondary = `${years}y ${remMonths}mo ago`
+  else if (years > 0) secondary = `${years}y ago`
+  else if (remMonths > 0) secondary = `${remMonths}mo ago`
+  else secondary = 'this month'
+  return { primary: monthYear, secondary }
+}
+
+function formatMonthLabel(month: string): string {
+  // month format from API is `YYYY-MM`
+  const [y, m] = month.split('-').map(Number)
+  if (!y || !m) return month
+  const date = new Date(Date.UTC(y, m - 1, 1))
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
+function isAddress(value: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(value)
+}
+
+async function fetchRewardHistory(voterAddress: string, limit = 3): Promise<RewardHistoryEntry[]> {
+  const { rounds } = await api.rounds()
+  const paid: RoundSummary[] = rounds
+    .filter((r) => r.status === 'paid')
+    .sort((a, b) => b.roundNumber - a.roundNumber)
+    .slice(0, limit)
+  if (paid.length === 0) return []
+  const details = await Promise.all(
+    paid.map((r) => api.round(r.roundNumber, voterAddress, { rewardLimit: '25' }).catch(() => null))
+  )
+  return details
+    .map((d, i) => {
+      const r = paid[i]
+      const ar = d?.addressReward
+      return {
+        roundNumber: r.roundNumber,
+        month: r.month,
+        totalRewardEns: ar?.voterRewardEns ?? '0',
+        rewardStatus: ar?.rewardStatus ?? 'unavailable',
+      }
+    })
+}
+
+/* ─── Animations ─── */
+
+const heroScaleIn = keyframes`
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+`
+
+const subtleBreathe = keyframes`
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.05); }
+`
+
+/* ─── Layout ─── */
+
 const Page = styled.div`
-  max-width: ${tokens.maxWidth.lg};
+  background: ${tokens.color.surfaceMat};
+  min-height: calc(100vh - 80px);
+`
+
+const Inner = styled.div`
+  max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+    padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
+    gap: ${tokens.spacing['3xl']};
   }
 `
 
-const BackLink = styled(Link)`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkGray};
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: ${tokens.spacing.xs};
-  transition: color ${tokens.transition.fast};
+/* ─── Hero billboard ─── */
 
-  &:hover {
-    color: ${tokens.color.blue};
-  }
-`
-
-const HeroCard = styled.div`
+const HeroCard = styled.section`
+  position: relative;
   background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.lg};
-  box-shadow: ${tokens.shadow.sm};
-  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${tokens.spacing.lg};
-  text-align: center;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.soft};
+  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
+  display: grid;
+  gap: ${tokens.spacing.xl};
+  overflow: hidden;
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['4xl']} ${tokens.spacing['3xl']};
-  }
-`
-
-const Identity = styled(AddressIdentity)`
-  && {
+    grid-template-columns: 1fr auto;
     align-items: center;
+    gap: ${tokens.spacing['4xl']};
   }
 
-  justify-content: center;
-  text-align: center;
+  /* Decorative radial gradient — visual interest without noise */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    right: -120px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, ${tokens.color.lightBlueOpacity} 0%, transparent 65%);
+    pointer-events: none;
+    animation: ${subtleBreathe} 6s ease-in-out infinite;
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
 `
 
-const CtaWrapper = styled.div`
+const HeroIdentity = styled.div`
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: ${tokens.spacing.xs};
-  width: 100%;
-  max-width: 400px;
-  margin-top: ${tokens.spacing.sm};
+  gap: ${tokens.spacing.lg};
+  min-width: 0;
 `
 
-const DelegateAction = styled.button`
+const HeroTopRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.lg};
+  animation: ${heroScaleIn} 0.35s ease both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`
+
+const AvatarWrap = styled.div`
+  flex-shrink: 0;
+`
+
+const NameStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+`
+
+const HeroName = styled.h1`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0;
+  word-break: break-word;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['4xl']};
+  }
+`
+
+const AddressChip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: ${tokens.radius.pill};
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surfaceMat};
+  font-family: ${tokens.font.mono};
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+  cursor: pointer;
+  transition: all ${tokens.transition.fast};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const CopiedFlash = styled.span`
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.status.success.fg};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+`
+
+const Bio = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  line-height: 1.6;
+  color: ${tokens.color.darkGray};
+  max-width: 560px;
+`
+
+const VerifiedChips = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.sm};
+`
+
+const Chip = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: ${tokens.radius.pill};
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surface};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  text-decoration: none;
+  transition: all ${tokens.transition.fast};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const ChipMark = styled.span`
+  font-weight: ${tokens.font.weight.bold};
+`
+
+/* ─── Hero CTA ─── */
+
+const HeroCta = styled.div`
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  min-width: 240px;
   width: 100%;
-  padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
+
+  @media (min-width: 768px) {
+    width: auto;
+    max-width: 280px;
+  }
+`
+
+const DelegateButton = styled.button`
+  width: 100%;
+  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
   border-radius: ${tokens.radius.md};
   border: none;
   background: ${tokens.color.blue};
   color: ${tokens.color.white};
-  font-size: ${tokens.font.size.xl};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.bold};
   cursor: pointer;
+  box-shadow: ${tokens.shadow.soft};
   transition:
     background ${tokens.transition.base},
-    box-shadow ${tokens.transition.base};
-  box-shadow: 0 4px 12px rgba(82, 152, 255, 0.3);
-  text-align: center;
+    box-shadow ${tokens.transition.base},
+    transform ${tokens.transition.fast};
 
   &:hover {
-    color: ${tokens.color.white};
     background: ${tokens.color.accent};
-    box-shadow: 0 6px 20px rgba(82, 152, 255, 0.4);
+    box-shadow: ${tokens.shadow.md};
+    transform: translateY(-1px);
   }
-`
 
-const DelegatedStatus = styled.span`
-  width: 100%;
-  padding: ${tokens.spacing.lg} ${tokens.spacing['2xl']};
-  border-radius: ${tokens.radius.md};
-  background: ${tokens.color.tierHighlight};
-  color: ${tokens.color.positiveEmphasis};
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  text-align: center;
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   display: inline-flex;
   align-items: center;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: ${tokens.radius.pill};
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.2);
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0;
-  margin-left: ${tokens.spacing.xs};
+  letter-spacing: 0.04em;
+  margin-left: ${tokens.spacing.sm};
 `
 
-const CtaHint = styled.span`
+const Hint = styled.span`
   font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.textSubtle};
+  color: ${tokens.color.darkGray};
+  text-align: center;
 `
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: ${tokens.spacing.md};
+/* ─── Stat cards ─── */
 
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(4, 1fr);
-  }
-`
-
-const StatCard = styled.div`
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  padding: ${tokens.spacing.lg};
+const StatCardSurface = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.soft};
+  transition: all ${tokens.transition.fast};
+  min-width: 0;
+
+  &:hover {
+    border-color: ${tokens.color.middleGray};
+    transform: translateY(-1px);
+  }
 `
 
 const StatValue = styled.span`
   font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.bold};
+  font-weight: ${tokens.font.weight.black};
   color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['3xl']};
+  }
 `
 
 const StatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-`
-
-const VotingCard = styled.div`
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  padding: ${tokens.spacing.xl};
-  box-shadow: ${tokens.shadow.sm};
-`
-
-const CardTitle = styled.h2`
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
-  margin: 0 0 ${tokens.spacing.lg};
 `
 
-const ExternalLink = styled.a`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.blue};
-  text-decoration: none;
-  text-align: center;
-  display: block;
-  transition: color ${tokens.transition.fast};
+const StatSub = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+  margin-top: 2px;
+`
 
+/* ─── Section cards ─── */
+
+const SectionCard = styled.section`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.soft};
+  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['2xl']};
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+`
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.md};
+`
+
+const SectionEyebrow = styled.span`
+  display: block;
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: ${tokens.color.darkGray};
+`
+
+const SectionTitle = styled.h2`
+  margin: 4px 0 0;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.25;
+`
+
+const SectionMeta = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+`
+
+const InlineExternalLink = styled.a`
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  text-decoration: none;
   &:hover {
     text-decoration: underline;
   }
 `
 
-function isAddress(value: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/.test(value)
+/* ─── Rewards strip ─── */
+
+const RewardsStrip = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+`
+
+const RewardCard = styled.a`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.soft};
+  text-decoration: none;
+  cursor: pointer;
+  transition: all ${tokens.transition.fast};
+  overflow: hidden;
+
+  &::after {
+    content: '→';
+    position: absolute;
+    top: ${tokens.spacing.lg};
+    right: ${tokens.spacing.lg};
+    color: ${tokens.color.darkGray};
+    font-size: ${tokens.font.size.xl};
+    transition: transform ${tokens.transition.fast};
+  }
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    transform: translateY(-1px);
+    box-shadow: ${tokens.shadow.md};
+  }
+
+  &:hover::after {
+    transform: translateX(2px);
+    color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const RewardEyebrow = styled.span`
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: ${tokens.color.darkGray};
+`
+
+const RewardValue = styled.span`
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.black};
+  color: ${tokens.color.status.success.fg};
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+`
+
+const RewardZero = styled(RewardValue)`
+  color: ${tokens.color.darkGray};
+`
+
+const RewardSub = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+`
+
+const EmptyRewards = styled.div`
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surfaceMat};
+  border: 1px dashed ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  text-align: center;
+  line-height: 1.6;
+`
+
+/* ─── Verification chips row ─── */
+
+const VerificationRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.sm};
+`
+
+const VerifyChip = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: ${tokens.radius.pill};
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surface};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  text-decoration: none;
+  box-shadow: ${tokens.shadow.soft};
+  transition: all ${tokens.transition.fast};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const VerifyArrow = styled.span`
+  font-size: ${tokens.font.size.base};
+  opacity: 0.6;
+`
+
+/* ─── Component ─── */
+
+function useEnsTextRecord(name: string | null, key: string): string | undefined {
+  const { data } = useEnsText({
+    name: name ?? undefined,
+    key,
+    query: { enabled: Boolean(name) && !env.useMockApi },
+  })
+  return typeof data === 'string' && data.trim().length > 0 ? data : undefined
+}
+
+function getMockProfileField(
+  address: string | undefined,
+  key: 'description' | 'twitter' | 'url',
+): string | undefined {
+  if (!env.useMockApi || !address) return undefined
+  return MOCK_ENS_PROFILES[address.toLowerCase()]?.[key]
 }
 
 export function VoterProfilePage() {
@@ -221,12 +605,21 @@ export function VoterProfilePage() {
   const rawParam = param ?? ''
   const isEnsParam = !isAddress(rawParam)
 
+  // Wagmi resolution (skipped in mock mode — no real RPC means this hangs forever)
   const { data: resolvedAddress, isLoading: ensLoading } = useEnsAddress({
     name: rawParam,
-    query: { enabled: isEnsParam },
+    query: { enabled: isEnsParam && !env.useMockApi },
   })
 
-  const resolvedAddr = isEnsParam ? (resolvedAddress ?? '') : rawParam
+  // Mock-mode reverse resolution for known ENS names in fixtures
+  const mockResolvedAddress = useMemo(() => {
+    if (!env.useMockApi || !isEnsParam) return null
+    return MOCK_ENS_TO_ADDRESS[rawParam.toLowerCase()] ?? null
+  }, [rawParam, isEnsParam])
+
+  const resolvedAddr = isEnsParam
+    ? (env.useMockApi ? (mockResolvedAddress ?? '') : (resolvedAddress ?? ''))
+    : rawParam
   const { voter, loading, error } = useVoter(resolvedAddr)
   const walletState = useWalletState()
 
@@ -236,8 +629,51 @@ export function VoterProfilePage() {
 
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
-    query: { enabled: !!resolvedAddr && !isEnsParam },
+    query: { enabled: !!resolvedAddr && !isEnsParam && !env.useMockApi },
   })
+
+  const ensName = voter?.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
+
+  // ENS text records — bio + verified links (with mock-mode fallback)
+  const liveBio = useEnsTextRecord(ensName, 'description')
+  const liveTwitter = useEnsTextRecord(ensName, 'com.twitter')
+  const liveUrl = useEnsTextRecord(ensName, 'url')
+  const voterAddrForMock = voter?.address
+  const bio = liveBio ?? getMockProfileField(voterAddrForMock, 'description')
+  const twitter = liveTwitter ?? getMockProfileField(voterAddrForMock, 'twitter')
+  const url = liveUrl ?? getMockProfileField(voterAddrForMock, 'url')
+
+  // Rewards history
+  const voterAddr = voter?.address ?? ''
+  const fetchRewards = useCallback(
+    () => (voterAddr ? fetchRewardHistory(voterAddr) : Promise.resolve([])),
+    [voterAddr]
+  )
+  const rewardsHistory = useAsync(fetchRewards, Boolean(voterAddr))
+
+  // Address copy
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    if (!voter?.address) return
+    navigator.clipboard.writeText(voter.address).then(() => {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  // Voting metrics
+  const votingPercentage = useMemo(() => {
+    if (!voter) return 0
+    if (voter.last10ProposalsVoted.length === 0) return 0
+    return Math.round(
+      (voter.last10ProposalsVoted.filter(Boolean).length / voter.last10ProposalsVoted.length) * 100
+    )
+  }, [voter])
+
+  const votedCount = useMemo(
+    () => (voter ? voter.last10ProposalsVoted.filter(Boolean).length : 0),
+    [voter]
+  )
 
   if (loading || ensLoading) {
     return <DelegateProfileSkeleton />
@@ -246,94 +682,229 @@ export function VoterProfilePage() {
   if (error || !voter) {
     return (
       <Page>
-        <BackLink to="/voters">← All voters</BackLink>
-        <ErrorMessage>
-          {error ?? 'Voter not found. They may not be an active voter in the incentives program.'}
-        </ErrorMessage>
+        <Inner>
+          <BackLink to="/voters">All voters</BackLink>
+          <ErrorMessage>
+            {error ?? 'Voter not found. They may not be an active voter in the incentives program.'}
+          </ErrorMessage>
+        </Inner>
       </Page>
     )
   }
 
-  const ensName = voter.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
 
-  const votingPercentage = voter.last10ProposalsVoted.length > 0
-    ? Math.round(
-        (voter.last10ProposalsVoted.filter(Boolean).length /
-          voter.last10ProposalsVoted.length) *
-          100
-      )
-    : 0
   const delegateUrl = getAnticaptureDelegateUrl(voter.address)
+  const etherscanUrl = `https://etherscan.io/address/${voter.address}`
+  const ensAppUrl = ensName
+    ? `https://app.ens.domains/${ensName}`
+    : `https://app.ens.domains/${voter.address}`
 
-  const handleDelegate = () => {
-    // TODO: call relayer for gasless delegation
-  }
+  const twitterUrl = twitter
+    ? `https://twitter.com/${twitter.replace(/^@/, '')}`
+    : null
+  const webUrl = url
+    ? (url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`)
+    : null
+
+  const activeSinceParts = voter.activeSince ? formatActiveSince(voter.activeSince) : null
 
   return (
     <Page>
-      <BackLink to="/voters">← All voters</BackLink>
+      <Inner>
+        <BackLink to="/voters">All voters</BackLink>
 
-      <HeroCard>
-        <Identity
-          address={voter.address}
-          ensName={ensName}
-          avatarUrl={voter.avatarUrl}
-          showAvatar
-          avatarSize={96}
-          layout="stack"
-          size="xl"
-        />
-        <CtaWrapper>
-          {isDelegated ? (
-            <DelegatedStatus>
-              {aprPct ? `Delegated · Earn up to ${aprPct}% APR` : 'Delegated'}
-            </DelegatedStatus>
+        {/* ─── Hero billboard ─── */}
+        <HeroCard>
+          <HeroIdentity>
+            <HeroTopRow>
+              <AvatarWrap>
+                <AddressIdentity
+                  address={voter.address}
+                  ensName={ensName}
+                  avatarUrl={voter.avatarUrl}
+                  showAvatar
+                  avatarSize={80}
+                  layout="inline"
+                  size="md"
+                  secondaryAddress="never"
+                />
+              </AvatarWrap>
+              <NameStack>
+                <HeroName>{ensName ?? truncateAddress(voter.address)}</HeroName>
+                <AddressChip onClick={handleCopy} type="button" aria-label="Copy address">
+                  {copied ? (
+                    <CopiedFlash>✓ Copied</CopiedFlash>
+                  ) : (
+                    <>
+                      {truncateAddress(voter.address)}
+                      <span aria-hidden style={{ opacity: 0.6 }}>⧉</span>
+                    </>
+                  )}
+                </AddressChip>
+              </NameStack>
+            </HeroTopRow>
+
+            {bio && <Bio>{bio}</Bio>}
+
+            {(twitterUrl || webUrl) && (
+              <VerifiedChips>
+                {twitterUrl && (
+                  <Chip
+                    href={twitterUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Twitter / X profile (from ENS record)"
+                  >
+                    <ChipMark>𝕏</ChipMark>
+                    @{twitter!.replace(/^@/, '')}
+                  </Chip>
+                )}
+                {webUrl && (
+                  <Chip
+                    href={webUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Website (from ENS record)"
+                  >
+                    <ChipMark>↗</ChipMark>
+                    {url}
+                  </Chip>
+                )}
+              </VerifiedChips>
+            )}
+          </HeroIdentity>
+
+          <HeroCta>
+            {isDelegated ? (
+              <ToneCallout
+                tone="success"
+                title="You're delegated"
+                body={aprPct ? `Earning up to ${aprPct}% APR.` : 'Active delegation.'}
+                compact
+              />
+            ) : (
+              <>
+                <DelegateButton type="button">
+                  {aprPct ? `Delegate · Earn up to ${aprPct}% APR` : 'Delegate'}
+                  <FreeTag>Free</FreeTag>
+                </DelegateButton>
+                <Hint>Gas sponsored by the incentives program</Hint>
+              </>
+            )}
+          </HeroCta>
+        </HeroCard>
+
+        {/* ─── Stats strip ─── */}
+        <StatStrip columns={4} gap="md">
+          <StatCardSurface>
+            <StatLabel>Voting Power</StatLabel>
+            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
+            <StatSub>ENS delegated to them</StatSub>
+          </StatCardSurface>
+
+          <StatCardSurface>
+            <StatLabel>Delegators</StatLabel>
+            <StatValue>{voter.tokenHolderCount.toLocaleString('en-US')}</StatValue>
+            <StatSub>token holders</StatSub>
+          </StatCardSurface>
+
+          <StatCardSurface>
+            <StatLabel>Participation</StatLabel>
+            <StatValue>{votedCount}<span style={{ color: tokens.color.darkGray, fontWeight: tokens.font.weight.medium }}>/10</span></StatValue>
+            <StatSub>{votingPercentage}% of last 10 proposals</StatSub>
+          </StatCardSurface>
+
+          {activeSinceParts ? (
+            <StatCardSurface>
+              <StatLabel>Active Since</StatLabel>
+              <StatValue style={{ fontSize: tokens.font.size.xl }}>{activeSinceParts.primary}</StatValue>
+              <StatSub>{activeSinceParts.secondary}</StatSub>
+            </StatCardSurface>
           ) : (
-            <DelegateAction type="button" onClick={handleDelegate}>
-              {aprPct ? `Delegate — Earn up to ${aprPct}% APR` : 'Delegate'}{' '}
-              <FreeTag>Free</FreeTag>
-            </DelegateAction>
+            <StatCardSurface>
+              <StatLabel>Active Since</StatLabel>
+              <StatValue style={{ color: tokens.color.textFaint, fontSize: tokens.font.size.xl }}>—</StatValue>
+              <StatSub>unknown</StatSub>
+            </StatCardSurface>
           )}
-          {!isDelegated && <CtaHint>Gas sponsored by the incentives program</CtaHint>}
-        </CtaWrapper>
-      </HeroCard>
+        </StatStrip>
 
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{formatVotingPower(voter.votingPower)} ENS</StatValue>
-          <StatLabel>Voting Power</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{voter.tokenHolderCount}</StatValue>
-          <StatLabel>Token holders</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{votingPercentage}%</StatValue>
-          <StatLabel>Participation</StatLabel>
-        </StatCard>
-        {voter.activeSince && (
-          <StatCard>
-            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
-            <StatLabel>Active since</StatLabel>
-          </StatCard>
-        )}
-      </StatsGrid>
+        {/* ─── Voting Record ─── */}
+        <SectionCard>
+          <SectionHeader>
+            <div>
+              <SectionEyebrow>Voting Record</SectionEyebrow>
+              <SectionTitle>Voted on {votedCount} of last 10 proposals</SectionTitle>
+            </div>
+            <InlineExternalLink href={delegateUrl} target="_blank" rel="noopener noreferrer">
+              Full record on Anticapture ↗
+            </InlineExternalLink>
+          </SectionHeader>
+          <ProposalBar votes={voter.last10ProposalsVoted} />
+          <SectionMeta>
+            Each dot is one of the most recent 10 governance proposals — filled means they voted, empty means they didn't.
+          </SectionMeta>
+        </SectionCard>
 
-      <VotingCard>
-        <CardTitle>Voting Record (last 10 proposals)</CardTitle>
-        <ProposalBar votes={voter.last10ProposalsVoted} />
-      </VotingCard>
+        {/* ─── Recent Rewards ─── */}
+        <SectionCard>
+          <SectionHeader>
+            <div>
+              <SectionEyebrow>Recent Voter Rewards</SectionEyebrow>
+              <SectionTitle>Last paid rounds</SectionTitle>
+            </div>
+            <SectionMeta>Voter share of the round&apos;s 10% pool</SectionMeta>
+          </SectionHeader>
 
-      <ExternalLink
-        href={delegateUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        View full governance profile on Anticapture ↗
-      </ExternalLink>
+          {rewardsHistory.loading ? (
+            <EmptyRewards>Loading reward history…</EmptyRewards>
+          ) : rewardsHistory.data && rewardsHistory.data.length > 0 ? (
+            <RewardsStrip>
+              {rewardsHistory.data.map((r) => {
+                const num = Number(r.totalRewardEns)
+                const formatted = Number.isFinite(num) && num > 0
+                  ? `${formatEnsAmount(r.totalRewardEns, { maximumFractionDigits: 2 })} ENS`
+                  : '0 ENS'
+                const earned = Number.isFinite(num) && num > 0
+                return (
+                  <RewardCard
+                    key={r.roundNumber}
+                    href={`/rounds/${r.roundNumber}?address=${voter.address}`}
+                  >
+                    <RewardEyebrow>Round {r.roundNumber}</RewardEyebrow>
+                    {earned ? (
+                      <RewardValue>+{formatted}</RewardValue>
+                    ) : (
+                      <RewardZero>0 ENS</RewardZero>
+                    )}
+                    <RewardSub>{formatMonthLabel(r.month)}</RewardSub>
+                  </RewardCard>
+                )
+              })}
+            </RewardsStrip>
+          ) : (
+            <EmptyRewards>
+              No finalized voter rewards yet for this delegate. Their first appearance here will be after the next round closes.
+            </EmptyRewards>
+          )}
+        </SectionCard>
+
+        {/* ─── Verification row ─── */}
+        <VerificationRow>
+          <VerifyChip href={delegateUrl} target="_blank" rel="noopener noreferrer">
+            Anticapture <VerifyArrow>↗</VerifyArrow>
+          </VerifyChip>
+          <VerifyChip href={etherscanUrl} target="_blank" rel="noopener noreferrer">
+            Etherscan <VerifyArrow>↗</VerifyArrow>
+          </VerifyChip>
+          <VerifyChip href={ensAppUrl} target="_blank" rel="noopener noreferrer">
+            ENS profile <VerifyArrow>↗</VerifyArrow>
+          </VerifyChip>
+        </VerificationRow>
+      </Inner>
     </Page>
   )
 }

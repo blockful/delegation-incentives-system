@@ -41,6 +41,19 @@ export const tokens = {
     borderLight: '#EAEEF2',
     tierHighlight: '#DAFBE1',
     textSubtle: '#8C959F',
+
+    // Surface ladder — page mat vs card; see docs §2.8 DS audit
+    surfaceMat: '#FAFAFC',
+
+    // Status families — 5 tones × 3 roles (bg / border / fg)
+    // Replaces inline $tone branching in AddressLotteryPanel, StatusPanel, ErrorCard
+    status: {
+      success: { bg: '#DAFBE1', border: '#007C23', fg: '#1A7F37' },
+      warning: { bg: '#FFF1E5', border: '#BC4C00', fg: '#9A3412' },
+      pending: { bg: '#EFF6FF', border: '#5298FF', fg: '#1E5BC9' },
+      danger:  { bg: '#FEE9F0', border: '#F53293', fg: '#B91552' },
+      neutral: { bg: '#FFFFFF', border: '#EAEEF2', fg: '#57606A' },
+    },
   },
 
   radius: {
@@ -56,11 +69,16 @@ export const tokens = {
     sm: '0 1px 3px rgba(0, 0, 0, 0.06)',
     md: '0 4px 16px rgba(0, 0, 0, 0.10)',
     lg: '0 8px 32px rgba(0, 0, 0, 0.14)',
+    // Replaces hairy inline `0 4px 12px rgba(82,152,255,0.3)` patterns;
+    // 1px border line + soft elevation. See docs §1.1 / §2.8.
+    soft: '0 1px 0 0 rgba(15, 23, 42, 0.04), 0 4px 24px 0 rgba(15, 23, 42, 0.05)',
   },
 
   font: {
     family: "'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    mono: "'Satoshi', monospace",
+    // System mono stack — used for addresses, hashes, seeds, block numbers, ENS amounts in tables.
+    // Drop Satoshi (not a monospace font); fall back to whatever the OS provides.
+    mono: "'JetBrains Mono', 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace",
     size: {
       xs: '11px',
       sm: '12px',
@@ -104,6 +122,13 @@ export const tokens = {
     fast: '0.15s ease',
     base: '0.2s ease',
     slow: '0.3s ease',
+  },
+
+  // Motion tokens for orchestrated animations. Prefer over `transition.*` in new code.
+  motion: {
+    in: '200ms ease-out',
+    inFast: '120ms ease-out',
+    out: '160ms ease-in',
   },
 
   maxWidth: {

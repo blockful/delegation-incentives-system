@@ -17,6 +17,7 @@ import { RoundDetailPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { CopyableAddress } from '@/components/shared/CopyableAddress'
+import { ToneCallout, type ToneCalloutTone } from '@/components/shared/ToneCallout'
 import { tokens, fadeInUp, Eyebrow, PageTitle, ErrorMessage } from '@/styles'
 import { formatEnsAmount, formatUtcMonthRange, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
@@ -333,41 +334,19 @@ const TableNote = styled.p`
   line-height: 1.5;
 `
 
-const AddressLotteryPanel = styled.section<{ $tone: 'neutral' | 'success' | 'warning' | 'pending' | 'error' }>`
+const AddressLotteryWrapper = styled.div`
   width: 100%;
   max-width: 840px;
-  border: 1px solid ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.positiveEmphasis
-    if ($tone === 'warning') return tokens.color.orange
-    if ($tone === 'pending') return tokens.color.blue
-    if ($tone === 'error') return tokens.color.negative
-    return tokens.color.borderLight
-  }};
-  border-radius: ${tokens.radius.sm};
-  background: ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.tierHighlight
-    if ($tone === 'warning') return tokens.color.lightOrange
-    if ($tone === 'pending') return tokens.color.lightBlue
-    if ($tone === 'error') return '#FEE9F0'
-    return tokens.color.surface
-  }};
-  padding: ${tokens.spacing['2xl']};
-  display: grid;
-  gap: ${tokens.spacing.lg};
 `
 
-const AddressLotteryTitle = styled.h2`
-  margin: 0;
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.bold};
-`
-
-const AddressLotteryBody = styled.p`
-  margin: 0;
+const AddressLotteryAddressRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  padding-top: ${tokens.spacing.md};
+  border-top: 1px solid ${tokens.color.borderLight};
+  font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.base};
-  line-height: 1.6;
 `
 
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
@@ -439,7 +418,7 @@ interface AddressLotteryEntry {
 }
 
 interface AddressLotteryInsight {
-  tone: 'neutral' | 'success' | 'warning' | 'pending' | 'error'
+  tone: ToneCalloutTone
   title: string
   body: string
   metrics: Array<{ label: string; value: string }>
@@ -511,7 +490,7 @@ function buildAddressLotteryInsight(
 
   if (!activeAddressValid) {
     return {
-      tone: 'error',
+      tone: 'danger',
       title: 'Invalid address',
       body: 'Enter a valid Ethereum address before checking lottery participation.',
       metrics: [
@@ -795,26 +774,21 @@ function AddressLotteryInsightPanel({
   const insight = buildAddressLotteryInsight(round, activeAddress, activeAddressValid)
 
   return (
-    <AddressLotteryPanel $tone={insight.tone}>
-      <AddressLotteryTitle>{insight.title}</AddressLotteryTitle>
-      <AddressLotteryBody>{insight.body}</AddressLotteryBody>
-      {activeAddress && activeAddressValid ? (
-        <MetaItem>
-          <MetaLabel>Selected Address</MetaLabel>
-          <MetaValue>
+    <AddressLotteryWrapper>
+      <ToneCallout
+        tone={insight.tone}
+        title={insight.title}
+        body={insight.body}
+        metrics={insight.metrics.map((m) => ({ label: m.label, value: m.value }))}
+      >
+        {activeAddress && activeAddressValid ? (
+          <AddressLotteryAddressRow>
+            <span>Selected address:</span>
             <CopyableAddress address={activeAddress} resolveEns={false} showEnsName />
-          </MetaValue>
-        </MetaItem>
-      ) : null}
-      <MetaGrid>
-        {insight.metrics.map((metric) => (
-          <MetaItem key={metric.label}>
-            <MetaLabel>{metric.label}</MetaLabel>
-            <MetaValue>{metric.value}</MetaValue>
-          </MetaItem>
-        ))}
-      </MetaGrid>
-    </AddressLotteryPanel>
+          </AddressLotteryAddressRow>
+        ) : null}
+      </ToneCallout>
+    </AddressLotteryWrapper>
   )
 }
 

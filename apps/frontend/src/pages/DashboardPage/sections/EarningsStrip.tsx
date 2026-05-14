@@ -130,7 +130,7 @@ const ShareButton = styled.button<{ $primary?: boolean }>`
   transition: opacity ${tokens.transition.fast};
   border: 1px solid ${({ $primary }) => ($primary ? tokens.color.blue : tokens.color.gray)};
   background: ${({ $primary }) => ($primary ? tokens.color.blue : tokens.color.surface)};
-  color: ${({ $primary }) => ($primary ? '#fff' : tokens.color.darkGray)};
+  color: ${({ $primary }) => ($primary ? tokens.color.white : tokens.color.darkGray)};
 
   &:hover {
     opacity: 0.85;

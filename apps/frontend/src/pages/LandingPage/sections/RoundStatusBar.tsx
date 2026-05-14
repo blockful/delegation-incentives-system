@@ -25,16 +25,16 @@ const Card = styled.div`
   align-items: center;
   gap: 12px;
   padding: 24px;
-  background: #ffffff;
-  border: 1px solid #d0d7de;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.middleGray};
   border-radius: 10px;
-  box-shadow: 0px 1px 3px #0000000f;
+  box-shadow: ${tokens.shadow.sm};
 `
 
 const Tagline = styled.span`
   font-size: 13px;
   font-weight: ${tokens.font.weight.bold};
-  color: #1a7f37;
+  color: ${tokens.color.positiveEmphasis};
   text-align: center;
   width: 100%;
 
@@ -48,8 +48,8 @@ const DataRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f6f8fa;
-  border: 1px solid #d0d7de;
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.middleGray};
   border-radius: 10px;
   padding: 10px 16px;
 `
@@ -66,7 +66,7 @@ const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
 const ColLabel = styled.span`
   font-size: 14px;
   font-weight: ${tokens.font.weight.bold};
-  color: #1f2328;
+  color: ${tokens.color.darkBlue};
   line-height: 18px;
   display: flex;
   align-items: center;
@@ -80,7 +80,7 @@ const ColLabel = styled.span`
 const ColSub = styled.span`
   font-size: 12px;
   font-weight: ${tokens.font.weight.normal};
-  color: #57606a;
+  color: ${tokens.color.darkGray};
   line-height: 16px;
 
   @media (min-width: 768px) {
@@ -92,14 +92,14 @@ const LiveDot = styled.span`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1a7f37;
+  background: ${tokens.color.positiveEmphasis};
   flex-shrink: 0;
 `
 
 const GrowthLabel = styled.span<{ $negative?: boolean }>`
   font-size: 14px;
   font-weight: ${tokens.font.weight.bold};
-  color: ${({ $negative }) => ($negative ? tokens.color.negative : '#1a7f37')};
+  color: ${({ $negative }) => ($negative ? tokens.color.negative : tokens.color.positiveEmphasis)};
   line-height: 18px;
 
   @media (min-width: 768px) {

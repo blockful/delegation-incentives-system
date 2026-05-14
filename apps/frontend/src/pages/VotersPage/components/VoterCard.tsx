@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import { useEnsName } from 'wagmi'
+import { useEnsName, useEnsText } from 'wagmi'
 import { Link } from 'react-router-dom'
 import type { VoterDetail } from '@/api/types'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
@@ -26,29 +26,44 @@ function formatVotingPower(vpWei: string): string {
   return `${Math.round(ens)}`
 }
 
-function formatActiveSince(iso: string): string {
-  const date = new Date(iso)
-  const month = date.toLocaleString('en-US', { month: 'short' })
-  const year = String(date.getFullYear()).slice(2)
-  return `${month} '${year}`
-}
-
 const StyledCard = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
   padding: ${tokens.spacing.xl};
   background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.gray};
+  border: 1px solid ${tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.sm};
+  box-shadow: ${tokens.shadow.soft};
   transition:
     border-color ${tokens.transition.fast},
-    box-shadow ${tokens.transition.base};
+    box-shadow ${tokens.transition.base},
+    transform ${tokens.transition.base};
+  overflow: hidden;
 
   &:hover {
     border-color: ${tokens.color.blue};
     box-shadow: ${tokens.shadow.md};
+    transform: translateY(-2px);
+  }
+
+  /* Subtle corner accent on hover */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at top right, ${tokens.color.lightBlueOpacity}, transparent 70%);
+    opacity: 0;
+    transition: opacity ${tokens.transition.base};
+    pointer-events: none;
+  }
+
+  &:hover::before {
+    opacity: 1;
   }
 `
 
@@ -56,6 +71,19 @@ const IdentityRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.md};
+  position: relative;
+  z-index: 1;
+`
+
+const BioRow = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.sm};
+  line-height: 1.5;
+  color: ${tokens.color.darkGray};
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `
 
 const ProposalSection = styled.div`
@@ -65,31 +93,49 @@ const ProposalSection = styled.div`
 `
 
 const ProposalLabel = styled.span`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: ${tokens.spacing.sm};
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
+`
+
+const ProposalCount = styled.strong`
+  color: ${tokens.color.darkBlue};
+  font-weight: ${tokens.font.weight.bold};
 `
 
 const StatsRow = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: ${tokens.spacing.md};
+  padding-top: ${tokens.spacing.md};
+  border-top: 1px solid ${tokens.color.borderLight};
 `
 
 const Stat = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 `
 
 const StatValue = styled.span`
-  font-size: ${tokens.font.size.base};
+  font-family: ${tokens.font.mono};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 `
 
 const StatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.xs};
   color: ${tokens.color.darkGray};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: ${tokens.font.weight.semibold};
 `
 
 const ActionsBlock = styled.div`
@@ -109,28 +155,37 @@ const DelegateAction = styled.button`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
   cursor: pointer;
-  transition:
-    background ${tokens.transition.fast},
-    border-color ${tokens.transition.fast};
+  transition: all ${tokens.transition.fast};
   text-align: center;
 
   &:hover {
     background: ${tokens.color.accent};
     border-color: ${tokens.color.accent};
-    color: ${tokens.color.white};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
   }
 `
 
 const DelegatedStatus = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
   border-radius: ${tokens.radius.sm};
-  border: 1px solid ${tokens.color.positiveEmphasis};
-  background: ${tokens.color.tierHighlight};
-  color: ${tokens.color.positiveEmphasis};
+  background: ${tokens.color.status.success.bg};
+  border: 1px solid ${tokens.color.status.success.border};
+  color: ${tokens.color.status.success.fg};
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
-  text-align: center;
+`
+
+const DelegatedCheck = styled.span`
+  font-size: ${tokens.font.size.sm};
 `
 
 const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
@@ -147,20 +202,35 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
 `
 
 const ProfileLink = styled(Link)`
-  font-size: ${tokens.font.size.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.blue};
   text-decoration: none;
-  text-align: center;
-  display: block;
   padding: ${tokens.spacing.xs} 0;
-  transition: color ${tokens.transition.fast};
+  transition: gap ${tokens.transition.fast};
 
   &:hover {
-    color: ${tokens.color.blue};
     text-decoration: underline;
+    gap: 8px;
   }
 `
+
+const ProfileArrow = styled.span`
+  transition: transform ${tokens.transition.fast};
+`
+
+function useEnsTextOrEmpty(name: string | null, key: string): string | undefined {
+  const { data } = useEnsText({
+    name: name ?? undefined,
+    key,
+    query: { enabled: Boolean(name) },
+  })
+  return typeof data === 'string' && data.trim().length > 0 ? data : undefined
+}
 
 export function VoterCard({ voter }: VoterCardProps) {
   const walletState = useWalletState()
@@ -173,9 +243,13 @@ export function VoterCard({ voter }: VoterCardProps) {
   })
   const ensName = voter.ensName ?? resolvedEnsName ?? null
 
+  const bio = useEnsTextOrEmpty(ensName, 'description')
+
   const handleDelegate = () => {
     // TODO: call relayer for gasless delegation
   }
+
+  const votedCount = voter.last10ProposalsVoted.filter(Boolean).length
 
   return (
     <StyledCard>
@@ -185,14 +259,19 @@ export function VoterCard({ voter }: VoterCardProps) {
           ensName={ensName}
           avatarUrl={voter.avatarUrl}
           showAvatar
-          avatarSize={40}
+          avatarSize={44}
           layout="stack"
           size="md"
         />
       </IdentityRow>
 
+      {bio && <BioRow>{bio}</BioRow>}
+
       <ProposalSection>
-        <ProposalLabel>Last 10 proposals</ProposalLabel>
+        <ProposalLabel>
+          <span>Last 10 proposals</span>
+          <ProposalCount>{votedCount}/10 voted</ProposalCount>
+        </ProposalLabel>
         <ProposalBar votes={voter.last10ProposalsVoted} />
       </ProposalSection>
 
@@ -203,26 +282,27 @@ export function VoterCard({ voter }: VoterCardProps) {
         </Stat>
         <Stat>
           <StatValue>{voter.tokenHolderCount}</StatValue>
-          <StatLabel>Token holders</StatLabel>
+          <StatLabel>Delegators</StatLabel>
         </Stat>
-        {voter.activeSince && (
-          <Stat>
-            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
-            <StatLabel>Active since</StatLabel>
-          </Stat>
-        )}
+        <Stat>
+          <StatValue>{Math.round((votedCount / 10) * 100)}%</StatValue>
+          <StatLabel>Participation</StatLabel>
+        </Stat>
       </StatsRow>
 
       <ActionsBlock>
         {isDelegated ? (
-          <DelegatedStatus>Delegated</DelegatedStatus>
+          <DelegatedStatus>
+            <DelegatedCheck aria-hidden>✓</DelegatedCheck>
+            Delegated
+          </DelegatedStatus>
         ) : (
           <DelegateAction type="button" onClick={handleDelegate}>
             Delegate <FreeTag>Free</FreeTag>
           </DelegateAction>
         )}
         <ProfileLink to={`/voters/${ensName ?? voter.address}`}>
-          View profile
+          View profile <ProfileArrow aria-hidden>→</ProfileArrow>
         </ProfileLink>
       </ActionsBlock>
     </StyledCard>

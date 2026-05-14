@@ -10,7 +10,7 @@ import { useRounds } from '@/features/rounds/useRounds'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, Eyebrow, PageTitle, ErrorMessage } from '@/styles'
 import { formatEnsAmount, formatUtcDate, formatUtcMonthRange } from '@/utils/format'
-import { TierTable } from './components/TierTable'
+import { Link } from 'react-router-dom'
 import { RoundCard } from './components/RoundCard'
 import {
   RoundHistoryTable,
@@ -23,17 +23,140 @@ import {
 } from './roundFallback'
 
 const Page = styled.div`
+  background: ${tokens.color.surfaceMat};
+  min-height: calc(100vh - 80px);
+`
+
+const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['3xl']};
+  gap: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+    padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
+    gap: ${tokens.spacing['3xl']};
   }
+`
+
+/* ─── Lottery Snapshot sidebar card ─── */
+
+const SnapshotCard = styled.aside`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  box-shadow: ${tokens.shadow.soft};
+  padding: ${tokens.spacing.xl};
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+  height: fit-content;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, ${tokens.color.lightBlueOpacity}, transparent 70%);
+    pointer-events: none;
+  }
+`
+
+const SnapshotEyebrow = styled.span`
+  position: relative;
+  z-index: 1;
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: ${tokens.color.darkGray};
+`
+
+const SnapshotTitle = styled.h3`
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.25;
+`
+
+const SnapshotMetrics = styled.div`
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+`
+
+const SnapshotRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: ${tokens.spacing.sm};
+  padding: ${tokens.spacing.sm} 0;
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  &:last-child {
+    border-bottom: none;
+  }
+`
+
+const SnapshotLabel = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+`
+
+const SnapshotValue = styled.span`
+  font-family: ${tokens.font.mono};
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  font-variant-numeric: tabular-nums;
+`
+
+const SnapshotLink = styled(Link)`
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  border-radius: ${tokens.radius.md};
+  background: ${tokens.color.lightBlueOpacity};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  text-decoration: none;
+  justify-content: center;
+  transition: all ${tokens.transition.fast};
+
+  &:hover {
+    background: ${tokens.color.blue};
+    color: ${tokens.color.white};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const SnapshotEmpty = styled.p`
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+  line-height: 1.5;
 `
 
 const HeaderBlock = styled.div`
@@ -360,11 +483,13 @@ export function RoundsPage() {
   if (!currentRound) {
     return (
       <Page>
-        <HeaderBlock>
-          <Eyebrow>Rounds</Eyebrow>
-          <RoundsPageTitle>No rounds configured</RoundsPageTitle>
-          <EmptyState>Round history is unavailable.</EmptyState>
-        </HeaderBlock>
+        <Inner>
+          <HeaderBlock>
+            <Eyebrow>Rounds</Eyebrow>
+            <RoundsPageTitle>No rounds configured</RoundsPageTitle>
+            <EmptyState>Round history is unavailable.</EmptyState>
+          </HeaderBlock>
+        </Inner>
       </Page>
     )
   }
@@ -378,54 +503,97 @@ export function RoundsPage() {
       : 'No address selected'
   const addressError = inputError || (activeAddress && !activeAddressValid ? 'Invalid address' : null)
 
+  const lotteryBuckets = currentRound.lotteryBucketCount ?? 0
+  const lotteryEntries = currentRound.lotteryEntryCount ?? 0
+  const lotteryParticipants = currentRound.lotteryParticipantCount ?? 0
+  const lotteryWinners = currentRound.lotteryWinnerCount ?? 0
+  const hasLotteryData = lotteryBuckets > 0
+
   return (
     <Page>
-      <HeaderBlock>
-        <Eyebrow>Rounds</Eyebrow>
-        <HeadingRow>
-          <RoundsPageTitle>
-            Round {currentRound.roundNumber}
-          </RoundsPageTitle>
-          <StatusBadge
-            $status={currentRound.status}
-            role="status"
-            aria-label={`Round ${currentRound.roundNumber} is ${headingStatus(currentRound.status)}`}
-          >
-            {currentRound.status === 'live' ? <LiveDot /> : null}
-            {headingStatus(currentRound.status)}
-          </StatusBadge>
-        </HeadingRow>
-        <AddressPanel>
-          <Eyebrow>Inspect Address</Eyebrow>
-          <AddressLookupForm
-            value={addressInput}
-            activeAddress={activeAddress}
-            sourceLabel={sourceLabel}
-            error={addressError}
-            onChange={setAddressInput}
-            onSubmit={handleAddressSubmit}
-            onClear={handleAddressClear}
-          />
-        </AddressPanel>
-      </HeaderBlock>
+      <Inner>
+        <HeaderBlock>
+          <Eyebrow>Rounds</Eyebrow>
+          <HeadingRow>
+            <RoundsPageTitle>
+              Round {currentRound.roundNumber}
+            </RoundsPageTitle>
+            <StatusBadge
+              $status={currentRound.status}
+              role="status"
+              aria-label={`Round ${currentRound.roundNumber} is ${headingStatus(currentRound.status)}`}
+            >
+              {currentRound.status === 'live' ? <LiveDot /> : null}
+              {headingStatus(currentRound.status)}
+            </StatusBadge>
+          </HeadingRow>
+          <AddressPanel>
+            <Eyebrow>Inspect Address</Eyebrow>
+            <AddressLookupForm
+              value={addressInput}
+              activeAddress={activeAddress}
+              sourceLabel={sourceLabel}
+              error={addressError}
+              onChange={setAddressInput}
+              onSubmit={handleAddressSubmit}
+              onClear={handleAddressClear}
+            />
+          </AddressPanel>
+        </HeaderBlock>
 
-      <Grid>
-        <LeftColumn>
-          <RoundCard
-            roundNumber={currentRound.roundNumber}
-            status={currentRound.status}
-            percentComplete={currentRound.percentComplete ?? 0}
-            startDate={formatUtcDate(currentRound.startDate, { year: 'numeric' })}
-            endDate={formatUtcDate(currentRound.endDate, { year: 'numeric' })}
-            timeLeft={formatDaysRemaining(currentRound.daysRemaining)}
-            poolSizeEns={currentRound.poolSizeEns ?? '0'}
-            currentTier={currentRound.tierLabel ?? `Tier #${currentTierIndex + 1}`}
-            currentAprPct={currentTier?.estimatedAprPct ?? '0'}
-          />
-          <RoundHistoryTable entries={roundHistory} />
-        </LeftColumn>
-        <TierTable tiers={tierData.tiers} currentTierIndex={currentTierIndex} />
-      </Grid>
+        <Grid>
+          <LeftColumn>
+            <RoundCard
+              roundNumber={currentRound.roundNumber}
+              status={currentRound.status}
+              percentComplete={currentRound.percentComplete ?? 0}
+              startDate={formatUtcDate(currentRound.startDate, { year: 'numeric' })}
+              endDate={formatUtcDate(currentRound.endDate, { year: 'numeric' })}
+              timeLeft={formatDaysRemaining(currentRound.daysRemaining)}
+              poolSizeEns={currentRound.poolSizeEns ?? '0'}
+              currentTier={currentRound.tierLabel ?? `Tier #${currentTierIndex + 1}`}
+              currentAprPct={currentTier?.estimatedAprPct ?? '0'}
+            />
+            <RoundHistoryTable entries={roundHistory} />
+          </LeftColumn>
+
+          <SnapshotCard>
+            <SnapshotEyebrow>Lottery Snapshot</SnapshotEyebrow>
+            <SnapshotTitle>Round {currentRound.roundNumber} lottery</SnapshotTitle>
+
+            {hasLotteryData ? (
+              <SnapshotMetrics>
+                <SnapshotRow>
+                  <SnapshotLabel>Pools</SnapshotLabel>
+                  <SnapshotValue>{lotteryBuckets.toLocaleString('en-US')}</SnapshotValue>
+                </SnapshotRow>
+                <SnapshotRow>
+                  <SnapshotLabel>Entries</SnapshotLabel>
+                  <SnapshotValue>{lotteryEntries.toLocaleString('en-US')}</SnapshotValue>
+                </SnapshotRow>
+                <SnapshotRow>
+                  <SnapshotLabel>Participants</SnapshotLabel>
+                  <SnapshotValue>{lotteryParticipants.toLocaleString('en-US')}</SnapshotValue>
+                </SnapshotRow>
+                <SnapshotRow>
+                  <SnapshotLabel>Winners drawn</SnapshotLabel>
+                  <SnapshotValue>{lotteryWinners.toLocaleString('en-US')}</SnapshotValue>
+                </SnapshotRow>
+              </SnapshotMetrics>
+            ) : (
+              <SnapshotEmpty>
+                {currentRound.status === 'live'
+                  ? 'Lottery runs after the round closes. Sub-1-ENS payouts pool into ~10 ENS buckets.'
+                  : 'No lottery data available for this round.'}
+              </SnapshotEmpty>
+            )}
+
+            <SnapshotLink to={`/lottery?round=${currentRound.roundNumber}`}>
+              Inspect on Lottery →
+            </SnapshotLink>
+          </SnapshotCard>
+        </Grid>
+      </Inner>
     </Page>
   )
 }

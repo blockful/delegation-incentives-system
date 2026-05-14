@@ -8,6 +8,7 @@ import { useLottery } from '@/features/lottery/useLottery'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { LotteryPageSkeleton } from '@/components/shared/PageSkeletons'
+import { ToneCallout, type ToneCalloutTone } from '@/components/shared/ToneCallout'
 import type {
   LotteryBucketDetail,
   LotteryDetail,
@@ -41,13 +42,51 @@ interface AddressLotteryStatus {
 
 const Page = styled.div`
   width: 100%;
+  background: ${tokens.color.surfaceMat};
+  min-height: calc(100vh - 80px);
   animation: ${fadeInUp} 0.4s ease both;
 `
 
 const HeaderBand = styled.section`
+  position: relative;
   width: 100%;
-  background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.white});
+  background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.surfaceMat});
   border-bottom: 1px solid ${tokens.color.borderLight};
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    right: -120px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, ${tokens.color.lightBlueOpacity}, transparent 60%);
+    pointer-events: none;
+  }
+`
+
+const PrizePill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.status.success.bg};
+  border: 1px solid ${tokens.color.status.success.border};
+  color: ${tokens.color.status.success.fg};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
+  box-shadow: ${tokens.shadow.soft};
+`
+
+const PrizePillSparkle = styled.span`
+  font-size: ${tokens.font.size.base};
 `
 
 const HeaderContent = styled.div`
@@ -134,18 +173,18 @@ const Panel = styled.section`
 
 const StatusPanel = styled(Panel)<{ $tone: StatusTone }>`
   border-color: ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.positiveEmphasis
-    if ($tone === 'warning') return tokens.color.orange
-    if ($tone === 'pending') return tokens.color.blue
-    if ($tone === 'error') return tokens.color.negative
-    return tokens.color.borderLight
+    if ($tone === 'success') return tokens.color.status.success.border
+    if ($tone === 'warning') return tokens.color.status.warning.border
+    if ($tone === 'pending') return tokens.color.status.pending.border
+    if ($tone === 'error') return tokens.color.status.danger.border
+    return tokens.color.status.neutral.border
   }};
   background: ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.tierHighlight
-    if ($tone === 'warning') return tokens.color.lightOrange
-    if ($tone === 'pending') return tokens.color.lightBlue
-    if ($tone === 'error') return '#FEE9F0'
-    return tokens.color.surface
+    if ($tone === 'success') return tokens.color.status.success.bg
+    if ($tone === 'warning') return tokens.color.status.warning.bg
+    if ($tone === 'pending') return tokens.color.status.pending.bg
+    if ($tone === 'error') return tokens.color.status.danger.bg
+    return tokens.color.status.neutral.bg
   }};
 `
 
@@ -542,8 +581,8 @@ const EmptyState = styled.div`
 
 const ErrorCard = styled(Panel)`
   max-width: 680px;
-  border-color: #FBCDD8;
-  background: #FEE9F0;
+  border-color: ${tokens.color.status.danger.border};
+  background: ${tokens.color.status.danger.bg};
 `
 
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
@@ -809,9 +848,13 @@ function HeaderBlock({
     <HeaderBand>
       <HeaderContent>
         <Eyebrow>Lottery</Eyebrow>
+        <PrizePill>
+          <PrizePillSparkle aria-hidden>✨</PrizePillSparkle>
+          Win up to 10 ENS
+        </PrizePill>
         <Title>Lottery buckets</Title>
         <Description>
-          Check a wallet first, then inspect any finalized round and bucket.
+          Sub-1-ENS payouts pool into ~10 ENS buckets. RANDAO seeds a weighted draw at round close, and one winner takes each bucket. Inspect any wallet, round, or bucket below.
         </Description>
         {round ? (
           <CurrentRoundNote>
@@ -837,6 +880,10 @@ function StatusMetrics({ metrics }: { metrics: StatusMetric[] }) {
   )
 }
 
+function mapTone(tone: StatusTone): ToneCalloutTone {
+  return tone === 'error' ? 'danger' : tone
+}
+
 function AddressStatusPanel({
   status,
   roundPath,
@@ -845,18 +892,13 @@ function AddressStatusPanel({
   roundPath: string
 }) {
   return (
-    <StatusPanel $tone={status.tone}>
-      <PanelHeader>
-        <div>
-          <PanelTitle>{status.title}</PanelTitle>
-          <PanelBody>{status.body}</PanelBody>
-        </div>
-      </PanelHeader>
-      <StatusMetrics metrics={status.metrics} />
-      <LinkRow>
-        <TextLink to={roundPath}>Open full round details</TextLink>
-      </LinkRow>
-    </StatusPanel>
+    <ToneCallout
+      tone={mapTone(status.tone)}
+      title={status.title}
+      body={status.body}
+      metrics={status.metrics.map((m) => ({ label: m.label, value: m.value }))}
+      action={{ to: roundPath, label: 'Open full round details' }}
+    />
   )
 }
 
