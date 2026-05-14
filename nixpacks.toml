@@ -1,0 +1,14 @@
+# Railway uses nixpacks to build the service. Pin Node 20 + pnpm 9.15 so
+# the build matches local dev. Install with --frozen-lockfile.
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm-9_x"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+# Ponder has no build step; the start command runs ponder directly.
+cmds = ["echo 'no build step'"]
+
+[start]
+cmd = "pnpm --filter @ens-dis/backend start"
