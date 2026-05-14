@@ -30,7 +30,7 @@ function formatVotingPower(vpWei: string): string {
 
 function formatActiveSince(iso: string): string {
   const date = new Date(iso)
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
 const Page = styled.div`
@@ -293,7 +293,7 @@ export function VoterProfilePage() {
             </DelegatedStatus>
           ) : (
             <DelegateAction type="button" onClick={handleDelegate}>
-              {aprPct ? `Delegate — Earn up to ${aprPct}% APR` : 'Delegate'}{' '}
+              {aprPct ? `Delegate · Earn up to ${aprPct}% APR` : 'Delegate'}{' '}
               <FreeTag>Free</FreeTag>
             </DelegateAction>
           )}

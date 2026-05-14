@@ -34,6 +34,7 @@ function formatActiveSince(iso: string): string {
 }
 
 const StyledCard = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
@@ -49,6 +50,25 @@ const StyledCard = styled.div`
   &:hover {
     border-color: ${tokens.color.blue};
     box-shadow: ${tokens.shadow.md};
+  }
+
+  &:focus-within {
+    border-color: ${tokens.color.blue};
+    box-shadow: ${tokens.shadow.md};
+  }
+`
+
+const CardLink = styled(Link)`
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  text-indent: -9999px;
+  overflow: hidden;
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
   }
 `
 
@@ -100,6 +120,8 @@ const ActionsBlock = styled.div`
 `
 
 const DelegateAction = styled.button`
+  position: relative;
+  z-index: 2;
   width: 100%;
   padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
   border-radius: ${tokens.radius.sm};
@@ -146,22 +168,6 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   margin-left: ${tokens.spacing.xs};
 `
 
-const ProfileLink = styled(Link)`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.blue};
-  text-decoration: none;
-  text-align: center;
-  display: block;
-  padding: ${tokens.spacing.xs} 0;
-  transition: color ${tokens.transition.fast};
-
-  &:hover {
-    color: ${tokens.color.blue};
-    text-decoration: underline;
-  }
-`
-
 export function VoterCard({ voter }: VoterCardProps) {
   const walletState = useWalletState()
   const isDelegated =
@@ -172,6 +178,8 @@ export function VoterCard({ voter }: VoterCardProps) {
     address: voter.address as `0x${string}`,
   })
   const ensName = voter.ensName ?? resolvedEnsName ?? null
+  const profileHref = `/voters/${ensName ?? voter.address}`
+  const profileLabel = `View profile for ${ensName ?? voter.address}`
 
   const handleDelegate = () => {
     // TODO: call relayer for gasless delegation
@@ -179,6 +187,10 @@ export function VoterCard({ voter }: VoterCardProps) {
 
   return (
     <StyledCard>
+      <CardLink to={profileHref} aria-label={profileLabel}>
+        {profileLabel}
+      </CardLink>
+
       <IdentityRow>
         <AddressIdentity
           address={voter.address}
@@ -221,9 +233,6 @@ export function VoterCard({ voter }: VoterCardProps) {
             Delegate <FreeTag>Free</FreeTag>
           </DelegateAction>
         )}
-        <ProfileLink to={`/voters/${ensName ?? voter.address}`}>
-          View profile
-        </ProfileLink>
       </ActionsBlock>
     </StyledCard>
   )
