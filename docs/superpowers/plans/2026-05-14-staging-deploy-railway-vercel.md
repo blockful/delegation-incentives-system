@@ -396,6 +396,7 @@ On the `backend` service → **Variables**, add:
 |---|---|---|
 | `RPC_URL` | (your mainnet RPC) | The one you already have |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | Use the Railway reference syntax |
+| `DATABASE_SCHEMA` | `staging` | **REQUIRED** when `NODE_ENV=production`. Ponder refuses to start without it. Use a distinct value per environment (e.g. `staging`, `prod`) to isolate indexer state. |
 | `ALLOWED_ORIGINS` | `https://delegation-incentives-system-fronte.vercel.app` | No trailing slash. Vercel preview deployments get unique subdomains and will NOT be CORS-allowed until you add them too (defer to a later task). |
 | `NODE_ENV` | `production` | |
 
