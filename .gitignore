@@ -10,3 +10,4 @@ package-lock.json
 .worktrees/
 *.png
 test-results/
+.playwright-mcp/
