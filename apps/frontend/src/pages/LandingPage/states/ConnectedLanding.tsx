@@ -15,11 +15,7 @@ export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps)
 
   return (
     <>
-      <HeroSection
-        currentAprPct={currentAprPct}
-        roundNumber={roundData.roundNumber}
-        roundEndDate={roundData.endDate}
-      />
+      <HeroSection currentAprPct={currentAprPct} />
       <RoundStatusBar
         currentGrowthPct={roundData.vpGrowthPct}
         currentTierIndex={roundData.tierIndex}

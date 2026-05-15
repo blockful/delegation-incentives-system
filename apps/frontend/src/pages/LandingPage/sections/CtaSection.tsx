@@ -24,13 +24,51 @@ const RouterLink = styled(Link)<{ $fullWidthMobile?: boolean }>`
   `}
 `
 
+const PrimaryCtaLink = styled(RouterLink)`
+  button {
+    background: ${tokens.color.white};
+    color: ${tokens.color.blue};
+    border: 1px solid ${tokens.color.white};
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.92);
+      color: ${tokens.color.blue};
+    }
+  }
+`
+
+const SecondaryCtaLink = styled(RouterLink)`
+  button {
+    background: rgba(255, 255, 255, 0.12);
+    color: ${tokens.color.white};
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: ${tokens.color.white};
+    }
+  }
+`
+
 const Section = styled.section`
+  background: ${tokens.color.surfaceAlt};
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
+  }
+`
+
+const Card = styled.div`
   position: relative;
   overflow: hidden;
-  background: ${tokens.color.blue};
-  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
-  cursor: default;
   isolation: isolate;
+  background: ${tokens.color.blue};
+  border-radius: 24px;
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  cursor: default;
 
   /* Static dot pattern — calm baseline that the cursor-trail dances over */
   &::before {
@@ -70,14 +108,13 @@ const Section = styled.section`
   }
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['8xl']} ${tokens.spacing['4xl']};
+    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']};
   }
 `
 
 const Inner = styled.div`
   position: relative;
   z-index: 2;
-  max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   text-align: center;
   display: flex;
@@ -171,10 +208,10 @@ const PIXEL_CONFIGS = [
 ]
 
 export function CtaSection() {
-  const ref = useRef<HTMLElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
-  const handleMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    const el = ref.current
+  const handleMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = cardRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
     const x = e.clientX - rect.left
@@ -184,53 +221,58 @@ export function CtaSection() {
   }, [])
 
   const handleEnter = useCallback(() => {
-    ref.current?.setAttribute('data-hover', 'true')
+    cardRef.current?.setAttribute('data-hover', 'true')
   }, [])
 
   const handleLeave = useCallback(() => {
-    ref.current?.setAttribute('data-hover', 'false')
+    cardRef.current?.setAttribute('data-hover', 'false')
   }, [])
 
   return (
-    <Section
-      ref={ref}
-      data-testid="cta-section"
-      data-hover="false"
-      onMouseMove={handleMove}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
-      <TrailLayer aria-hidden>
-        {PIXEL_CONFIGS.map((p) => (
-          <Pixel
-            key={p.id}
-            $size={p.size}
-            $delay={p.delay}
-            $alpha={p.alpha}
-            $offX={p.offX}
-            $offY={p.offY}
-          />
-        ))}
-      </TrailLayer>
+    <Section data-testid="cta-section">
+      <Card
+        ref={cardRef}
+        data-hover="false"
+        onMouseMove={handleMove}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+      >
+        <TrailLayer aria-hidden>
+          {PIXEL_CONFIGS.map((p) => (
+            <Pixel
+              key={p.id}
+              $size={p.size}
+              $delay={p.delay}
+              $alpha={p.alpha}
+              $offX={p.offX}
+              $offY={p.offY}
+            />
+          ))}
+        </TrailLayer>
 
-      <Inner>
-        <Heading>
-          {'Earn ENS rewards.\nStrengthen governance.'}
-        </Heading>
-        <Subtitle>Delegate in under a minute. Gas is sponsored. Rewards are automatic.</Subtitle>
-        <Actions>
-          <RouterLink to="/voters" $fullWidthMobile>
-            <Button colorStyle="greenPrimary">
-              Delegate to an active voter →
-            </Button>
-          </RouterLink>
-          <RouterLink to="/transparency" $fullWidthMobile>
-            <Button colorStyle="background">
-              See the methodology
-            </Button>
-          </RouterLink>
-        </Actions>
-      </Inner>
+        <Inner>
+          <Heading>
+            {'Earn ENS rewards.\nStrengthen governance.'}
+          </Heading>
+          <Subtitle>
+            Delegate in under a minute. Gas is sponsored.
+            <br />
+            Rewards are automatic.
+          </Subtitle>
+          <Actions>
+            <PrimaryCtaLink to="/voters" $fullWidthMobile>
+              <Button colorStyle="background">
+                Delegate to an active voter →
+              </Button>
+            </PrimaryCtaLink>
+            <SecondaryCtaLink to="/transparency" $fullWidthMobile>
+              <Button colorStyle="background">
+                See the methodology
+              </Button>
+            </SecondaryCtaLink>
+          </Actions>
+        </Inner>
+      </Card>
     </Section>
   )
 }

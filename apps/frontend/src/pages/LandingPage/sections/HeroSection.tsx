@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 import { LiveDot } from '@/components/shared/LiveDot'
-import { formatTimeLeft } from '@/utils/format'
 
 const RouterLink = styled(Link)`
   text-decoration: none;
@@ -36,12 +35,10 @@ const AnchorLink = styled.a`
 
 interface HeroSectionProps {
   currentAprPct: string
-  roundNumber?: number
-  roundEndDate?: string
 }
 
 const Section = styled.section`
-  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
+  padding: 60px ${tokens.spacing.xl};
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -53,7 +50,7 @@ const Section = styled.section`
   border-bottom: 1px solid ${tokens.color.borderLight};
 
   @media (min-width: 768px) {
-    padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['9xl']};
+    padding: 60px ${tokens.spacing['4xl']};
   }
 `
 
@@ -68,6 +65,10 @@ const HeroEyebrow = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${tokens.spacing.sm};
+  padding: 6px 14px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.status.neutral.bg};
+  border: 1px solid ${tokens.color.status.neutral.border};
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
@@ -76,17 +77,17 @@ const HeroEyebrow = styled.span`
 `
 
 const Headline = styled.h1`
-  font-size: ${tokens.font.size['4xl']};
+  font-size: ${tokens.font.size['5xl']};
   font-weight: ${tokens.font.weight.black};
   color: ${tokens.color.darkBlue};
-  line-height: 1.15;
+  line-height: 1.1;
   letter-spacing: -0.02em;
   margin: 0 auto ${tokens.spacing.lg};
-  max-width: 720px;
+  max-width: 860px;
   animation: ${fadeInUp} 0.5s ease 0.1s both;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['6xl']};
+    font-size: 68px;
   }
 `
 
@@ -122,27 +123,59 @@ const Particle = styled.div<{
   will-change: transform, opacity;
   animation: ${floatUp} ${({ $duration }) => $duration}s ease-in
     ${({ $delay }) => $delay}s infinite;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: filter 0.25s ease;
 
   svg {
     width: 100%;
     height: 100%;
     color: ${tokens.color.blue};
+    transition: transform 0.25s ease;
+    transform-origin: center;
   }
+
+  &:hover {
+    animation-play-state: paused;
+    filter: drop-shadow(0 6px 14px ${tokens.color.lightBlueOpacity});
+
+    svg {
+      transform: scale(1.25);
+    }
+  }
+`
+
+const highlightSlide = keyframes`
+  from { background-position: 100% 0; }
+  to   { background-position: 0 0; }
 `
 
 const AprValue = styled.span`
   display: inline-block;
   color: ${tokens.color.blue};
-  background: ${tokens.color.lightBlueOpacity};
   padding: ${tokens.spacing.xs} ${tokens.spacing.md};
   border-radius: ${tokens.radius.md};
+  background-image: linear-gradient(
+    to right,
+    ${tokens.color.lightBlueOpacity} 50%,
+    transparent 50%
+  );
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  animation: ${highlightSlide} 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+
+  @media (prefers-reduced-motion: reduce) {
+    background-image: none;
+    background-color: ${tokens.color.lightBlueOpacity};
+    animation: none;
+  }
 `
 
 const Subtitle = styled.p`
   font-size: ${tokens.font.size.xl};
   line-height: 1.6;
   color: ${tokens.color.darkGray};
-  max-width: ${tokens.maxWidth.md};
+  max-width: ${tokens.maxWidth.xl};
   margin: 0 auto ${tokens.spacing['4xl']};
   animation: ${fadeInUp} 0.5s ease 0.2s both;
 
@@ -183,24 +216,28 @@ const Actions = styled.div`
   }
 `
 
-// Fewer particles, more curated spacing — calmer feel.
 const PARTICLE_CONFIGS = [
-  { id: 0, left: 8, size: 22, duration: 14, delay: 0 },
-  { id: 1, left: 22, size: 14, duration: 11, delay: 4 },
-  { id: 2, left: 36, size: 28, duration: 16, delay: 8 },
-  { id: 3, left: 52, size: 18, duration: 12, delay: 2 },
-  { id: 4, left: 66, size: 24, duration: 15, delay: 6 },
-  { id: 5, left: 78, size: 16, duration: 13, delay: 10 },
-  { id: 6, left: 90, size: 20, duration: 10, delay: 3 },
+  { id: 0, left: 4, size: 40, duration: 14, delay: 0 },
+  { id: 1, left: 12, size: 24, duration: 12, delay: 5 },
+  { id: 2, left: 19, size: 32, duration: 15, delay: 9 },
+  { id: 3, left: 26, size: 46, duration: 11, delay: 2 },
+  { id: 4, left: 33, size: 28, duration: 13, delay: 7 },
+  { id: 5, left: 40, size: 52, duration: 16, delay: 4 },
+  { id: 6, left: 47, size: 22, duration: 10, delay: 11 },
+  { id: 7, left: 54, size: 38, duration: 14, delay: 1 },
+  { id: 8, left: 61, size: 30, duration: 12, delay: 8 },
+  { id: 9, left: 68, size: 48, duration: 15, delay: 3 },
+  { id: 10, left: 75, size: 26, duration: 11, delay: 6 },
+  { id: 11, left: 82, size: 42, duration: 13, delay: 9 },
+  { id: 12, left: 89, size: 34, duration: 14, delay: 2 },
+  { id: 13, left: 96, size: 28, duration: 10, delay: 7 },
 ]
 
-function buildEyebrow(roundNumber?: number, roundEndDate?: string): string {
-  if (!roundNumber) return 'ENS Governance · Active program'
-  if (!roundEndDate) return `Round ${roundNumber} · in progress`
-  return `Round ${roundNumber} · ${formatTimeLeft(roundEndDate)}`
+function buildEyebrow(): string {
+  return 'ENS Governance · Live program'
 }
 
-export function HeroSection({ currentAprPct, roundNumber, roundEndDate }: HeroSectionProps) {
+export function HeroSection({ currentAprPct }: HeroSectionProps) {
   return (
     <Section>
       <ParticlesLayer aria-hidden>
@@ -219,14 +256,17 @@ export function HeroSection({ currentAprPct, roundNumber, roundEndDate }: HeroSe
       <Content>
         <HeroEyebrow>
           <LiveDot tone="success" size={8} />
-          {buildEyebrow(roundNumber, roundEndDate)}
+          {buildEyebrow()}
         </HeroEyebrow>
         <Headline>
-          Earn <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS,
-          <br />
+          Earn <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS
           automatically.
         </Headline>
-        <Subtitle>Delegate to an active voter — gas is on us.</Subtitle>
+        <Subtitle>
+          Help secure ENS governance by delegating to an active voter.
+          <br />
+          Rewards are automatic, gas is sponsored.
+        </Subtitle>
         <Actions>
           <RouterLink to="/voters">
             <Button colorStyle="bluePrimary">

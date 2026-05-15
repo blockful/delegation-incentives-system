@@ -15,11 +15,7 @@ export function DelegatedLanding({ tierData, roundData }: DelegatedLandingProps)
 
   return (
     <>
-      <HeroSection
-        currentAprPct={currentAprPct}
-        roundNumber={roundData.roundNumber}
-        roundEndDate={roundData.endDate}
-      />
+      <HeroSection currentAprPct={currentAprPct} />
       <RoundStatusBar
         currentGrowthPct={roundData.vpGrowthPct}
         currentTierIndex={roundData.tierIndex}

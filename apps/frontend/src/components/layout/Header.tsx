@@ -16,8 +16,7 @@ const StyledHeader = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 57px;
+  padding: 20px;
   border-bottom: 1px solid ${tokens.color.border};
   background: ${tokens.color.surface};
   position: sticky;
@@ -25,12 +24,11 @@ const StyledHeader = styled.header`
   z-index: 100;
 
   @media (max-width: 360px) {
-    padding: 0 12px;
+    padding: 20px 12px;
   }
 
   @media (min-width: 768px) {
-    padding: 0 40px;
-    height: 72px;
+    padding: 20px 40px;
   }
 `
 
@@ -84,12 +82,12 @@ const navLinkStyles = css`
     color ${tokens.transition.fast};
 
   &:hover {
-    color: ${tokens.color.darkBlue};
+    color: ${tokens.color.blue};
     background: ${tokens.color.bgSubtle};
   }
 
   &.active {
-    color: ${tokens.color.darkBlue};
+    color: ${tokens.color.blue};
     font-weight: ${tokens.font.weight.medium};
     background: ${tokens.color.lightBlue};
   }

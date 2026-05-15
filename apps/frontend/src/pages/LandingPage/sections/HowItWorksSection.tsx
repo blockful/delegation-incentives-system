@@ -1,21 +1,41 @@
-import styled from 'styled-components'
+import { useEffect, useRef, useState } from 'react'
+import styled, { css } from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
-import { ProcessSteps, type ProcessStep } from '@/components/shared/ProcessSteps'
 
 const Section = styled.section`
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   background: ${tokens.color.surfaceAlt};
+  position: relative;
+
+  /* Mobile: just flow normally, no scroll lock. */
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
 
   @media (min-width: 768px) {
+    /* Desktop: extra height creates the scroll-lock arc. */
+    min-height: 200vh;
+    padding: 0;
+  }
+`
+
+const STICKY_TOP_OFFSET = 80 // breathing room above the pinned section
+
+const Sticky = styled.div`
+  @media (min-width: 768px) {
+    position: sticky;
+    top: ${STICKY_TOP_OFFSET}px;
+    min-height: calc(100vh - ${STICKY_TOP_OFFSET}px);
     padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 `
 
 const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
+  width: 100%;
 `
 
 const Header = styled.div`
@@ -23,10 +43,18 @@ const Header = styled.div`
   flex-direction: column;
   gap: ${tokens.spacing.md};
   margin-bottom: ${tokens.spacing['4xl']};
+  max-width: 560px;
 `
 
 const Eyebrow = styled.span`
-  display: block;
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  padding: 6px 14px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.status.neutral.bg};
+  border: 1px solid ${tokens.color.status.neutral.border};
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
@@ -56,11 +84,117 @@ const Description = styled.p`
   }
 `
 
-const CtaRow = styled.div`
+const STEP_OFFSET = 180 // px each next column pushes down on desktop
+const STEP_BLOCK_HEIGHT = 200 // approx height of one step's content
+const STEPS_COUNT = 4
+const STAIRCASE_HEIGHT = (STEPS_COUNT - 1) * STEP_OFFSET + STEP_BLOCK_HEIGHT
+
+const StepsRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['2xl']};
+
+  @media (min-width: 768px) {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(${STEPS_COUNT}, 1fr);
+    column-gap: 0;
+    min-height: ${STAIRCASE_HEIGHT}px;
+  }
+`
+
+const StepCol = styled.div<{ $index: number }>`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.md};
-  margin-top: ${tokens.spacing['2xl']};
+  will-change: transform, opacity;
+
+  @media (min-width: 768px) {
+    position: relative;
+    padding: ${({ $index }) => $index * STEP_OFFSET}px
+      ${tokens.spacing.lg} 0 ${tokens.spacing.lg};
+
+    &:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 1px;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        ${tokens.color.darkGray} 0 4px,
+        transparent 4px 10px
+      );
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 18%,
+        black 82%,
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 18%,
+        black 82%,
+        transparent 100%
+      );
+      opacity: 0.2;
+    }
+
+    &:first-child {
+      padding-left: 0;
+    }
+  }
+`
+
+const NumberBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: ${tokens.color.white};
+  border: 1px solid ${tokens.color.borderLight};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  box-shadow: ${tokens.shadow.sm};
+`
+
+const StepTitle = styled.h3`
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  margin: 0;
+`
+
+const StepDesc = styled.p`
+  font-size: ${tokens.font.size.base};
+  line-height: 1.55;
+  color: ${tokens.color.darkGray};
+  margin: 0;
+  max-width: 260px;
+`
+
+const TagPill = styled.span<{ $bg: string; $color: string }>`
+  display: inline-flex;
+  align-self: flex-start;
+  border-radius: ${tokens.radius.pill};
+  padding: 4px 10px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  background: ${({ $bg }) => $bg};
+  color: ${({ $color }) => $color};
+`
+
+const CtaRow = styled.div<{ $revealed: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+  margin-top: ${tokens.spacing['4xl']};
 
   a {
     text-decoration: none;
@@ -74,6 +208,22 @@ const CtaRow = styled.div`
 
   @media (min-width: 768px) {
     flex-direction: row;
+    justify-content: flex-end;
+    margin-top: ${tokens.spacing['3xl']};
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    transition:
+      opacity 0.5s ease,
+      transform 0.5s ease;
+
+    ${({ $revealed }) =>
+      $revealed &&
+      css`
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      `}
 
     a {
       display: inline-flex;
@@ -85,47 +235,164 @@ const CtaRow = styled.div`
   }
 `
 
-const steps: ProcessStep[] = [
+type Step = {
+  number: string
+  title: string
+  desc: string
+  tag: string
+  tagBg: string
+  tagColor: string
+}
+
+const steps: Step[] = [
   {
-    title: 'Pick a voter',
-    desc: 'Browse active delegates on the Voters page. You keep your tokens.',
+    number: '1',
+    title: 'Delegate to an active voter',
+    desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens — gas is sponsored.',
+    tag: 'Gas sponsored — free to delegate',
+    tagBg: tokens.color.tierHighlight,
+    tagColor: tokens.color.positiveEmphasis,
   },
   {
-    title: 'Sit back',
-    desc: 'Gas is on us; rewards auto-credited. Your share grows with the 180-day average.',
+    number: '2',
+    title: 'Your share grows with time',
+    desc: 'Rewards are based on your average ENS balance over the last 180 days. Longer holding means a bigger share.',
+    tag: 'No claiming needed',
+    tagBg: tokens.color.lightBlue,
+    tagColor: tokens.color.blue,
   },
   {
-    title: 'Earn monthly',
-    desc: 'Shares ≥1 ENS sent directly at round close; smaller shares pool into a 10 ENS lottery.',
+    number: '3',
+    title: 'Receive ENS at round end',
+    desc: 'If your share is 1 ENS or more, it’s sent directly to your wallet at the end of each monthly round.',
+    tag: 'Currently earning ~5.75% APR',
+    tagBg: tokens.color.lightOrange,
+    tagColor: tokens.color.orange,
+  },
+  {
+    number: '4',
+    title: 'Small balance? Enter the lottery',
+    desc: 'Payouts under 1 ENS pool together until they reach 10 ENS — one winner takes the full prize.',
+    tag: 'Lottery prize: 10 ENS',
+    tagBg: tokens.color.lightOrange,
+    tagColor: tokens.color.orange,
   },
 ]
 
+// Reveal arc inside the section's scroll-lock range (0..1):
+// - Steps stagger across [STEP_REVEAL_START, STEP_REVEAL_END].
+// - CTAs fade in after the last step settles.
+const STEP_REVEAL_START = 0.08
+const STEP_REVEAL_END = 0.78
+const CTA_REVEAL_AT = 0.82
+const RISE_PX = 80
+
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
+
 export function HowItWorksSection() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const [progress, setProgress] = useState(1)
+  const [enabled, setEnabled] = useState(false)
+
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const desktop = window.matchMedia('(min-width: 768px)').matches
+    setEnabled(!reduce && desktop)
+    if (reduce || !desktop) setProgress(1)
+    else setProgress(0)
+  }, [])
+
+  useEffect(() => {
+    if (!enabled) return
+    const el = sectionRef.current
+    if (!el) return
+
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const rect = el.getBoundingClientRect()
+      const vh = window.innerHeight
+      // Lock range: from when the section's top hits viewport top, until its
+      // bottom hits viewport bottom. During this window the sticky child is
+      // pinned and we drive the reveal.
+      const range = rect.height - vh
+      if (range <= 0) {
+        setProgress(1)
+        return
+      }
+      setProgress(clamp01(-rect.top / range))
+    }
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update)
+    }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [enabled])
+
+  const stepSpan = (STEP_REVEAL_END - STEP_REVEAL_START) / STEPS_COUNT
+  const ctaRevealed = progress >= CTA_REVEAL_AT
+
   return (
-    <Section id="how-it-works">
-      <Inner>
-        <Header>
-          <Eyebrow>How it works</Eyebrow>
-          <Heading>
-            Simple to join. <br />
-            Better when more people do.
-          </Heading>
-          <Description>
-            ENS governance is only as strong as its participation. This program makes it worth your while.
-          </Description>
-        </Header>
+    <Section ref={sectionRef}>
+      <Sticky>
+        <Inner>
+          <Header>
+            <Eyebrow>How it works</Eyebrow>
+            <Heading>
+              Simple to join. <br />
+              Better when more people do.
+            </Heading>
+            <Description>
+              ENS governance is only as strong as its participation.
+              <br />
+              This program makes it worth your while.
+            </Description>
+          </Header>
 
-        <ProcessSteps steps={steps} />
+          <StepsRow>
+            {steps.map((step, i) => {
+              const start = STEP_REVEAL_START + i * stepSpan
+              const end = start + stepSpan * 1.5 // overlap with next step
+              const local = clamp01((progress - start) / (end - start))
+              const eased = easeOutCubic(enabled ? local : 1)
+              const ty = (1 - eased) * RISE_PX
+              return (
+                <StepCol
+                  key={step.number}
+                  $index={i}
+                  style={{
+                    transform: `translate3d(0, ${ty}px, 0)`,
+                    opacity: eased,
+                  }}
+                >
+                  <NumberBadge>{step.number}</NumberBadge>
+                  <StepTitle>{step.title}</StepTitle>
+                  <StepDesc>{step.desc}</StepDesc>
+                  <TagPill $bg={step.tagBg} $color={step.tagColor}>
+                    {step.tag}
+                  </TagPill>
+                </StepCol>
+              )
+            })}
+          </StepsRow>
 
-        <CtaRow>
-          <Link to="/rounds">
-            <Button colorStyle="bluePrimary">Round breakdown &rarr;</Button>
-          </Link>
-          <Link to="/lottery">
-            <Button colorStyle="blueSecondary">Check lottery status</Button>
-          </Link>
-        </CtaRow>
-      </Inner>
+          <CtaRow $revealed={!enabled || ctaRevealed}>
+            <Link to="/rounds">
+              <Button colorStyle="bluePrimary">Round breakdown &rarr;</Button>
+            </Link>
+            <Link to="/lottery">
+              <Button colorStyle="blueSecondary">Check lottery status</Button>
+            </Link>
+          </CtaRow>
+        </Inner>
+      </Sticky>
     </Section>
   )
 }
