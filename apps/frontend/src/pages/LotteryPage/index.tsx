@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -13,6 +13,7 @@ import { LotteryPageSkeleton } from '@/components/shared/PageSkeletons'
 import { ToneCallout, type ToneCalloutTone } from '@/components/shared/ToneCallout'
 import { BucketSlotGrid } from '@/components/shared/BucketSlotGrid'
 import { LiveDot } from '@/components/shared/LiveDot'
+import { Tabs } from '@/components/shared/Tabs'
 import type {
   LotteryBucketDetail,
   LotteryDetail,
@@ -625,6 +626,71 @@ const RewardValue = styled.span`
   white-space: nowrap;
 `
 
+const TabPanelHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+  border-top: 1px solid ${tokens.color.borderLight};
+  padding-top: ${tokens.spacing.lg};
+`
+
+const MonoDigits = styled.span`
+  font-family: ${tokens.font.mono};
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+`
+
+const SearchInput = styled.input`
+  width: 100%;
+  max-width: 360px;
+  min-height: 36px;
+  padding: 0 ${tokens.spacing.md};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.white};
+  color: ${tokens.color.darkBlue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  transition: border-color ${tokens.transition.fast};
+
+  &::placeholder {
+    color: ${tokens.color.textSubtle};
+  }
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+    border-color: ${tokens.color.blue};
+  }
+`
+
+const ClickableTr = styled(Tr)`
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
+
+  &:hover {
+    background: ${({ $highlight }) => ($highlight ? tokens.color.lightBlue : tokens.color.bgSubtle)};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: -2px;
+  }
+`
+
+const TableCaption = styled.p`
+  margin: ${tokens.spacing.sm} 0 0;
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  line-height: 1.5;
+`
+
 const EmptyState = styled.div`
   border: 1px dashed ${tokens.color.borderLight};
   border-radius: ${tokens.radius.sm};
@@ -1102,6 +1168,7 @@ function RoundAndBucketExplorer({
           round={round}
           bucket={selectedBucket}
           activeAddress={activeAddress}
+          searchParams={searchParams}
         />
       ) : (
         <BucketDetailFallback round={round} />
@@ -1161,16 +1228,52 @@ function BucketDetailFallback({ round }: { round: RoundDetailResponse }) {
   )
 }
 
+type LotteryTabId = 'bucket' | 'winners'
+
+const LOTTERY_TABS: Array<{ id: LotteryTabId; label: string }> = [
+  { id: 'bucket', label: 'Bucket detail' },
+  { id: 'winners', label: 'All winners' },
+]
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebounced(value), delayMs)
+    return () => window.clearTimeout(handle)
+  }, [value, delayMs])
+  return debounced
+}
+
 function SelectedBucketDetail({
   round,
   bucket,
   activeAddress,
+  searchParams,
 }: {
   round: RoundDetailResponse
   bucket: LotteryBucketDetail
   activeAddress: string
+  searchParams: URLSearchParams
 }) {
+  const navigate = useNavigate()
   const rowRefs = useRef<Map<number, HTMLTableRowElement | null>>(new Map())
+  const [tab, setTab] = useState<LotteryTabId>('bucket')
+  const [winnerSearch, setWinnerSearch] = useState('')
+  const debouncedWinnerSearch = useDebouncedValue(winnerSearch, 200)
+
+  const lottery = round.lottery
+  const allBuckets = lottery?.buckets ?? []
+  const seedBlockNumber = lottery?.seed.blockNumber ?? null
+
+  const filteredBuckets = useMemo(() => {
+    const query = debouncedWinnerSearch.trim().toLowerCase()
+    if (!query) return allBuckets
+    return allBuckets.filter((b) => {
+      const ens = b.winnerEnsName?.toLowerCase() ?? ''
+      const addr = b.winner.toLowerCase()
+      return ens.includes(query) || addr.includes(query)
+    })
+  }, [allBuckets, debouncedWinnerSearch])
 
   const handleSlotClick = (entry: LotteryEntryDetail) => {
     const row = rowRefs.current.get(entry.entryIndex)
@@ -1185,6 +1288,15 @@ function SelectedBucketDetail({
     )
   }
 
+  const handleWinnerRowSelect = (selected: LotteryBucketDetail) => {
+    const href = buildLotteryHref(searchParams, {
+      round: round.roundNumber,
+      bucket: selected.bucketIndex + 1,
+    })
+    setTab('bucket')
+    navigate(href)
+  }
+
   return (
     <Panel>
       <PanelHeader>
@@ -1196,126 +1308,240 @@ function SelectedBucketDetail({
         </div>
       </PanelHeader>
 
-      <DetailGrid>
-        <Stat>
-          <StatValue>{formatEns(bucket.prizeEns, '0 ENS')}</StatValue>
-          <StatLabel>Prize</StatLabel>
-        </Stat>
-        <Stat>
-          <StatValue>
-            <AddressIdentity
-              address={bucket.winner}
-              ensName={bucket.winnerEnsName}
-              resolveEns
-              secondaryAddress="never"
-            />
-          </StatValue>
-          <StatLabel>Winner</StatLabel>
-        </Stat>
-        <Stat>
-          <StatValue>{getBucketParticipantCount(bucket).toLocaleString('en-US')}</StatValue>
-          <StatLabel>Participants</StatLabel>
-        </Stat>
-        <Stat>
-          <StatValue>{formatProbability(bucket.winnerProbability)}</StatValue>
-          <StatLabel>Winner's odds</StatLabel>
-        </Stat>
-      </DetailGrid>
-
-      <ConditionGrid>
-        <ConditionItem>
-          <ConditionName>Entry</ConditionName>
-          Final payout under 1 ENS.
-        </ConditionItem>
-        <ConditionItem>
-          <ConditionName>Chance</ConditionName>
-          ENS share divided by bucket prize.
-        </ConditionItem>
-        <ConditionItem>
-          <ConditionName>Draw</ConditionName>
-          RANDAO hash at round end.
-        </ConditionItem>
-      </ConditionGrid>
-
-      <SlotGridSection>
-        <SlotGridCaption>
-          Each slot below is one entry. Width is proportional to that entry's ENS share — wider slots had higher odds. The winning slot is highlighted in green.
-        </SlotGridCaption>
-        <BucketSlotGrid
-          entries={bucket.entries}
-          winnerAddress={bucket.winner}
-          highlightAddress={activeAddress}
-          onSlotClick={handleSlotClick}
-          ariaLabel={`Bucket ${bucket.bucketIndex + 1} entry distribution`}
+      <TabPanelHeader>
+        <Tabs
+          tabs={LOTTERY_TABS}
+          activeId={tab}
+          onChange={(id) => setTab(id as LotteryTabId)}
+          aria-label="Bucket view"
         />
-      </SlotGridSection>
+      </TabPanelHeader>
 
-      <SubsectionHeader>
-        <div>
-          <SubsectionTitle>Participants</SubsectionTitle>
+      {tab === 'bucket' ? (
+        <div role="tabpanel" id="bucket-panel" aria-labelledby="bucket">
+          <DetailGrid>
+            <Stat>
+              <StatValue>{formatEns(bucket.prizeEns, '0 ENS')}</StatValue>
+              <StatLabel>Prize</StatLabel>
+            </Stat>
+            <Stat>
+              <StatValue>
+                <AddressIdentity
+                  address={bucket.winner}
+                  ensName={bucket.winnerEnsName}
+                  resolveEns
+                  secondaryAddress="never"
+                />
+              </StatValue>
+              <StatLabel>Winner</StatLabel>
+            </Stat>
+            <Stat>
+              <StatValue>{getBucketParticipantCount(bucket).toLocaleString('en-US')}</StatValue>
+              <StatLabel>Participants</StatLabel>
+            </Stat>
+            <Stat>
+              <StatValue>{formatProbability(bucket.winnerProbability)}</StatValue>
+              <StatLabel>Winner's odds</StatLabel>
+            </Stat>
+          </DetailGrid>
+
+          <ConditionGrid>
+            <ConditionItem>
+              <ConditionName>Entry</ConditionName>
+              Final payout under 1 ENS.
+            </ConditionItem>
+            <ConditionItem>
+              <ConditionName>Chance</ConditionName>
+              ENS share divided by bucket prize.
+            </ConditionItem>
+            <ConditionItem>
+              <ConditionName>Draw</ConditionName>
+              RANDAO hash at round end.
+            </ConditionItem>
+          </ConditionGrid>
+
+          <SlotGridSection>
+            <SlotGridCaption>
+              Each slot below is one entry. Width is proportional to that entry's ENS share — wider slots had higher odds. The winning slot is highlighted in green.
+            </SlotGridCaption>
+            <BucketSlotGrid
+              entries={bucket.entries}
+              winnerAddress={bucket.winner}
+              highlightAddress={activeAddress}
+              onSlotClick={handleSlotClick}
+              ariaLabel={`Bucket ${bucket.bucketIndex + 1} entry distribution`}
+            />
+          </SlotGridSection>
+
+          <SubsectionHeader>
+            <div>
+              <SubsectionTitle>Participants</SubsectionTitle>
+            </div>
+            <RoundPill>
+              {bucket.entryCount.toLocaleString('en-US')} {bucket.entryCount === 1 ? 'entry' : 'entries'}
+            </RoundPill>
+          </SubsectionHeader>
+
+          <TableWrap>
+            <ParticipantTable>
+              <colgroup>
+                <col style={{ width: '36%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '22%' }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <Th>Participant</Th>
+                  <Th>ENS share</Th>
+                  <Th>Chance</Th>
+                  <Th>Result</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {bucket.entries.map((entry) => {
+                  const isWinner = sameAddress(entry.address, bucket.winner)
+                  const isActiveAddress = activeAddress ? sameAddress(entry.address, activeAddress) : false
+                  return (
+                    <Tr
+                      key={`${bucket.bucketIndex}-${entry.entryIndex}`}
+                      ref={(el) => { rowRefs.current.set(entry.entryIndex, el) }}
+                      $highlight={isActiveAddress}
+                      $winner={isWinner}
+                    >
+                      <Td data-label="Participant">
+                        <AddressIdentity
+                          address={entry.address}
+                          ensName={entry.ensName}
+                          resolveEns
+                          secondaryAddress="auto"
+                        />
+                      </Td>
+                      <Td data-label="ENS share">
+                        <RewardValue>{formatEns(entry.amountEns, '0 ENS')}</RewardValue>
+                      </Td>
+                      <Td data-label="Chance">
+                        <OddsStack>
+                          <span>{formatProbability(entry.probability)}</span>
+                          <OddsMeter aria-hidden>
+                            <OddsFill style={{ width: getOddsWidth(entry.probability) }} />
+                          </OddsMeter>
+                        </OddsStack>
+                      </Td>
+                      <Td data-label="Result">
+                        <OutcomePill $winner={isWinner}>
+                          {isWinner ? `Won ${formatEns(bucket.prizeEns, '0 ENS')}` : 'Not selected'}
+                        </OutcomePill>
+                      </Td>
+                    </Tr>
+                  )
+                })}
+              </tbody>
+            </ParticipantTable>
+          </TableWrap>
         </div>
-        <RoundPill>
-          {bucket.entryCount.toLocaleString('en-US')} {bucket.entryCount === 1 ? 'entry' : 'entries'}
-        </RoundPill>
-      </SubsectionHeader>
+      ) : (
+        <div role="tabpanel" id="winners-panel" aria-labelledby="winners">
+          {allBuckets.length === 0 ? (
+            <EmptyState>
+              <EmptyStateIcon aria-hidden>
+                <FontAwesomeIcon icon={faCheck} />
+              </EmptyStateIcon>
+              <EmptyStateTitle>No lottery this round</EmptyStateTitle>
+              <EmptyStateBody>
+                Every payout was ≥1 ENS, so all recipients got direct transfers.
+              </EmptyStateBody>
+            </EmptyState>
+          ) : (
+            <>
+              <SubsectionHeader>
+                <div>
+                  <SubsectionTitle>All winners</SubsectionTitle>
+                </div>
+                <SearchInput
+                  type="search"
+                  placeholder="Search winner ENS or address"
+                  value={winnerSearch}
+                  onChange={(e) => setWinnerSearch(e.target.value)}
+                  aria-label="Search winners by ENS name or address"
+                />
+              </SubsectionHeader>
 
-      <TableWrap>
-        <ParticipantTable>
-          <colgroup>
-            <col style={{ width: '36%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '22%' }} />
-            <col style={{ width: '22%' }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <Th>Participant</Th>
-              <Th>ENS share</Th>
-              <Th>Chance</Th>
-              <Th>Result</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {bucket.entries.map((entry) => {
-              const isWinner = sameAddress(entry.address, bucket.winner)
-              const isActiveAddress = activeAddress ? sameAddress(entry.address, activeAddress) : false
-              return (
-                <Tr
-                  key={`${bucket.bucketIndex}-${entry.entryIndex}`}
-                  ref={(el) => { rowRefs.current.set(entry.entryIndex, el) }}
-                  $highlight={isActiveAddress}
-                  $winner={isWinner}
-                >
-                  <Td data-label="Participant">
-                    <AddressIdentity
-                      address={entry.address}
-                      ensName={entry.ensName}
-                      resolveEns
-                      secondaryAddress="auto"
-                    />
-                  </Td>
-                  <Td data-label="ENS share">
-                    <RewardValue>{formatEns(entry.amountEns, '0 ENS')}</RewardValue>
-                  </Td>
-                  <Td data-label="Chance">
-                    <OddsStack>
-                      <span>{formatProbability(entry.probability)}</span>
-                      <OddsMeter aria-hidden>
-                        <OddsFill style={{ width: getOddsWidth(entry.probability) }} />
-                      </OddsMeter>
-                    </OddsStack>
-                  </Td>
-                  <Td data-label="Result">
-                    <OutcomePill $winner={isWinner}>
-                      {isWinner ? `Won ${formatEns(bucket.prizeEns, '0 ENS')}` : 'Not selected'}
-                    </OutcomePill>
-                  </Td>
-                </Tr>
-              )
-            })}
-          </tbody>
-        </ParticipantTable>
-      </TableWrap>
+              <TableWrap>
+                <ParticipantTable>
+                  <colgroup>
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '40%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '14%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <Th>Bucket #</Th>
+                      <Th>Winner</Th>
+                      <Th>Prize</Th>
+                      <Th>Odds</Th>
+                      <Th>Block</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBuckets.map((b) => {
+                      const isUserWinner =
+                        activeAddress && sameAddress(b.winner, activeAddress)
+                      return (
+                        <ClickableTr
+                          key={b.bucketIndex}
+                          $highlight={!!isUserWinner}
+                          role="link"
+                          tabIndex={0}
+                          onClick={() => handleWinnerRowSelect(b)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              handleWinnerRowSelect(b)
+                            }
+                          }}
+                        >
+                          <Td data-label="Bucket #">
+                            <MonoDigits>#{b.bucketIndex + 1}</MonoDigits>
+                          </Td>
+                          <Td data-label="Winner">
+                            <AddressIdentity
+                              address={b.winner}
+                              ensName={b.winnerEnsName}
+                              resolveEns
+                              secondaryAddress="auto"
+                            />
+                          </Td>
+                          <Td data-label="Prize">
+                            <RewardValue>
+                              <MonoDigits>{formatEns(b.prizeEns, '0 ENS')}</MonoDigits>
+                            </RewardValue>
+                          </Td>
+                          <Td data-label="Odds">
+                            <MonoDigits>{formatProbability(b.winnerProbability)}</MonoDigits>
+                          </Td>
+                          <Td data-label="Block">
+                            <MonoDigits>
+                              {seedBlockNumber ?? '—'}
+                            </MonoDigits>
+                          </Td>
+                        </ClickableTr>
+                      )
+                    })}
+                  </tbody>
+                </ParticipantTable>
+              </TableWrap>
+              {seedBlockNumber ? (
+                <TableCaption>
+                  All winners drawn from RANDAO seed at block <MonoDigits>{seedBlockNumber}</MonoDigits>.
+                </TableCaption>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
     </Panel>
   )
 }

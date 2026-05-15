@@ -6,6 +6,49 @@
 
 ---
 
+## Status at last sync (2026-05-15)
+
+> Snapshot of the branch as of the last commit pushed to GitHub. If you're picking this up on a new machine, this section is what's done vs what's pending.
+
+### ✅ Shipped & tested (committed)
+
+- **Audit pass** (`f36ab1a`): uppercase kill, hero pattern unified, shadow tokens softened, BucketSlotGrid + You-pin on Lottery, Worked Example v1 on Transparency, VoterProfile hero dedup.
+- **Tier A primitives** (`0310440`): `<CopyChip>`, `<SideDrawer>`, `<ProcessSteps>`, `<DataStrip>` + `<DataStripItem>`, `<ContractLiveness>`, `<TierLadderRow>`, plus `<LiveDot>` keyframe-interp fix.
+- **Landing — Hero / CTA / Footer / Skeleton**: LiveDot eyebrow, verb-first headline, blue CTA with cursor-following pixel trail, polished footer, matching skeleton.
+- **Tier B page edits** (`0310440`):
+  - Landing finish: RoundStatusBar split (trust row + stats row), HowItWorks → ProcessSteps, TierTable → TierLadderRow.
+  - Dashboard: LiveDot on RoundMeta, EarningsStrip metadata → chips, dedup This-Round callout, RewardTiers → TierLadderRow.
+  - VoterProfile: Active Since dedup (relative-only + tooltip), tighter ProposalBar caption, rewards history → DataStrip.
+  - Voters: header count chip with LiveDot, StatsBar flat appearance, ENS bio on VoterCard, no shadow stacking on hover.
+  - Rounds: SnapshotEyebrow with LiveDot, AddressLookupForm "Use connected wallet" chip, RoundHistoryTable State column with StatusPill.
+  - Lottery: CurrentRoundNote with LiveDot, consumes AddressLookupForm connected-wallet chip, Td[data-label] mobile reflow, two new empty-state variants (no-lottery, live/pending).
+  - Transparency: ContractLiveness probe under each contract card, Worked Example with real-round data (with fallback).
+
+**Test status at `0310440`:** 40 passing / 19 pre-existing wagmi-provider failures (same set as baseline, no regressions).
+
+### 🟡 WIP — uncommitted at last sync
+
+These pieces exist in the working tree but are **not yet committed**. They may have been committed in a follow-up "WIP" commit before the push — see git log on the branch.
+
+- **Lottery — All-Winners tab + `<Tabs>` primitive** (Tier D): cleanly landed; 4/4 LotteryPage tests pass. Tabs primitive built at `apps/frontend/src/components/shared/Tabs/`. New "All winners" panel inside SelectedBucketDetail with searchable bucket table and row-click bucket switching. **Ready to ship — just needs a clean commit.**
+- **Transparency — Methodology SVG diagram** (Tier D): `<MethodologyDiagram>` primitive built at `apps/frontend/src/components/shared/MethodologyDiagram/`. 4 nodes (Snapshot balances → Compute shares → Apply tier APR → Distribute) with click → SideDrawer drill-down. Hooked into TransparencyPage replacing the old StepList. **One test failure remaining** — `getByRole('button', { name: /Snapshot balances step/i })` fails because the Node has `role="listitem"` overriding the implicit button role. Fix: drop `role="listitem"` or update the test to query `listitem`.
+- **Voters — Compare drawer** (Tier D): three new files exist (`useCompare.ts`, `CompareDock.tsx`, `CompareDrawer.tsx`) and VoterCard.tsx has the Compare chip wired. **Mounting in `VotersPage/index.tsx` was interrupted** — the dock + drawer aren't yet rendered. Pick up by: importing the new hook + components into VotersPage, building the `voters` Map keyed by lowercased address, passing `isSelected`/`onToggleCompare` to each VoterCard, mounting `<CompareDock>` + `<CompareDrawer>` at page bottom with drawer-open state.
+- **Rounds — RoundDetail Tier C** (Tier C): RoundDetailPage.tsx is modified — the agent made progress on section reorder + Methodology card + recipients search/auto-highlight/pagination, but I didn't see the agent's report so it may be partial. **Verify by reading RoundDetailPage.tsx and re-running the page in dev.**
+
+### ⏸ Still pending — not started
+
+- **Voters — `/voters/compare` standalone route**: deferred. Drawer-only is sufficient for v1.
+- **Cross-page consistency pass**: after Tier C + D fully land, do a fresh top-to-bottom audit on every page for the no-repeated-info rule (the user has flagged this twice already).
+- **Visual QA**: open every page in the dev server at 360 / 768 / 1280 widths and verify the wireframes feel right. The dev server runs on `pnpm --filter @ens-dis/frontend dev` (port 3311).
+
+### Open questions still pending answers
+
+From §10, the user only addressed Q1 + Q2 + the CTA direction. Still open: Q3 (VoterProfile Active Since copy — agent chose StatValue-only with tooltip), Q4 (Lottery round breadcrumb — not yet built; deferred), Q5 (All-winners tab — built with custom 2-button Tabs), Q6 (methodology diagram vs enhanced StepList — went with the SVG diagram), Q7 (Worked Example data — pulls real recipient from latest paid round, with fallback), Q8 (Compare drawer — partially built, drawer-only, no standalone route this iteration).
+
+If you disagree with any of those defaults, the implementations are localized and easy to redirect.
+
+---
+
 ## 0. Cross-cutting principles
 
 These apply to every section below. If any wireframe contradicts one, the wireframe is wrong.
