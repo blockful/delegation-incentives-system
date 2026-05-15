@@ -835,8 +835,8 @@ export function VoterProfilePage() {
         <SectionCard>
           <SectionHeader>
             <div>
-              <SectionEyebrow>Voting Record</SectionEyebrow>
-              <SectionTitle>Voted on {votedCount} of last 10 proposals</SectionTitle>
+              <SectionEyebrow>Voting record</SectionEyebrow>
+              <SectionTitle>Last 10 governance proposals</SectionTitle>
             </div>
             <InlineExternalLink href={delegateUrl} target="_blank" rel="noopener noreferrer">
               Full record on Anticapture ↗
@@ -844,7 +844,7 @@ export function VoterProfilePage() {
           </SectionHeader>
           <ProposalBar votes={voter.last10ProposalsVoted} />
           <SectionMeta>
-            Each dot is one of the most recent 10 governance proposals — filled means they voted, empty means they didn't.
+            Hover any segment for the proposal it represents. Filled = they voted, empty = they didn&apos;t.
           </SectionMeta>
         </SectionCard>
 
@@ -852,10 +852,10 @@ export function VoterProfilePage() {
         <SectionCard>
           <SectionHeader>
             <div>
-              <SectionEyebrow>Recent Voter Rewards</SectionEyebrow>
-              <SectionTitle>Last paid rounds</SectionTitle>
+              <SectionEyebrow>Earnings history</SectionEyebrow>
+              <SectionTitle>What this delegate received from recent rounds</SectionTitle>
             </div>
-            <SectionMeta>Voter share of the round&apos;s 10% pool</SectionMeta>
+            <SectionMeta>Share of each round&apos;s 10% voter pool</SectionMeta>
           </SectionHeader>
 
           {rewardsHistory.loading ? (
