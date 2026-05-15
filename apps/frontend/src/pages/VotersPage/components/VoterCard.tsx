@@ -45,25 +45,36 @@ const StyledCard = styled.div`
   &:hover {
     border-color: ${tokens.color.blue};
     box-shadow: ${tokens.shadow.md};
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.008);
   }
 
-  /* Subtle corner accent on hover */
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
+  }
+
+  /* Decorative corner accent — grows and brightens on hover */
   &::before {
     content: '';
     position: absolute;
     top: 0;
     right: 0;
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     background: radial-gradient(circle at top right, ${tokens.color.lightBlueOpacity}, transparent 70%);
     opacity: 0;
-    transition: opacity ${tokens.transition.base};
+    transform: scale(0.85);
+    transform-origin: top right;
+    transition:
+      opacity ${tokens.transition.base},
+      transform ${tokens.transition.base};
     pointer-events: none;
   }
 
   &:hover::before {
     opacity: 1;
+    transform: scale(1.15);
   }
 `
 

@@ -199,20 +199,24 @@ const FilterLabel = styled.span`
 `
 
 const FilterChip = styled.button<{ $active: boolean }>`
-  padding: 6px 12px;
+  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
   border-radius: ${tokens.radius.pill};
-  border: 1px solid ${({ $active }) => ($active ? tokens.color.blue : tokens.color.borderLight)};
-  background: ${({ $active }) => ($active ? tokens.color.lightBlueOpacity : tokens.color.surface)};
-  color: ${({ $active }) => ($active ? tokens.color.blue : tokens.color.darkGray)};
-  font-size: ${tokens.font.size.sm};
+  border: 1px solid ${({ $active }) => ($active ? tokens.color.darkBlue : tokens.color.borderLight)};
+  background: ${({ $active }) => ($active ? tokens.color.darkBlue : 'transparent')};
+  color: ${({ $active }) => ($active ? tokens.color.white : tokens.color.darkGray)};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
   cursor: pointer;
-  transition: all ${tokens.transition.fast};
+  transition:
+    border-color ${tokens.transition.fast},
+    background ${tokens.transition.fast},
+    color ${tokens.transition.fast},
+    transform ${tokens.transition.fast};
   white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.blue};
+    opacity: 0.85;
   }
 
   &:focus-visible {
