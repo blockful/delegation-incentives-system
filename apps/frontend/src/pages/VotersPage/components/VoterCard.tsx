@@ -195,7 +195,7 @@ const ProfileLink = styled(Link)`
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.blue};
   text-decoration: none;

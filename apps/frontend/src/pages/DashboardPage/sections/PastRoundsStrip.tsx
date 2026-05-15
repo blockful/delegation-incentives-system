@@ -39,7 +39,7 @@ const Title = styled.h2`
 `
 
 const ViewAll = styled(Link)`
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.blue};
   text-decoration: none;

@@ -437,7 +437,7 @@ const SectionMeta = styled.span`
 
 const InlineExternalLink = styled.a`
   color: ${tokens.color.blue};
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   text-decoration: none;
   &:hover {
