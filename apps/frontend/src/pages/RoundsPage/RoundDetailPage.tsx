@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import styled from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import { isAddress } from 'viem'
 import { api, ApiClientError } from '@/api'
 import type {
@@ -17,6 +17,9 @@ import { RoundDetailPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { CopyableAddress } from '@/components/shared/CopyableAddress'
+import { CopyChip } from '@/components/shared/CopyChip'
+import { StatStrip } from '@/components/shared/StatStrip/StatStrip'
+import { StatCard } from '@/components/shared/StatCard'
 import { ToneCallout, type ToneCalloutTone } from '@/components/shared/ToneCallout'
 import { tokens, fadeInUp, Eyebrow, PageTitle, ErrorMessage } from '@/styles'
 import { formatEnsAmount, formatUtcMonthRange, truncateAddress } from '@/utils/format'
@@ -139,36 +142,6 @@ const StatusPill = styled.span<{ $status: RoundStatus | RewardStatus }>`
         : tokens.color.darkGray};
 `
 
-const SummaryGrid = styled.section`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${tokens.spacing.md};
-
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-`
-
-const SummaryItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-`
-
-const SummaryLabel = styled.span`
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-`
-
-const SummaryValue = styled.span`
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.bold};
-  overflow-wrap: anywhere;
-`
-
 const Section = styled.section`
   display: flex;
   flex-direction: column;
@@ -188,6 +161,14 @@ const SectionHeader = styled.div`
 
 const WideSectionHeader = styled(SectionHeader)`
   max-width: 840px;
+`
+
+const SectionTitle = styled.h2`
+  margin: 0;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
+  line-height: 1.25;
 `
 
 const RowCount = styled.span`
@@ -228,13 +209,29 @@ const Tbody = styled.tbody`
   }
 `
 
-const Row = styled.tr`
+const highlightPulse = keyframes`
+  0%   { background: ${tokens.color.lightBlueOpacity}; }
+  100% { background: transparent; }
+`
+
+const Row = styled.tr<{ $highlighted?: boolean }>`
   @media (max-width: 720px) {
     display: grid;
     border: 1px solid ${tokens.color.borderLight};
     border-radius: ${tokens.radius.sm};
     overflow: hidden;
   }
+
+  ${({ $highlighted }) =>
+    $highlighted &&
+    css`
+      background: ${tokens.color.lightBlueOpacity};
+      animation: ${highlightPulse} 1500ms ease-out;
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
+    `}
 `
 
 const Th = styled.th`
@@ -341,6 +338,188 @@ const AddressLotteryAddressRow = styled.div`
   color: ${tokens.color.darkGray};
 `
 
+/* ─── Methodology card ─── */
+
+const MethodologyCard = styled.div`
+  display: grid;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.lg};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.surface};
+  width: 100%;
+  max-width: 840px;
+`
+
+const MethodologyRow = styled.div`
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.sm} 0;
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  &:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  @media (max-width: 720px) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: flex-start;
+  }
+`
+
+const MethodologyRowLabel = styled.span`
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+`
+
+const MethodologyRowValue = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
+  min-width: 0;
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  overflow-wrap: anywhere;
+`
+
+const MethodologyMono = styled.span`
+  font-family: ${tokens.font.mono};
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkBlue};
+  overflow-wrap: anywhere;
+`
+
+const MethodologyLink = styled.a`
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`
+
+/* ─── Recipients search + pagination ─── */
+
+const TableToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
+`
+
+const SearchLabel = styled.label`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+`
+
+const SearchInput = styled.input`
+  flex: 1 1 220px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 ${tokens.spacing.md};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.surface};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-family: inherit;
+  transition: border-color ${tokens.motion.inFast};
+
+  &::placeholder {
+    color: ${tokens.color.darkGray};
+  }
+
+  &:hover {
+    border-color: ${tokens.color.middleGray};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-color: ${tokens.color.blue};
+  }
+`
+
+const MatchCaption = styled.span`
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  white-space: nowrap;
+`
+
+const TableScrollWrap = styled.div`
+  width: 100%;
+  max-width: 680px;
+  max-height: 560px;
+  overflow-y: auto;
+`
+
+const Pagination = styled.nav`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  padding-top: ${tokens.spacing.sm};
+`
+
+const PageButton = styled.button`
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 ${tokens.spacing.md};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.surface};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  font-family: inherit;
+  transition: border-color ${tokens.motion.inFast}, color ${tokens.motion.inFast};
+
+  &:hover:not(:disabled) {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+const PageStatus = styled.span`
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+`
+
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
   if (walletState.status === 'disconnected') return ''
   return walletState.address
@@ -363,14 +542,6 @@ function statusLabel(status: RoundStatus | RewardStatus): string {
 function formatEns(value: string | null, empty = 'Unavailable', maximumFractionDigits = 4): string {
   if (value == null) return empty
   return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
-}
-
-function formatVpGrowth(value: string | null): string {
-  if (value == null) return 'Unavailable'
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return 'Unavailable'
-  if (numericValue > 0) return `+${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
-  return `${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
 }
 
 function formatAddressReward(reward: AddressRoundReward | null): string {
@@ -399,6 +570,19 @@ function formatBlockNumber(value: string): string {
   return `#${numericValue.toLocaleString('en-US')}`
 }
 
+function truncateSeedHex(value: string | null | undefined): string {
+  if (!value) return '—'
+  if (value.length <= 14) return value
+  return `${value.slice(0, 6)}…${value.slice(-4)}`
+}
+
+function lotterySharePercent(round: RoundDetailResponse): number | null {
+  const lotteryEns = Number(round.lotteryPrizeEns ?? '0')
+  const totalEns = Number(round.totalDistributedEns ?? '0')
+  if (!Number.isFinite(lotteryEns) || !Number.isFinite(totalEns) || totalEns <= 0) return null
+  return (lotteryEns / totalEns) * 100
+}
+
 function sameAddress(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase()
 }
@@ -417,6 +601,8 @@ interface AddressLotteryInsight {
 }
 
 const LOTTERY_ENTRY_DISPLAY_LIMIT = 100
+const RECIPIENTS_PAGE_SIZE = 50
+const RECIPIENTS_PAGINATION_THRESHOLD = 100
 
 function getAddressLotteryEntries(lottery: LotteryDetail | null, address: string): AddressLotteryEntry[] {
   if (!lottery || !address) return []
@@ -582,41 +768,184 @@ function buildRoundPath(roundNumber: number, activeAddress: string, activeAddres
   return `/rounds/${roundNumber}${addressQuery}`
 }
 
-function RankingTable({ rows }: { rows: RewardRank[] }) {
+/* ─── Recipients table (with search + auto-highlight + pagination) ─── */
+
+interface RecipientsTableProps {
+  rows: RewardRank[]
+  highlightAddress: string
+  searchLabel: string
+  searchPlaceholder?: string
+}
+
+function rowMatchesQuery(row: RewardRank, query: string): boolean {
+  if (!query) return true
+  const needle = query.toLowerCase()
+  const ens = (row.ensName ?? '').toLowerCase()
+  const addr = row.address.toLowerCase()
+  return ens.includes(needle) || addr.includes(needle)
+}
+
+function RecipientsTable({
+  rows,
+  highlightAddress,
+  searchLabel,
+  searchPlaceholder = 'Search address or ENS',
+}: RecipientsTableProps) {
+  const [rawQuery, setRawQuery] = useState('')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map())
+  const scrollWrapRef = useRef<HTMLDivElement | null>(null)
+  const hasScrolledRef = useRef(false)
+
+  // Debounce search input (200ms) using setTimeout, no library.
+  useEffect(() => {
+    const id = setTimeout(() => setQuery(rawQuery.trim()), 200)
+    return () => clearTimeout(id)
+  }, [rawQuery])
+
+  // Reset page when query changes.
+  useEffect(() => {
+    setPage(1)
+  }, [query])
+
+  const filteredRows = useMemo(() => {
+    if (!query) return rows
+    return rows.filter((row) => rowMatchesQuery(row, query))
+  }, [rows, query])
+
+  const showPagination = rows.length > RECIPIENTS_PAGINATION_THRESHOLD
+  const totalPages = showPagination
+    ? Math.max(1, Math.ceil(filteredRows.length / RECIPIENTS_PAGE_SIZE))
+    : 1
+  const currentPage = Math.min(page, totalPages)
+  const visibleRows = showPagination
+    ? filteredRows.slice((currentPage - 1) * RECIPIENTS_PAGE_SIZE, currentPage * RECIPIENTS_PAGE_SIZE)
+    : filteredRows
+
+  const highlightLower = highlightAddress ? highlightAddress.toLowerCase() : ''
+
+  // Auto-scroll to the highlighted row on first paint where it is visible.
+  useEffect(() => {
+    if (!highlightLower) return
+    if (hasScrolledRef.current) return
+    if (typeof window === 'undefined') return
+    const node = rowRefs.current.get(highlightLower)
+    if (!node) return
+    hasScrolledRef.current = true
+    // Defer to next frame so layout is settled.
+    const id = window.requestAnimationFrame(() => {
+      if (typeof node.scrollIntoView === 'function') {
+        try {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        } catch {
+          node.scrollIntoView()
+        }
+      }
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [highlightLower, visibleRows])
+
   if (rows.length === 0) {
     return <EmptyState>No distribution data.</EmptyState>
   }
 
+  const matchCaption = query ? `${filteredRows.length.toLocaleString('en-US')} matching` : null
+
   return (
-    <TableWrap>
-      <Table>
-        <colgroup>
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '56%' }} />
-          <col style={{ width: '28%' }} />
-        </colgroup>
-        <Thead>
-          <tr>
-            <Th>Rank</Th>
-            <Th>Address</Th>
-            <Th>Reward</Th>
-          </tr>
-        </Thead>
-        <Tbody>
-          {rows.map((rank) => (
-            <Row key={`${rank.role}-${rank.rank}-${rank.address}`}>
-              <Td data-label="Rank">#{rank.rank}</Td>
-              <Td data-label="Address">
-                <AddressText>{rank.ensName ?? truncateAddress(rank.address)}</AddressText>
-              </Td>
-              <Td data-label="Reward">
-                <RewardValue>{formatEns(rank.rewardEns)}</RewardValue>
-              </Td>
-            </Row>
-          ))}
-        </Tbody>
-      </Table>
-    </TableWrap>
+    <div>
+      <TableToolbar>
+        <SearchLabel htmlFor={`recipients-search-${searchLabel}`}>
+          Search recipients by address or ENS
+        </SearchLabel>
+        <SearchInput
+          id={`recipients-search-${searchLabel}`}
+          type="search"
+          value={rawQuery}
+          onChange={(event) => setRawQuery(event.target.value)}
+          placeholder={searchPlaceholder}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {matchCaption ? <MatchCaption>{matchCaption}</MatchCaption> : null}
+      </TableToolbar>
+
+      <TableScrollWrap ref={scrollWrapRef}>
+        <TableWrap>
+          <Table>
+            <colgroup>
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '56%' }} />
+              <col style={{ width: '28%' }} />
+            </colgroup>
+            <Thead>
+              <tr>
+                <Th>Rank</Th>
+                <Th>Address</Th>
+                <Th>Reward</Th>
+              </tr>
+            </Thead>
+            <Tbody>
+              {visibleRows.length === 0 ? (
+                <tr>
+                  <Td colSpan={3}>
+                    <EmptyState>No recipients match this search.</EmptyState>
+                  </Td>
+                </tr>
+              ) : (
+                visibleRows.map((rank) => {
+                  const isHighlighted = highlightLower !== '' && rank.address.toLowerCase() === highlightLower
+                  return (
+                    <Row
+                      key={`${rank.role}-${rank.rank}-${rank.address}`}
+                      $highlighted={isHighlighted}
+                      aria-current={isHighlighted ? 'true' : undefined}
+                      ref={(node) => {
+                        if (node) {
+                          rowRefs.current.set(rank.address.toLowerCase(), node)
+                        }
+                      }}
+                    >
+                      <Td data-label="Rank">#{rank.rank}</Td>
+                      <Td data-label="Address">
+                        <AddressText>{rank.ensName ?? truncateAddress(rank.address)}</AddressText>
+                      </Td>
+                      <Td data-label="Reward">
+                        <RewardValue>{formatEns(rank.rewardEns)}</RewardValue>
+                      </Td>
+                    </Row>
+                  )
+                })
+              )}
+            </Tbody>
+          </Table>
+        </TableWrap>
+      </TableScrollWrap>
+
+      {showPagination ? (
+        <Pagination aria-label="Recipients pagination">
+          <PageButton
+            type="button"
+            aria-label="Previous page"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
+          >
+            ← Prev
+          </PageButton>
+          <PageStatus>
+            Page {currentPage} of {totalPages}
+          </PageStatus>
+          <PageButton
+            type="button"
+            aria-label="Next page"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+          >
+            Next →
+          </PageButton>
+        </Pagination>
+      ) : null}
+    </div>
   )
 }
 
@@ -784,6 +1113,86 @@ function AddressLotteryInsightPanel({
   )
 }
 
+/* ─── Methodology card ─── */
+
+const GITHUB_ALGORITHM_URL = 'https://github.com/blockful-io/delegation-incentives-system'
+
+function MethodologySection({ round }: { round: RoundDetailResponse }) {
+  const lottery = round.lottery
+  const seedValue = lottery?.seed.value ?? null
+  const seedHasValue = typeof seedValue === 'string' && seedValue.length > 0
+  const blockNumberRaw = lottery?.seed.blockNumber ?? null
+  const blockNumberNumeric = blockNumberRaw != null ? Number(blockNumberRaw) : NaN
+  const blockNumberDisplay = Number.isFinite(blockNumberNumeric)
+    ? `#${blockNumberNumeric.toLocaleString('en-US')}`
+    : '—'
+  const blockEtherscanUrl = Number.isFinite(blockNumberNumeric)
+    ? `https://etherscan.io/block/${blockNumberNumeric}`
+    : null
+  // Seed link uses the block explorer for the seed block (we don't have a tx hash for prevRandao).
+  const seedEtherscanUrl = blockEtherscanUrl
+
+  return (
+    <Section>
+      <WideSectionHeader>
+        <div>
+          <Eyebrow>Methodology</Eyebrow>
+          <SectionTitle>Same code that ran for every round.</SectionTitle>
+        </div>
+      </WideSectionHeader>
+      <MethodologyCard>
+        {lottery && seedHasValue ? (
+          <MethodologyRow>
+            <MethodologyRowLabel>RANDAO seed</MethodologyRowLabel>
+            <MethodologyRowValue>
+              <CopyChip
+                value={seedValue!}
+                display={truncateSeedHex(seedValue)}
+                label="Seed"
+              />
+            </MethodologyRowValue>
+            {seedEtherscanUrl ? (
+              <MethodologyLink href={seedEtherscanUrl} target="_blank" rel="noopener noreferrer">
+                View on Etherscan ↗
+              </MethodologyLink>
+            ) : (
+              <span aria-hidden>—</span>
+            )}
+          </MethodologyRow>
+        ) : null}
+
+        <MethodologyRow>
+          <MethodologyRowLabel>Algorithm</MethodologyRowLabel>
+          <MethodologyRowValue>
+            <MethodologyMono>
+              github.com/blockful-io/delegation-incentives-system
+            </MethodologyMono>
+          </MethodologyRowValue>
+          <MethodologyLink href={GITHUB_ALGORITHM_URL} target="_blank" rel="noopener noreferrer">
+            View on GitHub ↗
+          </MethodologyLink>
+        </MethodologyRow>
+
+        {blockNumberRaw != null ? (
+          <MethodologyRow>
+            <MethodologyRowLabel>Snapshot block</MethodologyRowLabel>
+            <MethodologyRowValue>
+              <MethodologyMono>{blockNumberDisplay}</MethodologyMono>
+            </MethodologyRowValue>
+            {blockEtherscanUrl ? (
+              <MethodologyLink href={blockEtherscanUrl} target="_blank" rel="noopener noreferrer">
+                View on Etherscan ↗
+              </MethodologyLink>
+            ) : (
+              <span aria-hidden>—</span>
+            )}
+          </MethodologyRow>
+        ) : null}
+      </MethodologyCard>
+    </Section>
+  )
+}
+
 export function RoundDetailPage() {
   const params = useParams()
   const roundNumber = Number(params.roundNumber)
@@ -917,8 +1326,25 @@ export function RoundDetailPage() {
     )
   }
 
+  const roundData = round.data
+  const hasActiveAddress = Boolean(activeAddress && activeAddressValid)
+  const lotteryShare = lotterySharePercent(roundData)
+  const recipientsCount =
+    roundData.topVoterRewards.length + roundData.topTokenHolderRewards.length
+  const lotteryShareValue =
+    roundData.lotteryPrizeEns != null
+      ? `${formatEnsAmount(roundData.lotteryPrizeEns, { maximumFractionDigits: 2 })} ENS`
+      : 'Unavailable'
+  const lotteryShareSub =
+    lotteryShare != null
+      ? `${lotteryShare.toLocaleString('en-US', { maximumFractionDigits: 1 })}% of total`
+      : roundData.lotteryBucketCount != null
+        ? `via ${roundData.lotteryBucketCount.toLocaleString('en-US')} buckets`
+        : undefined
+
   return (
     <Page>
+      {/* 1. BackLink */}
       <Header>
         <HeaderActions>
           <BackLink to={backTo}>Back to rounds</BackLink>
@@ -939,12 +1365,13 @@ export function RoundDetailPage() {
             )}
           </RoundNav>
         </HeaderActions>
+        {/* 2. Header */}
         <TitleRow>
           <div>
             <Eyebrow>Round Details</Eyebrow>
-            <PageTitle>Round {round.data.roundNumber}</PageTitle>
+            <PageTitle>Round {roundData.roundNumber}</PageTitle>
           </div>
-          <StatusPill $status={round.data.status}>{statusLabel(round.data.status)}</StatusPill>
+          <StatusPill $status={roundData.status}>{statusLabel(roundData.status)}</StatusPill>
         </TitleRow>
         <AddressLookupForm
           value={addressInput}
@@ -957,128 +1384,141 @@ export function RoundDetailPage() {
         />
       </Header>
 
-      <SummaryGrid>
-        <SummaryItem>
-          <SummaryLabel>Dates</SummaryLabel>
-          <SummaryValue>{formatUtcMonthRange(round.data.startDate, round.data.endDate)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Tier</SummaryLabel>
-          <SummaryValue>{round.data.tierLabel ?? 'Unavailable'}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>VP Growth</SummaryLabel>
-          <SummaryValue>{formatVpGrowth(round.data.vpGrowthPct)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Pool</SummaryLabel>
-          <SummaryValue>{formatEns(round.data.poolSizeEns, 'Unavailable', 0)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Distributed</SummaryLabel>
-          <SummaryValue>{formatEns(round.data.totalDistributedEns, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Address Earned</SummaryLabel>
-          <SummaryValue>{formatAddressReward(round.data.addressReward)}</SummaryValue>
-        </SummaryItem>
-      </SummaryGrid>
+      {/* 3. Your Result (only when activeAddress is set) */}
+      {hasActiveAddress ? (
+        <Section>
+          <WideSectionHeader>
+            <Eyebrow>Your Result</Eyebrow>
+            <RowCount>{formatAddressReward(roundData.addressReward)}</RowCount>
+          </WideSectionHeader>
+          <AddressLotteryInsightPanel
+            round={roundData}
+            activeAddress={activeAddress}
+            activeAddressValid={activeAddressValid}
+          />
+        </Section>
+      ) : null}
 
+      {/* 4. Round overview stat strip */}
       <Section>
         <WideSectionHeader>
-          <Eyebrow>Address Lottery</Eyebrow>
-          <RowCount>
-            {activeAddressValid && activeAddress
-              ? 'Address-specific'
-              : 'No address'}
-          </RowCount>
+          <Eyebrow>Round Overview</Eyebrow>
+          <RowCount>{formatUtcMonthRange(roundData.startDate, roundData.endDate)}</RowCount>
         </WideSectionHeader>
-        <AddressLotteryInsightPanel
-          round={round.data}
-          activeAddress={activeAddress}
-          activeAddressValid={activeAddressValid}
-        />
+        <StatStrip columns={4}>
+          <StatCard
+            label="Pool"
+            value={formatEns(roundData.poolSizeEns, 'Unavailable', 0)}
+          />
+          <StatCard
+            label="Recipients"
+            value={formatCount(recipientsCount, '0')}
+            sub={recipientsCount === 1 ? 'unique' : 'unique'}
+          />
+          <StatCard
+            label="Total paid"
+            value={formatEns(
+              roundData.totalDistributedEns,
+              roundData.status === 'live' ? 'Pending' : 'Unavailable',
+            )}
+          />
+          <StatCard
+            label="Lottery share"
+            value={lotteryShareValue}
+            sub={lotteryShareSub}
+          />
+        </StatStrip>
       </Section>
 
-      <Section>
-        <WideSectionHeader>
-          <Eyebrow>Lottery Results</Eyebrow>
-          <RowCount>{lotteryBucketCountLabel(round.data.lottery)}</RowCount>
-        </WideSectionHeader>
-        {round.data.lottery ? (
-          <>
-            <MetaGrid>
-              <MetaItem>
-                <MetaLabel>Seed Source</MetaLabel>
-                <MetaValue>{round.data.lottery.seed.label}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Seed Block</MetaLabel>
-                <MetaValue>{formatBlockNumber(round.data.lottery.seed.blockNumber)}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Total Lottery Prizes</MetaLabel>
-                <MetaValue>{formatEns(round.data.lotteryPrizeEns, '0 ENS')}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Participants</MetaLabel>
-                <MetaValue>{round.data.lottery.participantCount.toLocaleString('en-US')}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Entries</MetaLabel>
-                <MetaValue>{formatCount(round.data.lotteryEntryCount)}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Winners</MetaLabel>
-                <MetaValue>{formatCount(round.data.lotteryWinnerCount)}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Bucket Target</MetaLabel>
-                <MetaValue>{formatEns(round.data.lottery.bucketTargetEns, '0 ENS')}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Algorithm</MetaLabel>
-                <MetaValue>{round.data.lottery.seed.algorithm}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Seed</MetaLabel>
-                <MetaValue>{round.data.lottery.seed.value}</MetaValue>
-              </MetaItem>
-            </MetaGrid>
-            <LotteryBucketTable buckets={round.data.lottery.buckets} />
-          </>
-        ) : (
-          <EmptyState>No lottery data.</EmptyState>
-        )}
-      </Section>
+      {/* 5. Methodology card */}
+      <MethodologySection round={roundData} />
 
-      <Section>
-        <WideSectionHeader>
-          <Eyebrow>Lottery Entries</Eyebrow>
-          <RowCount>
-            {round.data.lottery
-              ? visibleLotteryEntryCountLabel(lotteryEntries.length, visibleLotteryEntries.length)
-              : lotteryEntryCountLabel(round.data.lottery)}
-          </RowCount>
-        </WideSectionHeader>
-        <LotteryEntryTable entries={visibleLotteryEntries} totalCount={lotteryEntries.length} />
-      </Section>
-
+      {/* 6. Recipients table */}
       <Section>
         <SectionHeader>
           <Eyebrow>Delegate Rewards</Eyebrow>
-          <RowCount>{rewardCountLabel(round.data.topVoterRewards.length)}</RowCount>
+          <RowCount>{rewardCountLabel(roundData.topVoterRewards.length)}</RowCount>
         </SectionHeader>
-        <RankingTable rows={round.data.topVoterRewards} />
+        <RecipientsTable
+          rows={roundData.topVoterRewards}
+          highlightAddress={hasActiveAddress ? activeAddress : ''}
+          searchLabel="delegates"
+        />
       </Section>
 
       <Section>
         <SectionHeader>
           <Eyebrow>Token Holder Rewards</Eyebrow>
-          <RowCount>{rewardCountLabel(round.data.topTokenHolderRewards.length)}</RowCount>
+          <RowCount>{rewardCountLabel(roundData.topTokenHolderRewards.length)}</RowCount>
         </SectionHeader>
-        <RankingTable rows={round.data.topTokenHolderRewards} />
+        <RecipientsTable
+          rows={roundData.topTokenHolderRewards}
+          highlightAddress={hasActiveAddress ? activeAddress : ''}
+          searchLabel="token-holders"
+        />
       </Section>
+
+      {/* 7. Lottery transparency recap card */}
+      {roundData.lottery ? (
+        <Section>
+          <WideSectionHeader>
+            <Eyebrow>Lottery Results</Eyebrow>
+            <RowCount>{lotteryBucketCountLabel(roundData.lottery)}</RowCount>
+          </WideSectionHeader>
+          <MetaGrid>
+            <MetaItem>
+              <MetaLabel>Seed Source</MetaLabel>
+              <MetaValue>{roundData.lottery.seed.label}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Seed Block</MetaLabel>
+              <MetaValue>{formatBlockNumber(roundData.lottery.seed.blockNumber)}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Total Lottery Prizes</MetaLabel>
+              <MetaValue>{formatEns(roundData.lotteryPrizeEns, '0 ENS')}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Participants</MetaLabel>
+              <MetaValue>{roundData.lottery.participantCount.toLocaleString('en-US')}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Entries</MetaLabel>
+              <MetaValue>{formatCount(roundData.lotteryEntryCount)}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Winners</MetaLabel>
+              <MetaValue>{formatCount(roundData.lotteryWinnerCount)}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Bucket Target</MetaLabel>
+              <MetaValue>{formatEns(roundData.lottery.bucketTargetEns, '0 ENS')}</MetaValue>
+            </MetaItem>
+            <MetaItem>
+              <MetaLabel>Algorithm</MetaLabel>
+              <MetaValue>{roundData.lottery.seed.algorithm}</MetaValue>
+            </MetaItem>
+          </MetaGrid>
+          <LotteryBucketTable buckets={roundData.lottery.buckets} />
+
+          <WideSectionHeader>
+            <Eyebrow>Lottery Entries</Eyebrow>
+            <RowCount>
+              {visibleLotteryEntryCountLabel(lotteryEntries.length, visibleLotteryEntries.length)}
+            </RowCount>
+          </WideSectionHeader>
+          <LotteryEntryTable entries={visibleLotteryEntries} totalCount={lotteryEntries.length} />
+        </Section>
+      ) : (
+        <Section>
+          <WideSectionHeader>
+            <Eyebrow>Lottery Results</Eyebrow>
+            <RowCount>{lotteryEntryCountLabel(roundData.lottery)}</RowCount>
+          </WideSectionHeader>
+          <EmptyState>No lottery data.</EmptyState>
+          <EmptyState>No lottery entries.</EmptyState>
+        </Section>
+      )}
     </Page>
   )
 }

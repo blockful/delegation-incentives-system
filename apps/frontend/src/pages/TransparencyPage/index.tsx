@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -20,7 +20,8 @@ import gitIcon from '@/images/github.svg'
 import anticaptureIcon from '@/images/anticapture.svg'
 import duneIcon from '@/images/dune.svg'
 import { StatStrip } from '@/components/shared/StatStrip'
-import { StepList } from '@/components/shared/StepList'
+import { MethodologyDiagram } from '@/components/shared/MethodologyDiagram'
+import { SideDrawer } from '@/components/shared/SideDrawer'
 import { formatEnsAmount, formatEnsCompact } from '@/utils/format'
 
 import { CURRENT_ROUND } from '@/config/round'
@@ -256,6 +257,70 @@ const WorkedExampleNote = styled.p`
   line-height: 1.5;
 `
 
+/* ─── Methodology drawer body ─── */
+
+const DrawerBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xl};
+  text-align: left;
+`
+
+const DrawerSummary = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.6;
+`
+
+const DrawerIORow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+`
+
+const DrawerIOLabel = styled.span`
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkGray};
+`
+
+const DrawerIOValue = styled.span`
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkBlue};
+  font-family: ${tokens.font.mono};
+  line-height: 1.4;
+`
+
+const DrawerFooter = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.md};
+  margin-top: ${tokens.spacing.sm};
+`
+
+const DrawerLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.blue};
+  text-decoration: none;
+  transition: color 150ms ease;
+
+  &:hover {
+    color: ${tokens.color.accent};
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-radius: ${tokens.radius.sm};
+  }
+`
+
 /* ─── Data ─── */
 
 const VERIFY_LINKS: LinkCardItem[] = [
@@ -317,18 +382,75 @@ const CONTRACT_ENTRIES: ContractEntry[] = [
   },
 ]
 
-const HOW_REWARDS_STEPS = [
+interface MethodologyStepData {
+  id: string
+  title: string
+  subtitle: string
+  detail: {
+    summary: string
+    githubUrl: string
+    inputs: string
+    output: string
+    etherscanUrl: string | null
+  }
+}
+
+const METHODOLOGY_STEPS: MethodologyStepData[] = [
   {
-    title: 'Balance snapshot',
-    desc: 'Your share uses a 180-day moving average of your ENS balance, not just your current balance.',
+    id: 'snapshot',
+    title: 'Snapshot balances',
+    subtitle: '180d',
+    detail: {
+      summary:
+        "At each round end, the program snapshots every ENS holder's balance — averaged over the prior 180 days, not the spot balance — to discourage gaming.",
+      githubUrl:
+        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/snapshot.ts',
+      inputs: 'Holder address + balance history (every block)',
+      output: 'balance180dAvgEns per holder',
+      etherscanUrl: null,
+    },
   },
   {
-    title: 'Tier assignment',
-    desc: 'Month-over-month growth in delegated VP unlocks tiers. Your tier is set at round start and determines APR.',
+    id: 'compute-shares',
+    title: 'Compute shares',
+    subtitle: 'P / total',
+    detail: {
+      summary:
+        "Each holder's 180-day average balance is divided by the program's total active VP to compute their share of the round's reward pool.",
+      githubUrl:
+        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/shares.ts',
+      inputs: 'balance180dAvgEns per holder',
+      output: 'share (decimal 0–1) per holder',
+      etherscanUrl: null,
+    },
   },
   {
-    title: 'Payout at round end',
-    desc: 'Payouts are proportional to your share and sent directly to your wallet. Sub-1 ENS amounts enter the lottery pool.',
+    id: 'apply-tier',
+    title: 'Apply tier APR',
+    subtitle: '+ caps',
+    detail: {
+      summary:
+        "The active tier at round start determines the APR. Each holder's reward is share × poolSize. Per-holder caps prevent any single wallet from claiming an outsized portion.",
+      githubUrl:
+        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/tier.ts',
+      inputs: 'share + active tier index + per-holder cap',
+      output: 'rewardEns per holder',
+      etherscanUrl: null,
+    },
+  },
+  {
+    id: 'distribute',
+    title: 'Distribute',
+    subtitle: '+ lottery < 1 ENS',
+    detail: {
+      summary:
+        'Rewards ≥ 1 ENS go directly to wallets via the Reward Distributor contract. Sub-1-ENS rewards pool into ~10-ENS lottery buckets, drawn at round close using RANDAO.',
+      githubUrl:
+        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/distribute.ts',
+      etherscanUrl: 'CONTRACT:rewardDistributor',
+      inputs: 'rewardEns per holder',
+      output: 'On-chain transfer OR lottery bucket entry',
+    },
   },
 ]
 
@@ -383,6 +505,15 @@ export function TransparencyPage() {
   const status = useAsync(fetchStatus)
   const tiers = useAsync(fetchTiers)
   const paidRound = useAsync(fetchPaidRound)
+  const [activeStep, setActiveStep] = useState<string | null>(null)
+  const currentStep = useMemo(
+    () => METHODOLOGY_STEPS.find((s) => s.id === activeStep) ?? null,
+    [activeStep],
+  )
+  const currentEtherscanUrl =
+    currentStep?.detail.etherscanUrl === 'CONTRACT:rewardDistributor'
+      ? `https://etherscan.io/address/${contracts.rewardDistributor}`
+      : currentStep?.detail.etherscanUrl ?? null
 
   const loading = status.loading || tiers.loading
   const dataError = status.error || tiers.error
@@ -565,10 +696,60 @@ export function TransparencyPage() {
 
           <Section>
             <SectionEyebrow>How Rewards Are Calculated</SectionEyebrow>
-            <SectionTitle>Three steps, monthly</SectionTitle>
-            <StepList steps={HOW_REWARDS_STEPS} />
+            <SectionTitle>Algorithm</SectionTitle>
+            <WorkedExampleNote>
+              Same code runs every round. Click any step for the source.
+            </WorkedExampleNote>
+            <MethodologyDiagram
+              steps={METHODOLOGY_STEPS.map(({ id, title, subtitle }) => ({
+                id,
+                title,
+                subtitle,
+              }))}
+              activeId={activeStep}
+              onStepClick={setActiveStep}
+            />
           </Section>
         </Grid>
+
+        <SideDrawer
+          open={currentStep !== null}
+          onClose={() => setActiveStep(null)}
+          title={currentStep?.title ?? ''}
+          side="right"
+        >
+          {currentStep ? (
+            <DrawerBody>
+              <DrawerSummary>{currentStep.detail.summary}</DrawerSummary>
+              <DrawerIORow>
+                <DrawerIOLabel>Inputs</DrawerIOLabel>
+                <DrawerIOValue>{currentStep.detail.inputs}</DrawerIOValue>
+              </DrawerIORow>
+              <DrawerIORow>
+                <DrawerIOLabel>Output</DrawerIOLabel>
+                <DrawerIOValue>{currentStep.detail.output}</DrawerIOValue>
+              </DrawerIORow>
+              <DrawerFooter>
+                <DrawerLink
+                  href={currentStep.detail.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View source ↗
+                </DrawerLink>
+                {currentEtherscanUrl ? (
+                  <DrawerLink
+                    href={currentEtherscanUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View contract ↗
+                  </DrawerLink>
+                ) : null}
+              </DrawerFooter>
+            </DrawerBody>
+          ) : null}
+        </SideDrawer>
     </Page>
   )
 }

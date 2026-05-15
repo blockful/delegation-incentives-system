@@ -1,6 +1,8 @@
 import styled from 'styled-components'
 import { useEnsName, useEnsText } from 'wagmi'
 import { Link } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons'
 import type { VoterDetail } from '@/api/types'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -9,6 +11,8 @@ import { tokens } from '@/styles'
 
 interface VoterCardProps {
   voter: VoterDetail
+  isSelected?: boolean
+  onToggleCompare?: () => void
 }
 
 function formatVotingPower(vpWei: string): string {
@@ -223,6 +227,47 @@ const ProfileArrow = styled.span`
   transition: transform ${tokens.transition.fast};
 `
 
+const CompareChip = styled.button<{ $selected: boolean }>`
+  position: absolute;
+  top: ${tokens.spacing.md};
+  right: ${tokens.spacing.md};
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px ${tokens.spacing.sm};
+  border-radius: ${tokens.radius.pill};
+  border: 1px solid
+    ${({ $selected }) =>
+      $selected ? tokens.color.blue : tokens.color.borderLight};
+  background: ${({ $selected }) =>
+    $selected ? tokens.color.lightBlue : tokens.color.surface};
+  color: ${({ $selected }) =>
+    $selected ? tokens.color.darkBlue : tokens.color.darkGray};
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.semibold};
+  cursor: pointer;
+  transition:
+    background ${tokens.transition.fast},
+    border-color ${tokens.transition.fast},
+    color ${tokens.transition.fast};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.darkBlue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const CompareIcon = styled.span`
+  font-size: 10px;
+  display: inline-flex;
+`
+
 function useEnsTextOrEmpty(name: string | null, key: string): string | undefined {
   const { data } = useEnsText({
     name: name ?? undefined,
@@ -232,7 +277,7 @@ function useEnsTextOrEmpty(name: string | null, key: string): string | undefined
   return typeof data === 'string' && data.trim().length > 0 ? data : undefined
 }
 
-export function VoterCard({ voter }: VoterCardProps) {
+export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterCardProps) {
   const walletState = useWalletState()
   const isDelegated =
     walletState.status === 'delegated' &&
@@ -253,6 +298,23 @@ export function VoterCard({ voter }: VoterCardProps) {
 
   return (
     <StyledCard>
+      {onToggleCompare && (
+        <CompareChip
+          type="button"
+          $selected={isSelected}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleCompare()
+          }}
+          aria-pressed={isSelected}
+          aria-label={isSelected ? 'Remove from compare' : 'Add to compare'}
+        >
+          <CompareIcon aria-hidden>
+            <FontAwesomeIcon icon={isSelected ? faCheck : faPlus} />
+          </CompareIcon>
+          {isSelected ? 'Selected' : 'Compare'}
+        </CompareChip>
+      )}
       <IdentityRow>
         <AddressIdentity
           address={voter.address}

@@ -45,15 +45,25 @@ describe('TransparencyPage', () => {
     expect(verifiedTags).toHaveLength(3)
   })
 
-  it('renders how rewards calculated steps', async () => {
+  it('renders the algorithm methodology diagram with all 4 steps', async () => {
     renderApp(<TransparencyPage />)
     expect(
       screen.getByText('How Rewards Are Calculated'),
     ).toBeInTheDocument()
+    expect(screen.getByText('Algorithm')).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByText(/180-day moving average/)).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /Snapshot balances step/i }),
+      ).toBeInTheDocument()
     })
-    expect(screen.getByText(/Month-over-month growth/)).toBeInTheDocument()
-    expect(screen.getByText(/proportional to your share/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Compute shares step/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Apply tier APR step/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Distribute step/i }),
+    ).toBeInTheDocument()
   })
 })
