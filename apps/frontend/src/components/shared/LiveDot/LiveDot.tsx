@@ -1,4 +1,4 @@
-import styled, { keyframes } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import { tokens } from '@/styles/tokens'
 
 interface LiveDotProps {
@@ -34,7 +34,7 @@ const Dot = styled.span<{ $tone: NonNullable<LiveDotProps['tone']>; $pulse: bool
 
   ${({ $pulse }) =>
     $pulse &&
-    `
+    css`
       animation: ${livePulse} 1.8s ease-in-out infinite;
       @media (prefers-reduced-motion: reduce) {
         animation: none;

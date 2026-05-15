@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTrophy } from '@fortawesome/free-solid-svg-icons'
+import { faTrophy, faCheck, faHourglassHalf } from '@fortawesome/free-solid-svg-icons'
 import { isAddress } from 'viem'
 import { fadeInUp, Eyebrow, PageTitle } from '@/styles'
 import { useLottery } from '@/features/lottery/useLottery'
@@ -12,6 +12,7 @@ import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { LotteryPageSkeleton } from '@/components/shared/PageSkeletons'
 import { ToneCallout, type ToneCalloutTone } from '@/components/shared/ToneCallout'
 import { BucketSlotGrid } from '@/components/shared/BucketSlotGrid'
+import { LiveDot } from '@/components/shared/LiveDot'
 import type {
   LotteryBucketDetail,
   LotteryDetail,
@@ -98,6 +99,10 @@ const Description = styled.p`
 
 const CurrentRoundNote = styled.p`
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   color: ${tokens.color.darkGray};
   font-size: ${tokens.font.size.base};
   line-height: 1.5;
@@ -490,6 +495,28 @@ const ParticipantTable = styled.table`
   border-collapse: collapse;
   table-layout: fixed;
   min-width: 580px;
+
+  @media (max-width: 720px) {
+    min-width: 0;
+    table-layout: auto;
+
+    thead {
+      display: none;
+    }
+
+    tbody, tr {
+      display: block;
+      width: 100%;
+    }
+
+    tr {
+      border-bottom: 1px solid ${tokens.color.borderLight};
+
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+  }
 `
 
 const OddsStack = styled.div`
@@ -536,8 +563,9 @@ const TableWrap = styled.div`
   border-radius: ${tokens.radius.sm};
   scrollbar-gutter: stable;
 
-  @media (max-width: 640px) {
-    max-height: 320px;
+  @media (max-width: 720px) {
+    max-height: none;
+    overflow: visible;
   }
 `
 
@@ -562,6 +590,25 @@ const Td = styled.td`
   border-bottom: 1px solid ${tokens.color.borderLight};
   vertical-align: middle;
   overflow-wrap: anywhere;
+
+  @media (max-width: 720px) {
+    display: grid;
+    grid-template-columns: minmax(82px, 34%) minmax(0, 1fr);
+    gap: ${tokens.spacing.md};
+    padding: ${tokens.spacing.sm} ${tokens.spacing.md};
+    border-bottom: 1px solid ${tokens.color.borderLight};
+
+    &::before {
+      content: attr(data-label);
+      color: ${tokens.color.darkGray};
+      font-size: ${tokens.font.size.sm};
+      font-weight: ${tokens.font.weight.semibold};
+    }
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
 `
 
 const Tr = styled.tr<{ $highlight?: boolean; $winner?: boolean }>`
@@ -585,6 +632,37 @@ const EmptyState = styled.div`
   color: ${tokens.color.darkGray};
   line-height: 1.6;
   text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: ${tokens.spacing.sm};
+`
+
+const EmptyStateIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: ${tokens.color.bgSubtle};
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.lg};
+`
+
+const EmptyStateTitle = styled.h3`
+  margin: 0;
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 1.3;
+`
+
+const EmptyStateBody = styled.p`
+  margin: 0;
+  max-width: 420px;
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  line-height: 1.5;
 `
 
 const ErrorCard = styled(Panel)`
@@ -886,8 +964,12 @@ function HeaderBlock({
       </Description>
       {round ? (
         <CurrentRoundNote>
-          Showing Round {round.roundNumber}: {formatUtcMonthRange(round.startDate, round.endDate)}.
-          {currentRoundNote ? ` ${currentRoundNote}` : ''}
+          {round.isCurrent ? <LiveDot pulse /> : null}
+          <span>
+            Round {round.roundNumber} · {formatUtcMonthRange(round.startDate, round.endDate)}
+            {round.isCurrent ? ' (current)' : ''}
+            {currentRoundNote ? `. ${currentRoundNote}` : ''}
+          </span>
         </CurrentRoundNote>
       ) : null}
     </HeaderContent>
@@ -1022,19 +1104,60 @@ function RoundAndBucketExplorer({
           activeAddress={activeAddress}
         />
       ) : (
-        <Panel>
-          <PanelHeader>
-            <div>
-              <PanelTitle>No finalized buckets for Round {round.roundNumber}</PanelTitle>
-              <PanelBody>
-                Buckets are available after the round is paid.
-              </PanelBody>
-            </div>
-            <RoundPill>{round.distributionDataStatus.replace('_', ' ')}</RoundPill>
-          </PanelHeader>
-        </Panel>
+        <BucketDetailFallback round={round} />
       )}
     </ExplorerGrid>
+  )
+}
+
+function BucketDetailFallback({ round }: { round: RoundDetailResponse }) {
+  const hasNoLottery =
+    round.status === 'paid' &&
+    round.distributionDataStatus === 'available' &&
+    (round.lottery == null || round.lottery.buckets.length === 0)
+
+  const isLiveOrPending = round.distributionDataStatus !== 'available'
+
+  if (hasNoLottery) {
+    return (
+      <EmptyState>
+        <EmptyStateIcon aria-hidden>
+          <FontAwesomeIcon icon={faCheck} />
+        </EmptyStateIcon>
+        <EmptyStateTitle>No lottery this round</EmptyStateTitle>
+        <EmptyStateBody>
+          Every payout was ≥1 ENS, so all recipients got direct transfers.
+        </EmptyStateBody>
+      </EmptyState>
+    )
+  }
+
+  if (isLiveOrPending) {
+    return (
+      <EmptyState>
+        <EmptyStateIcon aria-hidden>
+          <FontAwesomeIcon icon={faHourglassHalf} />
+        </EmptyStateIcon>
+        <EmptyStateTitle>Lottery hasn't drawn yet</EmptyStateTitle>
+        <EmptyStateBody>
+          Round {round.roundNumber} is still {round.status}. Lottery runs at round close on {formatUtcMonthRange(round.startDate, round.endDate)}.
+        </EmptyStateBody>
+      </EmptyState>
+    )
+  }
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <div>
+          <PanelTitle>No finalized buckets for Round {round.roundNumber}</PanelTitle>
+          <PanelBody>
+            Buckets are available after the round is paid.
+          </PanelBody>
+        </div>
+        <RoundPill>{round.distributionDataStatus.replace('_', ' ')}</RoundPill>
+      </PanelHeader>
+    </Panel>
   )
 }
 
@@ -1071,7 +1194,6 @@ function SelectedBucketDetail({
             Every participant below had a final payout under 1 ENS.
           </PanelBody>
         </div>
-        <RoundPill>{formatEns(bucket.prizeEns, '0 ENS')} prize</RoundPill>
       </PanelHeader>
 
       <DetailGrid>
@@ -1164,7 +1286,7 @@ function SelectedBucketDetail({
                   $highlight={isActiveAddress}
                   $winner={isWinner}
                 >
-                  <Td>
+                  <Td data-label="Participant">
                     <AddressIdentity
                       address={entry.address}
                       ensName={entry.ensName}
@@ -1172,10 +1294,10 @@ function SelectedBucketDetail({
                       secondaryAddress="auto"
                     />
                   </Td>
-                  <Td>
+                  <Td data-label="ENS share">
                     <RewardValue>{formatEns(entry.amountEns, '0 ENS')}</RewardValue>
                   </Td>
-                  <Td>
+                  <Td data-label="Chance">
                     <OddsStack>
                       <span>{formatProbability(entry.probability)}</span>
                       <OddsMeter aria-hidden>
@@ -1183,7 +1305,7 @@ function SelectedBucketDetail({
                       </OddsMeter>
                     </OddsStack>
                   </Td>
-                  <Td>
+                  <Td data-label="Result">
                     <OutcomePill $winner={isWinner}>
                       {isWinner ? `Won ${formatEns(bucket.prizeEns, '0 ENS')}` : 'Not selected'}
                     </OutcomePill>
@@ -1319,6 +1441,7 @@ export function LotteryPage() {
               onChange={setAddressInput}
               onSubmit={handleAddressSubmit}
               onClear={handleAddressClear}
+              connectedAddress={walletAddress || undefined}
             />
           </AddressPanel>
         </TopGrid>

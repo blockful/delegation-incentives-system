@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -7,19 +7,21 @@ import {
   faArrowRight,
 } from '@fortawesome/free-solid-svg-icons'
 import { api } from '@/api'
+import type { RewardRank, RoundDetailResponse, RoundSummary } from '@/api/types'
 import { TransparencyStatsSkeleton } from '@/components/shared/PageSkeletons'
 import { ToneCallout } from '@/components/shared/ToneCallout'
 import { useAsync } from '@/hooks/useAsync'
 import { contracts } from '@/config/contracts'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
-import { LinkCardRow, LinkCardStack, type LinkCardItem } from '@/components/shared/LinkCard'
+import { LinkCard, LinkCardRow, type LinkCardItem } from '@/components/shared/LinkCard'
+import { ContractLiveness } from '@/components/shared/ContractLiveness'
 import gitIcon from '@/images/github.svg'
 import anticaptureIcon from '@/images/anticapture.svg'
 import duneIcon from '@/images/dune.svg'
 import { StatStrip } from '@/components/shared/StatStrip'
 import { StepList } from '@/components/shared/StepList'
-import { formatEnsCompact } from '@/utils/format'
+import { formatEnsAmount, formatEnsCompact } from '@/utils/format'
 
 import { CURRENT_ROUND } from '@/config/round'
 
@@ -181,6 +183,31 @@ const WorkedExampleSteps = styled.div`
   }
 `
 
+const WorkedExampleSteps4 = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+  align-items: stretch;
+
+  @media (min-width: 640px) {
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: ${tokens.spacing.sm};
+  }
+`
+
+const ContractStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+`
+
+const ContractItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+`
+
 const WorkedStep = styled.div`
   display: flex;
   flex-direction: column;
@@ -252,27 +279,41 @@ const VERIFY_LINKS: LinkCardItem[] = [
   },
 ]
 
-const CONTRACT_ENTRIES: LinkCardItem[] = [
+interface ContractEntry {
+  card: LinkCardItem
+  address: string
+}
+
+const CONTRACT_ENTRIES: ContractEntry[] = [
   {
-    title: 'ENS Incentives',
-    desc: 'Verified contract',
-    href: `https://etherscan.io/address/${contracts.ensIncentives}`,
-    copyAddress: contracts.ensIncentives,
-    tag: 'Verified',
+    address: contracts.ensIncentives,
+    card: {
+      title: 'ENS Incentives',
+      desc: 'Verified contract',
+      href: `https://etherscan.io/address/${contracts.ensIncentives}`,
+      copyAddress: contracts.ensIncentives,
+      tag: 'Verified',
+    },
   },
   {
-    title: 'Delegate By Sig',
-    desc: 'Verified contract',
-    href: `https://etherscan.io/address/${contracts.delegateBySig}`,
-    copyAddress: contracts.delegateBySig,
-    tag: 'Verified',
+    address: contracts.delegateBySig,
+    card: {
+      title: 'Delegate By Sig',
+      desc: 'Verified contract',
+      href: `https://etherscan.io/address/${contracts.delegateBySig}`,
+      copyAddress: contracts.delegateBySig,
+      tag: 'Verified',
+    },
   },
   {
-    title: 'Reward Distributor',
-    desc: 'Verified contract',
-    href: `https://etherscan.io/address/${contracts.rewardDistributor}`,
-    copyAddress: contracts.rewardDistributor,
-    tag: 'Verified',
+    address: contracts.rewardDistributor,
+    card: {
+      title: 'Reward Distributor',
+      desc: 'Verified contract',
+      href: `https://etherscan.io/address/${contracts.rewardDistributor}`,
+      copyAddress: contracts.rewardDistributor,
+      tag: 'Verified',
+    },
   },
 ]
 
@@ -291,11 +332,57 @@ const HOW_REWARDS_STEPS = [
   },
 ]
 
+function pickRepresentativeRecipient(detail: RoundDetailResponse): RewardRank | null {
+  const pool: RewardRank[] = [
+    ...(detail.topVoterRewards ?? []),
+    ...(detail.topTokenHolderRewards ?? []),
+  ]
+  const eligible = pool.filter(
+    (r) => r.source === 'direct' && Number(r.rewardEns) > 1,
+  )
+  if (eligible.length === 0) return null
+  const withEns = eligible.find((r) => r.ensName)
+  return withEns ?? eligible[0]
+}
+
+async function fetchLatestPaidRound(): Promise<{
+  summary: RoundSummary
+  detail: RoundDetailResponse
+} | null> {
+  const list = await api.rounds()
+  const paid = list.rounds
+    .filter((r) => r.status === 'paid')
+    .sort((a, b) => b.roundNumber - a.roundNumber)
+  if (paid.length === 0) return null
+  const summary = paid[0]
+  const detail = await api.round(summary.roundNumber, undefined, { rewardLimit: '25' })
+  return { summary, detail }
+}
+
+function formatMonthYear(month: string): string {
+  const [y, m] = month.split('-').map(Number)
+  if (!y || !m) return month
+  const date = new Date(Date.UTC(y, m - 1, 1))
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+function formatSharePercent(rewardWei: string, totalWei: string | null): string {
+  if (!totalWei) return '—'
+  const reward = Number(rewardWei)
+  const total = Number(totalWei)
+  if (!Number.isFinite(reward) || !Number.isFinite(total) || total <= 0) return '—'
+  const pct = (reward / total) * 100
+  if (pct < 0.0001) return '<0.0001%'
+  return `${pct.toFixed(4)}%`
+}
+
 export function TransparencyPage() {
   const fetchStatus = useCallback(() => api.status(), [])
   const fetchTiers = useCallback(() => api.tierProgression(), [])
+  const fetchPaidRound = useCallback(() => fetchLatestPaidRound(), [])
   const status = useAsync(fetchStatus)
   const tiers = useAsync(fetchTiers)
+  const paidRound = useAsync(fetchPaidRound)
 
   const loading = status.loading || tiers.loading
   const dataError = status.error || tiers.error
@@ -309,6 +396,13 @@ export function TransparencyPage() {
     tiers.data && tiers.data.tiers[tiers.data.currentTierIndex]
       ? tiers.data.tiers[tiers.data.currentTierIndex]
       : null
+
+  const representative = useMemo(() => {
+    if (!paidRound.data) return null
+    const recipient = pickRepresentativeRecipient(paidRound.data.detail)
+    if (!recipient) return null
+    return { round: paidRound.data.summary, recipient }
+  }, [paidRound.data])
 
   return (
     <Page>
@@ -367,10 +461,70 @@ export function TransparencyPage() {
             <Section>
               <SectionEyebrow>Smart Contracts</SectionEyebrow>
               <SectionTitle>Verified on Etherscan</SectionTitle>
-              <LinkCardStack items={CONTRACT_ENTRIES} />
+              <ContractStack>
+                {CONTRACT_ENTRIES.map((entry) => (
+                  <ContractItem key={entry.card.title}>
+                    <LinkCard item={entry.card} />
+                    <ContractLiveness address={entry.address} />
+                  </ContractItem>
+                ))}
+              </ContractStack>
             </Section>
 
-            {currentTier && (
+            {representative ? (
+              <Section>
+                <SectionEyebrow>Worked Example</SectionEyebrow>
+                <SectionTitle>How a payout was computed</SectionTitle>
+                <WorkedExampleNote>
+                  Round {representative.round.roundNumber} ({formatMonthYear(representative.round.month)}) · representative recipient: {representative.recipient.ensName ?? representative.recipient.address}
+                </WorkedExampleNote>
+                <WorkedExampleSteps4>
+                  <WorkedStep>
+                    <WorkedStepLabel>1. Balance snapshot</WorkedStepLabel>
+                    <WorkedStepValue>
+                      {representative.recipient.votingPower
+                        ? `${formatEnsAmount(representative.recipient.votingPower, { maximumFractionDigits: 2 })} ENS`
+                        : '—'}
+                    </WorkedStepValue>
+                    <WorkedStepSub>180-day moving average</WorkedStepSub>
+                  </WorkedStep>
+                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
+                  <WorkedStep>
+                    <WorkedStepLabel>2. Share</WorkedStepLabel>
+                    <WorkedStepValue>
+                      {formatSharePercent(
+                        representative.recipient.reward,
+                        representative.round.totalDistributed,
+                      )}
+                    </WorkedStepValue>
+                    <WorkedStepSub>of round distribution</WorkedStepSub>
+                  </WorkedStep>
+                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
+                  <WorkedStep>
+                    <WorkedStepLabel>3. Tier</WorkedStepLabel>
+                    <WorkedStepValue>
+                      {representative.round.tierIndex != null
+                        ? representative.round.tierIndex + 1
+                        : '—'}
+                    </WorkedStepValue>
+                    <WorkedStepSub>at month start</WorkedStepSub>
+                  </WorkedStep>
+                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
+                  <WorkedStep>
+                    <WorkedStepLabel>4. Payout</WorkedStepLabel>
+                    <WorkedStepValue>
+                      {formatEnsAmount(representative.recipient.rewardEns, {
+                        maximumFractionDigits: 4,
+                      })} ENS
+                    </WorkedStepValue>
+                    <WorkedStepSub>direct payout</WorkedStepSub>
+                  </WorkedStep>
+                </WorkedExampleSteps4>
+                <WorkedExampleNote>
+                  Payouts under 1 ENS pool into lottery buckets. Above 1 ENS, the reward is sent directly to the holder's wallet at round close.
+                </WorkedExampleNote>
+              </Section>
+            ) : currentTier ? (
               <Section>
                 <SectionEyebrow>Worked Example</SectionEyebrow>
                 <SectionTitle>How a payout is computed this round</SectionTitle>
@@ -406,7 +560,7 @@ export function TransparencyPage() {
                   Payouts under 1 ENS pool into ~10-ENS lottery buckets. Above 1 ENS, the reward is sent directly to the holder's wallet at round close.
                 </WorkedExampleNote>
               </Section>
-            )}
+            ) : null}
           </LeftColumn>
 
           <Section>

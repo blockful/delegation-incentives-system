@@ -44,8 +44,7 @@ const StyledCard = styled.div`
 
   &:hover {
     border-color: ${tokens.color.blue};
-    box-shadow: ${tokens.shadow.md};
-    transform: translateY(-2px) scale(1.008);
+    transform: translateY(-1px);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -89,12 +88,14 @@ const IdentityRow = styled.div`
 const BioRow = styled.p`
   margin: 0;
   font-size: ${tokens.font.size.sm};
-  line-height: 1.5;
+  line-height: 1.4;
   color: ${tokens.color.darkGray};
+  max-width: 360px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 `
 
 const ProposalSection = styled.div`

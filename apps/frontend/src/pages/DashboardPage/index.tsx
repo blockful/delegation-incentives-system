@@ -10,13 +10,14 @@ import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { StatCard } from '@/components/shared/StatCard'
 import { StatStrip } from '@/components/shared/StatStrip'
 import { ToneCallout } from '@/components/shared/ToneCallout'
+import { LiveDot } from '@/components/shared/LiveDot'
 import { useDashboardData } from './useDashboardData'
 import { EarningsStrip } from './sections/EarningsStrip'
 import { RoundProgressCard } from './sections/RoundTimeline'
 import { RewardTiers } from './sections/RewardTiers'
 import { PastRoundsStrip } from './sections/PastRoundsStrip'
 import { formatShortDate } from '@/utils/dashboard'
-import { formatEnsAmount, truncateAddress } from '@/utils/format'
+import { truncateAddress } from '@/utils/format'
 
 const Page = styled.div`
   max-width: ${tokens.maxWidth.section};
@@ -54,6 +55,9 @@ const Greeting = styled.span`
 `
 
 const RoundMeta = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
   font-variant-numeric: tabular-nums;
@@ -145,7 +149,10 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
           <Greeting>
             {timeOfDayGreeting()}, <strong>{greetingName}</strong>
           </Greeting>
-          <RoundMeta>Round {round.roundNumber} · {timeLeftHuman}</RoundMeta>
+          <RoundMeta>
+            <LiveDot pulse />
+            <span>Round {round.roundNumber} · {timeLeftHuman}</span>
+          </RoundMeta>
         </GreetingRow>
 
         <MainGrid>
@@ -158,12 +165,8 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
                 tierIndex={currentTierIndex}
                 delegatedTo={delegatedTo}
                 delegateEnsName={apr.delegatedToEnsName ?? undefined}
-                delegateAvatarUrl={apr.delegatedToAvatarUrl ?? undefined}
-                balanceEns={apr.currentBalanceEns}
                 roundStartDate={round.startDate}
                 roundEndDate={round.endDate}
-                roundNumber={round.roundNumber}
-                daysRemaining={round.daysRemaining}
               />
             </div>
           </Column>
@@ -189,7 +192,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
                   <ToneCallout
                     tone="neutral"
                     title="You're in the lottery pool"
-                    body={`Your projected ${formatEnsAmount(apr.estimatedMonthlyRewardEns, { maximumFractionDigits: 4 })} ENS payout pools with other sub-1 ENS rewards into a ~10 ENS bucket. RANDAO picks one winner per bucket at round close.`}
+                    body="Sub-1-ENS rewards pool into ~10 ENS buckets. RANDAO picks one winner per bucket at round close."
                     action={{ to: `/lottery?round=${round.roundNumber}`, label: 'See your bucket on Lottery' }}
                     compact
                   />
@@ -197,7 +200,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
                   <ToneCallout
                     tone="neutral"
                     title="Direct payout — no lottery"
-                    body="Your projected payout is above the 1 ENS threshold, so it goes straight to your wallet at round close."
+                    body="Payouts above the 1 ENS threshold go straight to your wallet at round close."
                     action={{ to: `/rounds/${round.roundNumber}`, label: 'See round details' }}
                     compact
                   />

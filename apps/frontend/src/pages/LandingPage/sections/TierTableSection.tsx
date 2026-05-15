@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
-import { Button, CheckSVG, LockSVG } from '@ensdomains/thorin'
+import { Button } from '@ensdomains/thorin'
 import type { TierEntry } from '@/api/types'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
+import { TierLadderRow } from '@/components/shared/TierLadderRow'
 
 interface TierTableSectionProps {
   tiers: TierEntry[]
@@ -125,58 +126,11 @@ const AnimatedRow = styled.div<{ $index: number; $visible: boolean }>`
       animation: ${fadeInUp} 0.4s ease both;
       animation-delay: ${$index * 0.08}s;
     `}
-`
 
-const TierRow = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: ${tokens.spacing['2xl']};
-  padding: 6px ${tokens.spacing.sm};
-  border-radius: ${tokens.radius.sm};
-  background: ${({ $isCurrent }) => ($isCurrent ? tokens.color.tierHighlight : 'transparent')};
-  opacity: ${({ $isLocked }) => ($isLocked ? 0.5 : 1)};
-`
-
-const TierLabel = styled.span`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkBlue};
-  flex-shrink: 0;
-`
-
-const TierRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const Dots = styled.div`
-  display: flex;
-  gap: ${tokens.spacing.xs};
-  align-items: center;
-`
-
-const Dot = styled.div<{ $filled: boolean; $isUnlocked: boolean }>`
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: ${({ $filled, $isUnlocked }) =>
-    $filled
-      ? ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)
-      : tokens.color.middleGray};
-`
-
-const AprText = styled.span<{ $isUnlocked: boolean }>`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
-  width: 120px;
-  text-align: right;
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+  }
 `
 
 const CtaWrap = styled.div`
@@ -198,17 +152,6 @@ const CtaWrap = styled.div`
   }
 `
 
-const StatusIcon = styled.span`
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-`
-
 export function TierTableSection({ tiers }: TierTableSectionProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -223,6 +166,8 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  const currentIndex = tiers.findIndex((t) => t.isCurrent)
 
   return (
     <Section>
@@ -244,41 +189,18 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
 
       <div ref={cardRef} style={{ flex: 1, minWidth: 0 }}>
       <TierCard data-testid="tier-table">
-        {tiers.map((tier, i) => {
-          const isLocked = !tier.isUnlocked
-          const aprLabel = tier.estimatedAprPct != null
-            ? `~${tier.estimatedAprPct}% APR`
-            : '—'
-          return (
-            <React.Fragment key={tier.index}>
-              {i > 0 && <Separator />}
-              <AnimatedRow $index={i} $visible={visible}>
-              <TierRow $isCurrent={tier.isCurrent} $isLocked={isLocked}>
-                <TierLabel>Tier #{tier.index + 1}</TierLabel>
-                <TierRight>
-                  <Dots>
-                    {Array.from({ length: tiers.length }, (_, j) => (
-                      <Dot
-                        key={j}
-                        $filled={j <= tier.index}
-                        $isUnlocked={tier.isUnlocked}
-                      />
-                    ))}
-                  </Dots>
-                  <AprText $isUnlocked={tier.isUnlocked}>{aprLabel}</AprText>
-                  <StatusIcon>
-                    {tier.isUnlocked ? (
-                      <CheckSVG style={{ color: tokens.color.positiveEmphasis }} />
-                    ) : (
-                      <LockSVG style={{ color: tokens.color.darkBlue }} />
-                    )}
-                  </StatusIcon>
-                </TierRight>
-              </TierRow>
-              </AnimatedRow>
-            </React.Fragment>
-          )
-        })}
+        {tiers.map((tier, i) => (
+          <React.Fragment key={tier.index}>
+            {i > 0 && <Separator />}
+            <AnimatedRow $index={i} $visible={visible}>
+              <TierLadderRow
+                tier={tier}
+                total={tiers.length}
+                isCurrent={i === currentIndex}
+              />
+            </AnimatedRow>
+          </React.Fragment>
+        ))}
       </TierCard>
       </div>
       </Inner>

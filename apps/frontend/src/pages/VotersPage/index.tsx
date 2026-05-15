@@ -5,6 +5,7 @@ import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useVoters } from '@/features/voters/useVoters'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, Eyebrow, ErrorMessage } from '@/styles'
+import { LiveDot } from '@/components/shared/LiveDot'
 import { VoterCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
 import { VoterCard } from './components/VoterCard'
 import { SortControls, type SortState } from './components/SortControls'
@@ -64,6 +65,20 @@ const HeaderBlock = styled.div`
   min-width: 0;
 `
 
+const TitleRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: ${tokens.spacing.sm};
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${tokens.spacing.lg};
+  }
+`
+
 const PageTitle = styled.h1`
   font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.black};
@@ -71,10 +86,33 @@ const PageTitle = styled.h1`
   line-height: 1.15;
   letter-spacing: -0.01em;
   margin: 0;
+  flex: 1;
+  min-width: 0;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size['5xl']};
   }
+`
+
+const CountChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  padding: 4px 10px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.borderLight};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.darkGray};
+  white-space: nowrap;
+  flex-shrink: 0;
+`
+
+const CountChipValue = styled.span`
+  font-variant-numeric: tabular-nums;
+  font-family: ${tokens.font.mono};
+  color: ${tokens.color.darkBlue};
 `
 
 const Description = styled.p`
@@ -345,7 +383,16 @@ export function VotersPage() {
         <TopSection>
           <HeaderBlock>
             <Eyebrow>Delegate Your Tokens</Eyebrow>
-            <PageTitle>Delegate to someone who shows up</PageTitle>
+            <TitleRow>
+              <PageTitle>Delegate to someone who shows up</PageTitle>
+              {data && data.length > 0 && (
+                <CountChip aria-label={`${data.length} delegates active`}>
+                  <LiveDot tone="success" pulse />
+                  <CountChipValue>{data.length}</CountChipValue>
+                  delegates active
+                </CountChip>
+              )}
+            </TitleRow>
             <Description>
               Choose an active voter — they cast votes on at least 7 of the last 10 proposals — to maximize your rewards.
             </Description>
@@ -356,7 +403,6 @@ export function VotersPage() {
               <StatsBarSkeleton />
             ) : (
               <StatsBar
-                activeVoterCount={stats?.activeVoterCount}
                 totalDelegatedEns={stats?.totalDelegatedEns}
                 holdersEarning={stats?.holdersEarning}
               />

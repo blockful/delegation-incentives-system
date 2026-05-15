@@ -5,6 +5,7 @@ import { isAddress } from 'viem'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { RoundsPageSkeleton } from '@/components/shared/PageSkeletons'
+import { LiveDot as SharedLiveDot } from '@/components/shared/LiveDot'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -67,6 +68,9 @@ const SnapshotCard = styled.aside`
 const SnapshotEyebrow = styled.span`
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkGray};
@@ -280,6 +284,7 @@ function buildRoundHistory(
       addressError,
       fallbackStatus: round.distributionDataStatus,
     }),
+    status: round.status,
     to: `/rounds/${round.roundNumber}${addressQuery}`,
   }))
 }
@@ -432,8 +437,8 @@ export function RoundsPage() {
     [roundList.data, activeAddress, addressHistory.data, addressHistory.loading, addressHistory.error],
   )
 
-  function handleAddressSubmit() {
-    const nextAddress = addressInput.trim()
+  function handleAddressSubmit(addressOverride?: string) {
+    const nextAddress = (addressOverride ?? addressInput).trim()
     if (!nextAddress) {
       handleAddressClear()
       return
@@ -527,6 +532,7 @@ export function RoundsPage() {
               onChange={setAddressInput}
               onSubmit={handleAddressSubmit}
               onClear={handleAddressClear}
+              connectedAddress={walletState.status !== 'disconnected' ? walletState.address : undefined}
             />
           </AddressPanel>
         </HeaderBlock>
@@ -548,7 +554,10 @@ export function RoundsPage() {
           </LeftColumn>
 
           <SnapshotCard>
-            <SnapshotEyebrow>Lottery Snapshot</SnapshotEyebrow>
+            <SnapshotEyebrow>
+              <SharedLiveDot pulse />
+              Lottery Snapshot
+            </SnapshotEyebrow>
             <SnapshotTitle>Round {currentRound.roundNumber} lottery</SnapshotTitle>
 
             {hasLotteryData ? (

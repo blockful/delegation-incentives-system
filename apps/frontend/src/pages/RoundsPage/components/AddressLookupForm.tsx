@@ -8,8 +8,15 @@ interface AddressLookupFormProps {
   sourceLabel: string
   error: string | null
   onChange: (value: string) => void
-  onSubmit: () => void
+  /**
+   * Submit the lookup. Called with no args for normal form submit (parent reads state).
+   * Called with an explicit address override from the "Use connected wallet" chip,
+   * which bypasses stale-state read after onChange in the same event tick.
+   */
+  onSubmit: (addressOverride?: string) => void
   onClear: () => void
+  /** 0x... of the connected wallet, if any. Surfaces the "Use connected wallet" chip. */
+  connectedAddress?: string
 }
 
 const Form = styled.form`
@@ -73,6 +80,43 @@ const ErrorText = styled.span`
   color: ${tokens.color.negative};
 `
 
+const AffordanceRow = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
+`
+
+const ConnectedWalletChip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.bgSubtle};
+  color: ${tokens.color.darkGray};
+  padding: 4px 10px;
+  border-radius: ${tokens.radius.pill};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
+  cursor: pointer;
+  line-height: 1.2;
+  transition: border-color ${tokens.transition.fast}, color ${tokens.transition.fast};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+`
+
+const ChipGlyph = styled.span`
+  font-size: ${tokens.font.size.sm};
+  line-height: 1;
+`
+
 export function AddressLookupForm({
   value,
   activeAddress,
@@ -81,10 +125,23 @@ export function AddressLookupForm({
   onChange,
   onSubmit,
   onClear,
+  connectedAddress,
 }: AddressLookupFormProps) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit()
+  }
+
+  const trimmedValue = value.trim()
+  const showUseConnectedChip = Boolean(
+    connectedAddress &&
+      (trimmedValue === '' || trimmedValue.toLowerCase() !== connectedAddress.toLowerCase()),
+  )
+
+  function handleUseConnected() {
+    if (!connectedAddress) return
+    onChange(connectedAddress)
+    onSubmit(connectedAddress)
   }
 
   return (
@@ -99,6 +156,18 @@ export function AddressLookupForm({
         <Button type="submit">Inspect</Button>
         <Button type="button" $secondary onClick={onClear}>Clear</Button>
       </Row>
+      {showUseConnectedChip ? (
+        <AffordanceRow>
+          <ConnectedWalletChip
+            type="button"
+            onClick={handleUseConnected}
+            aria-label="Use connected wallet address"
+          >
+            <ChipGlyph aria-hidden>↩</ChipGlyph>
+            Use connected wallet
+          </ConnectedWalletChip>
+        </AffordanceRow>
+      ) : null}
       <Meta>
         <span>{activeAddress ? sourceLabel : 'No address selected'}</span>
         {error ? <ErrorText>{error}</ErrorText> : null}

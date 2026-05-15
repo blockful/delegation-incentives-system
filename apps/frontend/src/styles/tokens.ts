@@ -66,12 +66,12 @@ export const tokens = {
   },
 
   shadow: {
-    sm: '0 1px 3px rgba(0, 0, 0, 0.06)',
-    md: '0 4px 16px rgba(0, 0, 0, 0.10)',
-    lg: '0 8px 32px rgba(0, 0, 0, 0.14)',
-    // Replaces hairy inline `0 4px 12px rgba(82,152,255,0.3)` patterns;
-    // 1px border line + soft elevation. See docs §1.1 / §2.8.
-    soft: '0 1px 0 0 rgba(15, 23, 42, 0.04), 0 4px 24px 0 rgba(15, 23, 42, 0.05)',
+    // Subtle. Minimal & clean: borders carry surface; shadows are only a hint of lift.
+    sm: '0 1px 2px rgba(15, 23, 42, 0.04)',
+    md: '0 2px 8px rgba(15, 23, 42, 0.06)',
+    lg: '0 4px 16px rgba(15, 23, 42, 0.08)',
+    // Default for raised surfaces — 1px hairline + ambient. Prefer this over `md` for cards.
+    soft: '0 1px 0 0 rgba(15, 23, 42, 0.03), 0 2px 12px 0 rgba(15, 23, 42, 0.04)',
   },
 
   font: {

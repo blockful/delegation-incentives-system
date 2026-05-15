@@ -1,6 +1,9 @@
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles/tokens'
 import { formatEnsWhole, formatTimeLeft } from '@/utils/format'
+import { LiveDot } from '@/components/shared/LiveDot'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
@@ -22,21 +25,45 @@ const Wrapper = styled.div`
 const Card = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 24px;
+  padding: 0;
   background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.middleGray};
+  border: 1px solid ${tokens.color.borderLight};
   border-radius: 10px;
   box-shadow: ${tokens.shadow.sm};
+  overflow: hidden;
 `
 
-const Tagline = styled.span`
-  font-size: ${tokens.font.size.base};
+const TrustRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  padding: 12px 16px;
+  width: 100%;
+`
+
+const TrustItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.positiveEmphasis};
-  text-align: center;
+  line-height: 1.3;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+`
+
+const Separator = styled.div`
   width: 100%;
+  height: 1px;
+  background: ${tokens.color.borderLight};
+  flex-shrink: 0;
 `
 
 const DataRow = styled.div`
@@ -44,10 +71,7 @@ const DataRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: ${tokens.color.bgSubtle};
-  border: 1px solid ${tokens.color.middleGray};
-  border-radius: 10px;
-  padding: 10px 16px;
+  padding: 12px 16px;
 `
 
 const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
@@ -84,14 +108,6 @@ const ColSub = styled.span`
   }
 `
 
-const LiveDot = styled.span`
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: ${tokens.color.positiveEmphasis};
-  flex-shrink: 0;
-`
-
 const GrowthLabel = styled.span<{ $negative?: boolean }>`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
@@ -112,7 +128,7 @@ export function RoundStatusBar({
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
-  const growthPrefix = isNegative ? '\u2013' : '+'
+  const growthPrefix = isNegative ? '–' : '+'
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
   const displayRound = roundNumber
   const displayTimeLeft = formatTimeLeft(roundEndDate)
@@ -121,11 +137,25 @@ export function RoundStatusBar({
   return (
     <Wrapper>
       <Card>
-        <Tagline>No tokens locked · Gas sponsored · Rewards auto-sent</Tagline>
+        <TrustRow>
+          <TrustItem>
+            <FontAwesomeIcon icon={faCircleCheck} />
+            No tokens locked
+          </TrustItem>
+          <TrustItem>
+            <FontAwesomeIcon icon={faCircleCheck} />
+            Gas sponsored
+          </TrustItem>
+          <TrustItem>
+            <FontAwesomeIcon icon={faCircleCheck} />
+            Rewards auto-sent
+          </TrustItem>
+        </TrustRow>
+        <Separator />
         <DataRow>
           <Col $align="left">
             <ColLabel>
-              <LiveDot />
+              <LiveDot pulse />
               Round {displayRound}
             </ColLabel>
             <ColSub>{displayTimeLeft}</ColSub>

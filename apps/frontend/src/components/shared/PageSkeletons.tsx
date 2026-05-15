@@ -191,20 +191,26 @@ export function LandingPageSkeleton() {
     <LandingRoot label="Loading landing page">
       <LandingHero>
         <LandingHeroInner $gap={tokens.spacing.lg}>
-          <SkeletonBlock $height="14px" $width="260px" $maxWidth="80%" />
-          <FullWidthCenteredStack $gap={tokens.spacing.md} $maxWidth="680px">
-            <SkeletonBlock $height="54px" $width="88%" />
-            <SkeletonBlock $height="54px" $width="56%" />
+          {/* Eyebrow: LiveDot + "Round N · ends in M days" inline */}
+          <SkeletonInline $gap={tokens.spacing.sm}>
+            <SkeletonCircle $size="8px" />
+            <SkeletonBlock $height="14px" $width="220px" $maxWidth="80%" />
+          </SkeletonInline>
+          {/* Headline: 2 lines, "Earn X% APR on your ENS,\nautomatically." */}
+          <FullWidthCenteredStack $gap={tokens.spacing.md} $maxWidth="720px">
+            <SkeletonBlock $height="54px" $width="92%" />
+            <SkeletonBlock $height="54px" $width="48%" />
           </FullWidthCenteredStack>
+          {/* Subtitle: single line now */}
           <SkeletonText
-            lines={2}
-            lineHeight="18px"
-            maxWidth="520px"
-            widths={['100%', '72%']}
+            lines={1}
+            lineHeight="22px"
+            maxWidth="440px"
+            widths={['88%']}
           />
           <LandingActions $gap={tokens.spacing.md}>
             <SkeletonBlock $height="44px" $width="160px" />
-            <SkeletonBlock $height="44px" $width="132px" />
+            <SkeletonBlock $height="44px" $width="160px" />
           </LandingActions>
         </LandingHeroInner>
       </LandingHero>

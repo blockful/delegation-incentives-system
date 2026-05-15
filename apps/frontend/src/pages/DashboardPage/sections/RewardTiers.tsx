@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { Button, CheckSVG, LockSVG } from '@ensdomains/thorin'
+import { Button } from '@ensdomains/thorin'
 import { tokens } from '@/styles/tokens'
-import { formatPool, formatVpNeeded, computeVpProgress } from '@/utils/dashboard'
+import { TierLadderRow } from '@/components/shared/TierLadderRow'
+import { formatVpNeeded, computeVpProgress } from '@/utils/dashboard'
 import type { TierEntry } from '@/api/types'
 
 interface RewardTiersProps {
@@ -45,77 +46,6 @@ const Separator = styled.div`
   width: 100%;
   height: 1px;
   background: ${tokens.color.borderLight};
-`
-
-const TierRow = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: ${tokens.spacing['2xl']};
-  padding: 10px ${tokens.spacing.md};
-  margin: 2px ${tokens.spacing.xs};
-  border-radius: ${tokens.radius.sm};
-  background: ${({ $isCurrent }) => ($isCurrent ? tokens.color.tierHighlight : 'transparent')};
-  opacity: ${({ $isLocked }) => ($isLocked ? 0.45 : 1)};
-`
-
-const TierLabel = styled.span<{ $isCurrent: boolean }>`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${({ $isCurrent }) => ($isCurrent ? tokens.font.weight.bold : tokens.font.weight.medium)};
-  color: ${tokens.color.darkBlue};
-  flex-shrink: 0;
-`
-
-const TierRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const Dots = styled.div`
-  display: flex;
-  gap: ${tokens.spacing.xs};
-  align-items: center;
-`
-
-const Dot = styled.div<{ $filled: boolean; $isUnlocked: boolean }>`
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: ${({ $filled, $isUnlocked }) =>
-    $filled
-      ? ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)
-      : tokens.color.middleGray};
-`
-
-const AprText = styled.span<{ $isUnlocked: boolean }>`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${({ $isUnlocked }) => ($isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue)};
-  width: 110px;
-  text-align: right;
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-`
-
-const PoolText = styled.span`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkGray};
-  min-width: 80px;
-  white-space: nowrap;
-`
-
-const StatusIcon = styled.span`
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
 `
 
 const Footer = styled.div`
@@ -193,36 +123,16 @@ export function RewardTiers({
       </Header>
 
       <Rows>
-        {tiers.map((tier, i) => {
-          const isLocked = !tier.isUnlocked
-          const isCurrent = tier.index === currentTierIndex
-          const aprLabel = tier.estimatedAprPct != null ? `~${tier.estimatedAprPct}% APR` : '—'
-
-          return (
-            <div key={tier.index}>
-              {i > 0 && <Separator />}
-              <TierRow $isCurrent={isCurrent} $isLocked={isLocked}>
-                <TierLabel $isCurrent={isCurrent}>Tier #{tier.index + 1}</TierLabel>
-                <TierRight>
-                  <PoolText>{formatPool(tier.poolSizeEns)} ENS</PoolText>
-                  <Dots>
-                    {Array.from({ length: tiers.length }, (_, j) => (
-                      <Dot key={j} $filled={j <= tier.index} $isUnlocked={tier.isUnlocked} />
-                    ))}
-                  </Dots>
-                  <AprText $isUnlocked={tier.isUnlocked}>{aprLabel}</AprText>
-                  <StatusIcon>
-                    {tier.isUnlocked ? (
-                      <CheckSVG style={{ color: tokens.color.positiveEmphasis }} />
-                    ) : (
-                      <LockSVG style={{ color: tokens.color.darkBlue }} />
-                    )}
-                  </StatusIcon>
-                </TierRight>
-              </TierRow>
-            </div>
-          )
-        })}
+        {tiers.map((tier, i) => (
+          <div key={tier.index}>
+            {i > 0 && <Separator />}
+            <TierLadderRow
+              tier={tier}
+              total={tiers.length}
+              isCurrent={tier.index === currentTierIndex}
+            />
+          </div>
+        ))}
       </Rows>
 
       {!isMaxTier && nextTier && (

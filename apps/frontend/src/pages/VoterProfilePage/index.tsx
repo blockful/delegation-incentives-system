@@ -13,9 +13,11 @@ import { useAsync } from '@/hooks/useAsync'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
+import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { BackLink } from '@/components/shared/BackLink'
 import { StatStrip } from '@/components/shared/StatStrip'
+import { DataStrip, DataStripItem } from '@/components/shared/DataStrip'
 import { ToneCallout } from '@/components/shared/ToneCallout'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
@@ -44,9 +46,9 @@ function formatVotingPower(vpWei: string): string {
   return formatEnsAmount(ens)
 }
 
-function formatActiveSince(iso: string): { primary: string; secondary: string } {
+function formatActiveSince(iso: string): { relative: string; absolute: string } {
   const date = new Date(iso)
-  const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  const absolute = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
   const now = new Date()
   const months = Math.max(
     0,
@@ -54,12 +56,12 @@ function formatActiveSince(iso: string): { primary: string; secondary: string } 
   )
   const years = Math.floor(months / 12)
   const remMonths = months % 12
-  let secondary = ''
-  if (years > 0 && remMonths > 0) secondary = `${years}y ${remMonths}mo ago`
-  else if (years > 0) secondary = `${years}y ago`
-  else if (remMonths > 0) secondary = `${remMonths}mo ago`
-  else secondary = 'this month'
-  return { primary: monthYear, secondary }
+  let relative = ''
+  if (years > 0 && remMonths > 0) relative = `${years}y ${remMonths}mo ago`
+  else if (years > 0) relative = `${years}y ago`
+  else if (remMonths > 0) relative = `${remMonths}mo ago`
+  else relative = 'this month'
+  return { relative, absolute }
 }
 
 function formatMonthLabel(month: string): string {
@@ -431,92 +433,7 @@ const SectionMeta = styled.span`
   color: ${tokens.color.darkGray};
 `
 
-const InlineExternalLink = styled.a`
-  color: ${tokens.color.blue};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  text-decoration: none;
-  &:hover {
-    text-decoration: underline;
-  }
-`
-
 /* ─── Rewards strip ─── */
-
-const RewardsStrip = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${tokens.spacing.md};
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-`
-
-const RewardCard = styled.a`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: ${tokens.spacing.lg};
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.soft};
-  text-decoration: none;
-  cursor: pointer;
-  transition: all ${tokens.transition.fast};
-  overflow: hidden;
-
-  &::after {
-    content: '→';
-    position: absolute;
-    top: ${tokens.spacing.lg};
-    right: ${tokens.spacing.lg};
-    color: ${tokens.color.darkGray};
-    font-size: ${tokens.font.size.xl};
-    transition: transform ${tokens.transition.fast};
-  }
-
-  &:hover {
-    border-color: ${tokens.color.blue};
-    transform: translateY(-1px);
-    box-shadow: ${tokens.shadow.md};
-  }
-
-  &:hover::after {
-    transform: translateX(2px);
-    color: ${tokens.color.blue};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-const RewardEyebrow = styled.span`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkGray};
-`
-
-const RewardValue = styled.span`
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.black};
-  color: ${tokens.color.status.success.fg};
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-`
-
-const RewardZero = styled(RewardValue)`
-  color: ${tokens.color.darkGray};
-`
-
-const RewardSub = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-`
 
 const EmptyRewards = styled.div`
   padding: ${tokens.spacing.xl};
@@ -706,15 +623,11 @@ export function VoterProfilePage() {
           <HeroIdentity>
             <HeroTopRow>
               <AvatarWrap>
-                <AddressIdentity
+                <EnsAvatar
                   address={voter.address}
-                  ensName={ensName}
+                  name={ensName ?? undefined}
                   avatarUrl={voter.avatarUrl}
-                  showAvatar
-                  avatarSize={80}
-                  layout="inline"
-                  size="md"
-                  secondaryAddress="never"
+                  size={80}
                 />
               </AvatarWrap>
               <NameStack>
@@ -814,14 +727,17 @@ export function VoterProfilePage() {
           {activeSinceParts ? (
             <StatCardSurface>
               <StatLabel>Active Since</StatLabel>
-              <StatValue style={{ fontSize: tokens.font.size.xl }}>{activeSinceParts.primary}</StatValue>
-              <StatSub>{activeSinceParts.secondary}</StatSub>
+              <StatValue
+                style={{ fontSize: tokens.font.size.xl }}
+                title={`Since ${activeSinceParts.absolute}`}
+              >
+                {activeSinceParts.relative}
+              </StatValue>
             </StatCardSurface>
           ) : (
             <StatCardSurface>
               <StatLabel>Active Since</StatLabel>
               <StatValue style={{ color: tokens.color.textFaint, fontSize: tokens.font.size.xl }}>—</StatValue>
-              <StatSub>unknown</StatSub>
             </StatCardSurface>
           )}
         </StatStrip>
@@ -833,14 +749,9 @@ export function VoterProfilePage() {
               <SectionEyebrow>Voting record</SectionEyebrow>
               <SectionTitle>Last 10 governance proposals</SectionTitle>
             </div>
-            <InlineExternalLink href={delegateUrl} target="_blank" rel="noopener noreferrer">
-              Full record on Anticapture ↗
-            </InlineExternalLink>
           </SectionHeader>
           <ProposalBar votes={voter.last10ProposalsVoted} />
-          <SectionMeta>
-            Hover any segment for the proposal it represents. Filled = they voted, empty = they didn&apos;t.
-          </SectionMeta>
+          <SectionMeta>Hover for proposal · Filled = voted</SectionMeta>
         </SectionCard>
 
         {/* ─── Recent Rewards ─── */}
@@ -856,29 +767,24 @@ export function VoterProfilePage() {
           {rewardsHistory.loading ? (
             <EmptyRewards>Loading reward history…</EmptyRewards>
           ) : rewardsHistory.data && rewardsHistory.data.length > 0 ? (
-            <RewardsStrip>
+            <DataStrip>
               {rewardsHistory.data.map((r) => {
                 const num = Number(r.totalRewardEns)
-                const formatted = Number.isFinite(num) && num > 0
-                  ? `${formatEnsAmount(r.totalRewardEns, { maximumFractionDigits: 2 })} ENS`
-                  : '0 ENS'
                 const earned = Number.isFinite(num) && num > 0
+                const value = earned
+                  ? `+${formatEnsAmount(r.totalRewardEns, { maximumFractionDigits: 2 })} ENS`
+                  : '0 ENS'
                 return (
-                  <RewardCard
+                  <DataStripItem
                     key={r.roundNumber}
+                    label={`Round ${r.roundNumber}`}
+                    value={value}
+                    sub={formatMonthLabel(r.month)}
                     href={`/rounds/${r.roundNumber}?address=${voter.address}`}
-                  >
-                    <RewardEyebrow>Round {r.roundNumber}</RewardEyebrow>
-                    {earned ? (
-                      <RewardValue>+{formatted}</RewardValue>
-                    ) : (
-                      <RewardZero>0 ENS</RewardZero>
-                    )}
-                    <RewardSub>{formatMonthLabel(r.month)}</RewardSub>
-                  </RewardCard>
+                  />
                 )
               })}
-            </RewardsStrip>
+            </DataStrip>
           ) : (
             <EmptyRewards>
               No finalized voter rewards yet for this delegate. Their first appearance here will be after the next round closes.

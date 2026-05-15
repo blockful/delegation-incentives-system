@@ -3,68 +3,73 @@ import { tokens } from '@/styles'
 import { formatEnsCompact } from '@/utils/format'
 
 interface StatsBarProps {
-  activeVoterCount?: number
   totalDelegatedEns?: string
   holdersEarning?: number
 }
 
 const Bar = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.sm};
-  background: ${tokens.color.surface};
-  overflow: hidden;
+  grid-template-columns: 1fr 1fr;
+  gap: ${tokens.spacing.md} ${tokens.spacing.xl};
   min-width: 0;
-`
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 
-const Cell = styled.div`
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${tokens.spacing.xs};
-  text-align: center;
-
-  &:not(:last-child) {
-    border-right: 1px solid ${tokens.color.borderLight};
+  @media (min-width: 768px) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ${tokens.spacing.lg};
   }
 `
 
-const CellValue = styled.span`
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.black};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.1;
-  white-space: nowrap;
+const StatItem = styled.div`
+  display: inline-flex;
+  align-items: baseline;
+  gap: ${tokens.spacing.xs};
+  min-width: 0;
+  position: relative;
+
+  @media (min-width: 768px) {
+    &:not(:last-child) {
+      padding-right: ${tokens.spacing.lg};
+      border-right: 1px solid ${tokens.color.borderLight};
+    }
+  }
 `
 
-const CellLabel = styled.span`
+const StatLabel = styled.span`
   font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
   white-space: nowrap;
 `
 
+const StatValue = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.darkBlue};
+  font-family: ${tokens.font.mono};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
 export function StatsBar({
-  activeVoterCount,
   totalDelegatedEns,
   holdersEarning,
 }: StatsBarProps) {
   return (
     <Bar>
-      <Cell>
-        <CellValue>{activeVoterCount ?? '—'}</CellValue>
-        <CellLabel>active voters</CellLabel>
-      </Cell>
-      <Cell>
-        <CellValue>{totalDelegatedEns ? formatEnsCompact(totalDelegatedEns) : '—'}</CellValue>
-        <CellLabel>ENS delegated</CellLabel>
-      </Cell>
-      <Cell>
-        <CellValue>{holdersEarning ?? '—'}</CellValue>
-        <CellLabel>wallets earning</CellLabel>
-      </Cell>
+      <StatItem>
+        <StatLabel>ENS delegated:</StatLabel>
+        <StatValue>{totalDelegatedEns ? formatEnsCompact(totalDelegatedEns) : '—'}</StatValue>
+      </StatItem>
+      <StatItem>
+        <StatLabel>wallets earning:</StatLabel>
+        <StatValue>{holdersEarning ?? '—'}</StatValue>
+      </StatItem>
     </Bar>
   )
 }

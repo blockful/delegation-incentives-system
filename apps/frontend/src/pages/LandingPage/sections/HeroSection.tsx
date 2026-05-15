@@ -3,6 +3,8 @@ import { Button, EnsSVG } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
+import { LiveDot } from '@/components/shared/LiveDot'
+import { formatTimeLeft } from '@/utils/format'
 
 const RouterLink = styled(Link)`
   text-decoration: none;
@@ -18,8 +20,24 @@ const RouterLink = styled(Link)`
   }
 `
 
+const AnchorLink = styled.a`
+  text-decoration: none;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    display: block;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+`
+
 interface HeroSectionProps {
   currentAprPct: string
+  roundNumber?: number
+  roundEndDate?: string
 }
 
 const Section = styled.section`
@@ -32,7 +50,7 @@ const Section = styled.section`
     ${tokens.color.lightBlue},
     ${tokens.color.white}
   );
-  border-bottom: 1px solid ${tokens.color.middleGray};
+  border-bottom: 1px solid ${tokens.color.borderLight};
 
   @media (min-width: 768px) {
     padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['9xl']};
@@ -47,7 +65,9 @@ const Content = styled.div`
 `
 
 const HeroEyebrow = styled.span`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
@@ -59,10 +79,10 @@ const Headline = styled.h1`
   font-size: ${tokens.font.size['4xl']};
   font-weight: ${tokens.font.weight.black};
   color: ${tokens.color.darkBlue};
-  line-height: 1.32;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0 auto ${tokens.spacing.lg};
-  max-width: 680px;
+  max-width: 720px;
   animation: ${fadeInUp} 0.5s ease 0.1s both;
 
   @media (min-width: 768px) {
@@ -70,14 +90,9 @@ const Headline = styled.h1`
   }
 `
 
-const shimmer = keyframes`
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-`
-
 const floatUp = keyframes`
-  0%   { transform: translateY(0);      opacity: 0.4; }
-  60%  {                                opacity: 0.15; }
+  0%   { transform: translateY(0);      opacity: 0.35; }
+  60%  {                                opacity: 0.12; }
   100% { transform: translateY(-110vh); opacity: 0; }
 `
 
@@ -86,6 +101,10 @@ const ParticlesLayer = styled.div`
   inset: 0;
   pointer-events: none;
   z-index: 0;
+
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
 `
 
 const Particle = styled.div<{
@@ -93,7 +112,6 @@ const Particle = styled.div<{
   $size: number
   $duration: number
   $delay: number
-  $playing: boolean
 }>`
   position: absolute;
   bottom: -60px;
@@ -102,12 +120,8 @@ const Particle = styled.div<{
   height: ${({ $size }) => $size}px;
   opacity: 0;
   will-change: transform, opacity;
-
-  ${({ $playing, $duration, $delay }) =>
-    $playing &&
-    css`
-      animation: ${floatUp} ${$duration}s ease-in ${$delay}s infinite;
-    `}
+  animation: ${floatUp} ${({ $duration }) => $duration}s ease-in
+    ${({ $delay }) => $delay}s infinite;
 
   svg {
     width: 100%;
@@ -120,7 +134,7 @@ const AprValue = styled.span`
   display: inline-block;
   color: ${tokens.color.blue};
   background: ${tokens.color.lightBlueOpacity};
-  padding:  ${tokens.spacing.xs} ${tokens.spacing.md};
+  padding: ${tokens.spacing.xs} ${tokens.spacing.md};
   border-radius: ${tokens.radius.md};
 `
 
@@ -130,7 +144,6 @@ const Subtitle = styled.p`
   color: ${tokens.color.darkGray};
   max-width: ${tokens.maxWidth.md};
   margin: 0 auto ${tokens.spacing['4xl']};
-  opacity: 0.75;
   animation: ${fadeInUp} 0.5s ease 0.2s both;
 
   @media (min-width: 768px) {
@@ -170,60 +183,59 @@ const Actions = styled.div`
   }
 `
 
+// Fewer particles, more curated spacing — calmer feel.
 const PARTICLE_CONFIGS = [
-  { id: 0,  left: 5,  size: 18, duration: 12, delay: 0    },
-  { id: 1,  left: 14, size: 26, duration: 16, delay: 3.5  },
-  { id: 2,  left: 23, size: 14, duration: 10, delay: 7    },
-  { id: 3,  left: 31, size: 30, duration: 14, delay: 1.5  },
-  { id: 4,  left: 40, size: 20, duration: 11, delay: 5    },
-  { id: 5,  left: 50, size: 16, duration: 15, delay: 9    },
-  { id: 6,  left: 58, size: 24, duration: 13, delay: 6    },
-  { id: 7,  left: 67, size: 12, duration: 9,  delay: 2    },
-  { id: 8,  left: 75, size: 22, duration: 17, delay: 11   },
-  { id: 9,  left: 84, size: 28, duration: 12, delay: 4    },
-  { id: 10, left: 92, size: 15, duration: 14, delay: 8    },
-  { id: 11, left: 9,  size: 20, duration: 10, delay: 13   },
-  { id: 12, left: 28, size: 16, duration: 16, delay: 0.5  },
-  { id: 13, left: 45, size: 28, duration: 11, delay: 10   },
-  { id: 14, left: 63, size: 14, duration: 13, delay: 5.5  },
-  { id: 15, left: 78, size: 22, duration: 9,  delay: 14   },
-  { id: 16, left: 88, size: 18, duration: 15, delay: 2.5  },
-  { id: 17, left: 19, size: 12, duration: 12, delay: 7.5  },
-  { id: 18, left: 53, size: 26, duration: 10, delay: 3    },
-  { id: 19, left: 96, size: 20, duration: 16, delay: 6.5  },
+  { id: 0, left: 8, size: 22, duration: 14, delay: 0 },
+  { id: 1, left: 22, size: 14, duration: 11, delay: 4 },
+  { id: 2, left: 36, size: 28, duration: 16, delay: 8 },
+  { id: 3, left: 52, size: 18, duration: 12, delay: 2 },
+  { id: 4, left: 66, size: 24, duration: 15, delay: 6 },
+  { id: 5, left: 78, size: 16, duration: 13, delay: 10 },
+  { id: 6, left: 90, size: 20, duration: 10, delay: 3 },
 ]
 
-export function HeroSection({ currentAprPct }: HeroSectionProps) {
+function buildEyebrow(roundNumber?: number, roundEndDate?: string): string {
+  if (!roundNumber) return 'ENS Governance · Active program'
+  if (!roundEndDate) return `Round ${roundNumber} · in progress`
+  return `Round ${roundNumber} · ${formatTimeLeft(roundEndDate)}`
+}
+
+export function HeroSection({ currentAprPct, roundNumber, roundEndDate }: HeroSectionProps) {
   return (
     <Section>
-      <ParticlesLayer>
-        {PARTICLE_CONFIGS.map(p => (
-          <Particle key={p.id} $left={p.left} $size={p.size} $duration={p.duration} $delay={p.delay} $playing={true}>
+      <ParticlesLayer aria-hidden>
+        {PARTICLE_CONFIGS.map((p) => (
+          <Particle
+            key={p.id}
+            $left={p.left}
+            $size={p.size}
+            $duration={p.duration}
+            $delay={p.delay}
+          >
             <EnsSVG />
           </Particle>
         ))}
       </ParticlesLayer>
       <Content>
-        <HeroEyebrow>ENS Governance &middot; 90-Day Pilot</HeroEyebrow>
+        <HeroEyebrow>
+          <LiveDot tone="success" size={8} />
+          {buildEyebrow(roundNumber, roundEndDate)}
+        </HeroEyebrow>
         <Headline>
-          Your ENS could be earning <br />{' '}
-          <AprValue>{currentAprPct}% APR</AprValue>
+          Earn <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS,
+          <br />
+          automatically.
         </Headline>
-        <Subtitle>
-        Help secure ENS governance by delegating to an active voter.
-        Rewards are automatic, gas is sponsored.
-        </Subtitle>
+        <Subtitle>Delegate to an active voter — gas is on us.</Subtitle>
         <Actions>
           <RouterLink to="/voters">
             <Button colorStyle="bluePrimary">
-              Delegate Now &rarr;<FreeBadge>Free</FreeBadge>
+              Delegate now<FreeBadge>Free</FreeBadge>
             </Button>
           </RouterLink>
-          <RouterLink to="/rounds">
-            <Button colorStyle="blueSecondary">
-              View Rounds
-            </Button>
-          </RouterLink>
+          <AnchorLink href="#how-it-works">
+            <Button colorStyle="blueSecondary">See how it works ↓</Button>
+          </AnchorLink>
         </Actions>
       </Content>
     </Section>
