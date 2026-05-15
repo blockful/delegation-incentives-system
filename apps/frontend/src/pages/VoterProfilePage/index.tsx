@@ -238,7 +238,6 @@ const CopiedFlash = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.status.success.fg};
-  letter-spacing: 0.04em;
 `
 
 const Bio = styled.p`
@@ -338,7 +337,6 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
   background: rgba(255, 255, 255, 0.2);
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.04em;
   margin-left: ${tokens.spacing.sm};
 `
 
@@ -383,7 +381,6 @@ const StatValue = styled.span`
 const StatLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
 `
 
@@ -418,7 +415,6 @@ const SectionEyebrow = styled.span`
   display: block;
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
 `
 
@@ -502,7 +498,6 @@ const RewardCard = styled.a`
 const RewardEyebrow = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
 `
 

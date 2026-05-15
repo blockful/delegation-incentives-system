@@ -69,7 +69,6 @@ const SnapshotEyebrow = styled.span`
   z-index: 1;
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
 `
 

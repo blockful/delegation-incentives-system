@@ -60,9 +60,7 @@ const TitleBlock = styled.div`
 const Eyebrow = styled.span`
   display: block;
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
 `
 

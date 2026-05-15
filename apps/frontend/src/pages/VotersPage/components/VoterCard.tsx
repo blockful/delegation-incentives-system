@@ -133,9 +133,8 @@ const StatValue = styled.span`
 `
 
 const StatLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
+  font-size: ${tokens.font.size.sm};
   color: ${tokens.color.darkGray};
-  letter-spacing: 0.04em;
   font-weight: ${tokens.font.weight.semibold};
 `
 

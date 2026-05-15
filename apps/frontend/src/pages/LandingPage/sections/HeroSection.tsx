@@ -49,9 +49,7 @@ const Content = styled.div`
 const HeroEyebrow = styled.span`
   display: inline-block;
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
   margin-bottom: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.5s ease both;

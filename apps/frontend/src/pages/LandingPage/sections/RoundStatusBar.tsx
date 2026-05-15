@@ -32,15 +32,11 @@ const Card = styled.div`
 `
 
 const Tagline = styled.span`
-  font-size: 13px;
-  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.positiveEmphasis};
   text-align: center;
   width: 100%;
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size.base};
-  }
 `
 
 const DataRow = styled.div`
@@ -64,10 +60,10 @@ const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
 `
 
 const ColLabel = styled.span`
-  font-size: 14px;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  line-height: 18px;
+  line-height: 1.3;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -78,10 +74,10 @@ const ColLabel = styled.span`
 `
 
 const ColSub = styled.span`
-  font-size: 12px;
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.normal};
   color: ${tokens.color.darkGray};
-  line-height: 16px;
+  line-height: 1.35;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.base};
@@ -97,10 +93,10 @@ const LiveDot = styled.span`
 `
 
 const GrowthLabel = styled.span<{ $negative?: boolean }>`
-  font-size: 14px;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${({ $negative }) => ($negative ? tokens.color.negative : tokens.color.positiveEmphasis)};
-  line-height: 18px;
+  line-height: 1.3;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.lg};

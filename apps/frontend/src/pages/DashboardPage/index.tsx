@@ -81,9 +81,8 @@ const Column = styled.div`
 
 const SectionLabel = styled.span`
   display: block;
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.06em;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
   margin-bottom: ${tokens.spacing.md};
 `

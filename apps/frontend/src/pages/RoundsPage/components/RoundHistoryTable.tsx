@@ -58,11 +58,9 @@ const Row = styled.tr`
 const Th = styled.th`
   padding: ${tokens.spacing.sm} ${tokens.spacing.md};
   text-align: left;
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
-  text-transform: uppercase;
-  letter-spacing: 0;
   border-bottom: 1px solid ${tokens.color.borderLight};
 `
 
@@ -83,9 +81,7 @@ const Td = styled.td`
       content: attr(data-label);
       color: ${tokens.color.darkGray};
       font-size: ${tokens.font.size.sm};
-      font-weight: ${tokens.font.weight.bold};
-      text-transform: uppercase;
-      letter-spacing: 0;
+      font-weight: ${tokens.font.weight.semibold};
     }
 
     &:last-child {

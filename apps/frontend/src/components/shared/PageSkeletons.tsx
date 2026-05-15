@@ -11,9 +11,7 @@ import {
   SkeletonText,
 } from './Skeleton'
 
-const SectionLabelSkeleton = styled(SkeletonBlock)`
-  text-transform: uppercase;
-`
+const SectionLabelSkeleton = styled(SkeletonBlock)``
 
 const FluidSkeletonBlock = styled(SkeletonBlock)`
   flex: 1;

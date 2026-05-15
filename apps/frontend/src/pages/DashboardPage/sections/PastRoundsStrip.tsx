@@ -26,7 +26,6 @@ const SectionHeader = styled.div`
 const Eyebrow = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.06em;
   color: ${tokens.color.darkGray};
 `
 
@@ -99,7 +98,6 @@ const Card = styled(Link)`
 const RoundLabel = styled.span`
   font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0.04em;
   color: ${tokens.color.darkGray};
 `
 
@@ -129,7 +127,6 @@ const StatusBadge = styled.span<{ $tone: 'success' | 'neutral' | 'pending' }>`
   background: ${({ $tone }) => tokens.color.status[$tone].bg};
   color: ${({ $tone }) => tokens.color.status[$tone].fg};
   border: 1px solid ${({ $tone }) => tokens.color.status[$tone].border};
-  letter-spacing: 0.04em;
 `
 
 const EmptyCard = styled.div`

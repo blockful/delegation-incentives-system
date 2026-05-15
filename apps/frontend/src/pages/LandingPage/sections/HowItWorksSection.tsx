@@ -29,9 +29,7 @@ const Header = styled.div`
 const Eyebrow = styled.span`
   display: block;
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
 `
 
@@ -169,10 +167,8 @@ const OrDivider = styled.div`
   gap: ${tokens.spacing.md};
   padding: ${tokens.spacing.sm} 0 0;
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.gray};
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 
   &::after {
     content: '';

@@ -17,9 +17,7 @@ const Card = styled.div`
 
 const Label = styled.span`
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  text-transform: uppercase;
-  letter-spacing: 0;
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
 `
 

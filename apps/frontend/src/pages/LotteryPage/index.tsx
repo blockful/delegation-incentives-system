@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrophy } from '@fortawesome/free-solid-svg-icons'
 import { isAddress } from 'viem'
-import { fadeInUp } from '@/styles'
+import { fadeInUp, Eyebrow, PageTitle } from '@/styles'
 import { useLottery } from '@/features/lottery/useLottery'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { LotteryPageSkeleton } from '@/components/shared/PageSkeletons'
 import { ToneCallout, type ToneCalloutTone } from '@/components/shared/ToneCallout'
+import { BucketSlotGrid } from '@/components/shared/BucketSlotGrid'
 import type {
   LotteryBucketDetail,
   LotteryDetail,
@@ -79,23 +80,11 @@ const PrizePillSparkle = styled.span`
   font-size: ${tokens.font.size.base};
 `
 
-const Eyebrow = styled.span`
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0;
-`
-
-const Title = styled.h1`
-  margin: 0;
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size['4xl']};
-  font-weight: ${tokens.font.weight.black};
-  line-height: 1.1;
-  letter-spacing: 0;
+const Title = styled(PageTitle)`
+  font-size: ${tokens.font.size['3xl']};
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
+    font-size: ${tokens.font.size['4xl']};
   }
 `
 
@@ -149,23 +138,6 @@ const Panel = styled.section`
   min-width: 0;
 `
 
-const StatusPanel = styled(Panel)<{ $tone: StatusTone }>`
-  border-color: ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.status.success.border
-    if ($tone === 'warning') return tokens.color.status.warning.border
-    if ($tone === 'pending') return tokens.color.status.pending.border
-    if ($tone === 'error') return tokens.color.status.danger.border
-    return tokens.color.status.neutral.border
-  }};
-  background: ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.status.success.bg
-    if ($tone === 'warning') return tokens.color.status.warning.bg
-    if ($tone === 'pending') return tokens.color.status.pending.bg
-    if ($tone === 'error') return tokens.color.status.danger.bg
-    return tokens.color.status.neutral.bg
-  }};
-`
-
 const PanelHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -200,22 +172,6 @@ const RoundPill = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   white-space: nowrap;
-`
-
-const StatGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${tokens.spacing.md};
-
-  @media (min-width: 680px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-`
-
-const StatusMetricGrid = styled(StatGrid)`
-  @media (min-width: 680px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 `
 
 const Stat = styled.div`
@@ -297,9 +253,26 @@ const RoundOption = styled(Link)<{ $active?: boolean }>`
   background: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.white)};
   color: ${tokens.color.darkBlue};
   text-decoration: none;
+  transition:
+    border-color ${tokens.transition.fast},
+    background ${tokens.transition.fast},
+    transform ${tokens.transition.fast};
 
   &:hover {
     border-color: ${tokens.color.blue};
+    background: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.bgSubtle)};
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
   }
 `
 
@@ -370,17 +343,60 @@ const BucketOption = styled(Link)<{ $active?: boolean }>`
   background: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.white)};
   color: ${tokens.color.darkBlue};
   text-decoration: none;
-  box-shadow: ${({ $active }) => ($active ? tokens.shadow.sm : 'none')};
+  box-shadow: ${({ $active }) => ($active ? tokens.shadow.soft : 'none')};
+  transition:
+    border-color ${tokens.transition.fast},
+    background ${tokens.transition.fast},
+    transform ${tokens.transition.fast};
 
   &:hover {
     border-color: ${tokens.color.blue};
+    background: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.bgSubtle)};
+    transform: translateX(2px);
   }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
+  }
+`
+
+const BucketOptionTitleRow = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
 `
 
 const BucketOptionTitle = styled.span`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   white-space: nowrap;
+`
+
+const YouPin = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.status.success.bg};
+  border: 1px solid ${tokens.color.status.success.border};
+  color: ${tokens.color.status.success.fg};
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.semibold};
+`
+
+const YouDot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${tokens.color.status.success.border};
 `
 
 const BucketOptionMeta = styled.span`
@@ -434,6 +450,22 @@ const ConditionName = styled.strong`
   color: ${tokens.color.darkBlue};
   font-size: ${tokens.font.size.sm};
   margin-bottom: 2px;
+`
+
+const SlotGridSection = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  padding-top: ${tokens.spacing.md};
+  border-top: 1px solid ${tokens.color.borderLight};
+`
+
+const SlotGridCaption = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.darkGray};
+  line-height: 1.5;
+  max-width: 680px;
 `
 
 const SubsectionHeader = styled.div`
@@ -620,11 +652,30 @@ function getRoundLotteryMeta(round: RoundSummary): string {
   return `${bucketCount.toLocaleString('en-US')} ${bucketCount === 1 ? 'bucket' : 'buckets'} · ${entryCount.toLocaleString('en-US')} entries`
 }
 
-function getSelectedBucket(lottery: LotteryDetail | null, bucketNumber: number | null): LotteryBucketDetail | null {
+function findUserBucket(
+  lottery: LotteryDetail | null,
+  address: string,
+): LotteryBucketDetail | null {
+  if (!lottery || !address) return null
+  return (
+    lottery.buckets.find((bucket) =>
+      bucket.entries.some((entry) => sameAddress(entry.address, address)),
+    ) ?? null
+  )
+}
+
+function getSelectedBucket(
+  lottery: LotteryDetail | null,
+  bucketNumber: number | null,
+  activeAddress: string,
+): LotteryBucketDetail | null {
   if (!lottery || lottery.buckets.length === 0) return null
-  const requestedIndex = bucketNumber == null ? 0 : bucketNumber - 1
-  return lottery.buckets.find((bucket) => bucket.bucketIndex === requestedIndex)
-    ?? lottery.buckets[0]
+  if (bucketNumber != null) {
+    const requestedIndex = bucketNumber - 1
+    return lottery.buckets.find((bucket) => bucket.bucketIndex === requestedIndex)
+      ?? lottery.buckets[0]
+  }
+  return findUserBucket(lottery, activeAddress) ?? lottery.buckets[0]
 }
 
 function getBucketParticipantCount(bucket: LotteryBucketDetail): number {
@@ -843,19 +894,6 @@ function HeaderBlock({
   )
 }
 
-function StatusMetrics({ metrics }: { metrics: StatusMetric[] }) {
-  return (
-    <StatusMetricGrid>
-      {metrics.map((metric) => (
-        <Stat key={metric.label}>
-          <StatValue>{metric.value}</StatValue>
-          <StatLabel>{metric.label}</StatLabel>
-        </Stat>
-      ))}
-    </StatusMetricGrid>
-  )
-}
-
 function mapTone(tone: StatusTone): ToneCalloutTone {
   return tone === 'error' ? 'danger' : tone
 }
@@ -891,7 +929,13 @@ function RoundAndBucketExplorer({
   selectedBucketNumber: number | null
   activeAddress: string
 }) {
-  const selectedBucket = getSelectedBucket(round.lottery, selectedBucketNumber)
+  const selectedBucket = getSelectedBucket(round.lottery, selectedBucketNumber, activeAddress)
+  const userBucket = activeAddress ? findUserBucket(round.lottery, activeAddress) : null
+  const orderedBuckets = round.lottery
+    ? (userBucket
+        ? [userBucket, ...round.lottery.buckets.filter((b) => b.bucketIndex !== userBucket.bucketIndex)]
+        : round.lottery.buckets)
+    : []
 
   return (
     <ExplorerGrid>
@@ -930,7 +974,9 @@ function RoundAndBucketExplorer({
           <OptionLabel>Buckets in Round {round.roundNumber}</OptionLabel>
           {round.lottery && round.lottery.buckets.length > 0 ? (
             <BucketList>
-              {round.lottery.buckets.map((bucket) => (
+              {orderedBuckets.map((bucket) => {
+                const isUserBucket = userBucket?.bucketIndex === bucket.bucketIndex
+                return (
                 <BucketOption
                   key={bucket.bucketIndex}
                   to={buildLotteryHref(searchParams, {
@@ -939,7 +985,15 @@ function RoundAndBucketExplorer({
                   })}
                   $active={selectedBucket?.bucketIndex === bucket.bucketIndex}
                 >
-                  <BucketOptionTitle>Bucket #{bucket.bucketIndex + 1}</BucketOptionTitle>
+                  <BucketOptionTitleRow>
+                    <BucketOptionTitle>Bucket #{bucket.bucketIndex + 1}</BucketOptionTitle>
+                    {isUserBucket && (
+                      <YouPin aria-label="Your bucket">
+                        <YouDot aria-hidden />
+                        You
+                      </YouPin>
+                    )}
+                  </BucketOptionTitleRow>
                   <BucketWinner>
                     <BucketOptionMeta>Winner</BucketOptionMeta>
                     <AddressIdentity
@@ -950,7 +1004,8 @@ function RoundAndBucketExplorer({
                     />
                   </BucketWinner>
                 </BucketOption>
-              ))}
+                )
+              })}
             </BucketList>
           ) : (
             <PanelBody>
@@ -992,6 +1047,21 @@ function SelectedBucketDetail({
   bucket: LotteryBucketDetail
   activeAddress: string
 }) {
+  const rowRefs = useRef<Map<number, HTMLTableRowElement | null>>(new Map())
+
+  const handleSlotClick = (entry: LotteryEntryDetail) => {
+    const row = rowRefs.current.get(entry.entryIndex)
+    if (!row) return
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    row.animate(
+      [
+        { backgroundColor: tokens.color.lightBlue },
+        { backgroundColor: 'transparent' },
+      ],
+      { duration: 1200, easing: 'ease-out' },
+    )
+  }
+
   return (
     <Panel>
       <PanelHeader>
@@ -1045,6 +1115,19 @@ function SelectedBucketDetail({
         </ConditionItem>
       </ConditionGrid>
 
+      <SlotGridSection>
+        <SlotGridCaption>
+          Each slot below is one entry. Width is proportional to that entry's ENS share — wider slots had higher odds. The winning slot is highlighted in green.
+        </SlotGridCaption>
+        <BucketSlotGrid
+          entries={bucket.entries}
+          winnerAddress={bucket.winner}
+          highlightAddress={activeAddress}
+          onSlotClick={handleSlotClick}
+          ariaLabel={`Bucket ${bucket.bucketIndex + 1} entry distribution`}
+        />
+      </SlotGridSection>
+
       <SubsectionHeader>
         <div>
           <SubsectionTitle>Participants</SubsectionTitle>
@@ -1077,6 +1160,7 @@ function SelectedBucketDetail({
               return (
                 <Tr
                   key={`${bucket.bucketIndex}-${entry.entryIndex}`}
+                  ref={(el) => { rowRefs.current.set(entry.entryIndex, el) }}
                   $highlight={isActiveAddress}
                   $winner={isWinner}
                 >

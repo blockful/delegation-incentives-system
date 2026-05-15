@@ -31,7 +31,7 @@ describe('TransparencyPage', () => {
   it('renders how rewards calculated steps', async () => {
     renderApp(<TransparencyPage />)
     expect(
-      screen.getByText('How rewards are calculated'),
+      screen.getByText('How Rewards Are Calculated'),
     ).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText(/180-day moving average/)).toBeInTheDocument()
