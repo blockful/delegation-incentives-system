@@ -7,6 +7,8 @@ const StyledFooter = styled.footer`
   background: ${tokens.color.darkBlue};
   color: ${tokens.color.white};
   padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']} ${tokens.spacing['2xl']};
+  border-top-left-radius: 32px;
+  border-top-right-radius: 32px;
 
   @media (min-width: 768px) {
     padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['3xl']};
@@ -53,6 +55,18 @@ const BrandSub = styled.span`
   color: rgba(255, 255, 255, 0.75);
   max-width: 340px;
   line-height: 1.5;
+`
+
+const BrandSubLink = styled.a`
+  color: ${tokens.color.white};
+  text-decoration: none;
+  font-weight: ${tokens.font.weight.bold};
+  transition: opacity ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
+    opacity: 0.7;
+  }
 `
 
 const NavColumn = styled.nav`
@@ -155,7 +169,25 @@ export function Footer() {
         <Top>
           <BrandBlock>
             <BrandText>A security campaign for safer ENS governance.</BrandText>
-            <BrandSub>Built by Blockful · Powered by Anticapture.</BrandSub>
+            <BrandSub>
+              Built by{' '}
+              <BrandSubLink
+                href="https://blockful.io?utm_source=ens-incentives&utm_medium=footer&utm_campaign=delegation-incentives"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Blockful
+              </BrandSubLink>
+              {' · '}Powered by{' '}
+              <BrandSubLink
+                href="https://anticapture.com?utm_source=ens-incentives&utm_medium=footer&utm_campaign=delegation-incentives"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Anticapture
+              </BrandSubLink>
+              .
+            </BrandSub>
           </BrandBlock>
 
           <NavColumn>

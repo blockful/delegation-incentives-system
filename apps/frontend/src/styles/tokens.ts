@@ -4,18 +4,18 @@
  */
 export const tokens = {
   color: {
-    // Primary
-    blue: '#5298FF',
-    lightBlue: '#EFF6FF',
-    lightBlueOpacity: 'rgb(81 153 255 / 12%)',
-    darkBlue: '#1F2328',
-    darkGray: '#57606A',
+    // Primary — aligned with Thorin DS tokens
+    blue: '#3889ff',
+    lightBlue: '#EBF3FF',
+    lightBlueOpacity: 'rgba(56, 137, 255, 0.12)',
+    darkBlue: '#1e2122',
+    darkGray: '#5d5c62',
     middleGray: '#D0D7DE',
     gray: '#D0D7DE',
     white: '#fff',
 
     // Extended
-    green: '#007C23',
+    green: '#199c75',
     magenta: '#F53293',
     yellow: '#FFF72F',
     darkBrown: '#674D49',
@@ -25,22 +25,23 @@ export const tokens = {
     midnightBlue: '#093C52',
 
     // Semantic
-    text: '#011A25',
-    textMuted: '#4A5C63',
+    text: '#1e2122',
+    textMuted: '#5d5c62',
     textFaint: '#C4C7C8',
-    border: '#E5E5E5',
+    border: '#e8e8e8',
     surface: '#fff',
     surfaceAlt: '#f6f6f6',
     negative: '#F53293',
-    positive: '#007C23',
-    positiveEmphasis: '#1A7F37',
+    positive: '#199c75',
+    positiveEmphasis: '#199c75',
     accent: '#0080BC',
     orange: '#BC4C00',
     lightOrange: '#FFF1E5',
     bgSubtle: '#F6F8FA',
-    borderLight: '#EAEEF2',
-    tierHighlight: '#DAFBE1',
-    textSubtle: '#8C959F',
+    borderLight: '#e8e8e8',
+    tierHighlight: '#e7f4ef',
+    textSubtle: '#9b9ba7',
+    textSecondary: '#9b9ba7',
 
     // Surface ladder — page mat vs card; see docs §2.8 DS audit
     surfaceMat: '#FAFAFC',
@@ -48,11 +49,11 @@ export const tokens = {
     // Status families — 5 tones × 3 roles (bg / border / fg)
     // Replaces inline $tone branching in AddressLotteryPanel, StatusPanel, ErrorCard
     status: {
-      success: { bg: '#DAFBE1', border: '#007C23', fg: '#1A7F37' },
+      success: { bg: '#e7f4ef', border: '#199c75', fg: '#199c75' },
       warning: { bg: '#FFF1E5', border: '#BC4C00', fg: '#9A3412' },
-      pending: { bg: '#EFF6FF', border: '#5298FF', fg: '#1E5BC9' },
+      pending: { bg: '#EBF3FF', border: '#3889ff', fg: '#1E5BC9' },
       danger:  { bg: '#FEE9F0', border: '#F53293', fg: '#B91552' },
-      neutral: { bg: '#FFFFFF', border: '#EAEEF2', fg: '#57606A' },
+      neutral: { bg: '#FFFFFF', border: '#e8e8e8', fg: '#5d5c62' },
     },
   },
 

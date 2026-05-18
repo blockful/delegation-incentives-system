@@ -3,6 +3,7 @@ import styled, { css } from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
+import { fadeInUp } from '@/styles/primitives'
 
 const Section = styled.section`
   background: ${tokens.color.surfaceAlt};
@@ -42,8 +43,12 @@ const Header = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.md};
-  margin-bottom: ${tokens.spacing['4xl']};
+  margin-bottom: ${tokens.spacing['5xl']};
   max-width: 560px;
+
+  @media (min-width: 768px) {
+    margin-bottom: ${tokens.spacing['7xl']};
+  }
 `
 
 const Eyebrow = styled.span`
@@ -103,13 +108,42 @@ const StepsRow = styled.div`
   }
 `
 
-const StepCol = styled.div<{ $index: number }>`
+const StepCol = styled.div<{
+  $index: number
+  $animated: boolean
+  $visible: boolean
+}>`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.md};
   will-change: transform, opacity;
 
+  /* Mobile: each step is a self-contained card. */
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.white};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+
+  ${({ $animated, $visible, $index }) =>
+    $animated &&
+    css`
+      opacity: 0;
+      ${$visible &&
+      css`
+        animation: ${fadeInUp} 0.55s cubic-bezier(0.22, 1, 0.36, 1)
+          ${$index * 0.12}s both;
+      `}
+    `}
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+  }
+
   @media (min-width: 768px) {
+    background: transparent;
+    border: none;
+    border-radius: 0;
     position: relative;
     padding: ${({ $index }) => $index * STEP_OFFSET}px
       ${tokens.spacing.lg} 0 ${tokens.spacing.lg};
@@ -176,7 +210,10 @@ const StepDesc = styled.p`
   line-height: 1.55;
   color: ${tokens.color.darkGray};
   margin: 0;
-  max-width: 260px;
+
+  @media (min-width: 768px) {
+    max-width: 260px;
+  }
 `
 
 const TagPill = styled.span<{ $bg: string; $color: string }>`
@@ -195,6 +232,20 @@ const CtaRow = styled.div<{ $revealed: boolean }>`
   flex-direction: column;
   gap: ${tokens.spacing.md};
   margin-top: ${tokens.spacing['4xl']};
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+
+  ${({ $revealed }) =>
+    $revealed &&
+    css`
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    `}
 
   a {
     text-decoration: none;
@@ -210,20 +261,6 @@ const CtaRow = styled.div<{ $revealed: boolean }>`
     flex-direction: row;
     justify-content: flex-end;
     margin-top: ${tokens.spacing['3xl']};
-    opacity: 0;
-    transform: translateY(16px);
-    pointer-events: none;
-    transition:
-      opacity 0.5s ease,
-      transform 0.5s ease;
-
-    ${({ $revealed }) =>
-      $revealed &&
-      css`
-        opacity: 1;
-        transform: translateY(0);
-        pointer-events: auto;
-      `}
 
     a {
       display: inline-flex;
@@ -292,8 +329,12 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 
 export function HowItWorksSection() {
   const sectionRef = useRef<HTMLElement>(null)
+  const stepsRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLDivElement>(null)
   const [progress, setProgress] = useState(1)
   const [enabled, setEnabled] = useState(false)
+  const [stepsVisible, setStepsVisible] = useState(false)
+  const [ctaRevealedFallback, setCtaRevealedFallback] = useState(false)
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -301,7 +342,48 @@ export function HowItWorksSection() {
     setEnabled(!reduce && desktop)
     if (reduce || !desktop) setProgress(1)
     else setProgress(0)
+    if (reduce) {
+      setStepsVisible(true)
+      setCtaRevealedFallback(true)
+    }
   }, [])
+
+  // Mobile (and any non-scroll-lock context): when the steps row enters the
+  // viewport, flip a single flag — each card animates in with an index-based
+  // delay (CSS keyframe with stagger), so the reveal feels orchestrated.
+  useEffect(() => {
+    if (enabled) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const observers: IntersectionObserver[] = []
+    if (stepsRef.current) {
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setStepsVisible(true)
+            obs.disconnect()
+          }
+        },
+        { threshold: 0.1, rootMargin: '0px 0px -5% 0px' },
+      )
+      obs.observe(stepsRef.current)
+      observers.push(obs)
+    }
+    if (ctaRef.current) {
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setCtaRevealedFallback(true)
+            obs.disconnect()
+          }
+        },
+        { threshold: 0.25 },
+      )
+      obs.observe(ctaRef.current)
+      observers.push(obs)
+    }
+    return () => observers.forEach((o) => o.disconnect())
+  }, [enabled])
 
   useEffect(() => {
     if (!enabled) return
@@ -356,21 +438,28 @@ export function HowItWorksSection() {
             </Description>
           </Header>
 
-          <StepsRow>
+          <StepsRow ref={stepsRef}>
             {steps.map((step, i) => {
-              const start = STEP_REVEAL_START + i * stepSpan
-              const end = start + stepSpan * 1.5 // overlap with next step
-              const local = clamp01((progress - start) / (end - start))
-              const eased = easeOutCubic(enabled ? local : 1)
-              const ty = (1 - eased) * RISE_PX
+              const desktopStyle = enabled
+                ? (() => {
+                    const start = STEP_REVEAL_START + i * stepSpan
+                    const end = start + stepSpan * 1.5 // overlap with next step
+                    const local = clamp01((progress - start) / (end - start))
+                    const eased = easeOutCubic(local)
+                    const ty = (1 - eased) * RISE_PX
+                    return {
+                      transform: `translate3d(0, ${ty}px, 0)`,
+                      opacity: eased,
+                    }
+                  })()
+                : undefined
               return (
                 <StepCol
                   key={step.number}
                   $index={i}
-                  style={{
-                    transform: `translate3d(0, ${ty}px, 0)`,
-                    opacity: eased,
-                  }}
+                  $animated={!enabled}
+                  $visible={stepsVisible}
+                  style={desktopStyle}
                 >
                   <NumberBadge>{step.number}</NumberBadge>
                   <StepTitle>{step.title}</StepTitle>
@@ -383,12 +472,12 @@ export function HowItWorksSection() {
             })}
           </StepsRow>
 
-          <CtaRow $revealed={!enabled || ctaRevealed}>
+          <CtaRow
+            ref={ctaRef}
+            $revealed={enabled ? ctaRevealed : ctaRevealedFallback}
+          >
             <Link to="/rounds">
               <Button colorStyle="bluePrimary">Round breakdown &rarr;</Button>
-            </Link>
-            <Link to="/lottery">
-              <Button colorStyle="blueSecondary">Check lottery status</Button>
             </Link>
           </CtaRow>
         </Inner>

@@ -2,7 +2,8 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles/tokens'
-import { formatEnsWhole, formatTimeLeft } from '@/utils/format'
+import { formatTimeLeft } from '@/utils/format'
+import { formatPool } from '@/utils/dashboard'
 import { LiveDot } from '@/components/shared/LiveDot'
 
 interface RoundStatusBarProps {
@@ -47,7 +48,7 @@ const TrustItem = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.positiveEmphasis};
   line-height: 1.3;
@@ -132,7 +133,7 @@ export function RoundStatusBar({
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
   const displayRound = roundNumber
   const displayTimeLeft = formatTimeLeft(roundEndDate)
-  const displayPoolSizeEns = formatEnsWhole(poolSizeEns)
+  const displayPoolSizeEns = formatPool(poolSizeEns).toLowerCase()
 
   return (
     <Wrapper>

@@ -17,8 +17,11 @@ const StyledHeader = styled.header`
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  border-bottom: 1px solid ${tokens.color.border};
-  background: ${tokens.color.surface};
+  border-bottom: 1px solid ${tokens.color.white};
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -39,12 +42,18 @@ const Brand = styled(Link)`
   text-decoration: none;
   color: inherit;
   flex-shrink: 0;
+  transition: opacity ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
+    opacity: 0.6;
+  }
 `
 
 const BrandText = styled.span`
   font-weight: ${tokens.font.weight.bold};
   font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkBlue};
+  color: ${tokens.color.blue};
   white-space: nowrap;
 
   @media (max-width: 360px) {
@@ -60,7 +69,7 @@ const DesktopNav = styled.nav`
   display: none;
   gap: 6px;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: flex;
     align-items: center;
   }
@@ -71,25 +80,26 @@ const navLinkStyles = css`
   min-height: 40px;
   display: inline-flex;
   align-items: center;
-  padding: 0 ${tokens.spacing.md};
+  justify-content: center;
+  padding: 8px 16px;
   border-radius: ${tokens.radius.sm};
   text-decoration: none;
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
+  color: ${tokens.color.textSecondary};
   transition:
     background ${tokens.transition.fast},
     color ${tokens.transition.fast};
 
   &:hover {
     color: ${tokens.color.blue};
-    background: ${tokens.color.bgSubtle};
   }
 
   &.active {
     color: ${tokens.color.blue};
     font-weight: ${tokens.font.weight.medium};
-    background: ${tokens.color.lightBlue};
+    background: ${tokens.color.lightBlueOpacity};
+    border-radius: 9999px;
   }
 `
 
@@ -108,7 +118,7 @@ const ProfileScaler = styled.div`
 `
 
 const MobileOnly = styled.span`
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 `
@@ -116,7 +126,7 @@ const MobileOnly = styled.span`
 const DesktopOnly = styled.span`
   display: none;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: inline;
   }
 `
@@ -141,7 +151,7 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
     background: ${tokens.color.surfaceAlt};
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 
@@ -181,7 +191,7 @@ const Overlay = styled.div`
   background: rgba(1, 26, 37, 0.3);
   z-index: 99;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 `
@@ -198,7 +208,7 @@ const MobileDrawer = styled.nav`
   animation: ${slideIn} 0.2s ease;
   box-shadow: ${tokens.shadow.lg};
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 `

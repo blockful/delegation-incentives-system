@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import { Header } from './Header'
@@ -11,12 +12,13 @@ const Main = styled.main<{ $fullWidth?: boolean }>`
     $fullWidth
       ? ''
       : `
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: ${tokens.spacing.lg};
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: ${tokens.spacing.xl} ${tokens.spacing.lg};
 
     @media (min-width: 768px) {
-      padding: ${tokens.spacing['2xl']};
+      padding: 40px 24px 80px;
     }
   `}
 `
@@ -27,15 +29,22 @@ const Wrapper = styled.div<{ $hasGradient?: boolean }>`
   min-height: 100vh;
   ${({ $hasGradient }) =>
     $hasGradient
-      ? `background: linear-gradient(to bottom, ${tokens.color.lightBlue} 0%, ${tokens.color.white} 320px);`
+      ? `background:
+          linear-gradient(180deg, rgba(56, 137, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 20.4%),
+          ${tokens.color.white};`
       : ''}
 `
 
-const FULL_WIDTH_PATHS = ['/', '/lottery']
+const FULL_WIDTH_PATHS = ['/']
 
 export function AppLayout() {
   const { pathname } = useLocation()
   const isFullWidth = FULL_WIDTH_PATHS.includes(pathname)
+
+  // Reset scroll on route change so navigating into a new page starts at the top
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+  }, [pathname])
 
   return (
     <Wrapper $hasGradient={!isFullWidth}>

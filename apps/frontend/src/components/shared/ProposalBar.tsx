@@ -31,7 +31,7 @@ const Segment = styled.div<{ $voted: boolean; $index: number }>`
   position: relative;
   height: 12px;
   flex: 1;
-  border-radius: 4px;
+  border-radius: 9999px;
   background: ${({ $voted }) =>
     $voted ? tokens.color.positiveEmphasis : tokens.color.borderLight};
   border: 1px solid

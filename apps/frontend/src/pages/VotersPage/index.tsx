@@ -4,8 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useVoters } from '@/features/voters/useVoters'
 import { useStats } from '@/features/stats/useStats'
-import { tokens, fadeInUp, Eyebrow, ErrorMessage } from '@/styles'
-import { LiveDot } from '@/components/shared/LiveDot'
+import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { VoterCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
 import { VoterCard } from './components/VoterCard'
 import { SortControls, type SortState } from './components/SortControls'
@@ -13,18 +12,24 @@ import { StatsBar } from './components/StatsBar'
 import type { VoterDetail } from '@/api/types'
 
 const Page = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.4s ease both;
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
-    gap: ${tokens.spacing['3xl']};
+    gap: 64px;
   }
+`
+
+const CardsAndFilters = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['2xl']};
+  width: 100%;
 `
 
 const Grid = styled.div`
@@ -48,102 +53,78 @@ const Grid = styled.div`
 const TopSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['2xl']};
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: ${tokens.spacing['4xl']};
-  }
+  align-items: center;
+  gap: ${tokens.spacing['4xl']};
+  width: 100%;
 `
 
 const HeaderBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.sm};
-  flex: 1;
-  min-width: 0;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
 `
 
-const TitleRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: ${tokens.spacing.sm};
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: ${tokens.spacing.lg};
-  }
+const EyebrowPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid ${tokens.color.white};
+  border-radius: 14px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
 `
 
 const PageTitle = styled.h1`
   font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  line-height: 1.1;
+  letter-spacing: 0;
   margin: 0;
-  flex: 1;
-  min-width: 0;
+  text-align: center;
+  max-width: 720px;
+  text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
+    font-size: 68px;
   }
-`
-
-const CountChip = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: ${tokens.spacing.xs};
-  padding: 4px 10px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.bgSubtle};
-  border: 1px solid ${tokens.color.borderLight};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkGray};
-  white-space: nowrap;
-  flex-shrink: 0;
-`
-
-const CountChipValue = styled.span`
-  font-variant-numeric: tabular-nums;
-  font-family: ${tokens.font.mono};
-  color: ${tokens.color.darkBlue};
 `
 
 const Description = styled.p`
   font-size: ${tokens.font.size.lg};
-  line-height: 1.6;
+  line-height: 1.4;
   color: ${tokens.color.darkGray};
   margin: 0;
-  max-width: 560px;
+  max-width: 564px;
+  text-align: center;
+  text-wrap: pretty;
 `
 
 const StatsBarWrapper = styled.div`
   width: 100%;
-
-  @media (min-width: 768px) {
-    width: auto;
-    flex-shrink: 0;
-    align-self: center;
-  }
 `
 
 /* ─── Toolbar ─── */
 
-const Toolbar = styled.div`
+const FilterRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.lg};
+  flex-wrap: wrap;
 `
 
 const SearchRow = styled.div`
   position: relative;
   width: 100%;
+  max-width: 400px;
+  flex-shrink: 0;
 `
 
 const SearchIcon = styled.span`
@@ -158,18 +139,17 @@ const SearchIcon = styled.span`
 
 const SearchInput = styled.input`
   width: 100%;
-  padding: 12px 44px;
+  padding: 12px 16px 12px 44px;
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.pill};
+  border-radius: 9999px;
   background: ${tokens.color.surface};
   font-size: ${tokens.font.size.base};
   color: ${tokens.color.darkBlue};
   font-family: ${tokens.font.family};
   transition: all ${tokens.transition.fast};
-  box-shadow: ${tokens.shadow.soft};
 
   &::placeholder {
-    color: ${tokens.color.darkGray};
+    color: ${tokens.color.textSecondary};
   }
 
   &:hover {
@@ -207,72 +187,6 @@ const ClearButton = styled.button`
   }
 `
 
-const FiltersRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.sm};
-  align-items: stretch;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: center;
-    gap: ${tokens.spacing.lg};
-    flex-wrap: wrap;
-  }
-`
-
-const FilterGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.sm};
-  flex-wrap: wrap;
-`
-
-const FilterLabel = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkGray};
-  flex-shrink: 0;
-  margin-right: ${tokens.spacing.xs};
-`
-
-const FilterChip = styled.button<{ $active: boolean }>`
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
-  border-radius: ${tokens.radius.pill};
-  border: 1px solid ${({ $active }) => ($active ? tokens.color.darkBlue : tokens.color.borderLight)};
-  background: ${({ $active }) => ($active ? tokens.color.darkBlue : 'transparent')};
-  color: ${({ $active }) => ($active ? tokens.color.white : tokens.color.darkGray)};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  cursor: pointer;
-  transition:
-    border-color ${tokens.transition.fast},
-    background ${tokens.transition.fast},
-    color ${tokens.transition.fast},
-    transform ${tokens.transition.fast};
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  &:hover {
-    opacity: 0.85;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-const ResultCount = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-  font-variant-numeric: tabular-nums;
-
-  @media (min-width: 768px) {
-    margin-left: auto;
-  }
-`
-
 const EmptyState = styled.div`
   padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   background: ${tokens.color.surface};
@@ -300,11 +214,10 @@ const ResetLink = styled.button`
   margin-top: ${tokens.spacing.md};
 
   &:hover {
-    text-decoration: underline;
+    text-decoration: none;
+    opacity: 0.8;
   }
 `
-
-type ParticipationFilter = 'all' | 'high' | 'perfect'
 
 function shuffled(voters: VoterDetail[]): VoterDetail[] {
   const copy = [...voters]
@@ -321,7 +234,6 @@ export function VotersPage() {
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
   const [search, setSearch] = useState('')
-  const [participation, setParticipation] = useState<ParticipationFilter>('all')
 
   const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
 
@@ -338,13 +250,6 @@ export function VotersPage() {
         const addr = v.address.toLowerCase()
         return ens.includes(q) || addr.includes(q)
       })
-    }
-
-    // Participation filter
-    if (participation === 'high') {
-      filtered = filtered.filter((v) => v.last10ProposalsVoted.filter(Boolean).length >= 9)
-    } else if (participation === 'perfect') {
-      filtered = filtered.filter((v) => v.last10ProposalsVoted.filter(Boolean).length === 10)
     }
 
     // Sort
@@ -367,34 +272,24 @@ export function VotersPage() {
 
     return filtered
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, sort, shuffleSeed, search, participation])
+  }, [data, sort, shuffleSeed, search])
 
   const totalCount = data?.length ?? 0
   const filteredCount = voters?.length ?? 0
-  const hasFilters = search.length > 0 || participation !== 'all'
+  const hasFilters = search.length > 0
 
   const resetFilters = () => {
     setSearch('')
-    setParticipation('all')
   }
 
   return (
     <Page>
         <TopSection>
           <HeaderBlock>
-            <Eyebrow>Delegate Your Tokens</Eyebrow>
-            <TitleRow>
-              <PageTitle>Delegate to someone who shows up</PageTitle>
-              {data && data.length > 0 && (
-                <CountChip aria-label={`${data.length} delegates active`}>
-                  <LiveDot tone="success" pulse />
-                  <CountChipValue>{data.length}</CountChipValue>
-                  delegates active
-                </CountChip>
-              )}
-            </TitleRow>
+            <EyebrowPill>Delegate your tokens</EyebrowPill>
+            <PageTitle>Delegate to someone who shows up</PageTitle>
             <Description>
-              Choose an active voter — they cast votes on at least 7 of the last 10 proposals — to maximize your rewards.
+              Choose an active voter, they cast votes on at least 7 of the last 10 proposals, to maximize your rewards.
             </Description>
           </HeaderBlock>
 
@@ -403,6 +298,7 @@ export function VotersPage() {
               <StatsBarSkeleton />
             ) : (
               <StatsBar
+                activeVoterCount={stats?.activeVoterCount}
                 totalDelegatedEns={stats?.totalDelegatedEns}
                 holdersEarning={stats?.holdersEarning}
               />
@@ -410,80 +306,49 @@ export function VotersPage() {
           </StatsBarWrapper>
         </TopSection>
 
-        <Toolbar>
-          <SearchRow>
-            <SearchIcon aria-hidden>
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </SearchIcon>
-            <SearchInput
-              type="search"
-              placeholder="Search by ENS name or 0x address…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search voters"
-            />
-            {search.length > 0 && (
-              <ClearButton type="button" onClick={() => setSearch('')} aria-label="Clear search">
-                <FontAwesomeIcon icon={faXmark} />
-              </ClearButton>
-            )}
-          </SearchRow>
+        <CardsAndFilters>
+          <FilterRow>
+            <SearchRow>
+              <SearchIcon aria-hidden>
+                <FontAwesomeIcon icon={faMagnifyingGlass} />
+              </SearchIcon>
+              <SearchInput
+                type="search"
+                placeholder="Search by ENS name or 0x address…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Search voters"
+              />
+              {search.length > 0 && (
+                <ClearButton type="button" onClick={() => setSearch('')} aria-label="Clear search">
+                  <FontAwesomeIcon icon={faXmark} />
+                </ClearButton>
+              )}
+            </SearchRow>
 
-          <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
+            <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
+          </FilterRow>
 
-          <FiltersRow>
-            <FilterGroup>
-              <FilterLabel>Participation</FilterLabel>
-              <FilterChip
-                type="button"
-                $active={participation === 'all'}
-                onClick={() => setParticipation('all')}
-              >
-                All
-              </FilterChip>
-              <FilterChip
-                type="button"
-                $active={participation === 'high'}
-                onClick={() => setParticipation('high')}
-              >
-                ≥ 9/10
-              </FilterChip>
-              <FilterChip
-                type="button"
-                $active={participation === 'perfect'}
-                onClick={() => setParticipation('perfect')}
-              >
-                Perfect 10/10
-              </FilterChip>
-            </FilterGroup>
+          {loading && <VoterCardsSkeleton />}
 
-            {data && (
-              <ResultCount>
-                Showing <strong>{filteredCount}</strong> of {totalCount}
-              </ResultCount>
-            )}
-          </FiltersRow>
-        </Toolbar>
+          {error && <ErrorMessage>Failed to load voters: {error}</ErrorMessage>}
 
-        {loading && <VoterCardsSkeleton />}
+          {voters && voters.length === 0 && hasFilters && (
+            <EmptyState>
+              <EmptyTitle>No voters match your search</EmptyTitle>
+              <div>Try a different ENS name or address.</div>
+              <ResetLink type="button" onClick={resetFilters}>Clear search</ResetLink>
+            </EmptyState>
+          )}
 
-        {error && <ErrorMessage>Failed to load voters: {error}</ErrorMessage>}
-
-        {voters && voters.length === 0 && hasFilters && (
-          <EmptyState>
-            <EmptyTitle>No voters match these filters</EmptyTitle>
-            <div>Try widening Participation, or clearing the search.</div>
-            <ResetLink type="button" onClick={resetFilters}>Reset filters</ResetLink>
-          </EmptyState>
-        )}
-
-        {voters && voters.length > 0 && (
-          <Grid>
-            {voters.map((v) => (
-              <VoterCard key={v.address} voter={v} />
-            ))}
-          </Grid>
-        )}
+          {voters && voters.length > 0 && (
+            <Grid>
+              {voters.map((v) => (
+                <VoterCard key={v.address} voter={v} />
+              ))}
+            </Grid>
+          )}
+        </CardsAndFilters>
     </Page>
   )
 }

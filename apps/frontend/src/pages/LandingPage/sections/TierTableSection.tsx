@@ -232,6 +232,7 @@ const CtaWrap = styled.div`
 const List = styled.div`
   display: flex;
   flex-direction: column;
+  gap: ${tokens.spacing.sm};
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
@@ -244,7 +245,8 @@ const Row = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
   align-items: center;
   gap: ${tokens.spacing.lg};
   padding: ${tokens.spacing.lg} ${tokens.spacing.md};
-  border-top: 1px solid ${tokens.color.borderLight};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
   opacity: ${({ $isLocked }) => ($isLocked ? 0.5 : 1)};
   background-image: linear-gradient(
     to right,
@@ -256,10 +258,6 @@ const Row = styled.div<{ $isCurrent: boolean; $isLocked: boolean }>`
   transition:
     background-position 0.9s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.25s ease;
-
-  &:last-child {
-    border-bottom: 1px solid ${tokens.color.borderLight};
-  }
 
   ${({ $isCurrent }) =>
     $isCurrent &&

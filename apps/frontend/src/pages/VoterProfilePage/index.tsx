@@ -1,35 +1,33 @@
-import { useCallback, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import styled, { keyframes } from 'styled-components'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCopy, faCheck, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCircleCheck,
+  faCircleMinus,
+  faCircleXmark,
+  faBolt,
+  faUsers,
+  faSquarePollVertical,
+  faClock,
+  faArrowLeft,
+  faCopy,
+  faCheck,
+} from '@fortawesome/free-solid-svg-icons'
 import { faXTwitter } from '@fortawesome/free-brands-svg-icons'
 import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
-import { api } from '@/api'
 import { MOCK_ENS_PROFILES, MOCK_ENS_TO_ADDRESS } from '@/api/mock'
 import { env } from '@/config/env'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
-import { useAsync } from '@/hooks/useAsync'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
-import { ProposalBar } from '@/components/shared/ProposalBar'
-import { BackLink } from '@/components/shared/BackLink'
-import { StatStrip } from '@/components/shared/StatStrip'
-import { DataStrip, DataStripItem } from '@/components/shared/DataStrip'
-import { ToneCallout } from '@/components/shared/ToneCallout'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
-import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
-import type { RoundSummary } from '@/api/types'
+import { getAnticaptureDelegateUrl } from '@/utils/delegation'
+import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
 
-interface RewardHistoryEntry {
-  roundNumber: number
-  month: string
-  totalRewardEns: string
-  rewardStatus: 'paid' | 'no_reward' | 'not_eligible' | 'pending' | 'unavailable'
-}
+/* ─── Helpers ─── */
 
 function formatVotingPower(vpWei: string): string {
   const ens = Number(vpWei) / 1e18
@@ -46,433 +44,246 @@ function formatVotingPower(vpWei: string): string {
   return formatEnsAmount(ens)
 }
 
-function formatActiveSince(iso: string): { relative: string; absolute: string } {
+function formatActiveSinceShort(iso: string | null): string {
+  if (!iso) return '—'
   const date = new Date(iso)
-  const absolute = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-  const now = new Date()
-  const months = Math.max(
-    0,
-    (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth())
-  )
-  const years = Math.floor(months / 12)
-  const remMonths = months % 12
-  let relative = ''
-  if (years > 0 && remMonths > 0) relative = `${years}y ${remMonths}mo ago`
-  else if (years > 0) relative = `${years}y ago`
-  else if (remMonths > 0) relative = `${remMonths}mo ago`
-  else relative = 'this month'
-  return { relative, absolute }
-}
-
-function formatMonthLabel(month: string): string {
-  // month format from API is `YYYY-MM`
-  const [y, m] = month.split('-').map(Number)
-  if (!y || !m) return month
-  const date = new Date(Date.UTC(y, m - 1, 1))
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  if (Number.isNaN(date.getTime())) return '—'
+  const month = date.toLocaleDateString('en-US', { month: 'short' })
+  const year = String(date.getFullYear()).slice(-2)
+  return `${month} ‘${year}`
 }
 
 function isAddress(value: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(value)
 }
 
-async function fetchRewardHistory(voterAddress: string, limit = 3): Promise<RewardHistoryEntry[]> {
-  const { rounds } = await api.rounds()
-  const paid: RoundSummary[] = rounds
-    .filter((r) => r.status === 'paid')
-    .sort((a, b) => b.roundNumber - a.roundNumber)
-    .slice(0, limit)
-  if (paid.length === 0) return []
-  const details = await Promise.all(
-    paid.map((r) => api.round(r.roundNumber, voterAddress, { rewardLimit: '25' }).catch(() => null))
-  )
-  return details
-    .map((d, i) => {
-      const r = paid[i]
-      const ar = d?.addressReward
-      return {
-        roundNumber: r.roundNumber,
-        month: r.month,
-        totalRewardEns: ar?.voterRewardEns ?? '0',
-        rewardStatus: ar?.rewardStatus ?? 'unavailable',
-      }
-    })
-}
-
-/* ─── Animations ─── */
-
-const heroScaleIn = keyframes`
-  from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
-`
-
-const subtleBreathe = keyframes`
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50%      { opacity: 0.85; transform: scale(1.05); }
-`
-
-/* ─── Layout ─── */
+/* ─── Page layout ─── */
 
 const Page = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
+  width: 100%;
+  max-width: 1120px;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['3xl']};
+  animation: ${fadeInUp} 0.4s ease both;
+`
+
+/* ─── Header card ─── */
+
+const HeaderCard = styled.section`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['2xl']};
-  animation: ${fadeInUp} 0.4s ease both;
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
-    gap: ${tokens.spacing['3xl']};
-  }
-`
-
-/* ─── Hero billboard ─── */
-
-const HeroCard = styled.section`
-  position: relative;
+  padding: ${tokens.spacing['2xl']};
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.soft};
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
-  display: grid;
-  gap: ${tokens.spacing.xl};
-  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['3xl']};
+    display: grid;
     grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: ${tokens.spacing['4xl']};
-  }
-
-  /* Decorative radial gradient — visual interest without noise */
-  &::before {
-    content: '';
-    position: absolute;
-    top: -120px;
-    right: -120px;
-    width: 360px;
-    height: 360px;
-    background: radial-gradient(circle, ${tokens.color.lightBlueOpacity} 0%, transparent 65%);
-    pointer-events: none;
-    animation: ${subtleBreathe} 6s ease-in-out infinite;
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
+    grid-template-areas:
+      "back avatar"
+      "text avatar";
+    column-gap: ${tokens.spacing['4xl']};
+    row-gap: ${tokens.spacing['2xl']};
   }
 `
 
-const HeroIdentity = styled.div`
-  position: relative;
-  z-index: 1;
+const HeaderText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  gap: ${tokens.spacing['2xl']};
   min-width: 0;
-`
-
-const HeroTopRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.lg};
-  animation: ${heroScaleIn} 0.35s ease both;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-`
-
-const AvatarWrap = styled.div`
-  flex-shrink: 0;
-`
-
-const NameStack = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-`
-
-const HeroName = styled.h1`
-  font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  margin: 0;
-  word-break: break-word;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['4xl']};
+    grid-area: text;
   }
 `
 
-const AddressChip = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  padding: 4px 10px;
-  border-radius: ${tokens.radius.pill};
-  border: 1px solid ${tokens.color.borderLight};
-  background: ${tokens.color.surfaceMat};
-  font-family: ${tokens.font.mono};
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-  cursor: pointer;
-  transition: all ${tokens.transition.fast};
-
-  &:hover {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.blue};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-const CopiedFlash = styled.span`
-  font-family: ${tokens.font.family};
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.status.success.fg};
-`
-
-const Bio = styled.p`
-  margin: 0;
-  font-size: ${tokens.font.size.base};
-  line-height: 1.6;
-  color: ${tokens.color.darkGray};
-  max-width: 560px;
-`
-
-const VerifiedChips = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${tokens.spacing.sm};
-`
-
-const Chip = styled.a`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: ${tokens.radius.pill};
-  border: 1px solid ${tokens.color.borderLight};
-  background: ${tokens.color.surface};
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  text-decoration: none;
-  transition: all ${tokens.transition.fast};
-
-  &:hover {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.blue};
-    transform: translateY(-1px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-const ChipMark = styled.span`
-  font-weight: ${tokens.font.weight.bold};
-`
-
-/* ─── Hero CTA ─── */
-
-const HeroCta = styled.div`
-  position: relative;
-  z-index: 1;
+const TitleBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.sm};
-  min-width: 240px;
-  width: 100%;
-
-  @media (min-width: 768px) {
-    width: auto;
-    max-width: 280px;
-  }
+  gap: ${tokens.spacing.md};
 `
 
-const DelegateButton = styled.button`
-  width: 100%;
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
-  border-radius: ${tokens.radius.md};
+const BackLinkButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  background: none;
   border: none;
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.bold};
+  padding: 0;
   cursor: pointer;
-  box-shadow: ${tokens.shadow.soft};
-  transition:
-    background ${tokens.transition.base},
-    box-shadow ${tokens.transition.base},
-    transform ${tokens.transition.fast};
+  align-self: flex-start;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  color: ${tokens.color.blue};
+  transition: opacity ${tokens.transition.fast}, gap ${tokens.transition.fast};
 
   &:hover {
-    background: ${tokens.color.accent};
-    box-shadow: ${tokens.shadow.md};
-    transform: translateY(-1px);
+    text-decoration: none;
+    opacity: 0.8;
+    gap: ${tokens.spacing.sm};
   }
 
   &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
+    outline: 2px solid ${tokens.color.blue};
     outline-offset: 2px;
+    border-radius: 4px;
   }
-`
-
-const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: ${tokens.radius.pill};
-  background: rgba(255, 255, 255, 0.2);
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  margin-left: ${tokens.spacing.sm};
-`
-
-const Hint = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-  text-align: center;
-`
-
-/* ─── Stat cards ─── */
-
-const StatCardSurface = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: ${tokens.spacing.lg};
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.soft};
-  transition: all ${tokens.transition.fast};
-  min-width: 0;
-
-  &:hover {
-    border-color: ${tokens.color.middleGray};
-    transform: translateY(-1px);
-  }
-`
-
-const StatValue = styled.span`
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.black};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['3xl']};
+    grid-area: back;
   }
 `
 
-const StatLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkGray};
-`
-
-const StatSub = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-  margin-top: 2px;
-`
-
-/* ─── Section cards ─── */
-
-const SectionCard = styled.section`
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.soft};
-  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['2xl']};
+const NameRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.lg};
-`
-
-const SectionHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  align-items: baseline;
   flex-wrap: wrap;
   gap: ${tokens.spacing.md};
 `
 
-const SectionEyebrow = styled.span`
-  display: block;
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkGray};
-`
-
-const SectionTitle = styled.h2`
-  margin: 4px 0 0;
-  font-size: ${tokens.font.size.xl};
+const NameTitle = styled.h1`
+  margin: 0;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  line-height: 1.25;
+  line-height: 1.1;
+  letter-spacing: 0;
+  word-break: break-word;
+  text-wrap: balance;
+
+  @media (min-width: 768px) {
+    font-size: 68px;
+  }
 `
 
-const SectionMeta = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-`
-
-/* ─── Rewards strip ─── */
-
-const EmptyRewards = styled.div`
-  padding: ${tokens.spacing.xl};
-  background: ${tokens.color.surfaceMat};
-  border: 1px dashed ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.base};
-  text-align: center;
-  line-height: 1.6;
-`
-
-/* ─── Verification chips row ─── */
-
-const VerificationRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${tokens.spacing.sm};
-`
-
-const VerifyChip = styled.a`
+const AddressTag = styled.button<{ $copied?: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border-radius: ${tokens.radius.pill};
-  border: 1px solid ${tokens.color.borderLight};
-  background: ${tokens.color.surface};
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  text-decoration: none;
-  box-shadow: ${tokens.shadow.soft};
-  transition: all ${tokens.transition.fast};
+  padding: 2px 8px;
+  background: ${({ $copied }) =>
+    $copied ? tokens.color.status.success.bg : tokens.color.bgSubtle};
+  border: none;
+  border-radius: 14px;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  color: ${({ $copied }) =>
+    $copied ? tokens.color.status.success.fg : tokens.color.darkGray};
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background ${tokens.transition.fast},
+    color ${tokens.transition.fast};
 
   &:hover {
+    background: ${({ $copied }) =>
+      $copied ? tokens.color.status.success.bg : tokens.color.borderLight};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+`
+
+const CopyIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 12px;
+  opacity: 0.7;
+`
+
+const Description = styled.p`
+  margin: 0;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.medium};
+  line-height: 1.4;
+  color: ${tokens.color.darkGray};
+  max-width: 720px;
+  text-wrap: pretty;
+`
+
+const SocialLinks = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+`
+
+const SocialChip = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 14px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  text-decoration: none;
+  transition: border-color ${tokens.transition.fast}, color ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
     border-color: ${tokens.color.blue};
     color: ${tokens.color.blue};
-    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+`
+
+const SocialIcon = styled.span`
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+`
+
+const DelegateCta = styled.button`
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  padding: 10px 16px;
+  background: ${tokens.color.blue};
+  color: ${tokens.color.white};
+  border: none;
+  border-radius: 8px;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
+
+  @media (min-width: 768px) {
+    width: auto;
+    align-self: flex-start;
+  }
+
+  &:hover {
+    background: ${tokens.color.accent};
   }
 
   &:focus-visible {
@@ -481,9 +292,320 @@ const VerifyChip = styled.a`
   }
 `
 
-const VerifyArrow = styled.span`
+const FreeBadge = styled.span.attrs({ 'aria-hidden': true })`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 14px;
+  color: ${tokens.color.white};
+`
+
+/* ─── Avatar column with participation ring ─── */
+
+const AvatarColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    grid-area: avatar;
+    align-self: center;
+  }
+`
+
+const RingWrap = styled.div`
+  position: relative;
+  width: 240px;
+  height: 240px;
+  flex-shrink: 0;
+`
+
+const RingSvg = styled.svg`
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+`
+
+const AvatarSlot = styled.div`
+  position: absolute;
+  inset: 24px;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surface};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const ParticipationTag = styled.span<{ $isFull: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 14px;
+  background: ${({ $isFull }) =>
+    $isFull ? tokens.color.status.success.bg : tokens.color.lightBlueOpacity};
+  color: ${({ $isFull }) =>
+    $isFull ? tokens.color.status.success.fg : tokens.color.blue};
   font-size: ${tokens.font.size.base};
-  opacity: 0.6;
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  white-space: nowrap;
+`
+
+interface ParticipationRingProps {
+  percent: number
+  address: string
+  name?: string
+  avatarUrl?: string | null
+}
+
+function ParticipationRing({ percent, address, name, avatarUrl }: ParticipationRingProps) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [measuredSize, setMeasuredSize] = useState(148)
+  const [animatedPct, setAnimatedPct] = useState(0)
+
+  // Size the ring + avatar to whatever space the column gives us
+  useLayoutEffect(() => {
+    const el = wrapRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect
+      if (!rect) return
+      const next = Math.max(148, Math.min(rect.width, rect.height || rect.width))
+      setMeasuredSize(next)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // Animate from 0% to target on mount — small delay so the transition catches
+  useEffect(() => {
+    const handle = window.setTimeout(() => setAnimatedPct(percent), 120)
+    return () => window.clearTimeout(handle)
+  }, [percent])
+
+  const stroke = 12
+  const radius = (measuredSize - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+  const safeTargetPct = Math.max(0, Math.min(100, percent))
+  const safeAnimatedPct = Math.max(0, Math.min(100, animatedPct))
+  const offset = circumference - (safeAnimatedPct / 100) * circumference
+  const isFull = safeTargetPct >= 100
+  const color = isFull ? tokens.color.positiveEmphasis : tokens.color.blue
+  const avatarSize = Math.max(0, measuredSize - 48)
+
+  return (
+    <RingWrap ref={wrapRef} aria-label={`${Math.round(safeTargetPct)}% participation`}>
+      <RingSvg viewBox={`0 0 ${measuredSize} ${measuredSize}`} preserveAspectRatio="xMidYMid meet">
+        <circle
+          cx={measuredSize / 2}
+          cy={measuredSize / 2}
+          r={radius}
+          fill="none"
+          stroke={tokens.color.borderLight}
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={measuredSize / 2}
+          cy={measuredSize / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{
+            transition: 'stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease',
+          }}
+        />
+      </RingSvg>
+      <AvatarSlot>
+        <EnsAvatar
+          address={address}
+          name={name}
+          avatarUrl={avatarUrl ?? undefined}
+          size={avatarSize}
+        />
+      </AvatarSlot>
+    </RingWrap>
+  )
+}
+
+/* ─── Stats row ─── */
+
+const StatsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+`
+
+const StatCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const StatTopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+`
+
+const StatValue = styled.span`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  white-space: nowrap;
+`
+
+const StatIconBox = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: ${tokens.color.textSubtle};
+  font-size: 18px;
+`
+
+const StatLabel = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+/* ─── Voting record table ─── */
+
+const TableCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+`
+
+const TableHeadRow = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`
+
+const TableHeadCell = styled.div<{ $width?: string }>`
+  padding: 12px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+`
+
+const TableRow = styled.a`
+  display: flex;
+  background: ${tokens.color.surface};
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+
+  &:hover {
+    text-decoration: none;
+    background: ${tokens.color.bgSubtle};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: -2px;
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    padding: 4px 0;
+  }
+`
+
+const TableCell = styled.div<{ $width?: string; $primary?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  padding: 12px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+
+  @media (max-width: 767px) {
+    width: 100%;
+    flex: none;
+    justify-content: space-between;
+    padding: 10px 16px;
+    ${({ $primary }) =>
+      $primary
+        ? `font-weight: ${tokens.font.weight.bold}; color: ${tokens.color.darkBlue}; word-break: break-word;`
+        : ''}
+  }
+`
+
+const MobileLabel = styled.span`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: inline-block;
+    color: ${tokens.color.darkGray};
+    font-weight: ${tokens.font.weight.medium};
+  }
+`
+
+const CellValue = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+`
+
+const VoteIcon = styled.span<{ $tone: 'positive' | 'negative' | 'neutral' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  color: ${({ $tone }) =>
+    $tone === 'positive'
+      ? tokens.color.positiveEmphasis
+      : $tone === 'negative'
+        ? tokens.color.negative
+        : tokens.color.textSubtle};
 `
 
 /* ─── Component ─── */
@@ -505,18 +627,74 @@ function getMockProfileField(
   return MOCK_ENS_PROFILES[address.toLowerCase()]?.[key]
 }
 
+interface ProposalRow {
+  id: number
+  title: string
+  voted: boolean
+  anticaptureUrl: string
+  // NOTE(backend): we currently only have a boolean[] of "voted on last 10 proposals".
+  // See BACKEND-NEEDS in MOCK_PROPOSALS below.
+}
+
+/**
+ * Placeholder data for the last 10 ENS DAO proposals.
+ *
+ * BACKEND-NEEDS — we don't have any of this from the API yet:
+ *   1) Proposal title / EP number  → needs Snapshot or Tally feed
+ *      (e.g. GET /proposals?limit=10 returning {id, epNumber, title, type})
+ *   2) Delegate's vote choice (For / Against / Abstain) per proposal
+ *      — currently we only know "voted at all" via `last10ProposalsVoted: boolean[]`
+ *   3) Proposal outcome (Passed / Rejected) per proposal
+ *   4) On-chain governance proposal id (uint256) — used to build the Anticapture URL
+ *      `https://app.anticapture.com/ens/proposals/{id}`
+ *
+ * Until those land we render the rows from this hardcoded list mirrored against
+ * the existing `boolean[]`. Vote and Result columns mirror the boolean for now.
+ */
+interface MockProposal {
+  title: string
+  /** On-chain ENS governance proposal id (uint256 as decimal string). Mocked. */
+  proposalId: string
+}
+
+const MOCK_PROPOSALS: MockProposal[] = [
+  { title: 'EP 6.6 — [Executable] Working Group budgets, Term 6',         proposalId: '39893466662181856279242827854933926689925858494049650894234231038376231891860' },
+  { title: 'EP 6.5 — [Social] Service Provider Program renewal',          proposalId: '85714230187321904471028836259741268340985717625190837624089417823625781421003' },
+  { title: 'EP 6.4 — [Executable] Public Goods WG funding allocation',    proposalId: '12471203487123048712304871230487123048712304871230487123048712304871230487' },
+  { title: 'EP 6.3 — [Social] Term 6 Steward elections',                  proposalId: '74028371203748120374812037481203748120374812037481203748120374812037481203' },
+  { title: 'EP 6.2 — [Executable] Ecosystem WG quarterly budget',         proposalId: '38419283749182748392174839218374839218374839218374839218374839218374839218' },
+  { title: 'EP 6.1 — [Social] Endorse Term 6 Working Group Stewards',     proposalId: '90218374921837492183749218374921837492183749218374921837492183749218374921' },
+  { title: 'EP 5.31 — [Executable] Q4 governance facilitation budget',    proposalId: '52830192837492837410293847102938471029384710293847102938471029384710293847' },
+  { title: 'EP 5.30 — [Social] Service Provider Stream amendment',        proposalId: '67419283746192837461928374619283746192837461928374619283746192837461928374' },
+  { title: 'EP 5.29 — [Executable] Security audit budget approval',       proposalId: '18374619283746192837461928374619283746192837461928374619283746192837461928' },
+  { title: 'EP 5.28 — [Social] Constitution amendment — voting periods',  proposalId: '29384710293847102938471029384710293847102938471029384710293847102938471029' },
+]
+
+function buildProposalRows(votes: boolean[]): ProposalRow[] {
+  return votes.map((voted, i) => {
+    const mock = MOCK_PROPOSALS[i]
+    const title = mock?.title ?? `EP — Proposal #${i + 1}`
+    const proposalId = mock?.proposalId ?? '0'
+    return {
+      id: i + 1,
+      title,
+      voted,
+      anticaptureUrl: `https://app.anticapture.com/ens/proposals/${proposalId}`,
+    }
+  })
+}
+
 export function VoterProfilePage() {
+  const navigate = useNavigate()
   const { address: param } = useParams<{ address: string }>()
   const rawParam = param ?? ''
   const isEnsParam = !isAddress(rawParam)
 
-  // Wagmi resolution (skipped in mock mode — no real RPC means this hangs forever)
   const { data: resolvedAddress, isLoading: ensLoading } = useEnsAddress({
     name: rawParam,
     query: { enabled: isEnsParam && !env.useMockApi },
   })
 
-  // Mock-mode reverse resolution for known ENS names in fixtures
   const mockResolvedAddress = useMemo(() => {
     if (!env.useMockApi || !isEnsParam) return null
     return MOCK_ENS_TO_ADDRESS[rawParam.toLowerCase()] ?? null
@@ -528,10 +706,6 @@ export function VoterProfilePage() {
   const { voter, loading, error } = useVoter(resolvedAddr)
   const walletState = useWalletState()
 
-  const fetchTiers = useCallback(() => api.tierProgression(), [])
-  const tiers = useAsync(fetchTiers)
-  const aprPct = tiers.data?.maxTokenHolderAprPct ?? null
-
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
     query: { enabled: !!resolvedAddr && !isEnsParam && !env.useMockApi },
@@ -539,46 +713,27 @@ export function VoterProfilePage() {
 
   const ensName = voter?.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
 
-  // ENS text records — bio + verified links (with mock-mode fallback)
-  const liveBio = useEnsTextRecord(ensName, 'description')
+  // ENS text records — description + Twitter handle (the only social we surface)
+  const liveDescription = useEnsTextRecord(ensName, 'description')
   const liveTwitter = useEnsTextRecord(ensName, 'com.twitter')
-  const liveUrl = useEnsTextRecord(ensName, 'url')
   const voterAddrForMock = voter?.address
-  const bio = liveBio ?? getMockProfileField(voterAddrForMock, 'description')
+  const description = liveDescription ?? getMockProfileField(voterAddrForMock, 'description')
   const twitter = liveTwitter ?? getMockProfileField(voterAddrForMock, 'twitter')
-  const url = liveUrl ?? getMockProfileField(voterAddrForMock, 'url')
 
-  // Rewards history
-  const voterAddr = voter?.address ?? ''
-  const fetchRewards = useCallback(
-    () => (voterAddr ? fetchRewardHistory(voterAddr) : Promise.resolve([])),
-    [voterAddr]
-  )
-  const rewardsHistory = useAsync(fetchRewards, Boolean(voterAddr))
-
-  // Address copy
   const [copied, setCopied] = useState(false)
-  const handleCopy = () => {
+
+  const handleCopyAddress = () => {
     if (!voter?.address) return
-    navigator.clipboard.writeText(voter.address).then(() => {
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1500)
-    })
-  }
-
-  // Voting metrics
-  const votingPercentage = useMemo(() => {
-    if (!voter) return 0
-    if (voter.last10ProposalsVoted.length === 0) return 0
-    return Math.round(
-      (voter.last10ProposalsVoted.filter(Boolean).length / voter.last10ProposalsVoted.length) * 100
+    navigator.clipboard.writeText(voter.address).then(
+      () => {
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1500)
+      },
+      () => {
+        // Clipboard unavailable; silently no-op
+      },
     )
-  }, [voter])
-
-  const votedCount = useMemo(
-    () => (voter ? voter.last10ProposalsVoted.filter(Boolean).length : 0),
-    [voter]
-  )
+  }
 
   if (loading || ensLoading) {
     return <DelegateProfileSkeleton />
@@ -587,7 +742,10 @@ export function VoterProfilePage() {
   if (error || !voter) {
     return (
       <Page>
-        <BackLink to="/voters">All voters</BackLink>
+        <BackLinkButton type="button" onClick={() => navigate('/voters')}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Back to all voters
+        </BackLinkButton>
         <ErrorMessage>
           {error ?? 'Voter not found. They may not be an active voter in the incentives program.'}
         </ErrorMessage>
@@ -599,199 +757,176 @@ export function VoterProfilePage() {
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
 
-  const delegateUrl = getAnticaptureDelegateUrl(voter.address)
-  const etherscanUrl = `https://etherscan.io/address/${voter.address}`
-  const ensAppUrl = ensName
+  const totalProposals = voter.last10ProposalsVoted.length || 10
+  const votedCount = voter.last10ProposalsVoted.filter(Boolean).length
+  const participationPct = totalProposals > 0
+    ? Math.round((votedCount / totalProposals) * 100)
+    : 0
+  const isFullParticipation = participationPct >= 100
+
+  const proposalRows = buildProposalRows(voter.last10ProposalsVoted)
+
+  const twitterUrl = twitter ? `https://twitter.com/${twitter.replace(/^@/, '')}` : null
+  const ensProfileUrl = ensName
     ? `https://app.ens.domains/${ensName}`
     : `https://app.ens.domains/${voter.address}`
+  const anticaptureUrl = getAnticaptureDelegateUrl(voter.address)
 
-  const twitterUrl = twitter
-    ? `https://twitter.com/${twitter.replace(/^@/, '')}`
-    : null
-  const webUrl = url
-    ? (url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`)
-    : null
-
-  const activeSinceParts = voter.activeSince ? formatActiveSince(voter.activeSince) : null
+  const displayName = ensName ?? truncateAddress(voter.address)
 
   return (
     <Page>
-        <BackLink to="/voters">All voters</BackLink>
-
-        {/* ─── Hero billboard ─── */}
-        <HeroCard>
-          <HeroIdentity>
-            <HeroTopRow>
-              <AvatarWrap>
-                <EnsAvatar
-                  address={voter.address}
-                  name={ensName ?? undefined}
-                  avatarUrl={voter.avatarUrl}
-                  size={80}
-                />
-              </AvatarWrap>
-              <NameStack>
-                <HeroName>{ensName ?? truncateAddress(voter.address)}</HeroName>
-                <AddressChip onClick={handleCopy} type="button" aria-label="Copy address">
-                  {copied ? (
-                    <CopiedFlash>
-                      <FontAwesomeIcon icon={faCheck} /> Copied
-                    </CopiedFlash>
-                  ) : (
-                    <>
-                      {truncateAddress(voter.address)}
-                      <FontAwesomeIcon icon={faCopy} style={{ opacity: 0.6 }} />
-                    </>
-                  )}
-                </AddressChip>
-              </NameStack>
-            </HeroTopRow>
-
-            {bio && <Bio>{bio}</Bio>}
-
-            <VerifiedChips>
-              {twitterUrl && (
-                <Chip
-                  href={twitterUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Twitter / X profile (from ENS record)"
-                >
-                  <FontAwesomeIcon icon={faXTwitter} />
-                  @{twitter!.replace(/^@/, '')}
-                </Chip>
-              )}
-              {webUrl && (
-                <Chip
-                  href={webUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Website (from ENS record)"
-                >
-                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                  {url}
-                </Chip>
-              )}
-              <Chip href={delegateUrl} target="_blank" rel="noopener noreferrer">
-                Anticapture <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </Chip>
-              <Chip href={etherscanUrl} target="_blank" rel="noopener noreferrer">
-                Etherscan <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </Chip>
-              <Chip href={ensAppUrl} target="_blank" rel="noopener noreferrer">
-                ENS profile <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </Chip>
-            </VerifiedChips>
-          </HeroIdentity>
-
-          <HeroCta>
-            {isDelegated ? (
-              <ToneCallout
-                tone="success"
-                title="You're delegated"
-                body={aprPct ? `Earning up to ${aprPct}% APR.` : 'Active delegation.'}
-                compact
-              />
-            ) : (
-              <>
-                <DelegateButton type="button">
-                  {aprPct ? `Delegate · Earn up to ${aprPct}% APR` : 'Delegate'}
-                  <FreeTag>Free</FreeTag>
-                </DelegateButton>
-                <Hint>Gas sponsored by the incentives program</Hint>
-              </>
-            )}
-          </HeroCta>
-        </HeroCard>
-
-        {/* ─── Stats strip ─── */}
-        <StatStrip columns={4} gap="md">
-          <StatCardSurface>
-            <StatLabel>Voting Power</StatLabel>
-            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
-            <StatSub>ENS delegated to them</StatSub>
-          </StatCardSurface>
-
-          <StatCardSurface>
-            <StatLabel>Delegators</StatLabel>
-            <StatValue>{voter.tokenHolderCount.toLocaleString('en-US')}</StatValue>
-            <StatSub>token holders</StatSub>
-          </StatCardSurface>
-
-          <StatCardSurface>
-            <StatLabel>Participation</StatLabel>
-            <StatValue>{votingPercentage}%</StatValue>
-            <StatSub>recent activity rate</StatSub>
-          </StatCardSurface>
-
-          {activeSinceParts ? (
-            <StatCardSurface>
-              <StatLabel>Active Since</StatLabel>
-              <StatValue
-                style={{ fontSize: tokens.font.size.xl }}
-                title={`Since ${activeSinceParts.absolute}`}
+      <HeaderCard>
+        <BackLinkButton type="button" onClick={() => navigate('/voters')}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Back to all voters
+        </BackLinkButton>
+        <AvatarColumn>
+          <ParticipationRing
+            percent={participationPct}
+            address={voter.address}
+            name={ensName ?? undefined}
+            avatarUrl={voter.avatarUrl}
+          />
+          <ParticipationTag $isFull={isFullParticipation}>
+            {participationPct}% of participation
+          </ParticipationTag>
+        </AvatarColumn>
+        <HeaderText>
+          <TitleBlock>
+            <NameRow>
+              <NameTitle>{displayName}</NameTitle>
+              <AddressTag
+                type="button"
+                $copied={copied}
+                onClick={handleCopyAddress}
+                aria-label={copied ? 'Address copied' : 'Copy address'}
+                title={copied ? 'Copied!' : 'Click to copy'}
               >
-                {activeSinceParts.relative}
-              </StatValue>
-            </StatCardSurface>
-          ) : (
-            <StatCardSurface>
-              <StatLabel>Active Since</StatLabel>
-              <StatValue style={{ color: tokens.color.textFaint, fontSize: tokens.font.size.xl }}>—</StatValue>
-            </StatCardSurface>
+                {copied ? (
+                  <>
+                    <CopyIcon><FontAwesomeIcon icon={faCheck} /></CopyIcon>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    {truncateAddress(voter.address)}
+                    <CopyIcon><FontAwesomeIcon icon={faCopy} /></CopyIcon>
+                  </>
+                )}
+              </AddressTag>
+            </NameRow>
+            {description && <Description>{description}</Description>}
+          </TitleBlock>
+
+          <SocialLinks>
+            {twitterUrl && (
+              <SocialChip href={twitterUrl} target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+                <SocialIcon><FontAwesomeIcon icon={faXTwitter} /></SocialIcon>
+                @{twitter!.replace(/^@/, '')}
+              </SocialChip>
+            )}
+            <SocialChip href={ensProfileUrl} target="_blank" rel="noopener noreferrer" aria-label="ENS profile">
+              <SocialIcon><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></SocialIcon>
+              ENS profile
+            </SocialChip>
+            <SocialChip href={anticaptureUrl} target="_blank" rel="noopener noreferrer" aria-label="Anticapture">
+              <SocialIcon><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></SocialIcon>
+              Anticapture
+            </SocialChip>
+          </SocialLinks>
+
+          {!isDelegated && (
+            <DelegateCta type="button">
+              Delegate and earn
+              <FreeBadge>Free</FreeBadge>
+            </DelegateCta>
           )}
-        </StatStrip>
+        </HeaderText>
+      </HeaderCard>
 
-        {/* ─── Voting Record ─── */}
-        <SectionCard>
-          <SectionHeader>
-            <div>
-              <SectionEyebrow>Voting record</SectionEyebrow>
-              <SectionTitle>Last 10 governance proposals</SectionTitle>
-            </div>
-          </SectionHeader>
-          <ProposalBar votes={voter.last10ProposalsVoted} />
-          <SectionMeta>Hover for proposal · Filled = voted</SectionMeta>
-        </SectionCard>
+      <StatsRow>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
+            <StatIconBox aria-hidden><FontAwesomeIcon icon={faBolt} /></StatIconBox>
+          </StatTopRow>
+          <StatLabel>Voting power</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{voter.tokenHolderCount.toLocaleString('en-US')}</StatValue>
+            <StatIconBox aria-hidden><FontAwesomeIcon icon={faUsers} /></StatIconBox>
+          </StatTopRow>
+          <StatLabel>Delegators</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{votedCount}/{totalProposals}</StatValue>
+            <StatIconBox aria-hidden><FontAwesomeIcon icon={faSquarePollVertical} /></StatIconBox>
+          </StatTopRow>
+          <StatLabel>Participation on last proposals</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{formatActiveSinceShort(voter.activeSince)}</StatValue>
+            <StatIconBox aria-hidden><FontAwesomeIcon icon={faClock} /></StatIconBox>
+          </StatTopRow>
+          <StatLabel>Active since</StatLabel>
+        </StatCard>
+      </StatsRow>
 
-        {/* ─── Recent Rewards ─── */}
-        <SectionCard>
-          <SectionHeader>
-            <div>
-              <SectionEyebrow>Earnings history</SectionEyebrow>
-              <SectionTitle>What this delegate received from recent rounds</SectionTitle>
-            </div>
-            <SectionMeta>Share of each round&apos;s 10% voter pool</SectionMeta>
-          </SectionHeader>
-
-          {rewardsHistory.loading ? (
-            <EmptyRewards>Loading reward history…</EmptyRewards>
-          ) : rewardsHistory.data && rewardsHistory.data.length > 0 ? (
-            <DataStrip>
-              {rewardsHistory.data.map((r) => {
-                const num = Number(r.totalRewardEns)
-                const earned = Number.isFinite(num) && num > 0
-                const value = earned
-                  ? `+${formatEnsAmount(r.totalRewardEns, { maximumFractionDigits: 2 })} ENS`
-                  : '0 ENS'
-                return (
-                  <DataStripItem
-                    key={r.roundNumber}
-                    label={`Round ${r.roundNumber}`}
-                    value={value}
-                    sub={formatMonthLabel(r.month)}
-                    href={`/rounds/${r.roundNumber}?address=${voter.address}`}
-                  />
-                )
-              })}
-            </DataStrip>
-          ) : (
-            <EmptyRewards>
-              No finalized voter rewards yet for this delegate. Their first appearance here will be after the next round closes.
-            </EmptyRewards>
-          )}
-        </SectionCard>
-
+      <TableCard>
+        <TableHeadRow>
+          <TableHeadCell>Proposal Name</TableHeadCell>
+          <TableHeadCell $width="200px">Delegate Vote</TableHeadCell>
+          <TableHeadCell $width="200px">Result</TableHeadCell>
+        </TableHeadRow>
+        {proposalRows.map((row) => (
+          <TableRow
+            key={row.id}
+            href={row.anticaptureUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${row.title} on Anticapture`}
+          >
+            <TableCell $primary>{row.title}</TableCell>
+            <TableCell $width="200px">
+              <MobileLabel>Delegate Vote</MobileLabel>
+              <CellValue>
+                {row.voted ? (
+                  <>
+                    <VoteIcon $tone="positive"><FontAwesomeIcon icon={faCircleCheck} /></VoteIcon>
+                    For
+                  </>
+                ) : (
+                  <>
+                    <VoteIcon $tone="neutral"><FontAwesomeIcon icon={faCircleMinus} /></VoteIcon>
+                    Did not vote
+                  </>
+                )}
+              </CellValue>
+            </TableCell>
+            <TableCell $width="200px">
+              <MobileLabel>Result</MobileLabel>
+              <CellValue>
+                {/* TODO(backend): real proposal outcome from Snapshot/Tally */}
+                {row.voted ? (
+                  <>
+                    <VoteIcon $tone="positive"><FontAwesomeIcon icon={faCircleCheck} /></VoteIcon>
+                    For
+                  </>
+                ) : (
+                  <>
+                    <VoteIcon $tone="negative"><FontAwesomeIcon icon={faCircleXmark} /></VoteIcon>
+                    Against
+                  </>
+                )}
+              </CellValue>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableCard>
     </Page>
   )
 }

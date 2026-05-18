@@ -1,755 +1,802 @@
-import { useCallback, useMemo, useState } from 'react'
-import styled from 'styled-components'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import styled, { keyframes, css } from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faShieldHalved,
-  faTriangleExclamation,
-  faArrowRight,
-} from '@fortawesome/free-solid-svg-icons'
+import { faArrowUpRightFromSquare, faDownload } from '@fortawesome/free-solid-svg-icons'
 import { api } from '@/api'
-import type { RewardRank, RoundDetailResponse, RoundSummary } from '@/api/types'
-import { TransparencyStatsSkeleton } from '@/components/shared/PageSkeletons'
-import { ToneCallout } from '@/components/shared/ToneCallout'
+import type { RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
-import { contracts } from '@/config/contracts'
 import { tokens } from '@/styles/tokens'
-import { fadeInUp } from '@/styles/primitives'
-import { LinkCard, LinkCardRow, type LinkCardItem } from '@/components/shared/LinkCard'
-import { ContractLiveness } from '@/components/shared/ContractLiveness'
+import { formatUtcMonthRange } from '@/utils/format'
 import gitIcon from '@/images/github.svg'
 import anticaptureIcon from '@/images/anticapture.svg'
-import duneIcon from '@/images/dune.svg'
-import { StatStrip } from '@/components/shared/StatStrip'
-import { MethodologyDiagram } from '@/components/shared/MethodologyDiagram'
-import { SideDrawer } from '@/components/shared/SideDrawer'
-import { formatEnsAmount, formatEnsCompact } from '@/utils/format'
 
-import { CURRENT_ROUND } from '@/config/round'
+/* ─── Page shell ─── */
 
 const Page = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing.xl} ${tokens.spacing.xl} ${tokens.spacing['6xl']};
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['2xl']};
-  animation: ${fadeInUp} 0.4s ease both;
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['3xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
-    gap: ${tokens.spacing['3xl']};
-  }
+  align-items: center;
+  gap: 40px;
 `
 
 /* ─── Hero ─── */
 
-const Hero = styled.section`
+const HeaderBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  align-items: center;
+  gap: 16px;
+  width: 100%;
 `
 
-const HeroEyebrow = styled.span`
+const EyebrowPill = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  padding: 4px 12px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.status.success.bg};
-  border: 1px solid ${tokens.color.status.success.border};
-  color: ${tokens.color.status.success.fg};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-`
-
-const HeroTitle = styled.h1`
-  font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  margin: 0;
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size['4xl']};
-  }
-`
-
-const HeroDesc = styled.p`
-  font-size: ${tokens.font.size.lg};
-  color: ${tokens.color.darkGray};
-  line-height: 1.6;
-  margin: 0;
-  max-width: 640px;
-`
-
-/* ─── Hero counters ─── */
-
-const HeroCountersWrap = styled.div`
-  margin-top: ${tokens.spacing.md};
-`
-
-const HeroStat = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
-  border-left: 2px solid ${tokens.color.borderLight};
-  min-width: 0;
-`
-
-const HeroStatLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid ${tokens.color.white};
+  border-radius: 14px;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkGray};
+  line-height: 20px;
 `
 
-const HeroStatValue = styled.span`
-  font-family: ${tokens.font.mono};
+const PageTitle = styled.h1`
+  margin: 0;
   font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  font-variant-numeric: tabular-nums;
   line-height: 1.1;
+  text-align: center;
+  max-width: 720px;
+  text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['4xl']};
+    font-size: 68px;
   }
 `
 
-const HeroStatSub = styled.span`
-  font-size: ${tokens.font.size.sm};
+const Description = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.lg};
+  line-height: 1.6;
   color: ${tokens.color.darkGray};
+  text-align: center;
+  max-width: 646px;
+  text-wrap: pretty;
 `
 
-/* ─── Sections grid ─── */
+/* ─── Card primitive ─── */
 
-const Grid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${tokens.spacing['2xl']};
-
-  @media (min-width: 768px) {
-    grid-template-columns: 2fr 1fr;
-    gap: ${tokens.spacing['3xl']};
-  }
-`
-
-const LeftColumn = styled.div`
+const Card = styled.section`
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['2xl']};
-`
-
-const Section = styled.section`
+  gap: ${tokens.spacing['3xl']};
+  padding: 20px;
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.soft};
-  padding: ${tokens.spacing.xl};
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  border-radius: 12px;
 `
 
 const SectionEyebrow = styled.span`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
+  line-height: 20px;
 `
 
 const SectionTitle = styled.h2`
   margin: 0;
-  font-size: ${tokens.font.size.xl};
+  font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  line-height: 1.25;
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size['2xl']};
-  }
+  line-height: 1.1;
 `
 
-const WorkedExampleSteps = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${tokens.spacing.md};
-  align-items: stretch;
-
-  @media (min-width: 640px) {
-    grid-template-columns: 1fr auto 1fr auto 1fr;
-    align-items: center;
-    gap: ${tokens.spacing.sm};
-  }
-`
-
-const WorkedExampleSteps4 = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${tokens.spacing.md};
-  align-items: stretch;
-
-  @media (min-width: 640px) {
-    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
-    align-items: center;
-    gap: ${tokens.spacing.sm};
-  }
-`
-
-const ContractStack = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
-`
-
-const ContractItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xs};
-`
-
-const WorkedStep = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
-  background: ${tokens.color.bgSubtle};
-  border-radius: ${tokens.radius.sm};
-  border: 1px solid ${tokens.color.borderLight};
-`
-
-const WorkedStepLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkGray};
-`
-
-const WorkedStepValue = styled.span`
-  font-family: ${tokens.font.mono};
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-`
-
-const WorkedStepSub = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-`
-
-const WorkedArrow = styled.span`
-  display: none;
-  color: ${tokens.color.textFaint};
-  font-size: ${tokens.font.size.lg};
-  justify-self: center;
-
-  @media (min-width: 640px) {
-    display: inline-flex;
-  }
-`
-
-const WorkedExampleNote = styled.p`
-  margin: 0;
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkGray};
-  line-height: 1.5;
-`
-
-/* ─── Methodology drawer body ─── */
-
-const DrawerBody = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xl};
-  text-align: left;
-`
-
-const DrawerSummary = styled.p`
+const SectionLead = styled.p`
   margin: 0;
   font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.6;
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+  max-width: 720px;
 `
 
-const DrawerIORow = styled.div`
+const SectionHeader = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.xs};
+  gap: 12px;
 `
 
-const DrawerIOLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
+const Divider = styled.div`
+  height: 1px;
+  background: ${tokens.color.borderLight};
+  width: 100%;
+`
+
+/* ─── Methodology — animated staircase ─── */
+
+const StaircaseRow = styled.div`
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  align-items: stretch;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+`
+
+const growUp = keyframes`
+  from { opacity: 0; transform: scaleY(0); }
+  to   { opacity: 1; transform: scaleY(1); }
+`
+
+const StepColumn = styled.div<{ $offset: number; $delay: number; $tone: 'blue' | 'green'; $visible: boolean }>`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: ${({ $offset }) => $offset}px;
+  transform-origin: bottom center;
+  opacity: 0;
+
+  ${({ $visible, $delay }) =>
+    $visible &&
+    css`
+      animation: ${growUp} 0.55s cubic-bezier(0.22, 1, 0.36, 1) ${$delay}s forwards;
+    `}
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (max-width: 767px) {
+    padding-top: 0;
+    transform-origin: left center;
+  }
+`
+
+const StepBar = styled.div<{ $tone: 'blue' | 'green' }>`
+  height: 4px;
+  border-radius: 9999px;
+  background: ${({ $tone }) => ($tone === 'green' ? tokens.color.positiveEmphasis : tokens.color.blue)};
+  flex-shrink: 0;
+`
+
+const StepBody = styled.div<{ $tone: 'blue' | 'green' }>`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: ${({ $tone }) =>
+    $tone === 'green' ? tokens.color.status.success.bg : tokens.color.lightBlueOpacity};
+`
+
+const StepLabel = styled.span<{ $tone: 'blue' | 'green' }>`
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
+  color: ${({ $tone }) => ($tone === 'green' ? tokens.color.positiveEmphasis : tokens.color.blue)};
+  line-height: 20px;
+`
+
+const StepText = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
+  line-height: 20px;
+  text-wrap: pretty;
 `
 
-const DrawerIOValue = styled.span`
-  font-size: ${tokens.font.size.sm};
-  color: ${tokens.color.darkBlue};
-  font-family: ${tokens.font.mono};
-  line-height: 1.4;
+const StepEmoji = styled.span`
+  font-size: ${tokens.font.size['3xl']};
+  line-height: 1.1;
 `
 
-const DrawerFooter = styled.div`
+/* ─── Guardrails strip ─── */
+
+const GuardrailsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${tokens.spacing.md};
-  margin-top: ${tokens.spacing.sm};
+  align-items: center;
+  gap: 12px;
 `
 
-const DrawerLink = styled.a`
+const GuardrailsLabel = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+  margin-right: 4px;
+`
+
+const GuardrailChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 9999px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+const GuardrailValue = styled.strong`
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+`
+
+/* ─── Verify cards ─── */
+
+const VerifyBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const VerifyRow = styled.div`
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+`
+
+const VerifyCard = styled.a`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 12px 12px;
+  background: ${tokens.color.bgSubtle};
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    background ${tokens.transition.base},
+    transform ${tokens.transition.base};
+
+  &:hover {
+    text-decoration: none;
+    background: ${tokens.color.borderLight};
+    transform: translateY(-2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+`
+
+const VerifyIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: ${tokens.color.darkBlue};
+  overflow: hidden;
+  flex-shrink: 0;
+
+  img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    display: block;
+  }
+`
+
+const VerifyMeta = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`
+
+const VerifyTitle = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const VerifySub = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+const VerifyArrow = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.textSecondary};
+`
+
+/* ─── Eligibility ─── */
+
+const ConditionGrid = styled.div`
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+`
+
+const ConditionChip = styled.div<{ $tone: 'success' | 'warning' }>`
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: ${({ $tone }) =>
+    $tone === 'success' ? tokens.color.status.success.bg : tokens.color.lightOrange};
+`
+
+const ConditionTitle = styled.span<{ $tone: 'success' | 'warning' }>`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${({ $tone }) =>
+    $tone === 'success' ? tokens.color.positiveEmphasis : tokens.color.orange};
+  line-height: 20px;
+`
+
+const ConditionBody = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+/* ─── Round data table ─── */
+
+const RoundsTable = styled.div`
+  display: flex;
+  flex-direction: column;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+`
+
+const RoundsHeadRow = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`
+
+const RoundsHeadCell = styled.div<{ $width?: string }>`
+  padding: 12px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+`
+
+const RoundsRow = styled.div`
+  display: flex;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    padding: 8px 0;
+  }
+`
+
+const RoundsCell = styled.div<{ $width?: string; $primary?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+
+  @media (max-width: 767px) {
+    width: 100%;
+    flex: none;
+    justify-content: space-between;
+    padding: 10px 16px;
+    ${({ $primary }) =>
+      $primary ? `font-weight: ${tokens.font.weight.bold}; color: ${tokens.color.darkBlue};` : ''}
+  }
+`
+
+const MobileLabel = styled.span`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: inline-block;
+    color: ${tokens.color.darkGray};
+    font-weight: ${tokens.font.weight.medium};
+  }
+`
+
+const StatusPill = styled.span<{ $status: 'paid' | 'live' | 'pending' }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  background: ${({ $status }) =>
+    $status === 'paid'
+      ? tokens.color.status.success.bg
+      : $status === 'live'
+        ? tokens.color.lightBlueOpacity
+        : tokens.color.bgSubtle};
+  color: ${({ $status }) =>
+    $status === 'paid'
+      ? tokens.color.positiveEmphasis
+      : $status === 'live'
+        ? tokens.color.blue
+        : tokens.color.darkGray};
+  text-transform: capitalize;
+`
+
+const DownloadGroup = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.blue};
-  text-decoration: none;
-  transition: color 150ms ease;
-
-  &:hover {
-    color: ${tokens.color.accent};
-    text-decoration: underline;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.blue};
-    outline-offset: 2px;
-    border-radius: ${tokens.radius.sm};
-  }
 `
 
-/* ─── Data ─── */
+const DownloadLink = styled.a<{ $disabled?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  text-decoration: none;
+  transition: background ${tokens.transition.fast}, border-color ${tokens.transition.fast};
 
-const VERIFY_LINKS: LinkCardItem[] = [
-  {
-    iconSrc: gitIcon,
-    title: 'GitHub',
-    desc: 'Source code and reward scripts',
-    href: 'https://github.com/blockful-io/delegation-incentives-system',
-  },
-  {
-    iconSrc: anticaptureIcon,
-    title: 'Anticapture',
-    desc: 'Delegate activity and governance data',
-    href: 'https://anticapture.xyz',
-  },
-  {
-    iconSrc: duneIcon,
-    title: 'Dune Analytics',
-    desc: 'Round and payout dashboards',
-    href: 'https://dune.com',
-  },
-]
-
-interface ContractEntry {
-  card: LinkCardItem
-  address: string
-}
-
-const CONTRACT_ENTRIES: ContractEntry[] = [
-  {
-    address: contracts.ensIncentives,
-    card: {
-      title: 'ENS Incentives',
-      desc: 'Verified contract',
-      href: `https://etherscan.io/address/${contracts.ensIncentives}`,
-      copyAddress: contracts.ensIncentives,
-      tag: 'Verified',
-    },
-  },
-  {
-    address: contracts.delegateBySig,
-    card: {
-      title: 'Delegate By Sig',
-      desc: 'Verified contract',
-      href: `https://etherscan.io/address/${contracts.delegateBySig}`,
-      copyAddress: contracts.delegateBySig,
-      tag: 'Verified',
-    },
-  },
-  {
-    address: contracts.rewardDistributor,
-    card: {
-      title: 'Reward Distributor',
-      desc: 'Verified contract',
-      href: `https://etherscan.io/address/${contracts.rewardDistributor}`,
-      copyAddress: contracts.rewardDistributor,
-      tag: 'Verified',
-    },
-  },
-]
-
-interface MethodologyStepData {
-  id: string
-  title: string
-  subtitle: string
-  detail: {
-    summary: string
-    githubUrl: string
-    inputs: string
-    output: string
-    etherscanUrl: string | null
+  &:hover {
+    text-decoration: none;
+    border-color: ${tokens.color.blue};
+    background: ${tokens.color.lightBlueOpacity};
   }
+
+  ${({ $disabled }) =>
+    $disabled &&
+    css`
+      pointer-events: none;
+      color: ${tokens.color.textSubtle};
+      background: ${tokens.color.bgSubtle};
+    `}
+`
+
+const TableCaption = styled.p`
+  margin: 0;
+  padding: 0 4px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 18px;
+`
+
+const RoundsBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+
+/* ─── Component ─── */
+
+interface MethodStep {
+  label: string
+  text: string
+  offset: number
+  tone: 'blue' | 'green'
+  showEmoji?: boolean
 }
 
-const METHODOLOGY_STEPS: MethodologyStepData[] = [
+const METHOD_STEPS: MethodStep[] = [
   {
-    id: 'snapshot',
-    title: 'Snapshot balances',
-    subtitle: '180d',
-    detail: {
-      summary:
-        "At each round end, the program snapshots every ENS holder's balance — averaged over the prior 180 days, not the spot balance — to discourage gaming.",
-      githubUrl:
-        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/snapshot.ts',
-      inputs: 'Holder address + balance history (every block)',
-      output: 'balance180dAvgEns per holder',
-      etherscanUrl: null,
-    },
+    label: '1. Balance check',
+    text: "At round end, we snapshot your average ENS balance over the past 180 days. Long-term holders win. Last-minute deposits don't.",
+    offset: 120,
+    tone: 'blue',
   },
   {
-    id: 'compute-shares',
-    title: 'Compute shares',
-    subtitle: 'P / total',
-    detail: {
-      summary:
-        "Each holder's 180-day average balance is divided by the program's total active VP to compute their share of the round's reward pool.",
-      githubUrl:
-        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/shares.ts',
-      inputs: 'balance180dAvgEns per holder',
-      output: 'share (decimal 0–1) per holder',
-      etherscanUrl: null,
-    },
+    label: '2. Your share',
+    text: "We compare your average to everyone else's. That's your slice of the pool. Bigger balance, bigger slice.",
+    offset: 80,
+    tone: 'blue',
   },
   {
-    id: 'apply-tier',
-    title: 'Apply tier APR',
-    subtitle: '+ caps',
-    detail: {
-      summary:
-        "The active tier at round start determines the APR. Each holder's reward is share × poolSize. Per-holder caps prevent any single wallet from claiming an outsized portion.",
-      githubUrl:
-        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/tier.ts',
-      inputs: 'share + active tier index + per-holder cap',
-      output: 'rewardEns per holder',
-      etherscanUrl: null,
-    },
+    label: '3. The pool',
+    text: 'The pool grows as more ENS gets delegated to active voters. Your reward = your slice × pool size.',
+    offset: 40,
+    tone: 'blue',
   },
   {
-    id: 'distribute',
-    title: 'Distribute',
-    subtitle: '+ lottery < 1 ENS',
-    detail: {
-      summary:
-        'Rewards ≥ 1 ENS go directly to wallets via the Reward Distributor contract. Sub-1-ENS rewards pool into ~10-ENS lottery buckets, drawn at round close using RANDAO.',
-      githubUrl:
-        'https://github.com/blockful-io/delegation-incentives-system/blob/main/apps/backend/src/round/distribute.ts',
-      etherscanUrl: 'CONTRACT:rewardDistributor',
-      inputs: 'rewardEns per holder',
-      output: 'On-chain transfer OR lottery bucket entry',
-    },
+    label: '4. You earn',
+    text: 'Rewards of 1 ENS or more land straight in your wallet. No claiming required. Smaller amounts go into a 10‑ENS lottery, one winner picked randomly each round.',
+    offset: 0,
+    tone: 'green',
+    showEmoji: true,
   },
 ]
 
-function pickRepresentativeRecipient(detail: RoundDetailResponse): RewardRank | null {
-  const pool: RewardRank[] = [
-    ...(detail.topVoterRewards ?? []),
-    ...(detail.topTokenHolderRewards ?? []),
-  ]
-  const eligible = pool.filter(
-    (r) => r.source === 'direct' && Number(r.rewardEns) > 1,
-  )
-  if (eligible.length === 0) return null
-  const withEns = eligible.find((r) => r.ensName)
-  return withEns ?? eligible[0]
+function useInViewOnce(threshold = 0.35) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || inView) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setInView(true)
+          observer.disconnect()
+        }
+      },
+      { threshold, rootMargin: '0px 0px -10% 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [inView, threshold])
+  return { ref, inView }
 }
 
-async function fetchLatestPaidRound(): Promise<{
-  summary: RoundSummary
-  detail: RoundDetailResponse
-} | null> {
-  const list = await api.rounds()
-  const paid = list.rounds
-    .filter((r) => r.status === 'paid')
-    .sort((a, b) => b.roundNumber - a.roundNumber)
-  if (paid.length === 0) return null
-  const summary = paid[0]
-  const detail = await api.round(summary.roundNumber, undefined, { rewardLimit: '25' })
-  return { summary, detail }
+interface RoundsRowData {
+  number: number
+  period: string
+  status: RoundSummary['status']
+  /** TODO(backend): real CSV/JSON download endpoints once exports land. */
+  csvUrl: string | null
+  jsonUrl: string | null
 }
 
-function formatMonthYear(month: string): string {
-  const [y, m] = month.split('-').map(Number)
-  if (!y || !m) return month
-  const date = new Date(Date.UTC(y, m - 1, 1))
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-}
-
-function formatSharePercent(rewardWei: string, totalWei: string | null): string {
-  if (!totalWei) return '—'
-  const reward = Number(rewardWei)
-  const total = Number(totalWei)
-  if (!Number.isFinite(reward) || !Number.isFinite(total) || total <= 0) return '—'
-  const pct = (reward / total) * 100
-  if (pct < 0.0001) return '<0.0001%'
-  return `${pct.toFixed(4)}%`
+function buildRoundRows(rounds: RoundSummary[]): RoundsRowData[] {
+  return rounds
+    .slice(0, 8)
+    .map((r) => {
+      const isPaid = r.status === 'paid'
+      // BACKEND-NEEDS: per-round CSV/JSON export endpoints. Until they land,
+      // we expose the existing detail endpoint as a JSON fallback for paid rounds.
+      const jsonUrl = isPaid ? `/api/rounds/${r.roundNumber}` : null
+      return {
+        number: r.roundNumber,
+        period: formatUtcMonthRange(r.startDate, r.endDate),
+        status: r.status,
+        csvUrl: null,
+        jsonUrl,
+      }
+    })
 }
 
 export function TransparencyPage() {
-  const fetchStatus = useCallback(() => api.status(), [])
-  const fetchTiers = useCallback(() => api.tierProgression(), [])
-  const fetchPaidRound = useCallback(() => fetchLatestPaidRound(), [])
-  const status = useAsync(fetchStatus)
-  const tiers = useAsync(fetchTiers)
-  const paidRound = useAsync(fetchPaidRound)
-  const [activeStep, setActiveStep] = useState<string | null>(null)
-  const currentStep = useMemo(
-    () => METHODOLOGY_STEPS.find((s) => s.id === activeStep) ?? null,
-    [activeStep],
-  )
-  const currentEtherscanUrl =
-    currentStep?.detail.etherscanUrl === 'CONTRACT:rewardDistributor'
-      ? `https://etherscan.io/address/${contracts.rewardDistributor}`
-      : currentStep?.detail.etherscanUrl ?? null
+  const fetchRounds = useCallback(() => api.rounds(), [])
+  const { data: roundList } = useAsync(fetchRounds)
 
-  const loading = status.loading || tiers.loading
-  const dataError = status.error || tiers.error
+  const { ref: methodologyRef, inView } = useInViewOnce()
 
-  const retry = () => {
-    if (status.error) status.execute()
-    if (tiers.error) tiers.execute()
-  }
-
-  const currentTier =
-    tiers.data && tiers.data.tiers[tiers.data.currentTierIndex]
-      ? tiers.data.tiers[tiers.data.currentTierIndex]
-      : null
-
-  const representative = useMemo(() => {
-    if (!paidRound.data) return null
-    const recipient = pickRepresentativeRecipient(paidRound.data.detail)
-    if (!recipient) return null
-    return { round: paidRound.data.summary, recipient }
-  }, [paidRound.data])
+  const rows = roundList?.rounds ? buildRoundRows(roundList.rounds) : []
 
   return (
     <Page>
-        <Hero>
-          <HeroEyebrow>
-            <FontAwesomeIcon icon={faShieldHalved} />
-            Transparency
-          </HeroEyebrow>
-          <HeroTitle>Verify everything on-chain</HeroTitle>
-          <HeroDesc>
-            Contracts, data sources, and reward logic are public so every round can be checked. Below: live program metrics, verified contracts, and the algorithm in plain English.
-          </HeroDesc>
+      <HeaderBlock>
+        <EyebrowPill>Transparency &amp; methodology</EyebrowPill>
+        <PageTitle>Verify everything onchain</PageTitle>
+        <Description>
+          Open methodology, open data. Every reward is reproducible from onchain inputs (your delegations and balances) and published outputs. Read the rules below, then download the data to check our math.
+        </Description>
+      </HeaderBlock>
 
-          <HeroCountersWrap>
-            {loading ? (
-              <TransparencyStatsSkeleton />
-            ) : dataError ? (
-              <ToneCallout
-                tone="danger"
-                title="Live metrics unavailable"
-                body="The backend didn't respond. The program contracts and source code links below are still verifiable on-chain."
-                action={{ label: 'Try again', onClick: retry }}
-                icon={<FontAwesomeIcon icon={faTriangleExclamation} />}
-              />
-            ) : status.data && tiers.data ? (
-              <StatStrip columns={4} gap="md">
-                <HeroStat>
-                  <HeroStatLabel>Active Voters</HeroStatLabel>
-                  <HeroStatValue>{status.data.activeVoterCount}</HeroStatValue>
-                  <HeroStatSub>delegates voting 7/10+</HeroStatSub>
-                </HeroStat>
-                <HeroStat>
-                  <HeroStatLabel>ENS Delegated</HeroStatLabel>
-                  <HeroStatValue>{formatEnsCompact(status.data.totalDelegatedEns)}</HeroStatValue>
-                  <HeroStatSub>across all active voters</HeroStatSub>
-                </HeroStat>
-                <HeroStat>
-                  <HeroStatLabel>Wallets Earning</HeroStatLabel>
-                  <HeroStatValue>{status.data.holdersEarning}</HeroStatValue>
-                  <HeroStatSub>holders this round</HeroStatSub>
-                </HeroStat>
-                <HeroStat>
-                  <HeroStatLabel>Current Tier</HeroStatLabel>
-                  <HeroStatValue>{tiers.data.currentTierIndex + 1}</HeroStatValue>
-                  <HeroStatSub>round {CURRENT_ROUND}</HeroStatSub>
-                </HeroStat>
-              </StatStrip>
-            ) : null}
-          </HeroCountersWrap>
-        </Hero>
+      {/* ─── Methodology card ─── */}
+      <Card>
+        <SectionHeader>
+          <SectionEyebrow>Methodology</SectionEyebrow>
+          <SectionTitle>How rewards are computed</SectionTitle>
+          <SectionLead>
+            Each round, the pool is split between token holders (90%) and active voters (10%). An active voter is anyone who voted on at least 7 of the last 10 governance proposals.
+          </SectionLead>
+        </SectionHeader>
 
-        <LinkCardRow items={VERIFY_LINKS} />
+        <StaircaseRow ref={methodologyRef}>
+          {METHOD_STEPS.map((step, i) => (
+            <StepColumn
+              key={step.label}
+              $offset={step.offset}
+              $delay={i * 0.18}
+              $tone={step.tone}
+              $visible={inView}
+            >
+              <StepBar $tone={step.tone} />
+              <StepBody $tone={step.tone}>
+                <StepLabel $tone={step.tone}>{step.label}</StepLabel>
+                <StepText>{step.text}</StepText>
+                {step.showEmoji && <StepEmoji aria-hidden>🎉</StepEmoji>}
+              </StepBody>
+            </StepColumn>
+          ))}
+        </StaircaseRow>
 
-        <Grid>
-          <LeftColumn>
-            <Section>
-              <SectionEyebrow>Smart Contracts</SectionEyebrow>
-              <SectionTitle>Verified on Etherscan</SectionTitle>
-              <ContractStack>
-                {CONTRACT_ENTRIES.map((entry) => (
-                  <ContractItem key={entry.card.title}>
-                    <LinkCard item={entry.card} />
-                    <ContractLiveness address={entry.address} />
-                  </ContractItem>
-                ))}
-              </ContractStack>
-            </Section>
+        {/* Guardrails strip — caps and safeguards */}
+        <GuardrailsRow>
+          <GuardrailsLabel>Limits &amp; safeguards</GuardrailsLabel>
+          <GuardrailChip>
+            <GuardrailValue>1%</GuardrailValue> per‑delegate cap
+          </GuardrailChip>
+          <GuardrailChip>
+            <GuardrailValue>5%</GuardrailValue> per‑wallet cap
+          </GuardrailChip>
+          <GuardrailChip>
+            <GuardrailValue>180‑day</GuardrailValue> balance window
+          </GuardrailChip>
+          <GuardrailChip>
+            <GuardrailValue>RANDAO</GuardrailValue> lottery seed
+          </GuardrailChip>
+        </GuardrailsRow>
 
-            {representative ? (
-              <Section>
-                <SectionEyebrow>Worked Example</SectionEyebrow>
-                <SectionTitle>How a payout was computed</SectionTitle>
-                <WorkedExampleNote>
-                  Round {representative.round.roundNumber} ({formatMonthYear(representative.round.month)}) · representative recipient: {representative.recipient.ensName ?? representative.recipient.address}
-                </WorkedExampleNote>
-                <WorkedExampleSteps4>
-                  <WorkedStep>
-                    <WorkedStepLabel>1. Balance snapshot</WorkedStepLabel>
-                    <WorkedStepValue>
-                      {representative.recipient.votingPower
-                        ? `${formatEnsAmount(representative.recipient.votingPower, { maximumFractionDigits: 2 })} ENS`
-                        : '—'}
-                    </WorkedStepValue>
-                    <WorkedStepSub>180-day moving average</WorkedStepSub>
-                  </WorkedStep>
-                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
-                  <WorkedStep>
-                    <WorkedStepLabel>2. Share</WorkedStepLabel>
-                    <WorkedStepValue>
-                      {formatSharePercent(
-                        representative.recipient.reward,
-                        representative.round.totalDistributed,
-                      )}
-                    </WorkedStepValue>
-                    <WorkedStepSub>of round distribution</WorkedStepSub>
-                  </WorkedStep>
-                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
-                  <WorkedStep>
-                    <WorkedStepLabel>3. Tier</WorkedStepLabel>
-                    <WorkedStepValue>
-                      {representative.round.tierIndex != null
-                        ? representative.round.tierIndex + 1
-                        : '—'}
-                    </WorkedStepValue>
-                    <WorkedStepSub>at month start</WorkedStepSub>
-                  </WorkedStep>
-                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
-                  <WorkedStep>
-                    <WorkedStepLabel>4. Payout</WorkedStepLabel>
-                    <WorkedStepValue>
-                      {formatEnsAmount(representative.recipient.rewardEns, {
-                        maximumFractionDigits: 4,
-                      })} ENS
-                    </WorkedStepValue>
-                    <WorkedStepSub>direct payout</WorkedStepSub>
-                  </WorkedStep>
-                </WorkedExampleSteps4>
-                <WorkedExampleNote>
-                  Payouts under 1 ENS pool into lottery buckets. Above 1 ENS, the reward is sent directly to the holder's wallet at round close.
-                </WorkedExampleNote>
-              </Section>
-            ) : currentTier ? (
-              <Section>
-                <SectionEyebrow>Worked Example</SectionEyebrow>
-                <SectionTitle>How a payout is computed this round</SectionTitle>
-                <WorkedExampleNote>
-                  Illustration only — uses Tier {tiers.data ? tiers.data.currentTierIndex + 1 : '—'}'s actual APR for an example 5 ENS holder.
-                </WorkedExampleNote>
-                <WorkedExampleSteps>
-                  <WorkedStep>
-                    <WorkedStepLabel>1. Balance snapshot</WorkedStepLabel>
-                    <WorkedStepValue>5.00 ENS</WorkedStepValue>
-                    <WorkedStepSub>180-day moving average</WorkedStepSub>
-                  </WorkedStep>
-                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
-                  <WorkedStep>
-                    <WorkedStepLabel>2. Tier APR</WorkedStepLabel>
-                    <WorkedStepValue>
-                      {currentTier.estimatedAprPct != null ? `${currentTier.estimatedAprPct}%` : '—'}
-                    </WorkedStepValue>
-                    <WorkedStepSub>tier {tiers.data ? tiers.data.currentTierIndex + 1 : '—'} this round</WorkedStepSub>
-                  </WorkedStep>
-                  <WorkedArrow aria-hidden><FontAwesomeIcon icon={faArrowRight} /></WorkedArrow>
-                  <WorkedStep>
-                    <WorkedStepLabel>3. Monthly reward</WorkedStepLabel>
-                    <WorkedStepValue>
-                      {currentTier.estimatedAprPct != null
-                        ? `${((5 * Number(currentTier.estimatedAprPct)) / 100 / 12).toFixed(4)} ENS`
-                        : '—'}
-                    </WorkedStepValue>
-                    <WorkedStepSub>balance × APR ÷ 12</WorkedStepSub>
-                  </WorkedStep>
-                </WorkedExampleSteps>
-                <WorkedExampleNote>
-                  Payouts under 1 ENS pool into ~10-ENS lottery buckets. Above 1 ENS, the reward is sent directly to the holder's wallet at round close.
-                </WorkedExampleNote>
-              </Section>
-            ) : null}
-          </LeftColumn>
+        <Divider />
 
-          <Section>
-            <SectionEyebrow>How Rewards Are Calculated</SectionEyebrow>
-            <SectionTitle>Algorithm</SectionTitle>
-            <WorkedExampleNote>
-              Same code runs every round. Click any step for the source.
-            </WorkedExampleNote>
-            <MethodologyDiagram
-              steps={METHODOLOGY_STEPS.map(({ id, title, subtitle }) => ({
-                id,
-                title,
-                subtitle,
-              }))}
-              activeId={activeStep}
-              onStepClick={setActiveStep}
-            />
-          </Section>
-        </Grid>
+        <VerifyBlock>
+          <SectionEyebrow>Verify the data yourself</SectionEyebrow>
+          <VerifyRow>
+            <VerifyCard
+              href="https://github.com/blockful/delegation-incentives-system"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <VerifyIcon><img src={gitIcon} alt="" aria-hidden /></VerifyIcon>
+              <VerifyMeta>
+                <VerifyTitle>GitHub repo</VerifyTitle>
+                <VerifySub>Open source, auditable code</VerifySub>
+              </VerifyMeta>
+              <VerifyArrow aria-hidden><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></VerifyArrow>
+            </VerifyCard>
+            <VerifyCard
+              href="https://app.anticapture.com/ens"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <VerifyIcon><img src={anticaptureIcon} alt="" aria-hidden /></VerifyIcon>
+              <VerifyMeta>
+                <VerifyTitle>Anticapture</VerifyTitle>
+                <VerifySub>Live delegation and voting data</VerifySub>
+              </VerifyMeta>
+              <VerifyArrow aria-hidden><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></VerifyArrow>
+            </VerifyCard>
+          </VerifyRow>
+        </VerifyBlock>
+      </Card>
 
-        <SideDrawer
-          open={currentStep !== null}
-          onClose={() => setActiveStep(null)}
-          title={currentStep?.title ?? ''}
-          side="right"
-        >
-          {currentStep ? (
-            <DrawerBody>
-              <DrawerSummary>{currentStep.detail.summary}</DrawerSummary>
-              <DrawerIORow>
-                <DrawerIOLabel>Inputs</DrawerIOLabel>
-                <DrawerIOValue>{currentStep.detail.inputs}</DrawerIOValue>
-              </DrawerIORow>
-              <DrawerIORow>
-                <DrawerIOLabel>Output</DrawerIOLabel>
-                <DrawerIOValue>{currentStep.detail.output}</DrawerIOValue>
-              </DrawerIORow>
-              <DrawerFooter>
-                <DrawerLink
-                  href={currentStep.detail.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View source ↗
-                </DrawerLink>
-                {currentEtherscanUrl ? (
-                  <DrawerLink
-                    href={currentEtherscanUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+      {/* ─── Eligibility card ─── */}
+      <Card>
+        <SectionHeader>
+          <SectionEyebrow>Eligibility</SectionEyebrow>
+          <SectionTitle>Who counts as &lsquo;active&rsquo;?</SectionTitle>
+        </SectionHeader>
+        <ConditionGrid>
+          <ConditionChip $tone="success">
+            <ConditionTitle $tone="success">Token holder</ConditionTitle>
+            <ConditionBody>You&apos;ve held ENS for at least 180 days, averaged daily.</ConditionBody>
+          </ConditionChip>
+          <ConditionChip $tone="success">
+            <ConditionTitle $tone="success">Delegated to an active voter</ConditionTitle>
+            <ConditionBody>Your delegate voted on at least 7 of the last 10 proposals.</ConditionBody>
+          </ConditionChip>
+          <ConditionChip $tone="warning">
+            <ConditionTitle $tone="warning">Above the 1 ENS minimum</ConditionTitle>
+            <ConditionBody>Smaller rewards go into the lottery pool instead of a direct payout.</ConditionBody>
+          </ConditionChip>
+        </ConditionGrid>
+      </Card>
+
+      {/* ─── Round data downloads card ─── */}
+      <Card>
+        <SectionHeader>
+          <SectionEyebrow>Round data</SectionEyebrow>
+          <SectionTitle>Reproduce any round&apos;s math</SectionTitle>
+          <SectionLead>
+            Every round publishes its inputs (the active delegate set, delegation snapshots, 180&#8209;day balance averages) and its outputs (payouts and lottery results). Download a round, run the script in the GitHub repo, and you should get the same numbers we did.
+          </SectionLead>
+        </SectionHeader>
+
+        <RoundsBlock>
+        <RoundsTable>
+          <RoundsHeadRow>
+            <RoundsHeadCell>Round</RoundsHeadCell>
+            <RoundsHeadCell $width="200px">Period</RoundsHeadCell>
+            <RoundsHeadCell $width="140px">Status</RoundsHeadCell>
+            <RoundsHeadCell $width="200px">Download</RoundsHeadCell>
+          </RoundsHeadRow>
+
+          {rows.length === 0 && (
+            <RoundsRow>
+              <RoundsCell>Loading round history…</RoundsCell>
+            </RoundsRow>
+          )}
+
+          {rows.map((row) => (
+            <RoundsRow key={row.number}>
+              <RoundsCell $primary>
+                <MobileLabel>Round</MobileLabel>
+                <span>Round {row.number}</span>
+              </RoundsCell>
+              <RoundsCell $width="200px">
+                <MobileLabel>Period</MobileLabel>
+                <span>{row.period}</span>
+              </RoundsCell>
+              <RoundsCell $width="140px">
+                <MobileLabel>Status</MobileLabel>
+                <StatusPill $status={row.status === 'paid' ? 'paid' : row.status === 'live' ? 'live' : 'pending'}>
+                  {row.status}
+                </StatusPill>
+              </RoundsCell>
+              <RoundsCell $width="200px">
+                <MobileLabel>Download</MobileLabel>
+                <DownloadGroup>
+                  <DownloadLink $disabled={!row.csvUrl} href={row.csvUrl ?? undefined} aria-label={`Download round ${row.number} CSV`}>
+                    <FontAwesomeIcon icon={faDownload} />
+                    CSV
+                  </DownloadLink>
+                  <DownloadLink
+                    $disabled={!row.jsonUrl}
+                    href={row.jsonUrl ?? undefined}
+                    target={row.jsonUrl ? '_blank' : undefined}
+                    rel={row.jsonUrl ? 'noopener noreferrer' : undefined}
+                    aria-label={`View round ${row.number} JSON`}
                   >
-                    View contract ↗
-                  </DrawerLink>
-                ) : null}
-              </DrawerFooter>
-            </DrawerBody>
-          ) : null}
-        </SideDrawer>
+                    <FontAwesomeIcon icon={faDownload} />
+                    JSON
+                  </DownloadLink>
+                </DownloadGroup>
+              </RoundsCell>
+            </RoundsRow>
+          ))}
+        </RoundsTable>
+
+        <TableCaption>
+          CSV exports arrive after each round closes. The JSON endpoint is live now for paid rounds.{' '}
+          {/* BACKEND-NEEDS: per-round CSV export endpoint. Tracking in project_dis_backend_needs.md. */}
+        </TableCaption>
+        </RoundsBlock>
+      </Card>
     </Page>
   )
 }

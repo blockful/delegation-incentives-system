@@ -1,75 +1,99 @@
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faUsers, faHandshake, faWallet } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles'
 import { formatEnsCompact } from '@/utils/format'
 
 interface StatsBarProps {
+  activeVoterCount?: number
   totalDelegatedEns?: string
   holdersEarning?: number
 }
 
 const Bar = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${tokens.spacing.md} ${tokens.spacing.xl};
-  min-width: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-
-  @media (min-width: 768px) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: ${tokens.spacing.lg};
-  }
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${tokens.spacing.md};
+  width: 100%;
 `
 
-const StatItem = styled.div`
-  display: inline-flex;
-  align-items: baseline;
+const Cell = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: ${tokens.spacing.xs};
-  min-width: 0;
-  position: relative;
-
-  @media (min-width: 768px) {
-    &:not(:last-child) {
-      padding-right: ${tokens.spacing.lg};
-      border-right: 1px solid ${tokens.color.borderLight};
-    }
-  }
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
 `
 
-const StatLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+const ValueRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+`
+
+const CellValue = styled.span`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+`
+
+const IconWrap = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: ${tokens.color.textSubtle};
+  font-size: 18px;
+`
+
+const CellLabel = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
   white-space: nowrap;
 `
 
-const StatValue = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkBlue};
-  font-family: ${tokens.font.mono};
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-`
-
 export function StatsBar({
+  activeVoterCount,
   totalDelegatedEns,
   holdersEarning,
 }: StatsBarProps) {
   return (
     <Bar>
-      <StatItem>
-        <StatLabel>ENS delegated:</StatLabel>
-        <StatValue>{totalDelegatedEns ? formatEnsCompact(totalDelegatedEns) : '—'}</StatValue>
-      </StatItem>
-      <StatItem>
-        <StatLabel>wallets earning:</StatLabel>
-        <StatValue>{holdersEarning ?? '—'}</StatValue>
-      </StatItem>
+      <Cell>
+        <ValueRow>
+          <CellValue>{activeVoterCount ?? '—'}</CellValue>
+          <IconWrap aria-hidden>
+            <FontAwesomeIcon icon={faUsers} />
+          </IconWrap>
+        </ValueRow>
+        <CellLabel>active voters</CellLabel>
+      </Cell>
+      <Cell>
+        <ValueRow>
+          <CellValue>{totalDelegatedEns ? formatEnsCompact(totalDelegatedEns) : '—'}</CellValue>
+          <IconWrap aria-hidden>
+            <FontAwesomeIcon icon={faHandshake} />
+          </IconWrap>
+        </ValueRow>
+        <CellLabel>ENS delegated to active wallets</CellLabel>
+      </Cell>
+      <Cell>
+        <ValueRow>
+          <CellValue>{holdersEarning?.toLocaleString('en-US') ?? '—'}</CellValue>
+          <IconWrap aria-hidden>
+            <FontAwesomeIcon icon={faWallet} />
+          </IconWrap>
+        </ValueRow>
+        <CellLabel>wallets earning</CellLabel>
+      </Cell>
     </Bar>
   )
 }

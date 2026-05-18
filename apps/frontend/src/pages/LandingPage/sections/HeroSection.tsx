@@ -64,13 +64,14 @@ const Content = styled.div`
 const HeroEyebrow = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: ${tokens.spacing.sm};
-  padding: 6px 14px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.status.neutral.bg};
-  border: 1px solid ${tokens.color.status.neutral.border};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+  gap: ${tokens.spacing.xs};
+  padding: ${tokens.spacing.xs} ${tokens.spacing.sm};
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid ${tokens.color.white};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
   color: ${tokens.color.darkGray};
   margin-bottom: ${tokens.spacing['2xl']};
   animation: ${fadeInUp} 0.5s ease both;
@@ -260,7 +261,7 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
         </HeroEyebrow>
         <Headline>
           Earn <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS
-          automatically.
+          automatically
         </Headline>
         <Subtitle>
           Help secure ENS governance by delegating to an active voter.
