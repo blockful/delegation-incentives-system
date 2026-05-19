@@ -644,6 +644,14 @@ const TableCard = styled.div`
   border-radius: 12px;
   overflow: hidden;
   background: ${tokens.color.surface};
+
+  @media (max-width: 767px) {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+    gap: 12px;
+  }
 `
 
 const TableHeadRow = styled.div`
@@ -706,7 +714,29 @@ const TableRow = styled.button<{ $clickable?: boolean; $index?: number }>`
 
   @media (max-width: 767px) {
     flex-direction: column;
-    padding: 4px 0;
+    padding: 16px;
+    gap: 4px;
+    border: 1px solid ${tokens.color.borderLight};
+    border-radius: 12px;
+    background: ${tokens.color.surface};
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition:
+      background ${tokens.transition.fast},
+      transform ${tokens.transition.fast},
+      box-shadow ${tokens.transition.fast};
+
+    &:not(:last-child) {
+      border-bottom: 1px solid ${tokens.color.borderLight};
+    }
+
+    ${({ $clickable }) =>
+      $clickable &&
+      `
+        &:active {
+          transform: scale(0.99);
+          box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+        }
+      `}
   }
 `
 
@@ -729,11 +759,19 @@ const TableCell = styled.div<{ $weight?: number; $primary?: boolean }>`
     width: 100%;
     flex: none;
     justify-content: space-between;
-    padding: 10px 16px;
+    padding: 6px 0;
     white-space: normal;
     ${({ $primary }) =>
       $primary
-        ? `font-weight: ${tokens.font.weight.bold}; color: ${tokens.color.darkBlue};`
+        ? `
+          justify-content: flex-start;
+          font-weight: ${tokens.font.weight.bold};
+          color: ${tokens.color.darkBlue};
+          font-size: ${tokens.font.size.lg};
+          padding: 2px 0 10px;
+          margin-bottom: 4px;
+          border-bottom: 1px solid ${tokens.color.borderLight};
+        `
         : ''}
   }
 `
@@ -827,6 +865,42 @@ const StatusPill = styled.span<{ $status: RoundStatus }>`
     border-radius: 9999px;
     background: currentColor;
     flex-shrink: 0;
+  }
+`
+
+const MobileDetailsCta = styled.span`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: ${tokens.color.lightBlueOpacity};
+    color: ${tokens.color.blue};
+    font-size: ${tokens.font.size.base};
+    font-weight: ${tokens.font.weight.bold};
+    line-height: 20px;
+    transition: background ${tokens.transition.fast};
+
+    svg {
+      width: 12px;
+      height: 12px;
+      transition: transform ${tokens.transition.fast};
+    }
+  }
+
+  @media (max-width: 767px) and (hover: hover) {
+    ${TableRow}:hover & {
+      background: ${tokens.color.lightBlue};
+
+      svg {
+        transform: translateX(2px);
+      }
+    }
   }
 `
 
@@ -1341,7 +1415,11 @@ export function RoundsPage() {
     )
   }
 
-  const poolLabel = formatPool(currentRound.poolSizeEns ?? null) ?? '—'
+  // Pool comes from the tier the program is currently operating in. (Same
+  // value as currentRound.poolSizeEns in v1 — tier drives the round pool —
+  // but reading from the tier object keeps the card semantically consistent.)
+  const poolLabel =
+    formatPool(currentTier?.poolSizeEns ?? currentRound.poolSizeEns ?? null) ?? '—'
   const aprLabel = currentTier?.estimatedAprPct
     ? `~${Number(currentTier.estimatedAprPct).toFixed(2)}%`
     : '—'
@@ -1380,14 +1458,20 @@ export function RoundsPage() {
   const nextTierAprLabel = nextTier?.estimatedAprPct
     ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
     : null
-  const tierShareText = nextTier
-    ? `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
-    : "We're at the top tier of the ENS Delegation Incentives Program. Keep the active-voter pool growing:"
+  const tierShareText = !nextTier
+    ? "We're at the top tier of the ENS Delegation Incentives Program. Keep the active-voter pool growing:"
+    : thresholdCleared
+      ? `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program is locked in for this round. Keep growing the active-voter pool to climb higher:`
+      : `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
   const tierShareUrl =
     typeof window !== 'undefined'
       ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(tierShareText)}&url=${encodeURIComponent(window.location.origin)}`
       : '#'
-  const tierShareCta = nextTier ? `Share to unlock Tier ${nextTier.index + 1}` : 'Share the program'
+  const tierShareCta = !nextTier
+    ? 'Share the program'
+    : thresholdCleared
+      ? 'Share to keep growing'
+      : `Share to unlock Tier ${nextTier.index + 1}`
 
   const showWalletHint =
     Boolean(walletAddress) &&
@@ -1436,7 +1520,7 @@ export function RoundsPage() {
       <TierCard>
         <TierCardHeader>
           <TierCardLabel>
-            <TierCardEyebrow>Your tier</TierCardEyebrow>
+            <TierCardEyebrow>Current tier</TierCardEyebrow>
             <TierCardHeading>
               Tier {currentTierIndex + 1} of {tierLadder.length}
             </TierCardHeading>
@@ -1455,15 +1539,30 @@ export function RoundsPage() {
 
         <TierLadder>
           {tierLadder.map((tier, idx) => {
-            // Derive purely from position. The API's `isUnlocked` can be true
-            // for tiers above the current one (meaning "achievable" rather than
-            // "passed"), so it's not safe as the ladder source of truth.
+            // Three-state derivation:
+            //   - idx <  currentTierIndex  -> passed (blue check)
+            //   - idx === currentTierIndex -> current (green check)
+            //   - idx >  currentTierIndex AND its additionalVPNeeded is 0
+            //                              -> threshold cleared, on track for
+            //                                 this round (blue check)
+            //   - otherwise                -> locked (grey lock)
+            //
+            // Per the v1 spec, this round's pool follows this month's growth.
+            // Tiers above the current one whose VP threshold has been met are
+            // "secured" for this round's payout — they shouldn't read as
+            // locked. tier.additionalVPNeeded is wei needed above current VP
+            // to reach that tier; 0 means already cleared.
+            const thresholdAlreadyCleared =
+              idx > currentTierIndex &&
+              Number(tier.additionalVPNeeded ?? '1') <= 0
             const state: TierPipState =
               idx < currentTierIndex
                 ? 'unlocked'
                 : idx === currentTierIndex
                   ? 'current'
-                  : 'locked'
+                  : thresholdAlreadyCleared
+                    ? 'unlocked'
+                    : 'locked'
             const icon =
               state === 'current' || state === 'unlocked' ? faCheck : faLock
             return (
@@ -1501,9 +1600,11 @@ export function RoundsPage() {
 
         <TierShareRow>
           <TierShareCopy>
-            {nextTier
-              ? `Bring in more delegators to unlock ${nextTierAprLabel ?? 'a higher'} APR for everyone.`
-              : "You're at the top tier. Help keep the active-voter pool growing."}
+            {!nextTier
+              ? "You're at the top tier. Help keep the active-voter pool growing."
+              : thresholdCleared
+                ? `Tier ${nextTier.index + 1} is on track for this round. Keep growing the program to lift everyone's APR further.`
+                : `Bring in more delegators to unlock ${nextTierAprLabel ?? 'a higher'} APR for everyone.`}
           </TierShareCopy>
           <TierShareButton
             href={tierShareUrl}
@@ -1624,7 +1725,6 @@ export function RoundsPage() {
                 onClick={() => navigate(row.to)}
               >
                 <TableCell $weight={0.9} $primary>
-                  <MobileLabel>Round</MobileLabel>
                   <RoundNumber>Round {row.roundNumber}</RoundNumber>
                 </TableCell>
                 <TableCell>
@@ -1656,6 +1756,10 @@ export function RoundsPage() {
                 <ChevronCell $weight={0.25} aria-hidden>
                   <FontAwesomeIcon icon={faChevronRight} />
                 </ChevronCell>
+                <MobileDetailsCta aria-hidden>
+                  See round details
+                  <FontAwesomeIcon icon={faChevronRight} />
+                </MobileDetailsCta>
               </TableRow>
             ))
           )}
