@@ -34,30 +34,26 @@ function initialsForAddress(addr: string): string {
 }
 
 /* ─── Satoshi font loading ─── */
+// Satori (which @vercel/og uses) only accepts TTF/OTF/WOFF — NOT WOFF2.
+// Fontshare only serves WOFF2, so we pull Satoshi from a public GitHub mirror
+// via jsDelivr (which serves the raw .ttf bytes directly).
 // Cache the font promises at module scope so subsequent invocations on the
 // same edge instance reuse them instead of re-fetching on every render.
 type FontPromise = Promise<ArrayBuffer | null>
 let satoshiBoldPromise: FontPromise | null = null
 let satoshiMediumPromise: FontPromise | null = null
 
-async function loadSatoshiWeight(weight: number): Promise<ArrayBuffer | null> {
+const SATOSHI_URLS: Record<500 | 700, string> = {
+  500: 'https://cdn.jsdelivr.net/gh/webbycrown/golife-span-statamic-theme@main/public/assets/fonts/Satoshi-Medium.ttf',
+  700: 'https://cdn.jsdelivr.net/gh/webbycrown/golife-span-statamic-theme@main/public/assets/fonts/Satoshi-Bold.ttf',
+}
+
+async function loadSatoshiWeight(weight: 500 | 700): Promise<ArrayBuffer | null> {
   try {
-    const cssRes = await fetch(
-      `https://api.fontshare.com/v2/css?f[]=satoshi@${weight}&display=swap`,
-      { headers: { 'user-agent': 'Mozilla/5.0' } },
-    )
-    if (!cssRes.ok) return null
-    const css = await cssRes.text()
-    // Fontshare CSS exposes the woff2 (and sometimes woff/ttf) URLs in url(...)
-    // Prefer .ttf if available since Satori bundles its own woff2 decompressor
-    // but TTF is the safest format.
-    const ttfMatch = css.match(/url\((https:\/\/[^)]+\.ttf)\)/)
-    const woff2Match = css.match(/url\((https:\/\/[^)]+\.woff2)\)/)
-    const url = ttfMatch?.[1] ?? woff2Match?.[1]
-    if (!url) return null
-    const fontRes = await fetch(url)
-    if (!fontRes.ok) return null
-    return await fontRes.arrayBuffer()
+    const res = await fetch(SATOSHI_URLS[weight])
+    if (!res.ok) return null
+    const buf = await res.arrayBuffer()
+    return buf.byteLength > 0 ? buf : null
   } catch {
     return null
   }
@@ -72,6 +68,39 @@ function getSatoshi(weight: 500 | 700): FontPromise {
   return satoshiMediumPromise
 }
 
+/* ─── Avatar resolution ─── */
+// Fetch the avatar bytes ourselves and embed as a data URL. Letting Satori
+// fetch the URL itself works in Node but fails on Vercel's edge — likely a
+// content-type / redirect handling difference in Satori's image loader.
+async function fetchAvatarDataUrl(name: string): Promise<string | null> {
+  try {
+    const url = `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4000)
+    let res: Response
+    try {
+      res = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+    } finally {
+      clearTimeout(timer)
+    }
+    if (!res.ok) return null
+    const contentType = res.headers.get('content-type') ?? 'image/png'
+    if (!contentType.startsWith('image/')) return null
+    const buf = await res.arrayBuffer()
+    if (buf.byteLength === 0) return null
+    // Edge-safe base64 (no Buffer): iterate in 32KB chunks
+    const bytes = new Uint8Array(buf)
+    let binary = ''
+    const chunkSize = 0x8000
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+    }
+    return `data:${contentType};base64,${btoa(binary)}`
+  } catch {
+    return null
+  }
+}
+
 export default async function handler(request: Request) {
   const { searchParams } = new URL(request.url)
   const rawName = searchParams.get('name')?.trim()
@@ -83,13 +112,11 @@ export default async function handler(request: Request) {
     : (rawName && isAddress(rawName) ? rawName : null)
 
   const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
-  const avatarUrl = name
-    ? `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
-    : null
   const initials = address ? initialsForAddress(address) : 'EN'
 
-  // Kick off font fetches in parallel with avatar (Satori grabs it itself)
-  const [satoshiBold, satoshiMedium] = await Promise.all([
+  // Fetch avatar bytes + fonts in parallel
+  const [avatarUrl, satoshiBold, satoshiMedium] = await Promise.all([
+    name ? fetchAvatarDataUrl(name) : Promise.resolve(null),
     getSatoshi(700),
     getSatoshi(500),
   ])
