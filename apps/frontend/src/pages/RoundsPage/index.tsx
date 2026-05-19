@@ -11,6 +11,9 @@ import {
   faChevronRight,
   faWallet,
   faXmark,
+  faShareNodes,
+  faLock,
+  faCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
@@ -246,6 +249,225 @@ const Dot = styled.span`
   height: 4px;
   border-radius: 9999px;
   background: ${tokens.color.textSubtle};
+`
+
+/* ─── Tier ladder card ─── */
+
+const TierCard = styled.section`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const TierCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`
+
+const TierCardLabel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`
+
+const TierCardEyebrow = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 1.3;
+`
+
+const TierCardHeading = styled.span`
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.3;
+`
+
+const TierAprBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: ${tokens.color.status.success.bg};
+  color: ${tokens.color.positiveEmphasis};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  white-space: nowrap;
+`
+
+const TierLadder = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+`
+
+type TierPipState = 'unlocked' | 'current' | 'locked'
+
+const TierPip = styled.div<{ $state: TierPipState }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: ${({ $state }) =>
+    $state === 'current'
+      ? tokens.color.status.success.bg
+      : $state === 'unlocked'
+        ? tokens.color.lightBlueOpacity
+        : tokens.color.bgSubtle};
+  border: 1px solid
+    ${({ $state }) =>
+      $state === 'current'
+        ? tokens.color.status.success.border
+        : $state === 'unlocked'
+          ? tokens.color.lightBlue
+          : tokens.color.borderLight};
+  min-width: 0;
+`
+
+const TierPipIcon = styled.span<{ $state: TierPipState }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: ${({ $state }) =>
+    $state === 'current'
+      ? tokens.color.positiveEmphasis
+      : $state === 'unlocked'
+        ? tokens.color.blue
+        : 'transparent'};
+  color: ${({ $state }) =>
+    $state === 'locked' ? tokens.color.textSubtle : tokens.color.white};
+  font-size: 9px;
+`
+
+const TierPipLabel = styled.span<{ $state: TierPipState }>`
+  font-size: ${tokens.font.size.xs};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${({ $state }) =>
+    $state === 'current'
+      ? tokens.color.positiveEmphasis
+      : $state === 'locked'
+        ? tokens.color.textSubtle
+        : tokens.color.darkBlue};
+  white-space: nowrap;
+`
+
+const TierProgressBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+
+const TierProgressLine = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+`
+
+const TierProgressLabel = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.4;
+`
+
+const TierProgressValue = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  font-variant-numeric: tabular-nums;
+`
+
+const TierProgressTrack = styled.div`
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: ${tokens.color.borderLight};
+  border-radius: 9999px;
+  overflow: hidden;
+`
+
+const TierProgressFill = styled.div<{ $pct: number }>`
+  height: 100%;
+  width: ${({ $pct }) => Math.max(0, Math.min(100, $pct))}%;
+  background: ${tokens.color.positiveEmphasis};
+  border-radius: 9999px;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+`
+
+const TierShareRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  border-top: 1px solid ${tokens.color.borderLight};
+  padding-top: 16px;
+
+  @media (min-width: 720px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`
+
+const TierShareCopy = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  line-height: 1.5;
+`
+
+const TierShareButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: ${tokens.color.blue};
+  color: ${tokens.color.white};
+  border: 1px solid ${tokens.color.blue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
+
+  svg {
+    color: currentColor;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background: ${tokens.color.darkBlue};
+    border-color: ${tokens.color.darkBlue};
+    color: ${tokens.color.white};
+    text-decoration: none;
+  }
 `
 
 /* ─── Inspect card ─── */
@@ -955,6 +1177,28 @@ export function RoundsPage() {
   const progressPct = progressPercent(currentRound.startDate, currentRound.endDate)
   const daysLeftLabel = formatDaysRemaining(currentRound.daysRemaining, currentRound.status)
 
+  // ─── Tier ladder + share-to-unlock data ───
+  const tierLadder = tierData.tiers ?? []
+  const nextTier =
+    tierLadder.find((t, idx) => idx > currentTierIndex && !t.isUnlocked) ?? null
+  const currentGrowthPct = Number(tierData.currentGrowthPct ?? '0')
+  const nextTierGrowthTarget = nextTier ? Number(nextTier.momGrowthMinPct ?? '0') : 0
+  const tierProgressPct = nextTier && nextTierGrowthTarget > 0
+    ? (currentGrowthPct / nextTierGrowthTarget) * 100
+    : 100
+  const tierGrowthLabel = `${currentGrowthPct.toFixed(2)}% of ${nextTierGrowthTarget.toFixed(0)}%`
+  const nextTierAprLabel = nextTier?.estimatedAprPct
+    ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
+    : null
+  const tierShareText = nextTier
+    ? `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierGrowthTarget.toFixed(0)}% VP growth (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
+    : "We're at the top tier of the ENS Delegation Incentives Program. Keep the active-voter pool growing:"
+  const tierShareUrl =
+    typeof window !== 'undefined'
+      ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(tierShareText)}&url=${encodeURIComponent(window.location.origin)}`
+      : '#'
+  const tierShareCta = nextTier ? `Share to unlock Tier ${nextTier.index + 1}` : 'Share the program'
+
   const showWalletHint =
     Boolean(walletAddress) &&
     !addressInput.trim() &&
@@ -1028,6 +1272,72 @@ export function RoundsPage() {
           </BarLabels>
         </ProgressBlock>
       </SummaryBlock>
+
+      <TierCard>
+        <TierCardHeader>
+          <TierCardLabel>
+            <TierCardEyebrow>Your tier</TierCardEyebrow>
+            <TierCardHeading>
+              Tier {currentTierIndex + 1} of {tierLadder.length}
+            </TierCardHeading>
+          </TierCardLabel>
+          <TierAprBadge>
+            <FontAwesomeIcon icon={faPercent} />
+            {aprLabel} APR
+          </TierAprBadge>
+        </TierCardHeader>
+
+        <TierLadder>
+          {tierLadder.map((tier, idx) => {
+            const state: TierPipState =
+              idx === currentTierIndex
+                ? 'current'
+                : tier.isUnlocked
+                  ? 'unlocked'
+                  : 'locked'
+            const icon =
+              state === 'current' || state === 'unlocked' ? faCheck : faLock
+            return (
+              <TierPip key={tier.index} $state={state}>
+                <TierPipIcon $state={state} aria-hidden>
+                  <FontAwesomeIcon icon={icon} />
+                </TierPipIcon>
+                <TierPipLabel $state={state}>Tier {tier.index + 1}</TierPipLabel>
+              </TierPip>
+            )
+          })}
+        </TierLadder>
+
+        {nextTier ? (
+          <TierProgressBlock>
+            <TierProgressLine>
+              <TierProgressLabel>
+                Tier {nextTier.index + 1} unlocks at {nextTierGrowthTarget.toFixed(0)}% VP growth
+              </TierProgressLabel>
+              <TierProgressValue>{tierGrowthLabel}</TierProgressValue>
+            </TierProgressLine>
+            <TierProgressTrack>
+              <TierProgressFill $pct={tierProgressPct} />
+            </TierProgressTrack>
+          </TierProgressBlock>
+        ) : null}
+
+        <TierShareRow>
+          <TierShareCopy>
+            {nextTier
+              ? `Bring in more delegators to unlock ${nextTierAprLabel ?? 'a higher'} APR for everyone.`
+              : "You're at the top tier. Help keep the active-voter pool growing."}
+          </TierShareCopy>
+          <TierShareButton
+            href={tierShareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <FontAwesomeIcon icon={faShareNodes} />
+            {tierShareCta}
+          </TierShareButton>
+        </TierShareRow>
+      </TierCard>
 
       <InspectCard>
         <InspectHeader>
