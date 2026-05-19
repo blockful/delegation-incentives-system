@@ -13,6 +13,16 @@ function escapeRegExp(value: string): string {
 }
 
 export default defineConfig(({ mode, command }) => {
+  // Vercel preview deploys have no backend wired up, so default the bundle
+  // to mock-API mode. Production (VERCEL_ENV=production) keeps real API.
+  // An explicit VITE_USE_MOCK_API value still wins.
+  if (
+    process.env.VERCEL_ENV === "preview" &&
+    process.env.VITE_USE_MOCK_API == null
+  ) {
+    process.env.VITE_USE_MOCK_API = "true";
+  }
+
   const rawEnv = loadEnv(mode, rootDir, "");
   const env = parseFrontendBuildEnv(rawEnv);
   const devEnv = parseFrontendDevServerEnv(rawEnv);
