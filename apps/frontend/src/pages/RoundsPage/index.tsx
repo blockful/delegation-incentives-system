@@ -228,27 +228,11 @@ const TierCardLabel = styled.div`
   gap: 2px;
 `
 
-const TierCardEyebrow = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 1.3;
-`
-
 const TierCardHeading = styled.span`
   font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.3;
-`
-
-const TierCardApr = styled.span`
-  margin-top: 4px;
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.positiveEmphasis};
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
 `
 
 const TierBadgeRow = styled.div`
@@ -295,9 +279,9 @@ const TierPip = styled.div<{ $state: TierPipState }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 12px 8px;
+  border-radius: 10px;
   background: ${({ $state }) =>
     $state === 'locked'
       ? tokens.color.bgSubtle
@@ -321,48 +305,38 @@ const TierPipIcon = styled.span<{ $state: TierPipState }>`
   font-size: 22px;
 `
 
-const TierPipLabel = styled.span<{ $state: TierPipState }>`
-  font-size: 12px;
+const TierPipTitle = styled.span<{ $state: TierPipState }>`
+  font-size: 16px;
   font-weight: ${tokens.font.weight.bold};
   color: ${({ $state }) =>
-    $state === 'locked' ? tokens.color.textSubtle : tokens.color.positiveEmphasis};
+    $state === 'locked' ? tokens.color.textSubtle : tokens.color.darkBlue};
+  line-height: 1.2;
   white-space: nowrap;
 `
 
-const TierProgressBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`
-
-const TierProgressLine = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-`
-
-const TierProgressLabel = styled.span`
-  font-size: ${tokens.font.size.base};
+const TierPipApr = styled.span<{ $state: TierPipState }>`
+  font-size: 14px;
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.4;
+  color: ${({ $state }) =>
+    $state === 'locked' ? tokens.color.textSubtle : tokens.color.positiveEmphasis};
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
 `
 
-const TierProgressTrack = styled.div`
-  position: relative;
+const TierPipBarTrack = styled.div`
   width: 100%;
-  height: 8px;
-  background: ${tokens.color.borderLight};
+  height: 4px;
   border-radius: 9999px;
+  background: ${tokens.color.borderLight};
   overflow: hidden;
 `
 
-const TierProgressFill = styled.div<{ $pct: number }>`
+const TierPipBarFill = styled.div<{ $pct: number; $state: TierPipState }>`
   height: 100%;
   width: ${({ $pct }) => Math.max(0, Math.min(100, $pct))}%;
-  background: ${tokens.color.positiveEmphasis};
+  background: ${({ $state }) =>
+    $state === 'locked' ? tokens.color.textSubtle : tokens.color.positiveEmphasis};
   border-radius: 9999px;
   transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 `
@@ -1326,7 +1300,10 @@ export function RoundsPage() {
     return selectFeaturedRound(rounds)
   }, [roundList.data])
 
-  const currentTierIndex = currentRound?.tierIndex ?? tierData?.currentTierIndex ?? 0
+  // /tiers/progression is the authoritative source for the operating tier;
+  // /rounds may lag a round behind, so prefer the progression value.
+  const currentTierIndex =
+    tierData?.currentTierIndex ?? currentRound?.tierIndex ?? 0
   const currentTier = tierData?.tiers?.[currentTierIndex] ?? null
 
   const rows = useMemo(
@@ -1410,59 +1387,23 @@ export function RoundsPage() {
   // but reading from the tier object keeps the card semantically consistent.)
   const poolLabel =
     formatPool(currentTier?.poolSizeEns ?? currentRound.poolSizeEns ?? null) ?? '—'
-  const aprLabel = currentTier?.estimatedAprPct
-    ? `~${Number(currentTier.estimatedAprPct).toFixed(2)}%`
-    : '—'
 
   const progressPct = progressPercent(currentRound.startDate, currentRound.endDate)
   const daysLeftLabel = formatDaysRemaining(currentRound.daysRemaining, currentRound.status)
 
   // ─── Tier ladder + share-to-unlock data ───
-  // All values below read directly from the /tiers/progression response —
-  // currentTotalVP, requiredTotalVP, additionalVPNeeded — so the section
-  // tracks the live backend instead of any derived percentage math.
+  // Per-tier progress/state is derived inside the pip render loop; we only
+  // need the next-milestone tier here for the share CTA copy.
   const tierLadder = tierData.tiers ?? []
-
-  // nextMilestoneTier = first tier above current whose additionalVPNeeded > 0.
-  // This is where the progress bar + share CTA aim, because once a tier's VP
-  // threshold is cleared the meaningful "next goal" is the tier after that.
-  const nextMilestoneTier =
+  const nextTier =
     tierLadder.find(
       (t, idx) =>
         idx > currentTierIndex && Number(t.additionalVPNeeded ?? '0') > 0,
     ) ?? null
-  // The progress span starts at the highest already-cleared tier above current
-  // (or the current tier itself if nothing has been cleared yet).
-  const progressFloorTier = (() => {
-    let floor = currentTier
-    for (let i = currentTierIndex + 1; i < tierLadder.length; i++) {
-      if (Number(tierLadder[i].additionalVPNeeded ?? '0') <= 0) {
-        floor = tierLadder[i]
-      } else {
-        break
-      }
-    }
-    return floor
-  })()
 
-  // `nextTier` from here on means "the milestone we're aiming for next" so
-  // existing share/label code keeps working with one source.
-  const nextTier = nextMilestoneTier
-
-  const nextTierVpNeededLabel = nextTier?.additionalVPNeeded
-    ? formatVpNeeded(nextTier.additionalVPNeeded)
-    : ''
   const nextTierTargetLabel = nextTier?.requiredTotalVP
     ? formatVpNeeded(nextTier.requiredTotalVP)
     : ''
-
-  const tierProgressPct = nextTier
-    ? computeVpProgress(
-        progressFloorTier?.requiredTotalVP ?? '0',
-        nextTier.requiredTotalVP,
-        nextTier.additionalVPNeeded,
-      )
-    : 100
 
   const nextTierAprLabel = nextTier?.estimatedAprPct
     ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
@@ -1525,11 +1466,9 @@ export function RoundsPage() {
       <TierCard>
         <TierCardHeader>
           <TierCardLabel>
-            <TierCardEyebrow>Current tier</TierCardEyebrow>
             <TierCardHeading>
-              Tier {currentTierIndex + 1} of {tierLadder.length}
+              Currently on Tier {currentTierIndex + 1} of {tierLadder.length}
             </TierCardHeading>
-            <TierCardApr>{aprLabel} APR</TierCardApr>
           </TierCardLabel>
           <TierBadgeRow>
             <TierPoolBadge>
@@ -1541,21 +1480,11 @@ export function RoundsPage() {
 
         <TierLadder>
           {tierLadder.map((tier, idx) => {
-            // Three-state derivation:
-            //   - idx <  currentTierIndex  -> passed (blue check)
-            //   - idx === currentTierIndex -> current (green check)
-            //   - idx >  currentTierIndex AND its additionalVPNeeded is 0
-            //                              -> threshold cleared, on track for
-            //                                 this round (blue check)
-            //   - otherwise                -> locked (grey lock)
-            //
-            // Per the v1 spec, this round's pool follows this month's growth.
-            // Tiers above the current one whose VP threshold has been met are
-            // "secured" for this round's payout — they shouldn't read as
-            // locked. tier.additionalVPNeeded is wei needed above current VP
-            // to reach that tier; 0 means already cleared.
+            // Pip state — binary visual: reached (green) or locked (grey).
+            // A tier counts as reached if it's at or below the current
+            // operating tier, OR if its VP threshold has already been cleared
+            // (additionalVPNeeded === 0).
             const thresholdAlreadyCleared =
-              idx > currentTierIndex &&
               Number(tier.additionalVPNeeded ?? '1') <= 0
             const state: TierPipState =
               idx < currentTierIndex
@@ -1565,33 +1494,41 @@ export function RoundsPage() {
                   : thresholdAlreadyCleared
                     ? 'unlocked'
                     : 'locked'
-            const icon =
-              state === 'locked' ? faLock : faCircleCheck
+            const icon = state === 'locked' ? faLock : faCircleCheck
+
+            // Per-pip progress: 100 once a tier is reached; otherwise the
+            // fraction of the way from the previous tier's threshold to this
+            // tier's threshold.
+            const pipPct = (() => {
+              if (state !== 'locked') return 100
+              const prev = idx > 0 ? tierLadder[idx - 1] : null
+              return computeVpProgress(
+                prev?.requiredTotalVP ?? '0',
+                tier.requiredTotalVP,
+                tier.additionalVPNeeded,
+              )
+            })()
+
+            const tierAprLabel = tier.estimatedAprPct
+              ? `~${Number(tier.estimatedAprPct).toFixed(2)}% APR`
+              : null
+
             return (
               <TierPip key={tier.index} $state={state}>
                 <TierPipIcon $state={state} aria-hidden>
                   <FontAwesomeIcon icon={icon} />
                 </TierPipIcon>
-                <TierPipLabel $state={state}>Tier {tier.index + 1}</TierPipLabel>
+                <TierPipTitle $state={state}>Tier {tier.index + 1}</TierPipTitle>
+                {tierAprLabel ? (
+                  <TierPipApr $state={state}>{tierAprLabel}</TierPipApr>
+                ) : null}
+                <TierPipBarTrack>
+                  <TierPipBarFill $pct={pipPct} $state={state} />
+                </TierPipBarTrack>
               </TierPip>
             )
           })}
         </TierLadder>
-
-        {nextTier ? (
-          <TierProgressBlock>
-            <TierProgressLine>
-              <TierProgressLabel>
-                {nextTierVpNeededLabel
-                  ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
-                  : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
-              </TierProgressLabel>
-            </TierProgressLine>
-            <TierProgressTrack>
-              <TierProgressFill $pct={tierProgressPct} />
-            </TierProgressTrack>
-          </TierProgressBlock>
-        ) : null}
 
         <TierShareRow>
           <TierShareCopy>
