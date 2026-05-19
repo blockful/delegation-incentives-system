@@ -133,8 +133,8 @@ const StepCol = styled.div<{
       opacity: 0;
       ${$visible &&
       css`
-        animation: ${fadeInUp} 0.9s cubic-bezier(0.22, 1, 0.36, 1)
-          ${$index * 0.55}s both;
+        animation: ${fadeInUp} 1s cubic-bezier(0.22, 1, 0.36, 1)
+          ${$index * 0.7}s forwards;
       `}
     `}
 
@@ -344,13 +344,15 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
       const vh = window.innerHeight
       // Lock range: from when the section's top hits viewport top, until its
       // bottom hits viewport bottom. During this window the sticky child is
-      // pinned and we drive the reveal.
+      // pinned and we drive the reveal. Progress is monotonic — once a step
+      // has revealed, scrolling back up never undoes it.
       const range = rect.height - vh
       if (range <= 0) {
-        setProgress(1)
+        setProgress((prev) => Math.max(prev, 1))
         return
       }
-      setProgress(clamp01(-rect.top / range))
+      const next = clamp01(-rect.top / range)
+      setProgress((prev) => Math.max(prev, next))
     }
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update)
