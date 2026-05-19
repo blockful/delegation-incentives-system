@@ -14,12 +14,23 @@ interface RoundStatusBarProps {
   roundEndDate: string
 }
 
+/**
+ * Outer Wrapper container — `Outer` paints solid white across the full row so
+ * the AppLayout body gradient doesn't bleed through this strip between the
+ * Hero and the next section. `Inner` keeps the max-width + translateY(-50%)
+ * overlap effect for the card.
+ */
+const Outer = styled.div`
+  width: 100%;
+  background: ${tokens.color.white};
+  position: relative;
+  z-index: 1;
+`
+
 const Wrapper = styled.div`
   max-width: 600px;
   margin: 0 auto;
   padding: 0 ${tokens.spacing.xl};
-  position: relative;
-  z-index: 1;
   transform: translateY(-50%);
 `
 
@@ -136,8 +147,9 @@ export function RoundStatusBar({
   const displayPoolSizeEns = formatPool(poolSizeEns).toLowerCase()
 
   return (
-    <Wrapper>
-      <Card>
+    <Outer>
+      <Wrapper>
+        <Card>
         <TrustRow>
           <TrustItem>
             <FontAwesomeIcon icon={faCircleCheck} />
@@ -172,7 +184,8 @@ export function RoundStatusBar({
             <ColSub>{displayPoolSizeEns} ENS pool</ColSub>
           </Col>
         </DataRow>
-      </Card>
-    </Wrapper>
+        </Card>
+      </Wrapper>
+    </Outer>
   )
 }
