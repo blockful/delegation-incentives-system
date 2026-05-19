@@ -1404,6 +1404,9 @@ export function RoundsPage() {
   const nextTierTargetLabel = nextTier?.requiredTotalVP
     ? formatVpNeeded(nextTier.requiredTotalVP)
     : ''
+  const nextTierVpNeededLabel = nextTier?.additionalVPNeeded
+    ? formatVpNeeded(nextTier.additionalVPNeeded)
+    : ''
 
   const nextTierAprLabel = nextTier?.estimatedAprPct
     ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
@@ -1532,9 +1535,13 @@ export function RoundsPage() {
 
         <TierShareRow>
           <TierShareCopy>
-            {nextTier
-              ? `Bring in more delegators to unlock ${nextTierAprLabel ?? 'a higher'} APR for everyone.`
-              : "You're at the top tier. Help keep the active-voter pool growing."}
+            {!nextTier
+              ? "You're at the top tier. Help keep the active-voter pool growing."
+              : nextTierVpNeededLabel && nextTierAprLabel
+                ? `${nextTierVpNeededLabel} more ENS in voting power unlocks the next tier — ${nextTierAprLabel} APR for everyone.`
+                : nextTierAprLabel
+                  ? `Bring in more delegators to unlock ${nextTierAprLabel} APR for everyone.`
+                  : 'Bring in more delegators to unlock a higher APR for everyone.'}
           </TierShareCopy>
           <TierShareButton
             href={tierShareUrl}
