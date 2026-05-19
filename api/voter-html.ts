@@ -50,8 +50,13 @@ export default async function handler(request: Request) {
   }
   let html = await indexRes.text()
 
-  // Strip any existing <title> so ours wins
+  // Strip the static meta tags that index.html ships with so our per-delegate
+  // tags are the only ones crawlers see. Otherwise the generic og:image card
+  // could win depending on the crawler's "first vs last" preference.
   html = html.replace(/<title>[\s\S]*?<\/title>/i, '')
+  html = html.replace(/<meta\s+name="description"[^>]*>/gi, '')
+  html = html.replace(/<meta\s+property="og:[^"]*"[^>]*>/gi, '')
+  html = html.replace(/<meta\s+name="twitter:[^"]*"[^>]*>/gi, '')
 
   const metaBlock = `
     <title>${escapeHtml(pageTitle)}</title>
