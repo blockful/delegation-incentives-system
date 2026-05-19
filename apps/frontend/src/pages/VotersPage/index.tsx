@@ -282,6 +282,15 @@ export function VotersPage() {
 
   const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
 
+  const shareUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '#'
+    const text = encodeURIComponent(
+      "Delegate your ENS to an active voter and earn APR rewards automatically. The more wallets delegate, the higher everyone's APR climbs.",
+    )
+    const url = encodeURIComponent(window.location.origin)
+    return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
+  }, [])
+
   const voters = useMemo(() => {
     if (!data) return null
 
@@ -334,7 +343,7 @@ export function VotersPage() {
             <EyebrowPill>Delegate &amp; earn</EyebrowPill>
             <PageTitle>Pick an active voter. Earn ENS automatically.</PageTitle>
             <Description>
-              Choose an active voter, they cast votes on at least 7 of the last 10 proposals, to maximize your rewards.
+              Active voters cast on at least 7 of the last 10 proposals. Delegate to one to start earning ENS rewards.
             </Description>
           </HeaderBlock>
 
@@ -349,6 +358,26 @@ export function VotersPage() {
               />
             )}
           </StatsBarWrapper>
+
+          <ShareStrip>
+            <ShareStripCopy>
+              <ShareStripCopyStrong>More delegators lift everyone&rsquo;s APR.</ShareStripCopyStrong>
+              {' '}Share the program to grow the pool.
+            </ShareStripCopy>
+            <ShareStripLink
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button
+                size="small"
+                colorStyle="bluePrimary"
+                prefix={<FontAwesomeIcon icon={faShareNodes} />}
+              >
+                Share the program
+              </Button>
+            </ShareStripLink>
+          </ShareStrip>
         </TopSection>
 
         <CardsAndFilters>
