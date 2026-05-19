@@ -359,6 +359,7 @@ const TierShareRow = styled.div`
 const TierShareCopy = styled.p`
   margin: 0;
   font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
   line-height: 1.5;
 `
@@ -1538,7 +1539,7 @@ export function RoundsPage() {
             {!nextTier
               ? "You're at the top tier. Help keep the active-voter pool growing."
               : nextTierVpNeededLabel && nextTierAprLabel
-                ? `${nextTierVpNeededLabel} more ENS in voting power unlocks the next tier — ${nextTierAprLabel} APR for everyone.`
+                ? `${nextTierVpNeededLabel} more ENS in voting power unlocks the next tier, lifting APR to ${nextTierAprLabel} for everyone.`
                 : nextTierAprLabel
                   ? `Bring in more delegators to unlock ${nextTierAprLabel} APR for everyone.`
                   : 'Bring in more delegators to unlock a higher APR for everyone.'}
