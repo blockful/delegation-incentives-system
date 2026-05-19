@@ -89,7 +89,7 @@ const PageTitle = styled.h1`
   letter-spacing: 0;
   margin: 0;
   text-align: center;
-  max-width: 720px;
+  max-width: 800px;
   text-wrap: balance;
 
   @media (min-width: 768px) {
@@ -343,7 +343,8 @@ export function VotersPage() {
             <EyebrowPill>Delegate &amp; earn</EyebrowPill>
             <PageTitle>Pick an active voter. Earn ENS automatically.</PageTitle>
             <Description>
-              Active voters cast on at least 7 of the last 10 proposals. Delegate to one to start earning ENS rewards.
+              Active voters cast on at least 7 of the last 10 proposals.<br />
+              Delegate to one to start earning ENS rewards.
             </Description>
           </HeaderBlock>
 
