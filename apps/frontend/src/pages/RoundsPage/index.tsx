@@ -23,6 +23,7 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, ErrorMessage } from '@/styles'
 import { SkeletonBlock } from '@/components/shared/Skeleton'
 import { RoundsPageSkeleton } from '@/components/shared/PageSkeletons'
+import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import {
   formatEnsAmount,
   formatUtcDate,
@@ -764,6 +765,20 @@ const RewardCellRow = styled.div`
   flex-wrap: wrap;
 `
 
+// Thorin's *Secondary styles still read a bit saturated next to white table rows.
+// Override the background with the lighter design token; text colour stays from the DS.
+const AprTag = styled(Tag)`
+  && {
+    background-color: ${tokens.color.lightYellow};
+  }
+`
+
+const LotteryTag = styled(Tag)`
+  && {
+    background-color: ${tokens.color.lightOrange};
+  }
+`
+
 const RewardValueText = styled.span`
   color: ${tokens.color.positiveEmphasis};
   font-weight: ${tokens.font.weight.bold};
@@ -1050,7 +1065,7 @@ function renderHolderRewards(r: RewardsBreakdown) {
     return (
       <RewardCellRow>
         <RewardValueText>{r.apr}</RewardValueText>
-        <Tag colorStyle="yellowSecondary" size="small">APR</Tag>
+        <AprTag colorStyle="yellowSecondary" size="small">APR</AprTag>
       </RewardCellRow>
     )
   }
@@ -1058,7 +1073,7 @@ function renderHolderRewards(r: RewardsBreakdown) {
     return (
       <RewardCellRow>
         <RewardValueText>{r.lottery}</RewardValueText>
-        <Tag colorStyle="orangeSecondary" size="small">Lottery</Tag>
+        <LotteryTag colorStyle="orangeSecondary" size="small">Lottery</LotteryTag>
       </RewardCellRow>
     )
   }
@@ -1467,7 +1482,7 @@ export function RoundsPage() {
             <TierProgressLine>
               <TierProgressLabel>
                 {thresholdCleared
-                  ? `Threshold cleared. Tier ${nextTier.index + 1} opens at round end.`
+                  ? `Threshold cleared. Tier ${nextTier.index + 1} applies to next round.`
                   : nextTierVpNeededLabel
                     ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
                     : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
