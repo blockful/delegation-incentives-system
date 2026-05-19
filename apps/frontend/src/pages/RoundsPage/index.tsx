@@ -358,33 +358,11 @@ const TierProgressLine = styled.div`
   flex-wrap: wrap;
 `
 
-const SecuredNote = styled.div`
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  background: ${tokens.color.status.success.bg};
-  color: ${tokens.color.positiveEmphasis};
-  border: 1px solid ${tokens.color.status.success.border};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 16px;
-`
-
 const TierProgressLabel = styled.span`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkBlue};
   line-height: 1.4;
-`
-
-const TierProgressValue = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-  font-variant-numeric: tabular-nums;
 `
 
 const TierProgressTrack = styled.div`
@@ -1460,13 +1438,9 @@ export function RoundsPage() {
   // tracks the live backend instead of any derived percentage math.
   const tierLadder = tierData.tiers ?? []
 
-  // immediateNextTier  = idx === currentTierIndex + 1 (used for the ladder pip
-  //                       labels + "Tier N secured for this round" note)
-  // nextMilestoneTier  = first tier above current whose additionalVPNeeded > 0.
-  //                       This is where the progress bar + share CTA aim,
-  //                       because once a tier's VP threshold is cleared the
-  //                       meaningful "next goal" is the tier after that.
-  const immediateNextTier = tierLadder[currentTierIndex + 1] ?? null
+  // nextMilestoneTier = first tier above current whose additionalVPNeeded > 0.
+  // This is where the progress bar + share CTA aim, because once a tier's VP
+  // threshold is cleared the meaningful "next goal" is the tier after that.
   const nextMilestoneTier =
     tierLadder.find(
       (t, idx) =>
@@ -1485,7 +1459,6 @@ export function RoundsPage() {
     }
     return floor
   })()
-  const securedTier = progressFloorTier !== currentTier ? progressFloorTier : null
 
   // `nextTier` from here on means "the milestone we're aiming for next" so
   // existing share/label code keeps working with one source.
@@ -1497,16 +1470,6 @@ export function RoundsPage() {
   const nextTierTargetLabel = nextTier?.requiredTotalVP
     ? formatVpNeeded(nextTier.requiredTotalVP)
     : ''
-  const currentDelegatedLabel = tierData.currentTotalVP
-    ? formatVpNeeded(tierData.currentTotalVP)
-    : ''
-
-  // "Threshold cleared" now lives on the immediate-next tier — that's what the
-  // ladder pip / "secured for this round" note refer to. The progress bar is
-  // never in this state because it always points at a NOT-cleared milestone.
-  const thresholdCleared =
-    immediateNextTier != null &&
-    Number(immediateNextTier.additionalVPNeeded ?? '0') <= 0
 
   const tierProgressPct = nextTier
     ? computeVpProgress(
@@ -1630,12 +1593,6 @@ export function RoundsPage() {
           })}
         </TierLadder>
 
-        {securedTier ? (
-          <SecuredNote>
-            Tier {securedTier.index + 1} is already secured for this round.
-          </SecuredNote>
-        ) : null}
-
         {nextTier ? (
           <TierProgressBlock>
             <TierProgressLine>
@@ -1644,11 +1601,6 @@ export function RoundsPage() {
                   ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
                   : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
               </TierProgressLabel>
-              {currentDelegatedLabel && nextTierTargetLabel ? (
-                <TierProgressValue>
-                  {currentDelegatedLabel} of {nextTierTargetLabel} ENS
-                </TierProgressValue>
-              ) : null}
             </TierProgressLine>
             <TierProgressTrack>
               <TierProgressFill $pct={tierProgressPct} />
