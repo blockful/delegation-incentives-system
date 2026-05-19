@@ -1479,7 +1479,11 @@ export function RoundsPage() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button colorStyle="bluePrimary" prefix={<FontAwesomeIcon icon={faShareNodes} />}>
+            <Button
+              size="small"
+              colorStyle="bluePrimary"
+              prefix={<FontAwesomeIcon icon={faShareNodes} />}
+            >
               {tierShareCta}
             </Button>
           </TierShareLink>
