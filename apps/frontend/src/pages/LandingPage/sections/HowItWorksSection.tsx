@@ -7,30 +7,14 @@ const Section = styled.section`
   background: ${tokens.color.surfaceAlt};
   position: relative;
   scroll-margin-top: 96px;
-
-  /* Mobile: just flow normally, no scroll lock. */
   padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl} ${tokens.spacing['2xl']};
 
   @media (min-width: 768px) {
-    /* Desktop: extra height creates the scroll-lock arc. */
-    min-height: 200vh;
-    padding: 0;
-  }
-`
-
-const STICKY_TOP_OFFSET = 80 // breathing room above the pinned section
-
-const Sticky = styled.div`
-  @media (min-width: 768px) {
-    position: sticky;
-    top: ${STICKY_TOP_OFFSET}px;
-    min-height: calc(100vh - ${STICKY_TOP_OFFSET}px);
     padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['4xl']};
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
   }
 `
+
+const Sticky = styled.div``
 
 const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
@@ -277,35 +261,21 @@ function buildSteps(currentAprPct: string | null): Step[] {
   ]
 }
 
-// Reveal arc inside the section's scroll-lock range (0..1):
-// Steps stagger across [STEP_REVEAL_START, STEP_REVEAL_END].
-const STEP_REVEAL_START = 0.08
-const STEP_REVEAL_END = 0.78
-const RISE_PX = 80
-
-const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
-
 interface HowItWorksSectionProps {
   currentAprPct?: string | null
 }
 
-function MobileStep({
+function RevealStep({
   index,
-  animated,
-  desktopStyle,
   children,
 }: {
   index: number
-  animated: boolean
-  desktopStyle?: React.CSSProperties
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (!animated) return
     const el = ref.current
     if (!el) return
     const observer = new IntersectionObserver(
@@ -319,74 +289,20 @@ function MobileStep({
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [animated])
+  }, [])
 
   return (
-    <StepCol
-      ref={ref}
-      $index={index}
-      $animated={animated}
-      $visible={visible}
-      style={desktopStyle}
-    >
+    <StepCol ref={ref} $index={index} $animated $visible={visible}>
       {children}
     </StepCol>
   )
 }
 
 export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionProps = {}) {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [progress, setProgress] = useState(1)
-  const [enabled, setEnabled] = useState(false)
   const steps = buildSteps(currentAprPct)
 
-  useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const desktop = window.matchMedia('(min-width: 768px)').matches
-    setEnabled(!reduce && desktop)
-    if (reduce || !desktop) setProgress(1)
-    else setProgress(0)
-  }, [])
-
-  useEffect(() => {
-    if (!enabled) return
-    const el = sectionRef.current
-    if (!el) return
-
-    let raf = 0
-    const update = () => {
-      raf = 0
-      const rect = el.getBoundingClientRect()
-      const vh = window.innerHeight
-      // Lock range: from when the section's top hits viewport top, until its
-      // bottom hits viewport bottom. During this window the sticky child is
-      // pinned and we drive the reveal. Progress is monotonic — once a step
-      // has revealed, scrolling back up never undoes it.
-      const range = rect.height - vh
-      if (range <= 0) {
-        setProgress((prev) => Math.max(prev, 1))
-        return
-      }
-      const next = clamp01(-rect.top / range)
-      setProgress((prev) => Math.max(prev, next))
-    }
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update)
-    }
-    update()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-      if (raf) cancelAnimationFrame(raf)
-    }
-  }, [enabled])
-
-  const stepSpan = (STEP_REVEAL_END - STEP_REVEAL_START) / STEPS_COUNT
-
   return (
-    <Section id="how-it-works" ref={sectionRef}>
+    <Section id="how-it-works">
       <Sticky>
         <Inner>
           <Header>
@@ -403,36 +319,16 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
           </Header>
 
           <StepsRow>
-            {steps.map((step, i) => {
-              const desktopStyle = enabled
-                ? (() => {
-                    const start = STEP_REVEAL_START + i * stepSpan
-                    const end = start + stepSpan * 1.5 // overlap with next step
-                    const local = clamp01((progress - start) / (end - start))
-                    const eased = easeOutCubic(local)
-                    const ty = (1 - eased) * RISE_PX
-                    return {
-                      transform: `translate3d(0, ${ty}px, 0)`,
-                      opacity: eased,
-                    }
-                  })()
-                : undefined
-              return (
-                <MobileStep
-                  key={step.number}
-                  index={i}
-                  animated={!enabled}
-                  desktopStyle={desktopStyle}
-                >
-                  <NumberBadge>{step.number}</NumberBadge>
-                  <StepTitle>{step.title}</StepTitle>
-                  <StepDesc>{step.desc}</StepDesc>
-                  <TagPill $bg={step.tagBg} $color={step.tagColor}>
-                    {step.tag}
-                  </TagPill>
-                </MobileStep>
-              )
-            })}
+            {steps.map((step, i) => (
+              <RevealStep key={step.number} index={i}>
+                <NumberBadge>{step.number}</NumberBadge>
+                <StepTitle>{step.title}</StepTitle>
+                <StepDesc>{step.desc}</StepDesc>
+                <TagPill $bg={step.tagBg} $color={step.tagColor}>
+                  {step.tag}
+                </TagPill>
+              </RevealStep>
+            ))}
           </StepsRow>
         </Inner>
       </Sticky>
