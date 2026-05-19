@@ -260,13 +260,19 @@ function buildTwitterShareUrl(): string {
   return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
 }
 
-function buildAvatarUrl(voter: VoterDetail): string {
-  if (voter.avatarUrl) return voter.avatarUrl
+function buildFallbackAvatar(address: string): string {
   try {
-    return makeBlockie(voter.address)
+    return makeBlockie(address)
   } catch {
     return ''
   }
+}
+
+function buildAvatarUrl(voter: VoterDetail): string {
+  // Prefer the backend-resolved avatar (ENS metadata service); fall back to a
+  // deterministic blockie so every pill always has a visual.
+  if (voter.avatarUrl) return voter.avatarUrl
+  return buildFallbackAvatar(voter.address)
 }
 
 interface PillRowProps {
@@ -287,9 +293,23 @@ function PillRow({ voters, direction, duration }: PillRowProps) {
         const label =
           voter.ensName ??
           (voter.address ? truncateAddress(voter.address) : 'voter')
+        const fallbackSrc = buildFallbackAvatar(voter.address)
         return (
           <Pill key={`${voter.address}-${i}`}>
-            <PillAvatar src={buildAvatarUrl(voter)} alt="" aria-hidden />
+            <PillAvatar
+              src={buildAvatarUrl(voter)}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              onError={(event) => {
+                // If the ENS metadata avatar 404s or fails to load, swap in
+                // the blockie so the marquee never shows a broken image.
+                const img = event.currentTarget
+                if (fallbackSrc && img.src !== fallbackSrc) {
+                  img.src = fallbackSrc
+                }
+              }}
+            />
             <PillName>{label}</PillName>
           </Pill>
         )
@@ -347,9 +367,9 @@ export function CtaSection() {
 
         {rowA.length > 0 && (
           <Marquee aria-hidden>
-            <PillRow voters={rowA} direction="left" duration={45} />
+            <PillRow voters={rowA} direction="left" duration={120} />
             {rowB.length > 0 && (
-              <PillRow voters={rowB} direction="right" duration={55} />
+              <PillRow voters={rowB} direction="right" duration={150} />
             )}
           </Marquee>
         )}
