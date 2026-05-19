@@ -1,6 +1,9 @@
 import type { FormEvent } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faWallet } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles'
+import { truncateAddress } from '@/utils/format'
 
 interface AddressLookupFormProps {
   value: string
@@ -90,20 +93,20 @@ const ConnectedWalletChip = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid ${tokens.color.borderLight};
-  background: ${tokens.color.bgSubtle};
-  color: ${tokens.color.darkGray};
   padding: 4px 10px;
-  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.lightBlueOpacity};
+  border: 1px solid ${tokens.color.blue};
+  border-radius: 9999px;
+  color: ${tokens.color.blue};
+  font-family: ${tokens.font.family};
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
   cursor: pointer;
-  line-height: 1.2;
-  transition: border-color ${tokens.transition.fast}, color ${tokens.transition.fast};
+  transition: background ${tokens.transition.fast};
 
   &:hover {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.blue};
+    background: ${tokens.color.lightBlue};
   }
 
   &:focus-visible {
@@ -112,9 +115,18 @@ const ConnectedWalletChip = styled.button`
   }
 `
 
-const ChipGlyph = styled.span`
+const ActiveWalletPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: ${tokens.color.status.success.bg};
+  border-radius: 9999px;
+  color: ${tokens.color.status.success.fg};
+  font-family: ${tokens.font.family};
   font-size: ${tokens.font.size.sm};
-  line-height: 1;
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
 `
 
 export function AddressLookupForm({
@@ -133,9 +145,14 @@ export function AddressLookupForm({
   }
 
   const trimmedValue = value.trim()
+  const connectedLower = connectedAddress?.toLowerCase() ?? ''
+  const activeMatchesConnected =
+    Boolean(connectedAddress) &&
+    activeAddress.toLowerCase() === connectedLower
   const showUseConnectedChip = Boolean(
     connectedAddress &&
-      (trimmedValue === '' || trimmedValue.toLowerCase() !== connectedAddress.toLowerCase()),
+      !activeMatchesConnected &&
+      (trimmedValue === '' || trimmedValue.toLowerCase() !== connectedLower),
   )
 
   function handleUseConnected() {
@@ -156,22 +173,32 @@ export function AddressLookupForm({
         <Button type="submit">Inspect</Button>
         <Button type="button" $secondary onClick={onClear}>Clear</Button>
       </Row>
-      {showUseConnectedChip ? (
+      {(showUseConnectedChip || activeMatchesConnected) ? (
         <AffordanceRow>
-          <ConnectedWalletChip
-            type="button"
-            onClick={handleUseConnected}
-            aria-label="Use connected wallet address"
-          >
-            <ChipGlyph aria-hidden>↩</ChipGlyph>
-            Use connected wallet
-          </ConnectedWalletChip>
+          {showUseConnectedChip ? (
+            <ConnectedWalletChip
+              type="button"
+              onClick={handleUseConnected}
+              aria-label="Use my connected wallet address"
+            >
+              <FontAwesomeIcon icon={faWallet} />
+              Use my connected wallet
+            </ConnectedWalletChip>
+          ) : null}
+          {activeMatchesConnected && connectedAddress ? (
+            <ActiveWalletPill>
+              <FontAwesomeIcon icon={faWallet} />
+              Inspecting your wallet · {truncateAddress(connectedAddress)}
+            </ActiveWalletPill>
+          ) : null}
         </AffordanceRow>
       ) : null}
-      <Meta>
-        <span>{activeAddress ? sourceLabel : 'No address selected'}</span>
-        {error ? <ErrorText>{error}</ErrorText> : null}
-      </Meta>
+      {(activeAddress && !activeMatchesConnected) || error ? (
+        <Meta>
+          {activeAddress && !activeMatchesConnected ? <span>{sourceLabel}</span> : null}
+          {error ? <ErrorText>{error}</ErrorText> : null}
+        </Meta>
+      ) : null}
     </Form>
   )
 }

@@ -200,7 +200,7 @@ const FreeBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: 9999px;
   background: rgba(246, 248, 250, 0.2);
   border: 1px solid rgba(208, 215, 222, 0.2);
   font-size: ${tokens.font.size.xs};

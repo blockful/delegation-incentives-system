@@ -122,7 +122,6 @@ export function Footer() {
             <NavLink to="/#how-it-works">How it works</NavLink>
             <NavLink to="/voters">Voters</NavLink>
             <NavLink to="/rounds">Rounds</NavLink>
-            <NavLink to="/lottery">Lottery</NavLink>
             <NavLink to="/transparency">Transparency</NavLink>
             <ExternalLink
               href="https://discuss.ens.domains"

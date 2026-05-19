@@ -15,10 +15,12 @@ import {
   faCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { faXTwitter } from '@fortawesome/free-brands-svg-icons'
+import { faShareNodes } from '@fortawesome/free-solid-svg-icons'
 import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
 import { MOCK_ENS_PROFILES, MOCK_ENS_TO_ADDRESS } from '@/api/mock'
 import { env } from '@/config/env'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
+import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -26,6 +28,7 @@ import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
+import { Button } from '@ensdomains/thorin'
 
 /* ─── Helpers ─── */
 
@@ -170,7 +173,7 @@ const AddressTag = styled.button<{ $copied?: boolean }>`
   gap: 6px;
   padding: 2px 8px;
   background: ${({ $copied }) =>
-    $copied ? tokens.color.status.success.bg : tokens.color.bgSubtle};
+    $copied ? tokens.color.status.success.bg : tokens.color.borderLight};
   border: none;
   border-radius: 14px;
   font-family: ${tokens.font.family};
@@ -187,7 +190,7 @@ const AddressTag = styled.button<{ $copied?: boolean }>`
 
   &:hover {
     background: ${({ $copied }) =>
-      $copied ? tokens.color.status.success.bg : tokens.color.borderLight};
+      $copied ? tokens.color.status.success.bg : tokens.color.middleGray};
   }
 
   &:focus-visible {
@@ -259,50 +262,32 @@ const SocialIcon = styled.span`
   font-size: 14px;
 `
 
-const DelegateCta = styled.button`
+const CtaRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${tokens.spacing.sm};
-  padding: 10px 16px;
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  border: none;
-  border-radius: 8px;
-  font-family: ${tokens.font.family};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
 
   @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
     width: auto;
-    align-self: flex-start;
-  }
-
-  &:hover {
-    background: ${tokens.color.accent};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
   }
 `
 
-const FreeBadge = styled.span.attrs({ 'aria-hidden': true })`
+const FreeBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.25);
-  font-size: 11px;
+  background: rgba(246, 248, 250, 0.2);
+  border: 1px solid rgba(208, 215, 222, 0.2);
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  line-height: 14px;
-  color: ${tokens.color.white};
+  line-height: 16px;
+  color: white;
+  margin-left: ${tokens.spacing.sm};
+  vertical-align: middle;
 `
 
 /* ─── Avatar column with participation ring ─── */
@@ -735,6 +720,17 @@ export function VoterProfilePage() {
     )
   }
 
+  const handleShareOnTwitter = () => {
+    if (!voter) return
+    const handle = twitter ? `@${twitter.replace(/^@/, '')}` : (ensName ?? truncateAddress(voter.address))
+    const votedCount = voter.last10ProposalsVoted.filter(Boolean).length
+    const totalProposals = voter.last10ProposalsVoted.length || 10
+    const text = `Check out ${handle} on the ENS Delegation Incentives Program — ${votedCount}/${totalProposals} recent proposals voted.`
+    const url = window.location.href
+    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+    window.open(intent, '_blank', 'noopener,noreferrer')
+  }
+
   if (loading || ensLoading) {
     return <DelegateProfileSkeleton />
   }
@@ -830,18 +826,27 @@ export function VoterProfilePage() {
               <SocialIcon><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></SocialIcon>
               ENS profile
             </SocialChip>
-            <SocialChip href={anticaptureUrl} target="_blank" rel="noopener noreferrer" aria-label="Anticapture">
+            <SocialChip href={anticaptureUrl} target="_blank" rel="noopener noreferrer" aria-label="Anticapture profile">
               <SocialIcon><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></SocialIcon>
-              Anticapture
+              Anticapture profile
             </SocialChip>
           </SocialLinks>
 
-          {!isDelegated && (
-            <DelegateCta type="button">
-              Delegate and earn
-              <FreeBadge>Free</FreeBadge>
-            </DelegateCta>
-          )}
+          <CtaRow>
+            {!isDelegated && (
+              <Button colorStyle="bluePrimary" width="auto">
+                Delegate and earn<FreeBadge>Free</FreeBadge>
+              </Button>
+            )}
+            <Button
+              colorStyle="blueSecondary"
+              prefix={<FontAwesomeIcon icon={faShareNodes} />}
+              onClick={handleShareOnTwitter}
+              width="auto"
+            >
+              Share profile
+            </Button>
+          </CtaRow>
         </HeaderText>
       </HeaderCard>
 
@@ -879,7 +884,14 @@ export function VoterProfilePage() {
       <TableCard>
         <TableHeadRow>
           <TableHeadCell>Proposal Name</TableHeadCell>
-          <TableHeadCell $width="200px">Delegate Vote</TableHeadCell>
+          <TableHeadCell $width="200px">
+            <LabelWithTooltip
+              text="How this delegate voted on each proposal — “For”, “Against”, “Abstain”, or didn’t vote."
+              iconAriaLabel="About Delegate Vote"
+            >
+              Delegate Vote
+            </LabelWithTooltip>
+          </TableHeadCell>
           <TableHeadCell $width="200px">Result</TableHeadCell>
         </TableHeadRow>
         {proposalRows.map((row) => (

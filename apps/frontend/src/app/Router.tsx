@@ -15,7 +15,6 @@ const VotersPage = lazy(() => import('@/pages/VotersPage').then((module) => ({ d
 const VoterProfilePage = lazy(() => import('@/pages/VoterProfilePage').then((module) => ({ default: module.VoterProfilePage })))
 const RoundsPage = lazy(() => import('@/pages/RoundsPage').then((module) => ({ default: module.RoundsPage })))
 const RoundDetailPage = lazy(() => import('@/pages/RoundsPage/RoundDetailPage').then((module) => ({ default: module.RoundDetailPage })))
-const LotteryPage = lazy(() => import('@/pages/LotteryPage').then((module) => ({ default: module.LotteryPage })))
 const TransparencyPage = lazy(() => import('@/pages/TransparencyPage').then((module) => ({ default: module.TransparencyPage })))
 
 function LazyPage({ children, fallback }: { children: ReactNode; fallback?: ReactElement }) {
@@ -36,7 +35,6 @@ export function Router() {
         <Route path="voters/:address" element={<LazyPage fallback={<DelegateProfileSkeleton />}><VoterProfilePage /></LazyPage>} />
         <Route path="rounds/:roundNumber" element={<LazyPage><RoundDetailPage /></LazyPage>} />
         <Route path="rounds" element={<LazyPage fallback={<RoundsPageSkeleton />}><RoundsPage /></LazyPage>} />
-        <Route path="lottery" element={<LazyPage><LotteryPage /></LazyPage>} />
         <Route path="transparency" element={<LazyPage fallback={<TransparencyPageSkeleton />}><TransparencyPage /></LazyPage>} />
       </Route>
     </Routes>

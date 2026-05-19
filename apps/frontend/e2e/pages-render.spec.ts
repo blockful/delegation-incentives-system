@@ -41,12 +41,6 @@ test.describe('All pages render on mobile', () => {
     await expect(page.getByText('APR Tiers')).toBeVisible()
   })
 
-  test('lottery page renders hero and how-it-works', async ({ page }) => {
-    await page.goto('/lottery')
-    await expect(page.getByRole('heading', { name: /Lottery buckets/i })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(/Check a wallet first/i)).toBeVisible()
-  })
-
   test('transparency page renders all sections', async ({ page }) => {
     await page.goto('/transparency')
     await expect(page.getByRole('heading', { name: /Verify everything on-chain/i })).toBeVisible()

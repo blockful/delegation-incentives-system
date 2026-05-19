@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faMagnifyingGlass, faShareNodes, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { Button } from '@ensdomains/thorin'
 import { useVoters } from '@/features/voters/useVoters'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
@@ -108,6 +109,50 @@ const Description = styled.p`
 
 const StatsBarWrapper = styled.div`
   width: 100%;
+`
+
+const ShareStrip = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px 16px;
+  background: ${tokens.color.lightBlueOpacity};
+  border: 1px solid ${tokens.color.lightBlue};
+  border-radius: 12px;
+
+  @media (min-width: 720px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`
+
+const ShareStripCopy = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.5;
+`
+
+const ShareStripCopyStrong = styled.span`
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
+`
+
+const ShareStripLink = styled.a`
+  text-decoration: none;
+
+  @media (max-width: 719px) {
+    width: 100%;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `
 
 /* ─── Toolbar ─── */
@@ -286,8 +331,8 @@ export function VotersPage() {
     <Page>
         <TopSection>
           <HeaderBlock>
-            <EyebrowPill>Delegate your tokens</EyebrowPill>
-            <PageTitle>Delegate to someone who shows up</PageTitle>
+            <EyebrowPill>Delegate &amp; earn</EyebrowPill>
+            <PageTitle>Pick an active voter. Earn ENS automatically.</PageTitle>
             <Description>
               Choose an active voter, they cast votes on at least 7 of the last 10 proposals, to maximize your rewards.
             </Description>

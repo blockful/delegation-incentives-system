@@ -373,55 +373,6 @@ const InviteSubtext = styled.span`
 `
 
 /* ═══════════════════════════════════════════════════════════
-   5. Lottery banner
-   ═══════════════════════════════════════════════════════════ */
-
-const LotteryBanner = styled(Link)`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
-  border: 1px solid ${tokens.color.lightYellow};
-  border-radius: ${tokens.radius.md};
-  background: linear-gradient(
-    135deg,
-    rgba(255, 247, 47, 0.05) 0%,
-    ${tokens.color.surface} 100%
-  );
-  text-decoration: none;
-  color: inherit;
-  transition:
-    box-shadow ${tokens.transition.base},
-    transform ${tokens.transition.base};
-
-  &:hover {
-    box-shadow: ${tokens.shadow.md};
-    transform: translateY(-1px);
-  }
-`
-
-const LotteryIcon = styled.span`
-  font-size: 18px;
-  flex-shrink: 0;
-`
-
-const LotteryText = styled.span`
-  flex: 1;
-  font-size: ${tokens.font.size.xs};
-  color: ${tokens.color.text};
-  line-height: 1.4;
-
-  strong {
-    font-weight: ${tokens.font.weight.semibold};
-  }
-`
-
-const LotteryArrow = styled.span`
-  font-size: ${tokens.font.size.lg};
-  color: ${tokens.color.textFaint};
-`
-
-/* ═══════════════════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════════════════ */
 
@@ -487,16 +438,6 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
         userEstimatedReward={apr.estimatedMonthlyRewardEns}
       />
 
-      {apr.qualifiesForLottery && (
-        <LotteryBanner to="/lottery">
-          <LotteryIcon aria-hidden>🎟️</LotteryIcon>
-          <LotteryText>
-            Your <strong>{formatPayout(apr.estimatedMonthlyRewardEns)} ENS</strong> payout is below
-            the 1 ENS minimum. It enters a <strong>10 ENS lottery pool</strong> drawn at round end.
-          </LotteryText>
-          <LotteryArrow aria-hidden>&rsaquo;</LotteryArrow>
-        </LotteryBanner>
-      )}
     </Page>
   )
 }

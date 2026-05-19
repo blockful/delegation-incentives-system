@@ -1139,6 +1139,13 @@ function progressPercent(start: string | null, end: string | null): number {
   return Math.max(0, Math.min(100, ((now - s) / (e - s)) * 100))
 }
 
+function statusLabel(status: RoundStatus): string {
+  if (status === 'live') return 'Ongoing'
+  if (status === 'paid') return 'Complete'
+  if (status === 'pending') return 'Pending'
+  return 'Ended'
+}
+
 function formatDaysRemaining(daysRemaining: number | null, status: RoundStatus): string {
   if (status === 'paid') return 'Closed'
   if (daysRemaining == null) return 'Pending'
@@ -1642,7 +1649,7 @@ export function RoundsPage() {
                 </TableCell>
                 <TableCell $weight={0.7}>
                   <MobileLabel>Status</MobileLabel>
-                  <StatusPill $status={row.status}>{row.status}</StatusPill>
+                  <StatusPill $status={row.status}>{statusLabel(row.status)}</StatusPill>
                 </TableCell>
                 <ChevronCell $weight={0.25} aria-hidden>
                   <FontAwesomeIcon icon={faChevronRight} />

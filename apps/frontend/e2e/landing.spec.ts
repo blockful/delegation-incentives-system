@@ -33,7 +33,6 @@ test.describe('Landing Page', () => {
       '/',
       '/voters',
       '/rounds',
-      '/lottery',
       '/transparency',
     ]) {
       await page.goto(path)

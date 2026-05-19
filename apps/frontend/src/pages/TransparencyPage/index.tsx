@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { keyframes, css } from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowUpRightFromSquare, faDownload } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowUpRightFromSquare,
+  faDownload,
+  faFileLines,
+  faClock,
+  faChartPie,
+  faCoins,
+  faWallet,
+} from '@fortawesome/free-solid-svg-icons'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { api } from '@/api'
 import type { RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
@@ -199,9 +208,22 @@ const StepText = styled.p`
   text-wrap: pretty;
 `
 
-const StepEmoji = styled.span`
-  font-size: ${tokens.font.size['3xl']};
-  line-height: 1.1;
+const StepHeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const StepIcon = styled.span<{ $tone: 'blue' | 'green' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ $tone }) => ($tone === 'green' ? tokens.color.positiveEmphasis : tokens.color.blue)};
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `
 
 /* ─── Guardrails strip ─── */
@@ -298,12 +320,18 @@ const VerifyIcon = styled.span`
   background: ${tokens.color.darkBlue};
   overflow: hidden;
   flex-shrink: 0;
+  color: ${tokens.color.white};
 
   img {
     width: 24px;
     height: 24px;
     object-fit: contain;
     display: block;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `
 
@@ -332,42 +360,6 @@ const VerifyArrow = styled.span`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.textSecondary};
-`
-
-/* ─── Eligibility ─── */
-
-const ConditionGrid = styled.div`
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-`
-
-const ConditionChip = styled.div<{ $tone: 'success' | 'warning' }>`
-  flex: 1;
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: ${({ $tone }) =>
-    $tone === 'success' ? tokens.color.status.success.bg : tokens.color.lightOrange};
-`
-
-const ConditionTitle = styled.span<{ $tone: 'success' | 'warning' }>`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${({ $tone }) =>
-    $tone === 'success' ? tokens.color.positiveEmphasis : tokens.color.orange};
-  line-height: 20px;
-`
-
-const ConditionBody = styled.p`
-  margin: 0;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
 `
 
 /* ─── Round data table ─── */
@@ -467,12 +459,6 @@ const StatusPill = styled.span<{ $status: 'paid' | 'live' | 'pending' }>`
   text-transform: capitalize;
 `
 
-const DownloadGroup = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-`
-
 const DownloadLink = styled.a<{ $disabled?: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -525,7 +511,7 @@ interface MethodStep {
   text: string
   offset: number
   tone: 'blue' | 'green'
-  showEmoji?: boolean
+  icon: IconDefinition
 }
 
 const METHOD_STEPS: MethodStep[] = [
@@ -534,25 +520,28 @@ const METHOD_STEPS: MethodStep[] = [
     text: "At round end, we snapshot your average ENS balance over the past 180 days. Long-term holders win. Last-minute deposits don't.",
     offset: 120,
     tone: 'blue',
+    icon: faClock,
   },
   {
     label: '2. Your share',
     text: "We compare your average to everyone else's. That's your slice of the pool. Bigger balance, bigger slice.",
     offset: 80,
     tone: 'blue',
+    icon: faChartPie,
   },
   {
     label: '3. The pool',
     text: 'The pool grows as more ENS gets delegated to active voters. Your reward = your slice × pool size.',
     offset: 40,
     tone: 'blue',
+    icon: faCoins,
   },
   {
     label: '4. You earn',
     text: 'Rewards of 1 ENS or more land straight in your wallet. No claiming required. Smaller amounts go into a 10‑ENS lottery, one winner picked randomly each round.',
     offset: 0,
     tone: 'green',
-    showEmoji: true,
+    icon: faWallet,
   },
 ]
 
@@ -585,27 +574,17 @@ interface RoundsRowData {
   number: number
   period: string
   status: RoundSummary['status']
-  /** TODO(backend): real CSV/JSON download endpoints once exports land. */
+  /** TODO(backend): per-round CSV export endpoint once it lands. */
   csvUrl: string | null
-  jsonUrl: string | null
 }
 
 function buildRoundRows(rounds: RoundSummary[]): RoundsRowData[] {
-  return rounds
-    .slice(0, 8)
-    .map((r) => {
-      const isPaid = r.status === 'paid'
-      // BACKEND-NEEDS: per-round CSV/JSON export endpoints. Until they land,
-      // we expose the existing detail endpoint as a JSON fallback for paid rounds.
-      const jsonUrl = isPaid ? `/api/rounds/${r.roundNumber}` : null
-      return {
-        number: r.roundNumber,
-        period: formatUtcMonthRange(r.startDate, r.endDate),
-        status: r.status,
-        csvUrl: null,
-        jsonUrl,
-      }
-    })
+  return rounds.slice(0, 8).map((r) => ({
+    number: r.roundNumber,
+    period: formatUtcMonthRange(r.startDate, r.endDate),
+    status: r.status,
+    csvUrl: null,
+  }))
 }
 
 export function TransparencyPage() {
@@ -647,9 +626,13 @@ export function TransparencyPage() {
             >
               <StepBar $tone={step.tone} />
               <StepBody $tone={step.tone}>
-                <StepLabel $tone={step.tone}>{step.label}</StepLabel>
+                <StepHeaderRow>
+                  <StepIcon $tone={step.tone} aria-hidden>
+                    <FontAwesomeIcon icon={step.icon} />
+                  </StepIcon>
+                  <StepLabel $tone={step.tone}>{step.label}</StepLabel>
+                </StepHeaderRow>
                 <StepText>{step.text}</StepText>
-                {step.showEmoji && <StepEmoji aria-hidden>🎉</StepEmoji>}
               </StepBody>
             </StepColumn>
           ))}
@@ -701,39 +684,29 @@ export function TransparencyPage() {
               </VerifyMeta>
               <VerifyArrow aria-hidden><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></VerifyArrow>
             </VerifyCard>
+            <VerifyCard
+              href="https://discuss.ens.domains/t/rfc-delegation-increase-incentives-system/21546"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <VerifyIcon><FontAwesomeIcon icon={faFileLines} aria-hidden /></VerifyIcon>
+              <VerifyMeta>
+                <VerifyTitle>RFC &amp; specs</VerifyTitle>
+                <VerifySub>Detailed rules, formulas, and design notes</VerifySub>
+              </VerifyMeta>
+              <VerifyArrow aria-hidden><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></VerifyArrow>
+            </VerifyCard>
           </VerifyRow>
         </VerifyBlock>
-      </Card>
-
-      {/* ─── Eligibility card ─── */}
-      <Card>
-        <SectionHeader>
-          <SectionEyebrow>Eligibility</SectionEyebrow>
-          <SectionTitle>Who counts as &lsquo;active&rsquo;?</SectionTitle>
-        </SectionHeader>
-        <ConditionGrid>
-          <ConditionChip $tone="success">
-            <ConditionTitle $tone="success">Token holder</ConditionTitle>
-            <ConditionBody>You&apos;ve held ENS for at least 180 days, averaged daily.</ConditionBody>
-          </ConditionChip>
-          <ConditionChip $tone="success">
-            <ConditionTitle $tone="success">Delegated to an active voter</ConditionTitle>
-            <ConditionBody>Your delegate voted on at least 7 of the last 10 proposals.</ConditionBody>
-          </ConditionChip>
-          <ConditionChip $tone="warning">
-            <ConditionTitle $tone="warning">Above the 1 ENS minimum</ConditionTitle>
-            <ConditionBody>Smaller rewards go into the lottery pool instead of a direct payout.</ConditionBody>
-          </ConditionChip>
-        </ConditionGrid>
       </Card>
 
       {/* ─── Round data downloads card ─── */}
       <Card>
         <SectionHeader>
           <SectionEyebrow>Round data</SectionEyebrow>
-          <SectionTitle>Reproduce any round&apos;s math</SectionTitle>
+          <SectionTitle>Download every round</SectionTitle>
           <SectionLead>
-            Every round publishes its inputs (the active delegate set, delegation snapshots, 180&#8209;day balance averages) and its outputs (payouts and lottery results). Download a round, run the script in the GitHub repo, and you should get the same numbers we did.
+            Each round publishes a CSV with the active delegate set, balance snapshots, and final payouts. To re-run the math from scratch, the calculation script lives in the GitHub repo.
           </SectionLead>
         </SectionHeader>
 
@@ -741,9 +714,9 @@ export function TransparencyPage() {
         <RoundsTable>
           <RoundsHeadRow>
             <RoundsHeadCell>Round</RoundsHeadCell>
-            <RoundsHeadCell $width="200px">Period</RoundsHeadCell>
+            <RoundsHeadCell $width="240px">Period</RoundsHeadCell>
             <RoundsHeadCell $width="140px">Status</RoundsHeadCell>
-            <RoundsHeadCell $width="200px">Download</RoundsHeadCell>
+            <RoundsHeadCell $width="160px">Download</RoundsHeadCell>
           </RoundsHeadRow>
 
           {rows.length === 0 && (
@@ -758,7 +731,7 @@ export function TransparencyPage() {
                 <MobileLabel>Round</MobileLabel>
                 <span>Round {row.number}</span>
               </RoundsCell>
-              <RoundsCell $width="200px">
+              <RoundsCell $width="240px">
                 <MobileLabel>Period</MobileLabel>
                 <span>{row.period}</span>
               </RoundsCell>
@@ -768,31 +741,23 @@ export function TransparencyPage() {
                   {row.status}
                 </StatusPill>
               </RoundsCell>
-              <RoundsCell $width="200px">
+              <RoundsCell $width="160px">
                 <MobileLabel>Download</MobileLabel>
-                <DownloadGroup>
-                  <DownloadLink $disabled={!row.csvUrl} href={row.csvUrl ?? undefined} aria-label={`Download round ${row.number} CSV`}>
-                    <FontAwesomeIcon icon={faDownload} />
-                    CSV
-                  </DownloadLink>
-                  <DownloadLink
-                    $disabled={!row.jsonUrl}
-                    href={row.jsonUrl ?? undefined}
-                    target={row.jsonUrl ? '_blank' : undefined}
-                    rel={row.jsonUrl ? 'noopener noreferrer' : undefined}
-                    aria-label={`View round ${row.number} JSON`}
-                  >
-                    <FontAwesomeIcon icon={faDownload} />
-                    JSON
-                  </DownloadLink>
-                </DownloadGroup>
+                <DownloadLink
+                  $disabled={!row.csvUrl}
+                  href={row.csvUrl ?? undefined}
+                  aria-label={`Download round ${row.number} CSV`}
+                >
+                  <FontAwesomeIcon icon={faDownload} />
+                  CSV
+                </DownloadLink>
               </RoundsCell>
             </RoundsRow>
           ))}
         </RoundsTable>
 
         <TableCaption>
-          CSV exports arrive after each round closes. The JSON endpoint is live now for paid rounds.{' '}
+          CSV exports arrive after each round closes.{' '}
           {/* BACKEND-NEEDS: per-round CSV export endpoint. Tracking in project_dis_backend_needs.md. */}
         </TableCaption>
         </RoundsBlock>

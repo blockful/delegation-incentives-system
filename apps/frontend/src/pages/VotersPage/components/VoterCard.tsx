@@ -3,6 +3,7 @@ import { useEnsName } from 'wagmi'
 import { Link, useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { Button } from '@ensdomains/thorin'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -51,26 +52,15 @@ const StyledCard = styled.div`
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   cursor: pointer;
-  transition:
-    border-color ${tokens.transition.base},
-    background-image ${tokens.transition.base},
-    box-shadow ${tokens.transition.base};
-  overflow: hidden;
+  transition: border-color ${tokens.transition.base};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+  }
 
   &:focus-visible {
     outline: 2px solid ${tokens.color.blue};
     outline-offset: 2px;
-  }
-
-  @media (min-width: 768px) {
-    &:hover {
-      border-color: ${tokens.color.blue};
-      background-image: linear-gradient(
-        209deg,
-        rgba(56, 137, 255, 0.04) 4%,
-        rgba(255, 255, 255, 0.2) 47%
-      );
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -208,82 +198,25 @@ const ActionsBlock = styled.div`
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: ${tokens.spacing.sm};
+  gap: 8px;
   width: 100%;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: center;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: ${tokens.spacing.lg};
-    background: ${tokens.color.surface};
-    transform: translateY(100%);
-    opacity: 0;
-    pointer-events: none;
-    transition:
-      transform ${tokens.transition.base},
-      opacity ${tokens.transition.base};
-
-    ${StyledCard}:hover & {
-      transform: translateY(0);
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  }
 `
 
-const DelegateAction = styled.button`
-  width: 100%;
+const FreeBadge = styled.span.attrs({ 'aria-hidden': true })`
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: ${tokens.spacing.sm};
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  font-family: ${tokens.font.family};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  cursor: pointer;
-  transition: all ${tokens.transition.fast};
-
-  @media (min-width: 768px) {
-    flex: 1;
-    width: auto;
-  }
-
-  &:hover {
-    background: ${tokens.color.accent};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.25);
-  font-size: 11px;
+  background: rgba(246, 248, 250, 0.2);
+  border: 1px solid rgba(208, 215, 222, 0.2);
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.bold};
-  line-height: 14px;
-  color: ${tokens.color.white};
+  line-height: 16px;
+  color: white;
+  margin-left: ${tokens.spacing.sm};
+  vertical-align: middle;
 `
+
 
 const ProfileLink = styled(Link)`
   width: 100%;
@@ -298,11 +231,6 @@ const ProfileLink = styled(Link)`
   text-decoration: none;
   line-height: 20px;
   transition: gap ${tokens.transition.fast};
-
-  @media (min-width: 768px) {
-    flex: 1;
-    width: auto;
-  }
 
   &:hover {
     text-decoration: none;
@@ -456,15 +384,16 @@ export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterC
       </StatsRow>
 
       <ActionsBlock>
-        <DelegateAction
-          type="button"
+        <Button
+          colorStyle="bluePrimary"
+          size="small"
           onClick={(e) => {
             e.stopPropagation()
             handleDelegate()
           }}
         >
-          Delegate <FreeTag>Free</FreeTag>
-        </DelegateAction>
+          Delegate<FreeBadge>Free</FreeBadge>
+        </Button>
         <ProfileLink to={profileUrl} onClick={(e) => e.stopPropagation()}>
           View profile <ProfileArrow aria-hidden>→</ProfileArrow>
         </ProfileLink>

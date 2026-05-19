@@ -144,11 +144,9 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: ${tokens.radius.sm};
-  transition: background ${tokens.transition.fast};
 
-  &:hover {
-    background: ${tokens.color.surfaceAlt};
+  &:hover span {
+    background: ${tokens.color.blue};
   }
 
   @media (min-width: 1032px) {
@@ -161,7 +159,10 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
     width: 100%;
     background: ${tokens.color.text};
     border-radius: 1px;
-    transition: transform 0.25s ease, opacity 0.2s ease;
+    transition:
+      transform 0.25s ease,
+      opacity 0.2s ease,
+      background ${tokens.transition.fast};
   }
 
   ${({ $open }) =>
@@ -180,33 +181,55 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
 `
 
 const slideIn = keyframes`
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(-12px); }
   to   { opacity: 1; transform: translateY(0); }
 `
 
-const Overlay = styled.div`
+const slideOut = keyframes`
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-12px); }
+`
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to   { opacity: 1; }
+`
+
+const fadeOut = keyframes`
+  from { opacity: 1; }
+  to   { opacity: 0; }
+`
+
+const DRAWER_ANIM_MS = 220
+
+const Overlay = styled.div<{ $closing: boolean }>`
   position: fixed;
   inset: 0;
-  top: 57px;
   background: rgba(1, 26, 37, 0.3);
   z-index: 99;
+  animation: ${({ $closing }) => ($closing ? fadeOut : fadeIn)}
+    ${DRAWER_ANIM_MS}ms ease both;
 
   @media (min-width: 1032px) {
     display: none;
   }
 `
 
-const MobileDrawer = styled.nav`
-  position: fixed;
-  top: 57px;
-  left: 0;
-  right: 0;
-  background: ${tokens.color.surface};
-  border-bottom: 1px solid ${tokens.color.border};
+const MobileDrawer = styled.nav<{ $closing: boolean }>`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
   padding: 8px 0;
-  z-index: 100;
-  animation: ${slideIn} 0.2s ease;
+  overflow: hidden;
   box-shadow: ${tokens.shadow.lg};
+  animation: ${({ $closing }) => ($closing ? slideOut : slideIn)}
+    ${DRAWER_ANIM_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both;
 
   @media (min-width: 1032px) {
     display: none;
@@ -239,7 +262,6 @@ const publicNavItems = [
   { to: '/', label: 'Home' },
   { to: '/voters', label: 'Voters' },
   { to: '/rounds', label: 'Rounds' },
-  { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },
 ] as const
 
@@ -278,6 +300,7 @@ function ConnectedAccount({
 export function Header() {
   const walletState = useWalletState()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [drawerMounted, setDrawerMounted] = useState(false)
   const location = useLocation()
   const isConnected = walletState.status !== 'disconnected'
   const address = isConnected ? walletState.address : undefined
@@ -302,6 +325,17 @@ export function Header() {
       document.body.style.overflow = ''
     }
   }, [menuOpen])
+
+  // Keep the drawer mounted until the close animation finishes
+  useEffect(() => {
+    if (menuOpen) {
+      setDrawerMounted(true)
+      return
+    }
+    if (!drawerMounted) return
+    const t = setTimeout(() => setDrawerMounted(false), DRAWER_ANIM_MS)
+    return () => clearTimeout(t)
+  }, [menuOpen, drawerMounted])
 
   return (
     <>
@@ -349,11 +383,9 @@ export function Header() {
             <span />
           </HamburgerButton>
         </RightArea>
-      </StyledHeader>
 
-      {menuOpen && (
-        <>
-          <MobileDrawer>
+        {drawerMounted && (
+          <MobileDrawer $closing={!menuOpen}>
             {publicNavItems.map(({ to, label }) => (
               <MobileNavLink key={to} to={to} end={to === '/'} onClick={closeMenu}>
                 {label}
@@ -365,9 +397,10 @@ export function Header() {
               </MobileNavLink>
             ))}
           </MobileDrawer>
-          <Overlay onClick={closeMenu} />
-        </>
-      )}
+        )}
+      </StyledHeader>
+
+      {drawerMounted && <Overlay $closing={!menuOpen} onClick={closeMenu} />}
     </>
   )
 }
