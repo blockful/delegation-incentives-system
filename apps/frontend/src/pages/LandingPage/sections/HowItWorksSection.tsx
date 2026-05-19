@@ -127,14 +127,13 @@ const StepCol = styled.div<{
   border: 1px solid ${tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
 
-  ${({ $animated, $visible, $index }) =>
+  ${({ $animated, $visible }) =>
     $animated &&
     css`
       opacity: 0;
       ${$visible &&
       css`
-        animation: ${fadeInUp} 1s cubic-bezier(0.22, 1, 0.36, 1)
-          ${$index * 0.7}s forwards;
+        animation: ${fadeInUp} 0.5s ease both;
       `}
     `}
 
@@ -291,12 +290,54 @@ interface HowItWorksSectionProps {
   currentAprPct?: string | null
 }
 
+function MobileStep({
+  index,
+  animated,
+  desktopStyle,
+  children,
+}: {
+  index: number
+  animated: boolean
+  desktopStyle?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!animated) return
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.4, rootMargin: '0px 0px -10% 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [animated])
+
+  return (
+    <StepCol
+      ref={ref}
+      $index={index}
+      $animated={animated}
+      $visible={visible}
+      style={desktopStyle}
+    >
+      {children}
+    </StepCol>
+  )
+}
+
 export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionProps = {}) {
   const sectionRef = useRef<HTMLElement>(null)
-  const stepsRef = useRef<HTMLDivElement>(null)
   const [progress, setProgress] = useState(1)
   const [enabled, setEnabled] = useState(false)
-  const [stepsVisible, setStepsVisible] = useState(false)
   const steps = buildSteps(currentAprPct)
 
   useEffect(() => {
@@ -305,32 +346,7 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
     setEnabled(!reduce && desktop)
     if (reduce || !desktop) setProgress(1)
     else setProgress(0)
-    if (reduce) {
-      setStepsVisible(true)
-    }
   }, [])
-
-  // Mobile (and any non-scroll-lock context): when the steps row enters the
-  // viewport, flip a single flag — each card animates in with an index-based
-  // delay (CSS keyframe with stagger), so the reveal feels orchestrated.
-  useEffect(() => {
-    if (enabled) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    const el = stepsRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setStepsVisible(true)
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -5% 0px' },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [enabled])
 
   useEffect(() => {
     if (!enabled) return
@@ -386,7 +402,7 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
             </Description>
           </Header>
 
-          <StepsRow ref={stepsRef}>
+          <StepsRow>
             {steps.map((step, i) => {
               const desktopStyle = enabled
                 ? (() => {
@@ -402,12 +418,11 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
                   })()
                 : undefined
               return (
-                <StepCol
+                <MobileStep
                   key={step.number}
-                  $index={i}
-                  $animated={!enabled}
-                  $visible={stepsVisible}
-                  style={desktopStyle}
+                  index={i}
+                  animated={!enabled}
+                  desktopStyle={desktopStyle}
                 >
                   <NumberBadge>{step.number}</NumberBadge>
                   <StepTitle>{step.title}</StepTitle>
@@ -415,7 +430,7 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
                   <TagPill $bg={step.tagBg} $color={step.tagColor}>
                     {step.tag}
                   </TagPill>
-                </StepCol>
+                </MobileStep>
               )
             })}
           </StepsRow>
