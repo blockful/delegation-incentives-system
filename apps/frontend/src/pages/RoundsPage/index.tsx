@@ -13,7 +13,7 @@ import {
   faLock,
   faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons'
-import { Tag } from '@ensdomains/thorin'
+import { Button, Tag } from '@ensdomains/thorin'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
@@ -347,7 +347,7 @@ const TierShareRow = styled.div`
   gap: 12px;
   align-items: stretch;
   border-top: 1px solid ${tokens.color.borderLight};
-  padding-top: 16px;
+  padding-top: 20px;
 
   @media (min-width: 720px) {
     flex-direction: row;
@@ -364,38 +364,16 @@ const TierShareCopy = styled.p`
   line-height: 1.5;
 `
 
-const TierShareButton = styled.a`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 8px;
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  border: 1px solid ${tokens.color.blue};
-  font-family: inherit;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
+const TierShareLink = styled.a`
   text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background ${tokens.transition.fast},
-    border-color ${tokens.transition.fast};
 
-  svg {
-    color: currentColor;
-    width: 14px;
-    height: 14px;
-  }
+  @media (max-width: 719px) {
+    width: 100%;
 
-  &:hover {
-    background: ${tokens.color.darkBlue};
-    border-color: ${tokens.color.darkBlue};
-    color: ${tokens.color.white};
-    text-decoration: none;
+    button {
+      width: 100%;
+      justify-content: center;
+    }
   }
 `
 
@@ -1544,14 +1522,15 @@ export function RoundsPage() {
                   ? `Bring in more delegators to unlock ${nextTierAprLabel} APR for everyone.`
                   : 'Bring in more delegators to unlock a higher APR for everyone.'}
           </TierShareCopy>
-          <TierShareButton
+          <TierShareLink
             href={tierShareUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <FontAwesomeIcon icon={faShareNodes} />
-            {tierShareCta}
-          </TierShareButton>
+            <Button colorStyle="bluePrimary" prefix={<FontAwesomeIcon icon={faShareNodes} />}>
+              {tierShareCta}
+            </Button>
+          </TierShareLink>
         </TierShareRow>
       </TierCard>
 
