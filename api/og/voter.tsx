@@ -21,16 +21,24 @@ function isAddress(value: string): boolean {
 }
 
 async function resolveAvatarUrl(name: string): Promise<string | null> {
-  // Verify the avatar exists with a GET (metadata.ens.domains rejects HEAD), then
-  // hand the URL to Satori so it fetches the image itself. Read just the
-  // content-type so we don't pull the whole body twice.
+  // Verify the avatar exists with a quick GET (metadata.ens.domains rejects HEAD),
+  // then hand the URL to Satori so it fetches the image itself. We don't drain
+  // the body — checking the headers is enough, and downloading twice would
+  // bloat the function's total network time past Vercel's edge budget.
   try {
     const url = `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
-    const res = await fetch(url, { redirect: 'follow' })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 2500)
+    let res: Response
+    try {
+      res = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+    } finally {
+      clearTimeout(timer)
+    }
+    // Cancel the body stream so we don't hold the connection open.
+    res.body?.cancel().catch(() => undefined)
     if (!res.ok) return null
     const type = res.headers.get('content-type') ?? ''
-    // Discard the body — we're only using this fetch to confirm the avatar exists.
-    await res.arrayBuffer().catch(() => undefined)
     if (!type.startsWith('image/')) return null
     return url
   } catch {
