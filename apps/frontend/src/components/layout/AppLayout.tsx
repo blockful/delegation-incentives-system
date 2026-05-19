@@ -23,16 +23,13 @@ const Main = styled.main<{ $fullWidth?: boolean }>`
   `}
 `
 
-const Wrapper = styled.div<{ $hasGradient?: boolean }>`
+const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  ${({ $hasGradient }) =>
-    $hasGradient
-      ? `background:
-          linear-gradient(180deg, rgba(56, 137, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 20.4%),
-          ${tokens.color.white};`
-      : ''}
+  background:
+    linear-gradient(180deg, rgba(56, 137, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 20.4%),
+    ${tokens.color.white};
 `
 
 const FULL_WIDTH_PATHS = ['/']
@@ -47,7 +44,7 @@ export function AppLayout() {
   }, [pathname])
 
   return (
-    <Wrapper $hasGradient={!isFullWidth}>
+    <Wrapper>
       <Header />
       <Main $fullWidth={isFullWidth}>
         <Outlet />
