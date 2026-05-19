@@ -418,10 +418,10 @@ const InspectHeader = styled.div`
 `
 
 const InspectLabel = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.3;
 `
 
 const SearchRow = styled.div`
