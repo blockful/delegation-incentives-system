@@ -111,6 +111,7 @@ const Bottom = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   gap: ${tokens.spacing.md};
   border-top: 1px solid rgba(255, 255, 255, 0.18);
   padding-top: ${tokens.spacing.xl};
@@ -130,8 +131,8 @@ const FootMark = styled.span`
   line-height: 0;
 
   svg {
-    width: 40px;
-    height: 40px;
+    width: 64px;
+    height: 64px;
   }
 
   svg path,
@@ -143,8 +144,8 @@ const FootMark = styled.span`
 
   @media (min-width: 768px) {
     svg {
-      width: 56px;
-      height: 56px;
+      width: 96px;
+      height: 96px;
     }
   }
 `
@@ -195,7 +196,6 @@ export function Footer() {
             <FooterLink to="/">How It Works</FooterLink>
             <FooterLink to="/voters">Voters</FooterLink>
             <FooterLink to="/rounds">Rounds</FooterLink>
-            <FooterLink to="/lottery">Lottery</FooterLink>
             <FooterLink to="/transparency">Transparency</FooterLink>
           </NavColumn>
 
