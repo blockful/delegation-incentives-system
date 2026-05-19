@@ -56,7 +56,7 @@ const Card = styled.div`
   }
 
   @media (min-width: 768px) {
-    min-height: 720px;
+    min-height: 624px;
     padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['5xl']};
   }
 `
