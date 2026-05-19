@@ -1,11 +1,4 @@
 {
-  "build": {
-    "env": {
-      "VITE_API_BASE_URL": "/api",
-      "VITE_USE_MOCK_API": "true",
-      "VITE_REOWN_PROJECT_ID": "preview-placeholder"
-    }
-  },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

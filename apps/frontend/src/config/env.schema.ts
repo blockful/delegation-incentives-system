@@ -35,10 +35,13 @@ const ApiBaseUrlSchema = z
     return value.replace(/\/+$/, '')
   })
 
+// Defaults match .env.example so builds without env vars (Vercel preview
+// deploys, CI smoke builds) succeed. Real values from Vercel dashboard or a
+// local .env take precedence.
 const PublicFrontendEnvSchema = z.object({
-  VITE_API_BASE_URL: ApiBaseUrlSchema,
-  VITE_USE_MOCK_API: BooleanEnvSchema,
-  VITE_REOWN_PROJECT_ID: z.string().trim().min(1),
+  VITE_API_BASE_URL: ApiBaseUrlSchema.optional(),
+  VITE_USE_MOCK_API: BooleanEnvSchema.optional(),
+  VITE_REOWN_PROJECT_ID: z.string().trim().min(1).optional(),
 })
 
 const FrontendDevServerEnvSchema = z.object({
@@ -89,9 +92,9 @@ export function parsePublicFrontendEnv(rawEnv: Record<string, unknown>): PublicF
   )
 
   return {
-    apiBaseUrl: env.VITE_API_BASE_URL,
-    useMockApi: env.VITE_USE_MOCK_API,
-    reownProjectId: env.VITE_REOWN_PROJECT_ID,
+    apiBaseUrl: env.VITE_API_BASE_URL ?? '/api',
+    useMockApi: env.VITE_USE_MOCK_API ?? false,
+    reownProjectId: env.VITE_REOWN_PROJECT_ID ?? 'preview-placeholder',
   }
 }
 
