@@ -72,33 +72,52 @@ function getSatoshi(weight: 500 | 700): FontPromise {
 // Fetch the avatar bytes ourselves and embed as a data URL. Letting Satori
 // fetch the URL itself works in Node but fails on Vercel's edge — likely a
 // content-type / redirect handling difference in Satori's image loader.
-async function fetchAvatarDataUrl(name: string): Promise<string | null> {
+interface AvatarFetchResult {
+  dataUrl: string | null
+  diagnostic: string
+}
+
+async function fetchAvatarDataUrl(name: string): Promise<AvatarFetchResult> {
+  const url = `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
   try {
-    const url = `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 4000)
+    const timer = setTimeout(() => controller.abort(), 8000)
     let res: Response
     try {
-      res = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+      res = await fetch(url, {
+        signal: controller.signal,
+        redirect: 'follow',
+        headers: { 'user-agent': 'ens-incentives-og/1.0', accept: 'image/*' },
+      })
     } finally {
       clearTimeout(timer)
     }
-    if (!res.ok) return null
+    if (!res.ok) return { dataUrl: null, diagnostic: `status=${res.status}` }
     const contentType = res.headers.get('content-type') ?? 'image/png'
-    if (!contentType.startsWith('image/')) return null
+    if (!contentType.startsWith('image/')) {
+      return { dataUrl: null, diagnostic: `bad content-type=${contentType}` }
+    }
     const buf = await res.arrayBuffer()
-    if (buf.byteLength === 0) return null
-    // Edge-safe base64 (no Buffer): iterate in 32KB chunks
+    if (buf.byteLength === 0) return { dataUrl: null, diagnostic: 'empty body' }
     const bytes = new Uint8Array(buf)
     let binary = ''
     const chunkSize = 0x8000
     for (let i = 0; i < bytes.length; i += chunkSize) {
       binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
     }
-    return `data:${contentType};base64,${btoa(binary)}`
-  } catch {
-    return null
+    return {
+      dataUrl: `data:${contentType};base64,${btoa(binary)}`,
+      diagnostic: `ok bytes=${buf.byteLength} type=${contentType}`,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { dataUrl: null, diagnostic: `fetch threw: ${message}` }
   }
+}
+
+function stripEnsTld(name: string): string {
+  // Drop the trailing TLD (.eth, .xyz, .box, …) for visual density.
+  return name.replace(/\.[a-z0-9-]{2,}$/i, '')
 }
 
 export default async function handler(request: Request) {
@@ -111,15 +130,48 @@ export default async function handler(request: Request) {
     ? rawAddress
     : (rawName && isAddress(rawName) ? rawName : null)
 
-  const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
+  const displayName = name
+    ? stripEnsTld(name)
+    : address
+      ? truncateAddress(address)
+      : 'ENS Delegate'
   const initials = address ? initialsForAddress(address) : 'EN'
 
   // Fetch avatar bytes + fonts in parallel
-  const [avatarUrl, satoshiBold, satoshiMedium] = await Promise.all([
-    name ? fetchAvatarDataUrl(name) : Promise.resolve(null),
+  const [avatarResult, satoshiBold, satoshiMedium] = await Promise.all([
+    name
+      ? fetchAvatarDataUrl(name)
+      : Promise.resolve({ dataUrl: null, diagnostic: 'no name' } as AvatarFetchResult),
     getSatoshi(700),
     getSatoshi(500),
   ])
+  const avatarUrl = avatarResult.dataUrl
+
+  // Debug mode — return diagnostic JSON instead of the image
+  if (searchParams.get('debug') === '1') {
+    return new Response(
+      JSON.stringify(
+        {
+          name,
+          address,
+          avatar: {
+            attemptedUrl: name
+              ? `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
+              : null,
+            diagnostic: avatarResult.diagnostic,
+            embeddedBytes: avatarResult.dataUrl?.length ?? 0,
+          },
+          fonts: {
+            satoshiBold: satoshiBold ? `${satoshiBold.byteLength} bytes` : 'missing',
+            satoshiMedium: satoshiMedium ? `${satoshiMedium.byteLength} bytes` : 'missing',
+          },
+        },
+        null,
+        2,
+      ),
+      { headers: { 'content-type': 'application/json' } },
+    )
+  }
 
   type FontEntry = {
     name: string
