@@ -714,6 +714,24 @@ const VotersHeaderBlock = styled.div`
   width: 100%;
 `
 
+const VotersShareStrip = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px 16px;
+  background: ${tokens.color.lightBlueOpacity};
+  border: 1px solid ${tokens.color.lightBlue};
+  border-radius: 12px;
+
+  @media (min-width: 720px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`
+
 const VotersFilterRow = styled.div`
   display: flex;
   align-items: center;
@@ -757,6 +775,12 @@ export function VotersPageSkeleton() {
 
         {/* Stats row — reuses the same skeleton as the live component */}
         <StatsBarSkeleton />
+
+        {/* Share strip — matches the live network-effect band */}
+        <VotersShareStrip>
+          <SkeletonBlock $height="20px" $width="60%" $maxWidth="420px" />
+          <SkeletonBlock $height="32px" $width="180px" $radius="8px" />
+        </VotersShareStrip>
       </VotersTopSection>
 
       <CardsAndFiltersShell>

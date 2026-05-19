@@ -169,13 +169,17 @@ const ProposalCount = styled.span`
 
 const StatsRow = styled.div`
   display: flex;
-  gap: ${tokens.spacing.md};
+  gap: ${tokens.spacing.sm};
+
+  @media (min-width: 420px) {
+    gap: ${tokens.spacing.md};
+  }
 `
 
 const Stat = styled.div`
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
 `
 
@@ -185,13 +189,24 @@ const StatValue = styled.span`
   color: ${tokens.color.darkBlue};
   font-variant-numeric: tabular-nums;
   line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 const StatLabel = styled.span`
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textSecondary};
-  line-height: 20px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (min-width: 420px) {
+    font-size: ${tokens.font.size.base};
+    line-height: 20px;
+  }
 `
 
 const ActionsBlock = styled.div`
