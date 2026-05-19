@@ -1002,13 +1002,13 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     to: '/rounds/6',
     hasAddress: true,
   },
-  // Holder: APR + lottery (rare)
+  // Lottery + delegate (sub-1 ENS bucket winner who's also an active delegate)
   {
     roundNumber: 5,
     period: 'May 2026',
     pool: '6.5K ENS',
     vpGrowth: '+0.7%',
-    rewards: { state: 'paid', apr: '+0.4250 ENS', lottery: '+10.0000 ENS', delegate: null },
+    rewards: { state: 'paid', apr: null, lottery: '+10.0000 ENS', delegate: '+2.7500 ENS' },
     status: 'paid',
     to: '/rounds/5',
     hasAddress: true,
@@ -1035,13 +1035,13 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     to: '/rounds/3',
     hasAddress: true,
   },
-  // Delegate + APR + Lottery (the full house)
+  // Delegate + APR (holder ≥ 1 ENS, also active delegate — no lottery possible alongside APR)
   {
     roundNumber: 2,
     period: 'Feb 2026',
     pool: '5K ENS',
     vpGrowth: '+0.4%',
-    rewards: { state: 'paid', apr: '+0.3120 ENS', lottery: '+10.0000 ENS', delegate: '+2.7500 ENS' },
+    rewards: { state: 'paid', apr: '+0.5640 ENS', lottery: null, delegate: '+3.2500 ENS' },
     status: 'paid',
     to: '/rounds/2',
     hasAddress: true,
@@ -1064,23 +1064,29 @@ function renderHolderRewards(r: RewardsBreakdown) {
   if (r.state === 'inspect') return <MutedCell>Inspect an address</MutedCell>
   if (r.state === 'pending') return <MutedCell>Pending</MutedCell>
   if (r.state === 'unavailable') return <MutedCell>—</MutedCell>
-  if (!r.apr && !r.lottery) return <MutedCell>—</MutedCell>
-  return (
-    <RewardBadgeRow>
-      {r.apr && (
+  // APR and Lottery are mutually exclusive on the holder side:
+  // share ≥ 1 ENS → direct APR payout; share < 1 ENS → lottery entry instead.
+  if (r.apr) {
+    return (
+      <RewardBadgeRow>
         <RewardBadge $tone="apr">
           <RewardBadgeTag>APR</RewardBadgeTag>
           {r.apr}
         </RewardBadge>
-      )}
-      {r.lottery && (
+      </RewardBadgeRow>
+    )
+  }
+  if (r.lottery) {
+    return (
+      <RewardBadgeRow>
         <RewardBadge $tone="lottery">
           <RewardBadgeTag>Lottery</RewardBadgeTag>
           {r.lottery}
         </RewardBadge>
-      )}
-    </RewardBadgeRow>
-  )
+      </RewardBadgeRow>
+    )
+  }
+  return <MutedCell>—</MutedCell>
 }
 
 function renderDelegateRewards(r: RewardsBreakdown) {
@@ -1361,8 +1367,10 @@ export function RoundsPage() {
 
   // ─── Tier ladder + share-to-unlock data ───
   const tierLadder = tierData.tiers ?? []
-  const nextTier =
-    tierLadder.find((t, idx) => idx > currentTierIndex && !t.isUnlocked) ?? null
+  // Next tier is simply the one immediately above the current. Position is the
+  // source of truth — the API's `isUnlocked` flag can be true for tiers the
+  // program hasn't reached yet (meaning "achievable").
+  const nextTier = tierLadder[currentTierIndex + 1] ?? null
   const currentGrowthPct = Number(tierData.currentGrowthPct ?? '0')
   const nextTierGrowthTarget = nextTier ? Number(nextTier.momGrowthMinPct ?? '0') : 0
   const tierProgressPct = nextTier && nextTierGrowthTarget > 0
@@ -1447,11 +1455,14 @@ export function RoundsPage() {
 
         <TierLadder>
           {tierLadder.map((tier, idx) => {
+            // Derive purely from position. The API's `isUnlocked` can be true
+            // for tiers above the current one (meaning "achievable" rather than
+            // "passed"), so it's not safe as the ladder source of truth.
             const state: TierPipState =
-              idx === currentTierIndex
-                ? 'current'
-                : tier.isUnlocked
-                  ? 'unlocked'
+              idx < currentTierIndex
+                ? 'unlocked'
+                : idx === currentTierIndex
+                  ? 'current'
                   : 'locked'
             const icon =
               state === 'current' || state === 'unlocked' ? faCheck : faLock
