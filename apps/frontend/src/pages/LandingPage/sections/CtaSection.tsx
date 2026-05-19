@@ -1,8 +1,15 @@
-import { useCallback, useRef } from 'react'
-import styled from 'styled-components'
+import { useCallback, useMemo } from 'react'
+import styled, { keyframes } from 'styled-components'
 import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight, faShareNodes } from '@fortawesome/free-solid-svg-icons'
+import makeBlockie from 'ethereum-blockies-base64'
+import { api } from '@/api'
+import { useAsync } from '@/hooks/useAsync'
+import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles/tokens'
+import type { VoterDetail } from '@/api/types'
 
 const RouterLink = styled(Link)<{ $fullWidthMobile?: boolean }>`
   text-decoration: none;
@@ -49,6 +56,7 @@ const PrimaryCtaLink = styled(RouterLink)`
     background: ${tokens.color.white};
     color: ${tokens.color.blue};
     border: 1px solid ${tokens.color.white};
+    gap: 8px;
 
     &:hover {
       background: rgba(255, 255, 255, 0.92);
@@ -62,6 +70,7 @@ const SecondaryCtaLink = styled(ShareLink)`
     background: rgba(255, 255, 255, 0.12);
     color: ${tokens.color.white};
     border: 1px solid rgba(255, 255, 255, 0.3);
+    gap: 8px;
 
     &:hover {
       background: rgba(255, 255, 255, 0.2);
@@ -85,55 +94,40 @@ const Card = styled.div`
   isolation: isolate;
   background:
     radial-gradient(
-      circle 480px at var(--mx, 50%) var(--my, 0%),
-      rgba(255, 255, 255, 0.22),
-      transparent 70%
+      ellipse 70% 60% at 50% -10%,
+      rgba(56, 137, 255, 1) 0%,
+      rgba(104, 164, 253, 1) 25%,
+      rgba(151, 191, 251, 1) 50%,
+      rgba(199, 219, 248, 1) 75%,
+      rgba(246, 246, 246, 1) 100%
     ),
     ${tokens.color.blue};
+  border: 1px solid ${tokens.color.white};
   border-radius: 24px;
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
-  cursor: default;
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['4xl']};
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   transition:
-    transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 360ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      circle 280px at var(--mx, 50%) var(--my, 50%),
-      rgba(255, 255, 255, 0.18),
-      transparent 65%
-    );
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 320ms ease-out;
-    z-index: 1;
-  }
-
-  &[data-hover='true'] {
+  &:hover {
     transform: translateY(-2px);
     box-shadow: 0 24px 60px -24px rgba(56, 137, 255, 0.55);
-  }
-
-  &[data-hover='true']::before {
-    opacity: 1;
   }
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;
 
-    &[data-hover='true'] {
+    &:hover {
       transform: none;
-      box-shadow: none;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
     }
   }
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']};
+    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']} ${tokens.spacing['5xl']};
   }
 `
 
@@ -155,7 +149,8 @@ const Heading = styled.h2`
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin: 0;
-  white-space: pre-line;
+  max-width: 784px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size['5xl']};
@@ -165,9 +160,9 @@ const Heading = styled.h2`
 const Subtitle = styled.p`
   font-size: ${tokens.font.size.lg};
   color: rgba(255, 255, 255, 0.85);
-  line-height: 1.6;
+  line-height: 1.4;
   margin: 0;
-  max-width: 560px;
+  max-width: 460px;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.xl};
@@ -188,8 +183,83 @@ const Actions = styled.div`
   }
 `
 
+const Marquee = styled.div`
+  position: relative;
+  z-index: 1;
+  margin-top: ${tokens.spacing['3xl']};
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+`
+
+const scrollLeft = keyframes`
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+`
+
+const scrollRight = keyframes`
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+`
+
+const MarqueeTrack = styled.div<{ $direction: 'left' | 'right'; $duration: number }>`
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  animation: ${({ $direction }) => ($direction === 'left' ? scrollLeft : scrollRight)}
+    ${({ $duration }) => $duration}s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`
+
+const Pill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 4px 4px;
+  background: ${tokens.color.white};
+  border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+`
+
+const PillAvatar = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  border: 1px solid ${tokens.color.borderLight};
+  object-fit: cover;
+  flex-shrink: 0;
+`
+
+const PillName = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
 const SHARE_TWEET_TEXT =
-  'Delegate your ENS to an active voter and earn APR rewards automatically. The more people delegate, the higher everyone’s APR climbs.'
+  "Delegate your ENS to an active voter and earn APR rewards automatically. Share to lift everyone's APR, including yours."
 
 function buildTwitterShareUrl(): string {
   if (typeof window === 'undefined') return '#'
@@ -198,47 +268,71 @@ function buildTwitterShareUrl(): string {
   return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
 }
 
+function buildAvatarUrl(voter: VoterDetail): string {
+  if (voter.avatarUrl) return voter.avatarUrl
+  try {
+    return makeBlockie(voter.address)
+  } catch {
+    return ''
+  }
+}
+
+interface PillRowProps {
+  voters: VoterDetail[]
+  direction: 'left' | 'right'
+  duration: number
+}
+
+function PillRow({ voters, direction, duration }: PillRowProps) {
+  // Duplicate the list so the loop is seamless when the track translates -50%.
+  const items = [...voters, ...voters]
+  return (
+    <MarqueeTrack $direction={direction} $duration={duration}>
+      {items.map((voter, i) => {
+        const label =
+          voter.ensName ??
+          (voter.address ? truncateAddress(voter.address) : 'voter')
+        return (
+          <Pill key={`${voter.address}-${i}`}>
+            <PillAvatar src={buildAvatarUrl(voter)} alt="" aria-hidden />
+            <PillName>{label}</PillName>
+          </Pill>
+        )
+      })}
+    </MarqueeTrack>
+  )
+}
+
 export function CtaSection() {
-  const cardRef = useRef<HTMLDivElement>(null)
+  const fetchVoters = useCallback(() => api.activeVoters(), [])
+  const { data } = useAsync(fetchVoters)
 
-  const handleMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = cardRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    el.style.setProperty('--mx', `${x}px`)
-    el.style.setProperty('--my', `${y}px`)
-  }, [])
-
-  const handleEnter = useCallback(() => {
-    cardRef.current?.setAttribute('data-hover', 'true')
-  }, [])
-
-  const handleLeave = useCallback(() => {
-    cardRef.current?.setAttribute('data-hover', 'false')
-  }, [])
+  const { rowA, rowB } = useMemo(() => {
+    const voters = data?.voters ?? []
+    // Show up to ~14 pills total so the marquee is full enough to feel continuous.
+    const top = voters.slice(0, 14)
+    const half = Math.ceil(top.length / 2)
+    return {
+      rowA: top.slice(0, half),
+      rowB: top.slice(half).concat(top.slice(0, Math.max(0, half - (top.length - half)))),
+    }
+  }, [data])
 
   return (
     <Section data-testid="cta-section">
-      <Card
-        ref={cardRef}
-        data-hover="false"
-        onMouseMove={handleMove}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-      >
+      <Card>
         <Inner>
-          <Heading>
-            {'The more we share,\nthe more we earn.'}
-          </Heading>
+          <Heading>Earn ENS rewards. Strengthen governance.</Heading>
           <Subtitle>
-            Higher tiers unlock as more ENS gets delegated to active voters.
-            Share the program and lift everyone&rsquo;s APR — including yours.
+            Delegate in under a minute. Share the program to lift everyone&rsquo;s
+            APR, including yours.
           </Subtitle>
           <Actions>
             <PrimaryCtaLink to="/voters" $fullWidthMobile>
-              <Button colorStyle="background">Delegate</Button>
+              <Button colorStyle="background">
+                Delegate to an active voter
+                <FontAwesomeIcon icon={faArrowRight} />
+              </Button>
             </PrimaryCtaLink>
             <SecondaryCtaLink
               href={buildTwitterShareUrl()}
@@ -246,10 +340,22 @@ export function CtaSection() {
               rel="noopener noreferrer"
               $fullWidthMobile
             >
-              <Button colorStyle="background">Share</Button>
+              <Button colorStyle="background">
+                <FontAwesomeIcon icon={faShareNodes} />
+                Share the program
+              </Button>
             </SecondaryCtaLink>
           </Actions>
         </Inner>
+
+        {rowA.length > 0 && (
+          <Marquee aria-hidden>
+            <PillRow voters={rowA} direction="left" duration={45} />
+            {rowB.length > 0 && (
+              <PillRow voters={rowB} direction="right" duration={55} />
+            )}
+          </Marquee>
+        )}
       </Card>
     </Section>
   )

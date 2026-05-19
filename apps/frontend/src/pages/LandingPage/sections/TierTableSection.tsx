@@ -1,6 +1,8 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import { Button } from '@ensdomains/thorin'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faShareNodes } from '@fortawesome/free-solid-svg-icons'
 import type { TierEntry } from '@/api/types'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
@@ -224,6 +226,7 @@ const CtaWrap = styled.div`
   button {
     width: 100%;
     justify-content: center;
+    gap: 8px;
   }
 
   @media (min-width: 768px) {
@@ -446,9 +449,9 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             <Eyebrow>Network effect</Eyebrow>
             <Heading>Your APR grows when others delegate too</Heading>
             <Description>
-              This isn't a fixed yield. The reward pool unlocks higher tiers as
-              more ENS gets delegated to active voters — so every person you
-              bring in increases everyone's earnings.
+              This isn&rsquo;t a fixed yield. Higher tiers unlock as more ENS
+              gets delegated to active voters, so every person you bring in
+              increases everyone&rsquo;s earnings.
             </Description>
           </TitleBlock>
         </Header>
@@ -498,7 +501,10 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button colorStyle="bluePrimary">Share &amp; grow the pool</Button>
+            <Button colorStyle="bluePrimary">
+              <FontAwesomeIcon icon={faShareNodes} />
+              Share &amp; grow the pool
+            </Button>
           </a>
         </CtaWrap>
       </Inner>

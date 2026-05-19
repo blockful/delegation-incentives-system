@@ -107,8 +107,10 @@ const LandingRoot = styled(SkeletonRegion)`
 const LandingHero = styled.section`
   padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
   text-align: center;
-  background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.white});
-  border-bottom: 1px solid ${tokens.color.middleGray};
+  background:
+    linear-gradient(180deg, rgba(56, 137, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 60%),
+    ${tokens.color.white};
+  border-bottom: 1px solid ${tokens.color.borderLight};
 
   @media (min-width: 768px) {
     padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['9xl']};
@@ -159,13 +161,98 @@ const LandingTierSection = styled.section`
 const LandingTierInner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  display: grid;
-  gap: ${tokens.spacing['4xl']};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${tokens.spacing['3xl']};
+`
+
+const LandingTierHeader = styled(SkeletonStack)`
+  align-items: center;
+  text-align: center;
+  max-width: 720px;
+`
+
+const LandingHowItWorksSection = styled.section`
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl} ${tokens.spacing['2xl']};
+  background: ${tokens.color.surfaceAlt};
 
   @media (min-width: 768px) {
-    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
-    align-items: center;
+    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['4xl']};
   }
+`
+
+const LandingHowItWorksInner = styled.div`
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['3xl']};
+`
+
+const LandingStepsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+    gap: ${tokens.spacing.xl};
+  }
+`
+
+const LandingStepCard = styled(SkeletonStack)`
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.white};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+
+  @media (min-width: 768px) {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+`
+
+const LandingCtaSection = styled.section`
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  background: ${tokens.color.surfaceAlt};
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
+  }
+`
+
+const LandingCtaCard = styled(SkeletonStack)`
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['4xl']};
+  background: ${tokens.color.blue};
+  border-radius: 24px;
+  align-items: center;
+  text-align: center;
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']} ${tokens.spacing['5xl']};
+  }
+`
+
+const LandingMarqueeRow = styled(SkeletonInline)`
+  width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  opacity: 0.4;
+`
+
+const LandingPill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 4px 4px;
+  background: ${tokens.color.white};
+  border-radius: 9999px;
+  flex-shrink: 0;
 `
 
 export function LandingPageSkeleton() {
@@ -215,15 +302,60 @@ export function LandingPageSkeleton() {
       </LandingStatusWrap>
       <LandingTierSection>
         <LandingTierInner>
-          <SkeletonStack $gap={tokens.spacing.lg}>
-            <SkeletonBlock $height="12px" $width="140px" />
-            <SkeletonText lines={2} lineHeight="36px" widths={['86%', '64%']} />
-            <SkeletonText lines={3} lineHeight="16px" widths={['100%', '92%', '70%']} />
-            <SkeletonBlock $height="40px" $width="138px" />
-          </SkeletonStack>
+          <LandingTierHeader $gap={tokens.spacing.md}>
+            <SkeletonBlock $height="24px" $width="140px" $radius={tokens.radius.pill} />
+            <SkeletonText lines={2} lineHeight="36px" widths={['72%', '52%']} maxWidth="640px" />
+            <SkeletonText lines={2} lineHeight="20px" widths={['96%', '74%']} maxWidth="640px" />
+          </LandingTierHeader>
           <TierRowsSkeleton rows={5} />
+          <SkeletonBlock $height="44px" $width="220px" $radius={tokens.radius.sm} />
         </LandingTierInner>
       </LandingTierSection>
+      <LandingHowItWorksSection>
+        <LandingHowItWorksInner>
+          <SkeletonStack $gap={tokens.spacing.md}>
+            <SkeletonBlock $height="24px" $width="140px" $radius={tokens.radius.pill} />
+            <SkeletonText lines={2} lineHeight="36px" widths={['68%', '52%']} maxWidth="560px" />
+            <SkeletonText lines={2} lineHeight="20px" widths={['76%', '62%']} maxWidth="560px" />
+          </SkeletonStack>
+          <LandingStepsGrid>
+            {Array.from({ length: 4 }, (_, index) => (
+              <LandingStepCard key={index} $gap={tokens.spacing.md}>
+                <SkeletonBlock $height="28px" $width="28px" $radius={tokens.radius.sm} />
+                <SkeletonBlock $height="20px" $width="80%" />
+                <SkeletonText lines={3} lineHeight="14px" widths={['100%', '94%', '70%']} />
+                <SkeletonBlock $height="22px" $width="140px" $radius={tokens.radius.pill} />
+              </LandingStepCard>
+            ))}
+          </LandingStepsGrid>
+        </LandingHowItWorksInner>
+      </LandingHowItWorksSection>
+      <LandingCtaSection>
+        <LandingCtaCard $gap={tokens.spacing['2xl']}>
+          <FullWidthCenteredStack $gap={tokens.spacing.md} $maxWidth="720px">
+            <SkeletonBlock $height="44px" $width="86%" />
+            <SkeletonBlock $height="44px" $width="68%" />
+          </FullWidthCenteredStack>
+          <SkeletonText
+            lines={1}
+            lineHeight="22px"
+            maxWidth="440px"
+            widths={['88%']}
+          />
+          <SkeletonInline $gap={tokens.spacing.md}>
+            <SkeletonBlock $height="44px" $width="220px" $radius={tokens.radius.sm} />
+            <SkeletonBlock $height="44px" $width="160px" $radius={tokens.radius.sm} />
+          </SkeletonInline>
+          <LandingMarqueeRow $gap={tokens.spacing.sm}>
+            {Array.from({ length: 6 }, (_, index) => (
+              <LandingPill key={index}>
+                <SkeletonCircle $size="40px" />
+                <SkeletonBlock $height="14px" $width="90px" />
+              </LandingPill>
+            ))}
+          </LandingMarqueeRow>
+        </LandingCtaCard>
+      </LandingCtaSection>
     </LandingRoot>
   )
 }

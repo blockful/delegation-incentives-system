@@ -240,8 +240,8 @@ const steps: Step[] = [
   {
     number: '1',
     title: 'Delegate to an active voter',
-    desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens — gas is sponsored.',
-    tag: 'Gas sponsored — free to delegate',
+    desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens, and gas is sponsored.',
+    tag: 'Gas sponsored. Free to delegate.',
     tagBg: tokens.color.tierHighlight,
     tagColor: tokens.color.positiveEmphasis,
   },
@@ -264,7 +264,7 @@ const steps: Step[] = [
   {
     number: '4',
     title: 'Small balance? Enter the lottery',
-    desc: 'Payouts under 1 ENS pool together until they reach 10 ENS — one winner takes the full prize.',
+    desc: 'Payouts under 1 ENS pool together until they reach 10 ENS, and one winner takes the full prize.',
     tag: 'Lottery prize: 10 ENS',
     tagBg: tokens.color.lightOrange,
     tagColor: tokens.color.orange,

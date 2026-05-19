@@ -109,29 +109,29 @@ const ExternalLink = styled.a`
 
 const Bottom = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xl};
+  flex-direction: row;
+  align-items: center;
+  gap: ${tokens.spacing.md};
   border-top: 1px solid rgba(255, 255, 255, 0.18);
   padding-top: ${tokens.spacing.xl};
+  min-width: 0;
+  flex-wrap: wrap;
 
   @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: ${tokens.spacing['3xl']};
+    flex-wrap: nowrap;
+    gap: ${tokens.spacing.lg};
   }
 `
 
 const FootMark = styled.span`
   display: inline-flex;
+  flex-shrink: 0;
   color: ${tokens.color.white};
   line-height: 0;
 
   svg {
-    width: 56px;
-    height: 56px;
-    color: ${tokens.color.white};
-    fill: ${tokens.color.white};
+    width: 40px;
+    height: 40px;
   }
 
   svg path,
@@ -143,22 +143,22 @@ const FootMark = styled.span`
 
   @media (min-width: 768px) {
     svg {
-      width: 104px;
-      height: 104px;
+      width: 56px;
+      height: 56px;
     }
   }
 `
 
 const Wordmark = styled.span`
-  font-size: 56px;
-  font-weight: ${tokens.font.weight.black};
+  font-size: clamp(28px, 9vw, 56px);
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.white};
-  line-height: 0.95;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  min-width: 0;
 
   @media (min-width: 768px) {
-    font-size: 104px;
+    font-size: clamp(48px, 7vw, 88px);
   }
 `
 
