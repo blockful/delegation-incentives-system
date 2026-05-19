@@ -53,6 +53,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4(@types/node@22.19.15)(jsdom@26.1.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2))
+      msw:
+        specifier: ^2.12.10
+        version: 2.12.10(@types/node@22.19.15)(typescript@5.9.3)
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -65,6 +68,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@anticapture/client':
+        specifier: ^1.1.0
+        version: 1.1.0(@tanstack/react-query@5.90.21(react@19.2.4))(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(react@19.2.4)
       '@ensdomains/thorin':
         specifier: ^0.6.50
         version: 0.6.50(react-dom@19.2.4(react@19.2.4))(react-transition-state@1.1.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(styled-components@6.3.11(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
@@ -172,6 +178,20 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
+
+  '@anticapture/client@1.1.0':
+    resolution: {integrity: sha512-YEgF6RRUzxw2Jh8btzcGiuVwfI3U6WcVuVIp2qLAJ+L8uh3df0PVQB4czcgTaG3zuHHx/QxEC6sSBDVeVIEGOg==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.0.0
+      msw: ^2.0.0
+      react: ^19.0.0
+    peerDependenciesMeta:
+      '@tanstack/react-query':
+        optional: true
+      msw:
+        optional: true
+      react:
+        optional: true
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -807,6 +827,10 @@ packages:
 
   '@escape.tech/graphql-armor-types@0.7.0':
     resolution: {integrity: sha512-RHxyyp6PDgS6NAPnnmB6JdmUJ6oqhpSHFbsglGWeCcnNzceA5AkQFpir7VIDbVyS8LNC1xhipOtk7f9ycrIemQ==}
+
+  '@faker-js/faker@9.9.0':
+    resolution: {integrity: sha512-OEl393iCOoo/z8bMezRlJu+GlRGlsKbUAN7jKB6LhnKoqKve5DXRpalbItIIcwnCjs1k/FOPjFzcA6Qn+H+YbA==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@fastify/busboy@3.2.0':
     resolution: {integrity: sha512-m9FVDXU3GT2ITSe0UaMA5rU3QkfC/UXtCU8y0gSN/GugTqtVldOBWIB5V6V3sbmenVZUIpU6f+mPEO2+m5iTaA==}
@@ -3816,6 +3840,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   valtio@2.1.7:
@@ -4235,6 +4260,14 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
+
+  '@anticapture/client@1.1.0(@tanstack/react-query@5.90.21(react@19.2.4))(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(react@19.2.4)':
+    dependencies:
+      '@faker-js/faker': 9.9.0
+    optionalDependencies:
+      '@tanstack/react-query': 5.90.21(react@19.2.4)
+      msw: 2.12.10(@types/node@22.19.15)(typescript@5.9.3)
+      react: 19.2.4
 
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
@@ -4725,6 +4758,8 @@ snapshots:
     dependencies:
       graphql: 16.13.1
     optional: true
+
+  '@faker-js/faker@9.9.0': {}
 
   '@fastify/busboy@3.2.0': {}
 
