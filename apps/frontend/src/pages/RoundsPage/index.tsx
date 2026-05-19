@@ -13,7 +13,9 @@ import {
   faShareNodes,
   faLock,
   faCheck,
+  faCircleInfo,
 } from '@fortawesome/free-solid-svg-icons'
+import { Tag, Tooltip } from '@ensdomains/thorin'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
@@ -752,43 +754,47 @@ const RewardPositive = styled.span`
   font-weight: ${tokens.font.weight.bold};
 `
 
-const RewardBadgeRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-`
-
-const RewardBadge = styled.span<{ $tone: 'apr' | 'lottery' | 'delegate' }>`
+const HeadLabelWithInfo = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 14px;
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 18px;
-  white-space: nowrap;
-  background: ${({ $tone }) =>
-    $tone === 'apr'
-      ? tokens.color.status.success.bg
-      : $tone === 'lottery'
-        ? tokens.color.lightOrange
-        : tokens.color.lightBlueOpacity};
-  color: ${({ $tone }) =>
-    $tone === 'apr'
-      ? tokens.color.positiveEmphasis
-      : $tone === 'lottery'
-        ? tokens.color.orange
-        : tokens.color.blue};
+  gap: 4px;
 `
 
-const RewardBadgeTag = styled.small`
-  font-size: 10px;
+const InfoIconButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  color: ${tokens.color.textSubtle};
+  transition: color ${tokens.transition.fast};
+
+  &:hover {
+    color: ${tokens.color.darkGray};
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+`
+
+const RewardCellRow = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`
+
+const RewardValueText = styled.span`
+  color: ${tokens.color.darkBlue};
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.85;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 `
 
 const VpGrowthPositive = styled.span`
@@ -986,7 +992,7 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     period: 'Jul 2026',
     pool: '7.5K ENS',
     vpGrowth: '+1.1%',
-    rewards: { state: 'paid', apr: '+0.1234 ENS', lottery: null, delegate: null },
+    rewards: { state: 'paid', apr: '+0.1234', lottery: null, delegate: null },
     status: 'paid',
     to: '/rounds/7',
     hasAddress: true,
@@ -997,7 +1003,7 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     period: 'Jun 2026',
     pool: '7K ENS',
     vpGrowth: '+0.9%',
-    rewards: { state: 'paid', apr: null, lottery: '+10.0000 ENS', delegate: null },
+    rewards: { state: 'paid', apr: null, lottery: '+10.0000', delegate: null },
     status: 'paid',
     to: '/rounds/6',
     hasAddress: true,
@@ -1008,7 +1014,7 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     period: 'May 2026',
     pool: '6.5K ENS',
     vpGrowth: '+0.7%',
-    rewards: { state: 'paid', apr: null, lottery: '+10.0000 ENS', delegate: '+2.7500 ENS' },
+    rewards: { state: 'paid', apr: null, lottery: '+10.0000', delegate: '+2.7500' },
     status: 'paid',
     to: '/rounds/5',
     hasAddress: true,
@@ -1019,7 +1025,7 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     period: 'Apr 2026',
     pool: '6K ENS',
     vpGrowth: '+0.6%',
-    rewards: { state: 'paid', apr: null, lottery: null, delegate: '+2.5000 ENS' },
+    rewards: { state: 'paid', apr: null, lottery: null, delegate: '+2.5000' },
     status: 'paid',
     to: '/rounds/4',
     hasAddress: true,
@@ -1030,7 +1036,7 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     period: 'Mar 2026',
     pool: '5.5K ENS',
     vpGrowth: '+0.5%',
-    rewards: { state: 'paid', apr: '+0.1875 ENS', lottery: null, delegate: '+3.0000 ENS' },
+    rewards: { state: 'paid', apr: '+0.1875', lottery: null, delegate: '+3.0000' },
     status: 'paid',
     to: '/rounds/3',
     hasAddress: true,
@@ -1041,7 +1047,7 @@ const MOCK_ROUNDS_ROWS: RoundsRow[] = [
     period: 'Feb 2026',
     pool: '5K ENS',
     vpGrowth: '+0.4%',
-    rewards: { state: 'paid', apr: '+0.5640 ENS', lottery: null, delegate: '+3.2500 ENS' },
+    rewards: { state: 'paid', apr: '+0.5640', lottery: null, delegate: '+3.2500' },
     status: 'paid',
     to: '/rounds/2',
     hasAddress: true,
@@ -1068,22 +1074,18 @@ function renderHolderRewards(r: RewardsBreakdown) {
   // share ≥ 1 ENS → direct APR payout; share < 1 ENS → lottery entry instead.
   if (r.apr) {
     return (
-      <RewardBadgeRow>
-        <RewardBadge $tone="apr">
-          <RewardBadgeTag>APR</RewardBadgeTag>
-          {r.apr}
-        </RewardBadge>
-      </RewardBadgeRow>
+      <RewardCellRow>
+        <RewardValueText>{r.apr}</RewardValueText>
+        <Tag colorStyle="greenSecondary" size="small">APR</Tag>
+      </RewardCellRow>
     )
   }
   if (r.lottery) {
     return (
-      <RewardBadgeRow>
-        <RewardBadge $tone="lottery">
-          <RewardBadgeTag>Lottery</RewardBadgeTag>
-          {r.lottery}
-        </RewardBadge>
-      </RewardBadgeRow>
+      <RewardCellRow>
+        <RewardValueText>{r.lottery}</RewardValueText>
+        <Tag colorStyle="orangePrimary" size="small">Lottery</Tag>
+      </RewardCellRow>
     )
   }
   return <MutedCell>—</MutedCell>
@@ -1095,21 +1097,14 @@ function renderDelegateRewards(r: RewardsBreakdown) {
   if (r.state === 'pending') return <MutedCell>Pending</MutedCell>
   if (r.state === 'unavailable') return <MutedCell>—</MutedCell>
   if (!r.delegate) return <MutedCell>—</MutedCell>
-  return (
-    <RewardBadgeRow>
-      <RewardBadge $tone="delegate">
-        <RewardBadgeTag>Delegate</RewardBadgeTag>
-        {r.delegate}
-      </RewardBadge>
-    </RewardBadgeRow>
-  )
+  return <RewardValueText>{r.delegate}</RewardValueText>
 }
 
 function formatPositiveReward(value: string | null | undefined): string | null {
   if (!value) return null
   const n = Number(value)
   if (!Number.isFinite(n) || n <= 0) return null
-  return `+${formatEnsAmount(value, { maximumFractionDigits: 4 })} ENS`
+  return `+${formatEnsAmount(value, { maximumFractionDigits: 4 })}`
 }
 
 function formatRewardsBreakdown(opts: {
@@ -1372,11 +1367,23 @@ export function RoundsPage() {
   // program hasn't reached yet (meaning "achievable").
   const nextTier = tierLadder[currentTierIndex + 1] ?? null
   const currentGrowthPct = Number(tierData.currentGrowthPct ?? '0')
-  const nextTierGrowthTarget = nextTier ? Number(nextTier.momGrowthMinPct ?? '0') : 0
+  // Threshold that opens the next tier comes straight from the API: the upper
+  // bound of the current tier's growth range. That's the authoritative "leave
+  // this tier" mark; nextTier.momGrowthMinPct only matches when the API serves
+  // contiguous ranges.
+  const nextTierGrowthTarget = (() => {
+    if (!nextTier) return 0
+    const numeric = Number(currentTier?.momGrowthMaxPct ?? '0')
+    return Number.isFinite(numeric) ? numeric : 0
+  })()
+  const thresholdCleared =
+    nextTier != null && nextTierGrowthTarget > 0 && currentGrowthPct >= nextTierGrowthTarget
   const tierProgressPct = nextTier && nextTierGrowthTarget > 0
-    ? (currentGrowthPct / nextTierGrowthTarget) * 100
+    ? Math.min(100, (currentGrowthPct / nextTierGrowthTarget) * 100)
     : 100
-  const tierGrowthLabel = `${currentGrowthPct.toFixed(2)}% of ${nextTierGrowthTarget.toFixed(0)}%`
+  const tierGrowthLabel = thresholdCleared
+    ? `${currentGrowthPct.toFixed(2)}% growth · target ${nextTierGrowthTarget.toFixed(0)}%`
+    : `${currentGrowthPct.toFixed(2)}% of ${nextTierGrowthTarget.toFixed(0)}%`
   const nextTierAprLabel = nextTier?.estimatedAprPct
     ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
     : null
@@ -1481,7 +1488,9 @@ export function RoundsPage() {
           <TierProgressBlock>
             <TierProgressLine>
               <TierProgressLabel>
-                Tier {nextTier.index + 1} unlocks at {nextTierGrowthTarget.toFixed(0)}% VP growth
+                {thresholdCleared
+                  ? `Threshold cleared. Tier ${nextTier.index + 1} opens at round end.`
+                  : `Tier ${nextTier.index + 1} unlocks at ${nextTierGrowthTarget.toFixed(0)}% VP growth`}
               </TierProgressLabel>
               <TierProgressValue>{tierGrowthLabel}</TierProgressValue>
             </TierProgressLine>
@@ -1571,9 +1580,45 @@ export function RoundsPage() {
           <TableHeadRow>
             <TableHeadCell $weight={0.9}>Round</TableHeadCell>
             <TableHeadCell>Pool</TableHeadCell>
-            <TableHeadCell>VP growth</TableHeadCell>
-            <TableHeadCell $weight={1.4}>Holder rewards</TableHeadCell>
-            <TableHeadCell $weight={1.4}>Delegate rewards</TableHeadCell>
+            <TableHeadCell>
+              <HeadLabelWithInfo>
+                VP growth
+                <Tooltip
+                  content="Month-over-month voting-power increase on active delegates. Sets the round's reward pool size."
+                  placement="top"
+                >
+                  <InfoIconButton type="button" aria-label="About VP growth">
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                  </InfoIconButton>
+                </Tooltip>
+              </HeadLabelWithInfo>
+            </TableHeadCell>
+            <TableHeadCell $weight={1.4}>
+              <HeadLabelWithInfo>
+                Holder rewards (ENS)
+                <Tooltip
+                  content="Earned by delegating to an active delegate at the distribution cutoff. ≥ 1 ENS pays out directly (APR); < 1 ENS enters the lottery instead."
+                  placement="top"
+                >
+                  <InfoIconButton type="button" aria-label="About holder rewards">
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                  </InfoIconButton>
+                </Tooltip>
+              </HeadLabelWithInfo>
+            </TableHeadCell>
+            <TableHeadCell $weight={1.4}>
+              <HeadLabelWithInfo>
+                Delegate rewards (ENS)
+                <Tooltip
+                  content="Earned by being an active delegate — voted on at least 7 of the last 10 on-chain proposals (rolling)."
+                  placement="top"
+                >
+                  <InfoIconButton type="button" aria-label="About delegate rewards">
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                  </InfoIconButton>
+                </Tooltip>
+              </HeadLabelWithInfo>
+            </TableHeadCell>
             <TableHeadCell $weight={0.7}>Status</TableHeadCell>
             <TableHeadCell $weight={0.25}>{' '}</TableHeadCell>
           </TableHeadRow>
@@ -1613,11 +1658,11 @@ export function RoundsPage() {
                   )}
                 </TableCell>
                 <TableCell $weight={1.4}>
-                  <MobileLabel>Holder rewards</MobileLabel>
+                  <MobileLabel>Holder rewards (ENS)</MobileLabel>
                   {renderHolderRewards(row.rewards)}
                 </TableCell>
                 <TableCell $weight={1.4}>
-                  <MobileLabel>Delegate rewards</MobileLabel>
+                  <MobileLabel>Delegate rewards (ENS)</MobileLabel>
                   {renderDelegateRewards(row.rewards)}
                 </TableCell>
                 <TableCell $weight={0.7}>
