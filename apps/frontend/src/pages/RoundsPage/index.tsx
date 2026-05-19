@@ -13,9 +13,8 @@ import {
   faShareNodes,
   faLock,
   faCheck,
-  faCircleInfo,
 } from '@fortawesome/free-solid-svg-icons'
-import { Tag, Tooltip } from '@ensdomains/thorin'
+import { Tag } from '@ensdomains/thorin'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
@@ -30,6 +29,10 @@ import {
   formatUtcMonthRange,
   truncateAddress,
 } from '@/utils/format'
+import {
+  computeVpProgress,
+  formatVpNeeded,
+} from '@/utils/dashboard'
 import {
   buildRoundListFromCurrentRound,
   buildUnavailableAddressHistory,
@@ -754,35 +757,6 @@ const RewardPositive = styled.span`
   font-weight: ${tokens.font.weight.bold};
 `
 
-const HeadLabelWithInfo = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-`
-
-const InfoIconButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: help;
-  color: ${tokens.color.textSubtle};
-  transition: color ${tokens.transition.fast};
-
-  &:hover {
-    color: ${tokens.color.darkGray};
-  }
-
-  svg {
-    width: 12px;
-    height: 12px;
-  }
-`
-
 const RewardCellRow = styled.div`
   display: inline-flex;
   align-items: center;
@@ -791,15 +765,15 @@ const RewardCellRow = styled.div`
 `
 
 const RewardValueText = styled.span`
-  color: ${tokens.color.darkBlue};
+  color: ${tokens.color.positiveEmphasis};
   font-weight: ${tokens.font.weight.bold};
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 `
 
 const VpGrowthPositive = styled.span`
-  color: ${tokens.color.positiveEmphasis};
-  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  font-weight: ${tokens.font.weight.medium};
 `
 
 const RoundNumber = styled.span`
@@ -1076,7 +1050,7 @@ function renderHolderRewards(r: RewardsBreakdown) {
     return (
       <RewardCellRow>
         <RewardValueText>{r.apr}</RewardValueText>
-        <Tag colorStyle="greenSecondary" size="small">APR</Tag>
+        <Tag colorStyle="yellowSecondary" size="small">APR</Tag>
       </RewardCellRow>
     )
   }
@@ -1084,7 +1058,7 @@ function renderHolderRewards(r: RewardsBreakdown) {
     return (
       <RewardCellRow>
         <RewardValueText>{r.lottery}</RewardValueText>
-        <Tag colorStyle="orangePrimary" size="small">Lottery</Tag>
+        <Tag colorStyle="orangeSecondary" size="small">Lottery</Tag>
       </RewardCellRow>
     )
   }
@@ -1361,34 +1335,38 @@ export function RoundsPage() {
   const daysLeftLabel = formatDaysRemaining(currentRound.daysRemaining, currentRound.status)
 
   // ─── Tier ladder + share-to-unlock data ───
+  // All values below read directly from the /tiers/progression response —
+  // currentTotalVP, requiredTotalVP, additionalVPNeeded — so the section
+  // tracks the live backend instead of any derived percentage math.
   const tierLadder = tierData.tiers ?? []
-  // Next tier is simply the one immediately above the current. Position is the
-  // source of truth — the API's `isUnlocked` flag can be true for tiers the
-  // program hasn't reached yet (meaning "achievable").
   const nextTier = tierLadder[currentTierIndex + 1] ?? null
-  const currentGrowthPct = Number(tierData.currentGrowthPct ?? '0')
-  // Threshold that opens the next tier comes straight from the API: the upper
-  // bound of the current tier's growth range. That's the authoritative "leave
-  // this tier" mark; nextTier.momGrowthMinPct only matches when the API serves
-  // contiguous ranges.
-  const nextTierGrowthTarget = (() => {
-    if (!nextTier) return 0
-    const numeric = Number(currentTier?.momGrowthMaxPct ?? '0')
-    return Number.isFinite(numeric) ? numeric : 0
-  })()
+
+  const nextTierVpNeededLabel = nextTier?.additionalVPNeeded
+    ? formatVpNeeded(nextTier.additionalVPNeeded)
+    : ''
+  const nextTierTargetLabel = nextTier?.requiredTotalVP
+    ? formatVpNeeded(nextTier.requiredTotalVP)
+    : ''
+  const currentDelegatedLabel = tierData.currentTotalVP
+    ? formatVpNeeded(tierData.currentTotalVP)
+    : ''
+
   const thresholdCleared =
-    nextTier != null && nextTierGrowthTarget > 0 && currentGrowthPct >= nextTierGrowthTarget
-  const tierProgressPct = nextTier && nextTierGrowthTarget > 0
-    ? Math.min(100, (currentGrowthPct / nextTierGrowthTarget) * 100)
+    nextTier != null && Number(nextTier.additionalVPNeeded ?? '0') <= 0
+
+  const tierProgressPct = nextTier
+    ? computeVpProgress(
+        currentTier?.requiredTotalVP ?? '0',
+        nextTier.requiredTotalVP,
+        nextTier.additionalVPNeeded,
+      )
     : 100
-  const tierGrowthLabel = thresholdCleared
-    ? `${currentGrowthPct.toFixed(2)}% growth · target ${nextTierGrowthTarget.toFixed(0)}%`
-    : `${currentGrowthPct.toFixed(2)}% of ${nextTierGrowthTarget.toFixed(0)}%`
+
   const nextTierAprLabel = nextTier?.estimatedAprPct
     ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
     : null
   const tierShareText = nextTier
-    ? `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierGrowthTarget.toFixed(0)}% VP growth (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
+    ? `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
     : "We're at the top tier of the ENS Delegation Incentives Program. Keep the active-voter pool growing:"
   const tierShareUrl =
     typeof window !== 'undefined'
@@ -1490,9 +1468,15 @@ export function RoundsPage() {
               <TierProgressLabel>
                 {thresholdCleared
                   ? `Threshold cleared. Tier ${nextTier.index + 1} opens at round end.`
-                  : `Tier ${nextTier.index + 1} unlocks at ${nextTierGrowthTarget.toFixed(0)}% VP growth`}
+                  : nextTierVpNeededLabel
+                    ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
+                    : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
               </TierProgressLabel>
-              <TierProgressValue>{tierGrowthLabel}</TierProgressValue>
+              {currentDelegatedLabel && nextTierTargetLabel ? (
+                <TierProgressValue>
+                  {currentDelegatedLabel} of {nextTierTargetLabel} ENS
+                </TierProgressValue>
+              ) : null}
             </TierProgressLine>
             <TierProgressTrack>
               <TierProgressFill $pct={tierProgressPct} />
@@ -1581,43 +1565,28 @@ export function RoundsPage() {
             <TableHeadCell $weight={0.9}>Round</TableHeadCell>
             <TableHeadCell>Pool</TableHeadCell>
             <TableHeadCell>
-              <HeadLabelWithInfo>
+              <LabelWithTooltip
+                text="Month-over-month voting-power increase on active delegates. Sets the round's reward pool size."
+                iconAriaLabel="About VP growth"
+              >
                 VP growth
-                <Tooltip
-                  content="Month-over-month voting-power increase on active delegates. Sets the round's reward pool size."
-                  placement="top"
-                >
-                  <InfoIconButton type="button" aria-label="About VP growth">
-                    <FontAwesomeIcon icon={faCircleInfo} />
-                  </InfoIconButton>
-                </Tooltip>
-              </HeadLabelWithInfo>
+              </LabelWithTooltip>
             </TableHeadCell>
             <TableHeadCell $weight={1.4}>
-              <HeadLabelWithInfo>
+              <LabelWithTooltip
+                text="Earned by delegating to an active delegate at the distribution cutoff. ≥ 1 ENS pays out directly (APR); < 1 ENS enters the lottery instead."
+                iconAriaLabel="About holder rewards"
+              >
                 Holder rewards (ENS)
-                <Tooltip
-                  content="Earned by delegating to an active delegate at the distribution cutoff. ≥ 1 ENS pays out directly (APR); < 1 ENS enters the lottery instead."
-                  placement="top"
-                >
-                  <InfoIconButton type="button" aria-label="About holder rewards">
-                    <FontAwesomeIcon icon={faCircleInfo} />
-                  </InfoIconButton>
-                </Tooltip>
-              </HeadLabelWithInfo>
+              </LabelWithTooltip>
             </TableHeadCell>
             <TableHeadCell $weight={1.4}>
-              <HeadLabelWithInfo>
+              <LabelWithTooltip
+                text="Earned by being an active delegate — voted on at least 7 of the last 10 on-chain proposals (rolling)."
+                iconAriaLabel="About delegate rewards"
+              >
                 Delegate rewards (ENS)
-                <Tooltip
-                  content="Earned by being an active delegate — voted on at least 7 of the last 10 on-chain proposals (rolling)."
-                  placement="top"
-                >
-                  <InfoIconButton type="button" aria-label="About delegate rewards">
-                    <FontAwesomeIcon icon={faCircleInfo} />
-                  </InfoIconButton>
-                </Tooltip>
-              </HeadLabelWithInfo>
+              </LabelWithTooltip>
             </TableHeadCell>
             <TableHeadCell $weight={0.7}>Status</TableHeadCell>
             <TableHeadCell $weight={0.25}>{' '}</TableHeadCell>
