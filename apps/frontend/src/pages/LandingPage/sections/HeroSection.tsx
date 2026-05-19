@@ -33,6 +33,19 @@ const AnchorLink = styled.a`
   }
 `
 
+function scrollToHowItWorks(e: React.MouseEvent<HTMLAnchorElement>) {
+  const target = document.getElementById('how-it-works')
+  if (!target) return
+  e.preventDefault()
+  const headerEl = document.querySelector('header')
+  const headerHeight = headerEl?.getBoundingClientRect().height ?? 0
+  const top =
+    target.getBoundingClientRect().top + window.scrollY - headerHeight - 16
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' })
+  history.replaceState(null, '', '#how-it-works')
+}
+
 interface HeroSectionProps {
   currentAprPct: string
 }
@@ -42,11 +55,9 @@ const Section = styled.section`
   text-align: center;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    to bottom,
-    ${tokens.color.lightBlue},
-    ${tokens.color.white}
-  );
+  background:
+    linear-gradient(180deg, rgba(56, 137, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 60%),
+    ${tokens.color.white};
   border-bottom: 1px solid ${tokens.color.borderLight};
 
   @media (min-width: 768px) {
@@ -79,7 +90,7 @@ const HeroEyebrow = styled.span`
 
 const Headline = styled.h1`
   font-size: ${tokens.font.size['5xl']};
-  font-weight: ${tokens.font.weight.black};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -274,7 +285,7 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
               Delegate now<FreeBadge>Free</FreeBadge>
             </Button>
           </RouterLink>
-          <AnchorLink href="#how-it-works">
+          <AnchorLink href="#how-it-works" onClick={scrollToHowItWorks}>
             <Button colorStyle="blueSecondary">See how it works ↓</Button>
           </AnchorLink>
         </Actions>

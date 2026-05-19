@@ -188,7 +188,7 @@ const Eyebrow = styled.span`
 
 const Heading = styled.h2`
   font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -211,8 +211,15 @@ const Description = styled.p`
 `
 
 const CtaWrap = styled.div`
-  display: block;
+  display: flex;
+  justify-content: center;
   width: 100%;
+  margin-top: ${tokens.spacing['2xl']};
+
+  a {
+    text-decoration: none;
+    width: 100%;
+  }
 
   button {
     width: 100%;
@@ -220,14 +227,25 @@ const CtaWrap = styled.div`
   }
 
   @media (min-width: 768px) {
-    display: inline-flex;
-    width: auto;
+    a {
+      width: auto;
+    }
 
     button {
       width: auto;
     }
   }
 `
+
+const SHARE_TWEET_TEXT =
+  'Higher tiers unlock as more ENS gets delegated to active voters. Every delegate brought in lifts everyone’s APR.'
+
+function buildTwitterShareUrl(): string {
+  if (typeof window === 'undefined') return '#'
+  const text = encodeURIComponent(SHARE_TWEET_TEXT)
+  const url = encodeURIComponent(window.location.origin)
+  return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
+}
 
 const List = styled.div`
   display: flex;
@@ -433,9 +451,6 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
               bring in increases everyone's earnings.
             </Description>
           </TitleBlock>
-          <CtaWrap>
-            <Button colorStyle="bluePrimary">Share &amp; Grow the Pool</Button>
-          </CtaWrap>
         </Header>
 
         <List data-testid="tier-table">
@@ -476,6 +491,16 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             )
           })}
         </List>
+
+        <CtaWrap>
+          <a
+            href={buildTwitterShareUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button colorStyle="bluePrimary">Share &amp; grow the pool</Button>
+          </a>
+        </CtaWrap>
       </Inner>
     </Section>
   )

@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
-import { Button } from '@ensdomains/thorin'
-import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 
 const Section = styled.section`
   background: ${tokens.color.surfaceAlt};
   position: relative;
+  scroll-margin-top: 96px;
 
   /* Mobile: just flow normally, no scroll lock. */
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl} ${tokens.spacing['2xl']};
 
   @media (min-width: 768px) {
     /* Desktop: extra height creates the scroll-lock arc. */
@@ -26,7 +25,7 @@ const Sticky = styled.div`
     position: sticky;
     top: ${STICKY_TOP_OFFSET}px;
     min-height: calc(100vh - ${STICKY_TOP_OFFSET}px);
-    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
+    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['4xl']};
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -67,7 +66,7 @@ const Eyebrow = styled.span`
 
 const Heading = styled.h2`
   font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -97,7 +96,7 @@ const STAIRCASE_HEIGHT = (STEPS_COUNT - 1) * STEP_OFFSET + STEP_BLOCK_HEIGHT
 const StepsRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing['2xl']};
+  gap: ${tokens.spacing.md};
 
   @media (min-width: 768px) {
     position: relative;
@@ -105,6 +104,7 @@ const StepsRow = styled.div`
     grid-template-columns: repeat(${STEPS_COUNT}, 1fr);
     column-gap: 0;
     min-height: ${STAIRCASE_HEIGHT}px;
+    gap: 0;
   }
 `
 
@@ -227,51 +227,6 @@ const TagPill = styled.span<{ $bg: string; $color: string }>`
   color: ${({ $color }) => $color};
 `
 
-const CtaRow = styled.div<{ $revealed: boolean }>`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
-  margin-top: ${tokens.spacing['4xl']};
-  opacity: 0;
-  transform: translateY(16px);
-  pointer-events: none;
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
-
-  ${({ $revealed }) =>
-    $revealed &&
-    css`
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    `}
-
-  a {
-    text-decoration: none;
-    display: block;
-
-    button {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    justify-content: flex-end;
-    margin-top: ${tokens.spacing['3xl']};
-
-    a {
-      display: inline-flex;
-
-      button {
-        width: auto;
-      }
-    }
-  }
-`
-
 type Step = {
   number: string
   title: string
@@ -317,11 +272,9 @@ const steps: Step[] = [
 ]
 
 // Reveal arc inside the section's scroll-lock range (0..1):
-// - Steps stagger across [STEP_REVEAL_START, STEP_REVEAL_END].
-// - CTAs fade in after the last step settles.
+// Steps stagger across [STEP_REVEAL_START, STEP_REVEAL_END].
 const STEP_REVEAL_START = 0.08
 const STEP_REVEAL_END = 0.78
-const CTA_REVEAL_AT = 0.82
 const RISE_PX = 80
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
@@ -330,11 +283,9 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 export function HowItWorksSection() {
   const sectionRef = useRef<HTMLElement>(null)
   const stepsRef = useRef<HTMLDivElement>(null)
-  const ctaRef = useRef<HTMLDivElement>(null)
   const [progress, setProgress] = useState(1)
   const [enabled, setEnabled] = useState(false)
   const [stepsVisible, setStepsVisible] = useState(false)
-  const [ctaRevealedFallback, setCtaRevealedFallback] = useState(false)
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -344,7 +295,6 @@ export function HowItWorksSection() {
     else setProgress(0)
     if (reduce) {
       setStepsVisible(true)
-      setCtaRevealedFallback(true)
     }
   }, [])
 
@@ -355,34 +305,19 @@ export function HowItWorksSection() {
     if (enabled) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    const observers: IntersectionObserver[] = []
-    if (stepsRef.current) {
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setStepsVisible(true)
-            obs.disconnect()
-          }
-        },
-        { threshold: 0.1, rootMargin: '0px 0px -5% 0px' },
-      )
-      obs.observe(stepsRef.current)
-      observers.push(obs)
-    }
-    if (ctaRef.current) {
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setCtaRevealedFallback(true)
-            obs.disconnect()
-          }
-        },
-        { threshold: 0.25 },
-      )
-      obs.observe(ctaRef.current)
-      observers.push(obs)
-    }
-    return () => observers.forEach((o) => o.disconnect())
+    const el = stepsRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStepsVisible(true)
+          obs.disconnect()
+        }
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -5% 0px' },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
   }, [enabled])
 
   useEffect(() => {
@@ -419,10 +354,9 @@ export function HowItWorksSection() {
   }, [enabled])
 
   const stepSpan = (STEP_REVEAL_END - STEP_REVEAL_START) / STEPS_COUNT
-  const ctaRevealed = progress >= CTA_REVEAL_AT
 
   return (
-    <Section ref={sectionRef}>
+    <Section id="how-it-works" ref={sectionRef}>
       <Sticky>
         <Inner>
           <Header>
@@ -471,15 +405,6 @@ export function HowItWorksSection() {
               )
             })}
           </StepsRow>
-
-          <CtaRow
-            ref={ctaRef}
-            $revealed={enabled ? ctaRevealed : ctaRevealedFallback}
-          >
-            <Link to="/rounds">
-              <Button colorStyle="bluePrimary">Round breakdown &rarr;</Button>
-            </Link>
-          </CtaRow>
         </Inner>
       </Sticky>
     </Section>

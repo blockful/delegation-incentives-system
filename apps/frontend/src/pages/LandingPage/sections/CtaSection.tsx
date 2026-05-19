@@ -24,6 +24,26 @@ const RouterLink = styled(Link)<{ $fullWidthMobile?: boolean }>`
   `}
 `
 
+const ShareLink = styled.a<{ $fullWidthMobile?: boolean }>`
+  text-decoration: none;
+  position: relative;
+  z-index: 2;
+
+  ${({ $fullWidthMobile }) =>
+    $fullWidthMobile &&
+    `
+    @media (max-width: 767px) {
+      display: block;
+      width: 100%;
+
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  `}
+`
+
 const PrimaryCtaLink = styled(RouterLink)`
   button {
     background: ${tokens.color.white};
@@ -37,7 +57,7 @@ const PrimaryCtaLink = styled(RouterLink)`
   }
 `
 
-const SecondaryCtaLink = styled(RouterLink)`
+const SecondaryCtaLink = styled(ShareLink)`
   button {
     background: rgba(255, 255, 255, 0.12);
     color: ${tokens.color.white};
@@ -63,48 +83,53 @@ const Card = styled.div`
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background: ${tokens.color.blue};
+  background:
+    radial-gradient(
+      circle 480px at var(--mx, 50%) var(--my, 0%),
+      rgba(255, 255, 255, 0.22),
+      transparent 70%
+    ),
+    ${tokens.color.blue};
   border-radius: 24px;
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
   padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
   cursor: default;
+  transition:
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 360ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Static dot pattern — calm baseline that the cursor-trail dances over */
   &::before {
     content: '';
     position: absolute;
     inset: 0;
-    background-image: radial-gradient(
-      circle,
-      rgba(255, 255, 255, 0.18) 1px,
-      transparent 1.5px
-    );
-    background-size: 24px 24px;
-    background-position: 0 0;
-    opacity: 0.5;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Cursor spotlight — brightens the dots beneath as the cursor moves */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
     background: radial-gradient(
-      circle 220px at var(--mx, 50%) var(--my, 50%),
-      rgba(255, 255, 255, 0.22),
-      transparent 70%
+      circle 280px at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 255, 255, 0.18),
+      transparent 65%
     );
     pointer-events: none;
     opacity: 0;
-    transition: opacity 240ms ease-out;
-    z-index: 0;
+    transition: opacity 320ms ease-out;
+    z-index: 1;
   }
 
-  &[data-hover='true']::after {
+  &[data-hover='true'] {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 60px -24px rgba(56, 137, 255, 0.55);
+  }
+
+  &[data-hover='true']::before {
     opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &[data-hover='true'] {
+      transform: none;
+      box-shadow: none;
+    }
   }
 
   @media (min-width: 768px) {
@@ -120,12 +145,12 @@ const Inner = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${tokens.spacing['3xl']};
+  gap: ${tokens.spacing['2xl']};
 `
 
 const Heading = styled.h2`
   font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.black};
+  font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.white};
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -142,7 +167,7 @@ const Subtitle = styled.p`
   color: rgba(255, 255, 255, 0.85);
   line-height: 1.6;
   margin: 0;
-  max-width: 540px;
+  max-width: 560px;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.xl};
@@ -154,6 +179,7 @@ const Actions = styled.div`
   flex-direction: column;
   gap: ${tokens.spacing.md};
   width: 100%;
+  margin-top: ${tokens.spacing.md};
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -162,50 +188,15 @@ const Actions = styled.div`
   }
 `
 
-/* Cursor-follow pixel trail */
-const TrailLayer = styled.div`
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 200ms ease-out;
+const SHARE_TWEET_TEXT =
+  'Delegate your ENS to an active voter and earn APR rewards automatically. The more people delegate, the higher everyone’s APR climbs.'
 
-  [data-hover='true'] & {
-    opacity: 1;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    display: none;
-  }
-`
-
-const Pixel = styled.span<{ $size: number; $delay: number; $alpha: number; $offX: number; $offY: number }>`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: ${({ $size }) => $size}px;
-  height: ${({ $size }) => $size}px;
-  background: rgba(255, 255, 255, ${({ $alpha }) => $alpha});
-  border-radius: 2px;
-  will-change: transform;
-  transform: translate3d(
-    calc(var(--mx, 0px) + ${({ $offX }) => $offX}px - 50%),
-    calc(var(--my, 0px) + ${({ $offY }) => $offY}px - 50%),
-    0
-  );
-  transition: transform ${({ $delay }) => $delay}ms cubic-bezier(0.16, 1, 0.3, 1);
-`
-
-/* Six pixel blocks, increasing lag → comet trail. Random offsets keep it lively. */
-const PIXEL_CONFIGS = [
-  { id: 0, size: 10, delay: 60,  alpha: 1.0,  offX:  0,  offY:  0  },
-  { id: 1, size: 8,  delay: 140, alpha: 0.85, offX: 14,  offY: -6  },
-  { id: 2, size: 6,  delay: 220, alpha: 0.7,  offX: -18, offY:  4  },
-  { id: 3, size: 8,  delay: 320, alpha: 0.55, offX:  8,  offY: 18  },
-  { id: 4, size: 6,  delay: 460, alpha: 0.4,  offX: -10, offY: -16 },
-  { id: 5, size: 4,  delay: 640, alpha: 0.3,  offX: 20,  offY: 12  },
-]
+function buildTwitterShareUrl(): string {
+  if (typeof window === 'undefined') return '#'
+  const text = encodeURIComponent(SHARE_TWEET_TEXT)
+  const url = encodeURIComponent(window.location.origin)
+  return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
+}
 
 export function CtaSection() {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -237,38 +228,25 @@ export function CtaSection() {
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
       >
-        <TrailLayer aria-hidden>
-          {PIXEL_CONFIGS.map((p) => (
-            <Pixel
-              key={p.id}
-              $size={p.size}
-              $delay={p.delay}
-              $alpha={p.alpha}
-              $offX={p.offX}
-              $offY={p.offY}
-            />
-          ))}
-        </TrailLayer>
-
         <Inner>
           <Heading>
-            {'Earn ENS rewards.\nStrengthen governance.'}
+            {'The more we share,\nthe more we earn.'}
           </Heading>
           <Subtitle>
-            Delegate in under a minute. Gas is sponsored.
-            <br />
-            Rewards are automatic.
+            Higher tiers unlock as more ENS gets delegated to active voters.
+            Share the program and lift everyone&rsquo;s APR — including yours.
           </Subtitle>
           <Actions>
             <PrimaryCtaLink to="/voters" $fullWidthMobile>
-              <Button colorStyle="background">
-                Delegate to an active voter →
-              </Button>
+              <Button colorStyle="background">Delegate</Button>
             </PrimaryCtaLink>
-            <SecondaryCtaLink to="/transparency" $fullWidthMobile>
-              <Button colorStyle="background">
-                See the methodology
-              </Button>
+            <SecondaryCtaLink
+              href={buildTwitterShareUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              $fullWidthMobile
+            >
+              <Button colorStyle="background">Share</Button>
             </SecondaryCtaLink>
           </Actions>
         </Inner>
