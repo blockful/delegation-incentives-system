@@ -554,7 +554,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
                   colorStyle="bluePrimary"
                   prefix={<FontAwesomeIcon icon={faShareNodes} />}
                 >
-                  Share how much you&rsquo;re earning
+                  Share to earn more
                 </Button>
               </a>
             </HeroCtaWrap>
