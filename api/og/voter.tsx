@@ -24,13 +24,17 @@ function isAddress(value: string): boolean {
 }
 
 async function resolveAvatarUrl(name: string): Promise<string | null> {
-  // Verify the avatar exists before handing the URL to Satori (which would otherwise crash on 404).
-  // We pass the HTTPS URL directly to <img> so Satori fetches it itself — avoids data: URLs
-  // which the local Edge runtime emulator can't fetch (works fine in production either way).
+  // Verify the avatar exists with a GET (metadata.ens.domains rejects HEAD), then
+  // hand the URL to Satori so it fetches the image itself. Read just the
+  // content-type so we don't pull the whole body twice.
   try {
     const url = `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
-    const res = await fetch(url, { method: 'HEAD' })
+    const res = await fetch(url, { redirect: 'follow' })
     if (!res.ok) return null
+    const type = res.headers.get('content-type') ?? ''
+    // Discard the body — we're only using this fetch to confirm the avatar exists.
+    await res.arrayBuffer().catch(() => undefined)
+    if (!type.startsWith('image/')) return null
     return url
   } catch {
     return null
