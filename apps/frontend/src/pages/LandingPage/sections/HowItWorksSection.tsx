@@ -45,7 +45,7 @@ const Header = styled.div`
   text-align: center;
   gap: ${tokens.spacing.md};
   margin: 0 auto ${tokens.spacing['5xl']};
-  max-width: 560px;
+  max-width: 800px;
 
   @media (min-width: 768px) {
     margin: 0 auto ${tokens.spacing['7xl']};
