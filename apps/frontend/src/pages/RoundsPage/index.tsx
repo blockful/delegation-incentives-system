@@ -605,7 +605,7 @@ const TableRow = styled.button<{ $clickable?: boolean; $index?: number }>`
   ${({ $clickable }) =>
     $clickable &&
     `
-      &:hover { background: ${tokens.color.bgSubtle}; }
+      &:hover { background: ${tokens.color.lightBlueOpacity}; }
       &:focus-visible {
         outline: 2px solid ${tokens.color.blue};
         outline-offset: -2px;
@@ -902,136 +902,6 @@ function formatVpGrowth(value: string | null): string | null {
   return `${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
 }
 
-/**
- * TEMP — toggle to render every reward-cell variation against fixed mock data.
- * Flip back to `false` (or delete the block + import) when done QA'ing.
- */
-const SHOW_MOCK_REWARDS = true
-
-const MOCK_ROUNDS_ROWS: RoundsRow[] = [
-  // No address inspected
-  {
-    roundNumber: 11,
-    period: 'Nov 2026',
-    pool: '12K ENS',
-    vpGrowth: '+1.2%',
-    rewards: { state: 'inspect', apr: null, lottery: null, delegate: null },
-    status: 'live',
-    to: '/rounds/11',
-    hasAddress: false,
-  },
-  // Loading
-  {
-    roundNumber: 10,
-    period: 'Oct 2026',
-    pool: '10K ENS',
-    vpGrowth: '+0.8%',
-    rewards: { state: 'loading', apr: null, lottery: null, delegate: null },
-    status: 'live',
-    to: '/rounds/10',
-    hasAddress: true,
-  },
-  // Round not closed yet
-  {
-    roundNumber: 9,
-    period: 'Sep 2026',
-    pool: '9.5K ENS',
-    vpGrowth: '+0.4%',
-    rewards: { state: 'pending', apr: null, lottery: null, delegate: null },
-    status: 'live',
-    to: '/rounds/9',
-    hasAddress: true,
-  },
-  // Data unavailable
-  {
-    roundNumber: 8,
-    period: 'Aug 2026',
-    pool: '8K ENS',
-    vpGrowth: '+0.2%',
-    rewards: { state: 'unavailable', apr: null, lottery: null, delegate: null },
-    status: 'paid',
-    to: '/rounds/8',
-    hasAddress: true,
-  },
-  // Holder: APR only
-  {
-    roundNumber: 7,
-    period: 'Jul 2026',
-    pool: '7.5K ENS',
-    vpGrowth: '+1.1%',
-    rewards: { state: 'paid', apr: '+0.1234', lottery: null, delegate: null },
-    status: 'paid',
-    to: '/rounds/7',
-    hasAddress: true,
-  },
-  // Holder: lottery only (sub-1 ENS winner)
-  {
-    roundNumber: 6,
-    period: 'Jun 2026',
-    pool: '7K ENS',
-    vpGrowth: '+0.9%',
-    rewards: { state: 'paid', apr: null, lottery: '+10.0000', delegate: null },
-    status: 'paid',
-    to: '/rounds/6',
-    hasAddress: true,
-  },
-  // Lottery + delegate (sub-1 ENS bucket winner who's also an active delegate)
-  {
-    roundNumber: 5,
-    period: 'May 2026',
-    pool: '6.5K ENS',
-    vpGrowth: '+0.7%',
-    rewards: { state: 'paid', apr: null, lottery: '+10.0000', delegate: '+2.7500' },
-    status: 'paid',
-    to: '/rounds/5',
-    hasAddress: true,
-  },
-  // Delegate only (no holdings)
-  {
-    roundNumber: 4,
-    period: 'Apr 2026',
-    pool: '6K ENS',
-    vpGrowth: '+0.6%',
-    rewards: { state: 'paid', apr: null, lottery: null, delegate: '+2.5000' },
-    status: 'paid',
-    to: '/rounds/4',
-    hasAddress: true,
-  },
-  // Delegate + APR
-  {
-    roundNumber: 3,
-    period: 'Mar 2026',
-    pool: '5.5K ENS',
-    vpGrowth: '+0.5%',
-    rewards: { state: 'paid', apr: '+0.1875', lottery: null, delegate: '+3.0000' },
-    status: 'paid',
-    to: '/rounds/3',
-    hasAddress: true,
-  },
-  // Delegate + APR (holder ≥ 1 ENS, also active delegate — no lottery possible alongside APR)
-  {
-    roundNumber: 2,
-    period: 'Feb 2026',
-    pool: '5K ENS',
-    vpGrowth: '+0.4%',
-    rewards: { state: 'paid', apr: '+0.5640', lottery: null, delegate: '+3.2500' },
-    status: 'paid',
-    to: '/rounds/2',
-    hasAddress: true,
-  },
-  // Eligible but no payout this round
-  {
-    roundNumber: 1,
-    period: 'Jan 2026',
-    pool: '4K ENS',
-    vpGrowth: '+0.1%',
-    rewards: { state: 'paid', apr: null, lottery: null, delegate: null },
-    status: 'paid',
-    to: '/rounds/1',
-    hasAddress: true,
-  },
-]
-
 function renderHolderRewards(r: RewardsBreakdown) {
   if (r.state === 'loading') return <SkeletonBlock $height="14px" $width="120px" $radius="6px" />
   if (r.state === 'inspect') return <MutedCell>Inspect an address</MutedCell>
@@ -1255,15 +1125,13 @@ export function RoundsPage() {
 
   const rows = useMemo(
     () =>
-      SHOW_MOCK_REWARDS
-        ? MOCK_ROUNDS_ROWS
-        : buildRoundsRows(
-            roundList.data?.rounds ?? [],
-            activeAddress,
-            addressHistory.data?.rounds ?? null,
-            addressHistory.loading,
-            addressHistory.error,
-          ),
+      buildRoundsRows(
+        roundList.data?.rounds ?? [],
+        activeAddress,
+        addressHistory.data?.rounds ?? null,
+        addressHistory.loading,
+        addressHistory.error,
+      ),
     [roundList.data, activeAddress, addressHistory.data, addressHistory.loading, addressHistory.error],
   )
 
