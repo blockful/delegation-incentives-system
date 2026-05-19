@@ -1482,7 +1482,7 @@ export function RoundsPage() {
             <TierProgressLine>
               <TierProgressLabel>
                 {thresholdCleared
-                  ? `Threshold cleared. Tier ${nextTier.index + 1} applies to next round.`
+                  ? `Threshold cleared. Tier ${nextTier.index + 1} applies to this round's payout.`
                   : nextTierVpNeededLabel
                     ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
                     : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
