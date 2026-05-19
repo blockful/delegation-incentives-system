@@ -472,54 +472,6 @@ const ActionButtons = styled.div`
   }
 `
 
-const SearchButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  border: none;
-  border-radius: 8px;
-  font-family: ${tokens.font.family};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
-
-  &:hover {
-    background: ${tokens.color.accent};
-  }
-
-  &:disabled {
-    background: ${tokens.color.borderLight};
-    color: ${tokens.color.textSubtle};
-    cursor: not-allowed;
-  }
-`
-
-const ClearButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 16px;
-  background: ${tokens.color.lightBlueOpacity};
-  color: ${tokens.color.blue};
-  border: none;
-  border-radius: 8px;
-  font-family: ${tokens.font.family};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
-
-  &:hover {
-    background: ${tokens.color.lightBlue};
-  }
-`
 
 const HintRow = styled.div`
   display: flex;
@@ -1455,7 +1407,7 @@ export function RoundsPage() {
           <TierBadgeRow>
             <TierPoolBadge>
               <FontAwesomeIcon icon={faCoins} />
-              Pool · {poolLabel} ENS
+              Pool · {poolLabel}
             </TierPoolBadge>
           </TierBadgeRow>
         </TierCardHeader>
@@ -1558,15 +1510,24 @@ export function RoundsPage() {
               />
             </SearchInputWrap>
             <ActionButtons>
-              <SearchButton type="button" onClick={() => handleSubmit()} disabled={!addressInput.trim()}>
-                <FontAwesomeIcon icon={faMagnifyingGlass} />
+              <Button
+                size="small"
+                colorStyle="bluePrimary"
+                disabled={!addressInput.trim()}
+                onClick={() => handleSubmit()}
+                prefix={<FontAwesomeIcon icon={faMagnifyingGlass} />}
+              >
                 Search
-              </SearchButton>
+              </Button>
               {(addressInput || activeAddress) && (
-                <ClearButton type="button" onClick={handleClear}>
-                  <FontAwesomeIcon icon={faXmark} />
+                <Button
+                  size="small"
+                  colorStyle="blueSecondary"
+                  onClick={handleClear}
+                  prefix={<FontAwesomeIcon icon={faXmark} />}
+                >
                   Clear
-                </ClearButton>
+                </Button>
               )}
             </ActionButtons>
           </SearchRow>
