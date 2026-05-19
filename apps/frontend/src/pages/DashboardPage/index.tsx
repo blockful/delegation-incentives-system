@@ -288,7 +288,7 @@ const PayoutCard = styled.button`
   transition: background ${tokens.transition.fast}, transform ${tokens.transition.fast};
 
   &:hover {
-    background: ${tokens.color.borderLight};
+    background: ${tokens.color.lightBlueOpacity};
     transform: translateY(-2px);
   }
 
