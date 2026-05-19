@@ -1065,310 +1065,6 @@ export function RoundDetailPageSkeleton() {
   )
 }
 
-const LotteryPageShell = styled(SkeletonRegion)`
-  width: 100%;
-  max-width: 1120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 40px;
-  animation: ${fadeInUp} 0.35s ease both;
-`
-
-const LotteryHeaderStack = styled(SkeletonStack)`
-  align-items: center;
-  width: 100%;
-  gap: 16px;
-`
-
-const LotteryTitleRow = styled(SkeletonInline)`
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-`
-
-const LotteryStatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  width: 100%;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-`
-
-const LotteryStatCard = styled(SkeletonStack)`
-  padding: 20px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-  gap: 4px;
-`
-
-const LotteryStatTopRow = styled(SkeletonInline)`
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-`
-
-const LotteryProgressBlock = styled(SkeletonStack)`
-  gap: 8px;
-  width: 100%;
-`
-
-const LotteryBarLabels = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-`
-
-const LotteryInspectCard = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 20px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-`
-
-const LotteryInspectHeader = styled(SkeletonStack)`
-  gap: 12px;
-`
-
-const LotterySearchRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-
-  @media (max-width: 767px) {
-    flex-wrap: wrap;
-  }
-`
-
-const LotteryResultStripSkeleton = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: ${tokens.color.bgSubtle};
-  border: 1px solid ${tokens.color.borderLight};
-  width: 100%;
-`
-
-const LotteryTableCard = styled.div`
-  display: flex;
-  flex-direction: column;
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-  overflow: hidden;
-  background: ${tokens.color.surface};
-`
-
-const LotteryTableHeadRow = styled.div`
-  display: flex;
-  background: ${tokens.color.bgSubtle};
-  border-bottom: 1px solid ${tokens.color.borderLight};
-
-  @media (max-width: 767px) {
-    display: none;
-  }
-`
-
-const LotteryTableHeadCellSkeleton = styled.div<{ $weight?: number }>`
-  flex: ${({ $weight }) => $weight ?? 1};
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  padding: 12px;
-`
-
-const LotteryTableRowSkeleton = styled.div`
-  display: flex;
-  width: 100%;
-
-  &:not(:last-child) {
-    border-bottom: 1px solid ${tokens.color.borderLight};
-  }
-
-  @media (max-width: 767px) {
-    flex-direction: column;
-    padding: 4px 0;
-  }
-`
-
-const LotteryTableCellSkeleton = styled.div<{ $weight?: number }>`
-  flex: ${({ $weight }) => $weight ?? 1};
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  padding: 14px 12px;
-
-  @media (max-width: 767px) {
-    width: 100%;
-    flex: none;
-    justify-content: space-between;
-    padding: 10px 16px;
-  }
-`
-
-const LotteryBucketCard = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 20px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-`
-
-const LotteryBucketStatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-`
-
-const LotteryBucketStatCard = styled(SkeletonStack)`
-  padding: 16px;
-  background: ${tokens.color.bgSubtle};
-  border-radius: 8px;
-  gap: 4px;
-`
-
-const LOTTERY_COL_WEIGHTS = [0.9, 1, 1, 1.3, 0.8, 0.25]
-
-export function LotteryPageSkeleton() {
-  return (
-    <LotteryPageShell label="Loading lottery page">
-      {/* Hero */}
-      <LotteryHeaderStack>
-        <SkeletonBlock $height="28px" $width="92px" $radius="14px" />
-        <LotteryTitleRow>
-          <SkeletonBlock $height="68px" $width="520px" $maxWidth="100%" $radius="8px" />
-          <SkeletonCircle $size="20px" />
-        </LotteryTitleRow>
-        <SkeletonStack $gap="4px" $maxWidth="646px">
-          <SkeletonBlock $height="20px" $width="100%" />
-          <SkeletonBlock $height="20px" $width="84%" />
-        </SkeletonStack>
-      </LotteryHeaderStack>
-
-      {/* Stats + progress */}
-      <SkeletonStack $gap="16px">
-        <LotteryStatsGrid>
-          {Array.from({ length: 3 }, (_, i) => (
-            <LotteryStatCard key={i}>
-              <LotteryStatTopRow>
-                <SkeletonBlock $height="36px" $width={i === 0 ? '120px' : '64px'} $radius="6px" />
-                <SkeletonBlock $height="24px" $width="24px" $radius="4px" />
-              </LotteryStatTopRow>
-              <SkeletonBlock $height="20px" $width={i === 0 ? '110px' : i === 1 ? '128px' : '64px'} />
-            </LotteryStatCard>
-          ))}
-        </LotteryStatsGrid>
-
-        <LotteryProgressBlock>
-          <SkeletonBlock $height="12px" $width="100%" $radius="9999px" />
-          <LotteryBarLabels>
-            <SkeletonBlock $height="20px" $width="160px" />
-            <SkeletonBlock $height="20px" $width="220px" />
-          </LotteryBarLabels>
-        </LotteryProgressBlock>
-      </SkeletonStack>
-
-      {/* Inspect card with search + result strip + table */}
-      <LotteryInspectCard>
-        <LotteryInspectHeader>
-          <SkeletonBlock $height="20px" $width="124px" />
-          <LotterySearchRow>
-            <SkeletonBlock $height="44px" $width="100%" $radius="9999px" />
-            <SkeletonBlock $height="40px" $width="112px" $radius="8px" />
-          </LotterySearchRow>
-        </LotteryInspectHeader>
-
-        <LotteryResultStripSkeleton>
-          <SkeletonCircle $size="32px" />
-          <SkeletonStack $gap="4px" $maxWidth="320px">
-            <SkeletonBlock $height="20px" $width="240px" $maxWidth="100%" />
-            <SkeletonBlock $height="16px" $width="320px" $maxWidth="100%" />
-          </SkeletonStack>
-        </LotteryResultStripSkeleton>
-
-        <LotteryTableCard>
-          <LotteryTableHeadRow>
-            {LOTTERY_COL_WEIGHTS.map((w, i) => (
-              <LotteryTableHeadCellSkeleton key={i} $weight={w}>
-                {w > 0.3 && <SkeletonBlock $height="20px" $width={i === 3 ? '92px' : '60px'} />}
-              </LotteryTableHeadCellSkeleton>
-            ))}
-          </LotteryTableHeadRow>
-          {Array.from({ length: 5 }, (_, rowIdx) => (
-            <LotteryTableRowSkeleton key={rowIdx}>
-              <LotteryTableCellSkeleton $weight={LOTTERY_COL_WEIGHTS[0]}>
-                <SkeletonBlock $height="20px" $width="76px" />
-              </LotteryTableCellSkeleton>
-              <LotteryTableCellSkeleton $weight={LOTTERY_COL_WEIGHTS[1]}>
-                <SkeletonBlock $height="20px" $width="68px" />
-              </LotteryTableCellSkeleton>
-              <LotteryTableCellSkeleton $weight={LOTTERY_COL_WEIGHTS[2]}>
-                <SkeletonBlock $height="20px" $width="48px" />
-              </LotteryTableCellSkeleton>
-              <LotteryTableCellSkeleton $weight={LOTTERY_COL_WEIGHTS[3]}>
-                <SkeletonBlock $height="20px" $width="112px" />
-              </LotteryTableCellSkeleton>
-              <LotteryTableCellSkeleton $weight={LOTTERY_COL_WEIGHTS[4]}>
-                <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
-              </LotteryTableCellSkeleton>
-              <LotteryTableCellSkeleton $weight={LOTTERY_COL_WEIGHTS[5]}>
-                <SkeletonBlock $height="14px" $width="14px" $radius="4px" />
-              </LotteryTableCellSkeleton>
-            </LotteryTableRowSkeleton>
-          ))}
-        </LotteryTableCard>
-      </LotteryInspectCard>
-
-      {/* Bucket detail */}
-      <LotteryBucketCard>
-        <SpaceBetweenInline>
-          <SkeletonStack $gap="4px">
-            <SkeletonBlock $height="24px" $width="220px" />
-            <SkeletonBlock $height="16px" $width="320px" $maxWidth="100%" />
-          </SkeletonStack>
-          <SkeletonBlock $height="28px" $width="84px" $radius="9999px" />
-        </SpaceBetweenInline>
-
-        <SkeletonInline $gap="8px">
-          <SkeletonBlock $height="32px" $width="92px" $radius="9999px" />
-          <SkeletonBlock $height="32px" $width="92px" $radius="9999px" />
-          <SkeletonBlock $height="32px" $width="92px" $radius="9999px" />
-        </SkeletonInline>
-
-        <LotteryBucketStatsGrid>
-          {Array.from({ length: 4 }, (_, i) => (
-            <LotteryBucketStatCard key={i}>
-              <SkeletonBlock $height="22px" $width={i === 1 ? '128px' : '72px'} />
-              <SkeletonBlock $height="14px" $width="68px" />
-            </LotteryBucketStatCard>
-          ))}
-        </LotteryBucketStatsGrid>
-
-        <SkeletonBlock $height="120px" $width="100%" $radius="8px" />
-      </LotteryBucketCard>
-    </LotteryPageShell>
-  )
-}
-
 /* ─── Transparency full-page skeleton (matches new design) ─── */
 
 const TransparencyShell = styled(SkeletonRegion)`
@@ -1690,31 +1386,6 @@ const RoundsTitleRow = styled(SkeletonInline)`
   gap: 24px;
 `
 
-const RoundsStatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  width: 100%;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-`
-
-const RoundsStatCard = styled(SkeletonStack)`
-  padding: 20px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-  gap: 4px;
-`
-
-const RoundsStatTopRow = styled(SkeletonInline)`
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-`
-
 const RoundsProgressBlock = styled(SkeletonStack)`
   gap: 8px;
   width: 100%;
@@ -1726,6 +1397,65 @@ const RoundsBarLabels = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+`
+
+const RoundsTierCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const RoundsTierHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`
+
+const RoundsTierLadder = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+`
+
+const RoundsTierPip = styled(SkeletonStack)`
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 10px;
+`
+
+const RoundsTierShareRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  border-top: 1px solid ${tokens.color.borderLight};
+  padding-top: 20px;
+
+  @media (min-width: 720px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 `
 
 const RoundsInspectCard = styled.div`
@@ -1810,7 +1540,7 @@ const RoundsTableCellSkeleton = styled.div<{ $weight?: number }>`
   }
 `
 
-const COL_WEIGHTS = [0.9, 1, 1, 1.2, 1.2, 0.7, 0.25]
+const COL_WEIGHTS = [0.9, 1, 1, 1.4, 1.4, 0.7, 0.25]
 
 export function RoundsPageSkeleton() {
   return (
@@ -1828,28 +1558,40 @@ export function RoundsPageSkeleton() {
         </SkeletonStack>
       </RoundsHeaderStack>
 
-      {/* Stats + progress */}
-      <SkeletonStack $gap="16px">
-        <RoundsStatsGrid>
-          {Array.from({ length: 3 }, (_, i) => (
-            <RoundsStatCard key={i}>
-              <RoundsStatTopRow>
-                <SkeletonBlock $height="36px" $width="92px" $radius="6px" />
-                <SkeletonBlock $height="24px" $width="24px" $radius="4px" />
-              </RoundsStatTopRow>
-              <SkeletonBlock $height="20px" $width={i === 1 ? '48px' : '96px'} />
-            </RoundsStatCard>
-          ))}
-        </RoundsStatsGrid>
+      {/* Round progress bar */}
+      <RoundsProgressBlock>
+        <SkeletonBlock $height="12px" $width="100%" $radius="9999px" />
+        <RoundsBarLabels>
+          <SkeletonBlock $height="20px" $width="160px" />
+          <SkeletonBlock $height="20px" $width="220px" />
+        </RoundsBarLabels>
+      </RoundsProgressBlock>
 
-        <RoundsProgressBlock>
-          <SkeletonBlock $height="12px" $width="100%" $radius="9999px" />
-          <RoundsBarLabels>
-            <SkeletonBlock $height="20px" $width="160px" />
-            <SkeletonBlock $height="20px" $width="220px" />
-          </RoundsBarLabels>
-        </RoundsProgressBlock>
-      </SkeletonStack>
+      {/* Current tier card */}
+      <RoundsTierCard>
+        <RoundsTierHeader>
+          <SkeletonStack $gap="4px">
+            <SkeletonBlock $height="24px" $width="180px" />
+          </SkeletonStack>
+          <SkeletonBlock $height="32px" $width="120px" $radius="9999px" />
+        </RoundsTierHeader>
+
+        <RoundsTierLadder>
+          {Array.from({ length: 7 }, (_, i) => (
+            <RoundsTierPip key={i}>
+              <SkeletonCircle $size="24px" />
+              <SkeletonBlock $height="18px" $width="48px" />
+              <SkeletonBlock $height="16px" $width="68px" />
+              <SkeletonBlock $height="4px" $width="100%" $radius="9999px" />
+            </RoundsTierPip>
+          ))}
+        </RoundsTierLadder>
+
+        <RoundsTierShareRow>
+          <SkeletonBlock $height="20px" $width="60%" $maxWidth="420px" />
+          <SkeletonBlock $height="40px" $width="200px" $radius="8px" />
+        </RoundsTierShareRow>
+      </RoundsTierCard>
 
       {/* Inspect card */}
       <RoundsInspectCard>
