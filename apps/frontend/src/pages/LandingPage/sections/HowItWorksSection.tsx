@@ -48,9 +48,7 @@ const Header = styled.div`
   max-width: 560px;
 
   @media (min-width: 768px) {
-    align-items: flex-start;
-    text-align: left;
-    margin: 0 0 ${tokens.spacing['7xl']};
+    margin: 0 auto ${tokens.spacing['7xl']};
   }
 `
 
@@ -135,8 +133,8 @@ const StepCol = styled.div<{
       opacity: 0;
       ${$visible &&
       css`
-        animation: ${fadeInUp} 0.7s cubic-bezier(0.22, 1, 0.36, 1)
-          ${$index * 0.35}s both;
+        animation: ${fadeInUp} 0.9s cubic-bezier(0.22, 1, 0.36, 1)
+          ${$index * 0.55}s both;
       `}
     `}
 
@@ -146,8 +144,6 @@ const StepCol = styled.div<{
   }
 
   @media (min-width: 768px) {
-    align-items: flex-start;
-    text-align: left;
     background: transparent;
     border: none;
     border-radius: 0;
@@ -229,10 +225,6 @@ const TagPill = styled.span<{ $bg: string; $color: string }>`
   padding: 4px 10px;
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
-
-  @media (min-width: 768px) {
-    align-self: flex-start;
-  }
   background: ${({ $bg }) => $bg};
   color: ${({ $color }) => $color};
 `
