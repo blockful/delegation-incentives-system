@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react'
 import styled, { keyframes } from 'styled-components'
-import { Button } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight, faShareNodes } from '@fortawesome/free-solid-svg-icons'
@@ -10,74 +9,6 @@ import { useAsync } from '@/hooks/useAsync'
 import { truncateAddress } from '@/utils/format'
 import { tokens } from '@/styles/tokens'
 import type { VoterDetail } from '@/api/types'
-
-const RouterLink = styled(Link)<{ $fullWidthMobile?: boolean }>`
-  text-decoration: none;
-  position: relative;
-  z-index: 2;
-
-  ${({ $fullWidthMobile }) =>
-    $fullWidthMobile &&
-    `
-    @media (max-width: 767px) {
-      display: block;
-      width: 100%;
-
-      button {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  `}
-`
-
-const ShareLink = styled.a<{ $fullWidthMobile?: boolean }>`
-  text-decoration: none;
-  position: relative;
-  z-index: 2;
-
-  ${({ $fullWidthMobile }) =>
-    $fullWidthMobile &&
-    `
-    @media (max-width: 767px) {
-      display: block;
-      width: 100%;
-
-      button {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  `}
-`
-
-const PrimaryCtaLink = styled(RouterLink)`
-  button {
-    background: ${tokens.color.white};
-    color: ${tokens.color.blue};
-    border: 1px solid ${tokens.color.white};
-    gap: 8px;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.92);
-      color: ${tokens.color.blue};
-    }
-  }
-`
-
-const SecondaryCtaLink = styled(ShareLink)`
-  button {
-    background: rgba(255, 255, 255, 0.12);
-    color: ${tokens.color.white};
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    gap: 8px;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: ${tokens.color.white};
-    }
-  }
-`
 
 const Section = styled.section`
   background: ${tokens.color.surfaceAlt};
@@ -92,29 +23,24 @@ const Card = styled.div`
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background:
-    radial-gradient(
-      ellipse 70% 60% at 50% -10%,
-      rgba(56, 137, 255, 1) 0%,
-      rgba(104, 164, 253, 1) 25%,
-      rgba(151, 191, 251, 1) 50%,
-      rgba(199, 219, 248, 1) 75%,
-      rgba(246, 246, 246, 1) 100%
-    ),
-    ${tokens.color.blue};
+  background: radial-gradient(
+    ellipse 100% 110% at 50% 50%,
+    #3889ff 0%,
+    #68a4fd 25%,
+    #97bffb 50%,
+    #c7dbf8 75%,
+    #f6f6f6 100%
+  );
   border: 1px solid ${tokens.color.white};
   border-radius: 24px;
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['4xl']};
+  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  transition:
-    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 24px 60px -24px rgba(56, 137, 255, 0.55);
+    transform: translateY(-3px);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -122,12 +48,11 @@ const Card = styled.div`
 
     &:hover {
       transform: none;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
     }
   }
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']} ${tokens.spacing['5xl']};
+    padding: 120px ${tokens.spacing['4xl']} ${tokens.spacing['6xl']};
   }
 `
 
@@ -151,18 +76,20 @@ const Heading = styled.h2`
   margin: 0;
   max-width: 784px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size['5xl']};
+    font-size: 56px;
   }
 `
 
 const Subtitle = styled.p`
   font-size: ${tokens.font.size.lg};
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1.4;
   margin: 0;
   max-width: 460px;
+  text-wrap: pretty;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.xl};
@@ -183,30 +110,90 @@ const Actions = styled.div`
   }
 `
 
+const buttonBase = `
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background ${tokens.transition.fast},
+    color ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
+
+  svg {
+    color: currentColor;
+    width: 14px;
+    height: 14px;
+  }
+
+  @media (max-width: 767px) {
+    width: 100%;
+  }
+`
+
+const PrimaryCta = styled(Link)`
+  ${buttonBase};
+  background: ${tokens.color.white};
+  color: ${tokens.color.blue};
+  border: 1px solid ${tokens.color.white};
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.92);
+    color: ${tokens.color.blue};
+  }
+`
+
+const SecondaryCta = styled.a`
+  ${buttonBase};
+  background: rgba(255, 255, 255, 0.12);
+  color: ${tokens.color.white};
+  border: 1px solid rgba(255, 255, 255, 0.3);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: ${tokens.color.white};
+  }
+`
+
 const Marquee = styled.div`
   position: relative;
   z-index: 1;
   margin-top: ${tokens.spacing['3xl']};
+  margin-left: calc(-1 * ${tokens.spacing.xl});
+  margin-right: calc(-1 * ${tokens.spacing.xl});
   display: flex;
   flex-direction: column;
   gap: 12px;
-  opacity: 0.6;
+  opacity: 0.7;
   pointer-events: none;
   user-select: none;
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 8%,
-    black 92%,
+    black 6%,
+    black 94%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 8%,
-    black 92%,
+    black 6%,
+    black 94%,
     transparent 100%
   );
+
+  @media (min-width: 768px) {
+    margin-left: calc(-1 * ${tokens.spacing['4xl']});
+    margin-right: calc(-1 * ${tokens.spacing['4xl']});
+  }
 `
 
 const scrollLeft = keyframes`
@@ -223,6 +210,7 @@ const MarqueeTrack = styled.div<{ $direction: 'left' | 'right'; $duration: numbe
   display: flex;
   gap: 8px;
   width: max-content;
+  flex-shrink: 0;
   animation: ${({ $direction }) => ($direction === 'left' ? scrollLeft : scrollRight)}
     ${({ $duration }) => $duration}s linear infinite;
 
@@ -284,7 +272,10 @@ interface PillRowProps {
 }
 
 function PillRow({ voters, direction, duration }: PillRowProps) {
-  // Duplicate the list so the loop is seamless when the track translates -50%.
+  // Track holds two identical lists back-to-back. The animation translates the
+  // whole track by -50%, so when the second copy reaches the start position
+  // the loop wraps seamlessly. flex-shrink: 0 keeps each pill at its natural
+  // width inside the max-content track.
   const items = [...voters, ...voters]
   return (
     <MarqueeTrack $direction={direction} $duration={duration}>
@@ -309,12 +300,16 @@ export function CtaSection() {
 
   const { rowA, rowB } = useMemo(() => {
     const voters = data?.voters ?? []
-    // Show up to ~14 pills total so the marquee is full enough to feel continuous.
-    const top = voters.slice(0, 14)
-    const half = Math.ceil(top.length / 2)
+    if (voters.length === 0) return { rowA: [], rowB: [] }
+    // Use as many voters as we have, split into two rows. If we end up with
+    // very few pills, repeat the list within the row so the marquee never
+    // looks half-empty (still seamless once the track itself is doubled).
+    const all = [...voters]
+    while (all.length < 12) all.push(...voters)
+    const half = Math.ceil(all.length / 2)
     return {
-      rowA: top.slice(0, half),
-      rowB: top.slice(half).concat(top.slice(0, Math.max(0, half - (top.length - half)))),
+      rowA: all.slice(0, half),
+      rowB: all.slice(half).concat(all.slice(0, Math.max(0, half - (all.length - half)))),
     }
   }, [data])
 
@@ -322,29 +317,27 @@ export function CtaSection() {
     <Section data-testid="cta-section">
       <Card>
         <Inner>
-          <Heading>Earn ENS rewards. Strengthen governance.</Heading>
+          <Heading>
+            Earn ENS rewards.<br />
+            Strengthen governance.
+          </Heading>
           <Subtitle>
-            Delegate in under a minute. Share the program to lift everyone&rsquo;s
-            APR, including yours.
+            Delegate in under a minute. Share to lift everyone&rsquo;s APR,
+            including&nbsp;yours.
           </Subtitle>
           <Actions>
-            <PrimaryCtaLink to="/voters" $fullWidthMobile>
-              <Button colorStyle="background">
-                Delegate to an active voter
-                <FontAwesomeIcon icon={faArrowRight} />
-              </Button>
-            </PrimaryCtaLink>
-            <SecondaryCtaLink
+            <PrimaryCta to="/voters">
+              Delegate to an active voter
+              <FontAwesomeIcon icon={faArrowRight} />
+            </PrimaryCta>
+            <SecondaryCta
               href={buildTwitterShareUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              $fullWidthMobile
             >
-              <Button colorStyle="background">
-                <FontAwesomeIcon icon={faShareNodes} />
-                Share the program
-              </Button>
-            </SecondaryCtaLink>
+              <FontAwesomeIcon icon={faShareNodes} />
+              Share the program
+            </SecondaryCta>
           </Actions>
         </Inner>
 

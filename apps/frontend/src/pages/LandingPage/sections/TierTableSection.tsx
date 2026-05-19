@@ -1,6 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
-import { Button } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faShareNodes } from '@fortawesome/free-solid-svg-icons'
 import type { TierEntry } from '@/api/types'
@@ -217,26 +216,44 @@ const CtaWrap = styled.div`
   justify-content: center;
   width: 100%;
   margin-top: ${tokens.spacing['2xl']};
+`
 
-  a {
-    text-decoration: none;
-    width: 100%;
+const ShareButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  background: ${tokens.color.blue};
+  color: ${tokens.color.white};
+  border: 1px solid ${tokens.color.blue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+  transition:
+    background ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
+
+  svg {
+    color: currentColor;
+    width: 14px;
+    height: 14px;
   }
 
-  button {
-    width: 100%;
-    justify-content: center;
-    gap: 8px;
+  &:hover {
+    background: ${tokens.color.darkBlue};
+    border-color: ${tokens.color.darkBlue};
+    color: ${tokens.color.white};
+    text-decoration: none;
   }
 
   @media (min-width: 768px) {
-    a {
-      width: auto;
-    }
-
-    button {
-      width: auto;
-    }
+    width: auto;
   }
 `
 
@@ -496,16 +513,14 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
         </List>
 
         <CtaWrap>
-          <a
+          <ShareButton
             href={buildTwitterShareUrl()}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button colorStyle="bluePrimary">
-              <FontAwesomeIcon icon={faShareNodes} />
-              Share &amp; grow the pool
-            </Button>
-          </a>
+            <FontAwesomeIcon icon={faShareNodes} />
+            Share &amp; grow the pool
+          </ShareButton>
         </CtaWrap>
       </Inner>
     </Section>
