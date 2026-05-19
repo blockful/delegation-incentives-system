@@ -1,0 +1,18 @@
+# Railway uses nixpacks to build the service. Pin Node 20 + pnpm 9.15 so
+# the build matches local dev. Install with --frozen-lockfile.
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm-9_x"]
+
+[phases.install]
+# --prod=false is REQUIRED: Ponder uses tsx (a devDependency) to compile its
+# TypeScript config. With NODE_ENV=production set on the service, pnpm skips
+# devDeps by default, which leaves the container missing tsx and the start
+# command exits with status 2 before Ponder prints anything.
+cmds = ["pnpm install --frozen-lockfile --prod=false"]
+
+[phases.build]
+# Ponder has no build step; the start command runs ponder directly.
+cmds = ["echo 'no build step'"]
+
+[start]
+cmd = "pnpm --filter @ens-dis/backend start"

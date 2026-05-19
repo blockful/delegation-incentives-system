@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
+import { applyCors } from "./cors.js";
 import health from "./routes/health.js";
 import voters from "./routes/voters.js";
 import eligibility from "./routes/eligibility.js";
@@ -12,6 +13,8 @@ import stats from "./routes/stats.js";
 import { startAutomaticDistributionScheduler } from "./distribution-scheduler.js";
 
 const app = new OpenAPIHono();
+
+applyCors(app, process.env.ALLOWED_ORIGINS);
 
 app.route("/", health);
 app.route("/", voters);
