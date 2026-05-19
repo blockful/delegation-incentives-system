@@ -377,7 +377,7 @@ const RowRight = styled.div`
   }
 `
 
-const PoolAmount = styled.span<{ $isLocked: boolean }>`
+const PoolAmount = styled.span`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
@@ -499,7 +499,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
                     </TierStatus>
                   </RowLeft>
                   <RowRight>
-                    <PoolAmount $isLocked={isLocked}>
+                    <PoolAmount>
                       {poolLabel ?? ''}
                     </PoolAmount>
                     <AprValue $isUnlocked={tier.isUnlocked}>

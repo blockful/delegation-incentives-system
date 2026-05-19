@@ -11,22 +11,12 @@ import {
   SkeletonText,
 } from './Skeleton'
 
-const SectionLabelSkeleton = styled(SkeletonBlock)``
-
 const FluidSkeletonBlock = styled(SkeletonBlock)`
   flex: 1;
 `
 
 const SpaceBetweenInline = styled(SkeletonInline)`
   justify-content: space-between;
-`
-
-const TableCellSkeleton = styled(SkeletonBlock)`
-  margin: ${tokens.spacing.md};
-`
-
-const TableBodyRow = styled(SkeletonGrid)`
-  border-top: 1px solid ${tokens.color.borderLight};
 `
 
 const FullWidthCenteredStack = styled(SkeletonStack)`
@@ -46,37 +36,6 @@ function AddressFormSkeleton() {
         <SkeletonBlock $height="42px" $width="118px" />
       </SkeletonInline>
       <SkeletonBlock $height="12px" $width="42%" />
-    </SkeletonCard>
-  )
-}
-
-function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
-  return (
-    <SkeletonCard $padding="0" $gap="0" $radius={tokens.radius.sm}>
-      <SkeletonGrid $columns={`repeat(${columns}, minmax(0, 1fr))`} $gap="0">
-        {Array.from({ length: columns }, (_, index) => (
-          <TableCellSkeleton
-            key={`head-${index}`}
-            $height="14px"
-            $width="64%"
-          />
-        ))}
-      </SkeletonGrid>
-      {Array.from({ length: rows }, (_, rowIndex) => (
-        <TableBodyRow
-          key={rowIndex}
-          $columns={`repeat(${columns}, minmax(0, 1fr))`}
-          $gap="0"
-        >
-          {Array.from({ length: columns }, (_, columnIndex) => (
-            <TableCellSkeleton
-              key={columnIndex}
-              $height="14px"
-              $width={columnIndex === 0 ? '46%' : columnIndex === columns - 1 ? '58%' : '74%'}
-            />
-          ))}
-        </TableBodyRow>
-      ))}
     </SkeletonCard>
   )
 }
@@ -482,7 +441,7 @@ const DashPayoutInner = styled(SkeletonStack)`
 
 const CHIP_WIDTHS = ['148px', '108px', '64px', '56px']
 
-export function DashboardPageSkeleton(_props: { compact?: boolean } = {}) {
+export function DashboardPageSkeleton() {
   return (
     <DashboardShell label="Loading dashboard">
       {/* Hero card */}
@@ -1006,86 +965,329 @@ export function DelegateProfileSkeleton() {
   )
 }
 
-const RoundsShell = styled(SkeletonRegion)`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+const RoundDetailShell = styled(SkeletonRegion)`
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
-  animation: ${fadeInUp} 0.35s ease both;
+  animation: ${fadeInUp} 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+`
+
+const RoundDetailHeaderCard = styled.div`
+  display: flex;
+  flex-direction: column-reverse;
+  gap: ${tokens.spacing['2xl']};
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "text avatar";
+    column-gap: ${tokens.spacing['4xl']};
+    row-gap: ${tokens.spacing['2xl']};
+    align-items: center;
   }
 `
 
-const RoundDetailHeaderActions = styled(SkeletonInline)`
-  justify-content: space-between;
+const RoundDetailHeaderText = styled(SkeletonStack)`
+  gap: ${tokens.spacing.lg};
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    grid-area: text;
+  }
+`
+
+const RoundDetailAvatarColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    grid-area: avatar;
+  }
+`
+
+const RoundDetailRing = styled.div`
+  width: 220px;
+  height: 220px;
+  border-radius: 9999px;
+  border: 12px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surface};
+
+  @media (min-width: 768px) {
+    width: 240px;
+    height: 240px;
+  }
+`
+
+const RoundDetailSocialRow = styled(SkeletonInline)`
+  flex-wrap: wrap;
+  gap: 4px;
+`
+
+const RoundDetailCtaRow = styled(SkeletonInline)`
+  gap: 8px;
   flex-wrap: wrap;
 `
 
-const RoundDetailSummaryGrid = styled(SkeletonGrid)`
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+const RoundDetailStatsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+  width: 100%;
 
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
   }
 `
 
-function RoundDetailSectionSkeleton({
-  columns = 4,
-  rows = 4,
-  titleWidth = '160px',
-}: {
-  columns?: number
-  rows?: number
-  titleWidth?: string
-}) {
-  return (
-    <SkeletonStack $gap={tokens.spacing.lg}>
-      <SpaceBetweenInline>
-        <SectionLabelSkeleton $height="12px" $width={titleWidth} />
-        <SkeletonBlock $height="12px" $width="88px" />
-      </SpaceBetweenInline>
-      <TableSkeleton rows={rows} columns={columns} />
-    </SkeletonStack>
-  )
-}
+const RoundDetailStatCard = styled(SkeletonStack)`
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  gap: 4px;
+`
+
+const RoundDetailStatTopRow = styled(SkeletonInline)`
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+`
+
+const RoundDetailSection = styled.section`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+`
+
+const RoundDetailTableCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+
+  @media (max-width: 767px) {
+    border: none;
+    background: transparent;
+    overflow: visible;
+    gap: 12px;
+  }
+`
+
+const RoundDetailTableHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 12px;
+
+  @media (max-width: 767px) {
+    padding: 0;
+  }
+`
+
+const RoundDetailTableHeadRow = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-top: 1px solid ${tokens.color.borderLight};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`
+
+const RoundDetailTableHeadCell = styled.div<{ $weight?: number; $end?: boolean }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $end }) => ($end ? 'flex-end' : 'flex-start')};
+  padding: 12px;
+`
+
+const RoundDetailTableRow = styled.div`
+  display: flex;
+  width: 100%;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    padding: 16px;
+    gap: 8px;
+    border: 1px solid ${tokens.color.borderLight};
+    border-radius: 12px;
+    background: ${tokens.color.surface};
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+    &:not(:last-child) {
+      border-bottom: 1px solid ${tokens.color.borderLight};
+    }
+  }
+`
+
+const RoundDetailTableCell = styled.div<{ $weight?: number; $end?: boolean }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: ${({ $end }) => ($end ? 'flex-end' : 'flex-start')};
+  padding: 14px 12px;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    padding: 0;
+    justify-content: space-between;
+  }
+`
 
 export function RoundDetailPageSkeleton() {
   return (
-    <RoundsShell label="Loading round detail">
-      <SkeletonStack $gap={tokens.spacing.lg}>
-        <RoundDetailHeaderActions>
-          <SkeletonBlock $height="18px" $width="112px" />
-          <SkeletonInline $gap={tokens.spacing.sm}>
-            <SkeletonBlock $height="36px" $width="124px" />
-            <SkeletonBlock $height="36px" $width="102px" />
-          </SkeletonInline>
-        </RoundDetailHeaderActions>
-        <RoundDetailHeaderActions>
-          <SkeletonStack>
-            <SectionLabelSkeleton $height="12px" $width="116px" />
-            <SkeletonBlock $height="42px" $width="170px" />
-          </SkeletonStack>
-          <SkeletonBlock $height="28px" $width="72px" $radius={tokens.radius.pill} />
-        </RoundDetailHeaderActions>
-        <AddressFormSkeleton />
-      </SkeletonStack>
-      <RoundDetailSummaryGrid>
-        {Array.from({ length: 14 }, (_, index) => (
-          <SkeletonStack key={index} $gap="5px">
-            <SkeletonBlock $height="11px" $width={index % 3 === 0 ? '72%' : '58%'} />
-            <SkeletonBlock $height="18px" $width={index % 4 === 0 ? '84%' : '64%'} />
-          </SkeletonStack>
+    <RoundDetailShell label="Loading round detail">
+      {/* Header card */}
+      <RoundDetailHeaderCard>
+        <RoundDetailHeaderText>
+          {/* Back link */}
+          <SkeletonBlock $height="20px" $width="120px" />
+          {/* Title */}
+          <SkeletonBlock $height="68px" $width="280px" $maxWidth="100%" $radius="8px" />
+          {/* Social chips */}
+          <RoundDetailSocialRow>
+            <SkeletonBlock $height="24px" $width="148px" $radius="14px" />
+            <SkeletonBlock $height="24px" $width="132px" $radius="14px" />
+          </RoundDetailSocialRow>
+          {/* Prev / next nav */}
+          <RoundDetailCtaRow>
+            <SkeletonBlock $height="36px" $width="124px" $radius="8px" />
+            <SkeletonBlock $height="36px" $width="124px" $radius="8px" />
+          </RoundDetailCtaRow>
+        </RoundDetailHeaderText>
+
+        <RoundDetailAvatarColumn>
+          <RoundDetailRing />
+          <SkeletonBlock $height="28px" $width="120px" $radius="14px" />
+        </RoundDetailAvatarColumn>
+      </RoundDetailHeaderCard>
+
+      {/* 4-stat row */}
+      <RoundDetailStatsRow>
+        {Array.from({ length: 4 }, (_, i) => (
+          <RoundDetailStatCard key={i}>
+            <RoundDetailStatTopRow>
+              <SkeletonBlock $height="36px" $width={i === 0 ? '120px' : '84px'} $radius="6px" />
+              <SkeletonBlock $height="24px" $width="24px" $radius="4px" />
+            </RoundDetailStatTopRow>
+            <SkeletonBlock $height="20px" $width={i === 0 ? '110px' : i === 1 ? '128px' : '96px'} />
+          </RoundDetailStatCard>
         ))}
-      </RoundDetailSummaryGrid>
-      <RoundDetailSectionSkeleton titleWidth="132px" rows={2} columns={3} />
-      <RoundDetailSectionSkeleton titleWidth="112px" rows={5} columns={5} />
-      <RoundDetailSectionSkeleton titleWidth="118px" rows={5} columns={4} />
-      <RoundDetailSectionSkeleton titleWidth="126px" rows={4} columns={4} />
-    </RoundsShell>
+      </RoundDetailStatsRow>
+
+      {/* Address inspector */}
+      <RoundDetailSection>
+        <SkeletonStack $gap="4px">
+          <SkeletonBlock $height="14px" $width="112px" />
+          <SkeletonBlock $height="24px" $width="320px" $maxWidth="100%" />
+        </SkeletonStack>
+        <AddressFormSkeleton />
+      </RoundDetailSection>
+
+      {/* Top voter rewards table */}
+      <RoundDetailTableCard>
+        <RoundDetailTableHeader>
+          <SkeletonStack $gap="4px">
+            <SkeletonBlock $height="14px" $width="148px" />
+            <SkeletonBlock $height="20px" $width="220px" />
+          </SkeletonStack>
+        </RoundDetailTableHeader>
+        <RoundDetailTableHeadRow>
+          <RoundDetailTableHeadCell $weight={0.6}>
+            <SkeletonBlock $height="16px" $width="44px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={2}>
+            <SkeletonBlock $height="16px" $width="64px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={1.2} $end>
+            <SkeletonBlock $height="16px" $width="92px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={1.4} $end>
+            <SkeletonBlock $height="16px" $width="60px" />
+          </RoundDetailTableHeadCell>
+        </RoundDetailTableHeadRow>
+        {Array.from({ length: 5 }, (_, i) => (
+          <RoundDetailTableRow key={i}>
+            <RoundDetailTableCell $weight={0.6}>
+              <SkeletonBlock $height="22px" $width="36px" $radius="9999px" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={2}>
+              <SkeletonCircle $size="28px" />
+              <SkeletonBlock $height="20px" $width={i % 2 === 0 ? '160px' : '120px'} $maxWidth="100%" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={1.2} $end>
+              <SkeletonBlock $height="20px" $width="84px" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={1.4} $end>
+              <SkeletonBlock $height="20px" $width="80px" />
+              <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+            </RoundDetailTableCell>
+          </RoundDetailTableRow>
+        ))}
+      </RoundDetailTableCard>
+
+      {/* Top token holder rewards table */}
+      <RoundDetailTableCard>
+        <RoundDetailTableHeader>
+          <SkeletonStack $gap="4px">
+            <SkeletonBlock $height="14px" $width="180px" />
+            <SkeletonBlock $height="20px" $width="200px" />
+          </SkeletonStack>
+        </RoundDetailTableHeader>
+        <RoundDetailTableHeadRow>
+          <RoundDetailTableHeadCell $weight={0.6}>
+            <SkeletonBlock $height="16px" $width="44px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={2}>
+            <SkeletonBlock $height="16px" $width="64px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={1.4} $end>
+            <SkeletonBlock $height="16px" $width="60px" />
+          </RoundDetailTableHeadCell>
+        </RoundDetailTableHeadRow>
+        {Array.from({ length: 5 }, (_, i) => (
+          <RoundDetailTableRow key={i}>
+            <RoundDetailTableCell $weight={0.6}>
+              <SkeletonBlock $height="22px" $width="36px" $radius="9999px" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={2}>
+              <SkeletonCircle $size="28px" />
+              <SkeletonBlock $height="20px" $width={i % 2 === 0 ? '140px' : '108px'} $maxWidth="100%" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={1.4} $end>
+              <SkeletonBlock $height="20px" $width="76px" />
+              <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+            </RoundDetailTableCell>
+          </RoundDetailTableRow>
+        ))}
+      </RoundDetailTableCard>
+    </RoundDetailShell>
   )
 }
 

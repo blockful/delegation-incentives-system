@@ -245,10 +245,6 @@ const PARTICLE_CONFIGS = [
   { id: 13, left: 96, size: 28, duration: 10, delay: 7 },
 ]
 
-function buildEyebrow(): string {
-  return 'ENS Governance · Live program'
-}
-
 export function HeroSection({ currentAprPct }: HeroSectionProps) {
   return (
     <Section>
@@ -268,7 +264,7 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
       <Content>
         <HeroEyebrow>
           <LiveDot tone="success" size={8} />
-          {buildEyebrow()}
+          ENS Governance · Live program
         </HeroEyebrow>
         <Headline>
           Earn <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS

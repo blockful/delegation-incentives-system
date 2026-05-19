@@ -3,7 +3,6 @@ import styled, { keyframes, css } from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowUpRightFromSquare,
-  faDownload,
   faFileLines,
   faClock,
   faChartPie,
@@ -459,35 +458,6 @@ const StatusPill = styled.span<{ $status: 'paid' | 'live' | 'pending' }>`
   text-transform: capitalize;
 `
 
-const DownloadLink = styled.a<{ $disabled?: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  color: ${tokens.color.blue};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 16px;
-  text-decoration: none;
-  transition: background ${tokens.transition.fast}, border-color ${tokens.transition.fast};
-
-  &:hover {
-    text-decoration: none;
-    border-color: ${tokens.color.blue};
-    background: ${tokens.color.lightBlueOpacity};
-  }
-
-  ${({ $disabled }) =>
-    $disabled &&
-    css`
-      pointer-events: none;
-      color: ${tokens.color.textSubtle};
-      background: ${tokens.color.bgSubtle};
-    `}
-`
 
 const TableCaption = styled.p`
   margin: 0;
@@ -574,8 +544,6 @@ interface RoundsRowData {
   number: number
   period: string
   status: RoundSummary['status']
-  /** TODO(backend): per-round CSV export endpoint once it lands. */
-  csvUrl: string | null
 }
 
 function buildRoundRows(rounds: RoundSummary[]): RoundsRowData[] {
@@ -583,7 +551,6 @@ function buildRoundRows(rounds: RoundSummary[]): RoundsRowData[] {
     number: r.roundNumber,
     period: formatUtcMonthRange(r.startDate, r.endDate),
     status: r.status,
-    csvUrl: null,
   }))
 }
 
@@ -714,9 +681,8 @@ export function TransparencyPage() {
         <RoundsTable>
           <RoundsHeadRow>
             <RoundsHeadCell>Round</RoundsHeadCell>
-            <RoundsHeadCell $width="240px">Period</RoundsHeadCell>
-            <RoundsHeadCell $width="140px">Status</RoundsHeadCell>
-            <RoundsHeadCell $width="160px">Download</RoundsHeadCell>
+            <RoundsHeadCell $width="280px">Period</RoundsHeadCell>
+            <RoundsHeadCell $width="160px">Status</RoundsHeadCell>
           </RoundsHeadRow>
 
           {rows.length === 0 && (
@@ -731,34 +697,25 @@ export function TransparencyPage() {
                 <MobileLabel>Round</MobileLabel>
                 <span>Round {row.number}</span>
               </RoundsCell>
-              <RoundsCell $width="240px">
+              <RoundsCell $width="280px">
                 <MobileLabel>Period</MobileLabel>
                 <span>{row.period}</span>
               </RoundsCell>
-              <RoundsCell $width="140px">
+              <RoundsCell $width="160px">
                 <MobileLabel>Status</MobileLabel>
                 <StatusPill $status={row.status === 'paid' ? 'paid' : row.status === 'live' ? 'live' : 'pending'}>
                   {row.status}
                 </StatusPill>
-              </RoundsCell>
-              <RoundsCell $width="160px">
-                <MobileLabel>Download</MobileLabel>
-                <DownloadLink
-                  $disabled={!row.csvUrl}
-                  href={row.csvUrl ?? undefined}
-                  aria-label={`Download round ${row.number} CSV`}
-                >
-                  <FontAwesomeIcon icon={faDownload} />
-                  CSV
-                </DownloadLink>
               </RoundsCell>
             </RoundsRow>
           ))}
         </RoundsTable>
 
         <TableCaption>
-          CSV exports arrive after each round closes.{' '}
-          {/* BACKEND-NEEDS: per-round CSV export endpoint. Tracking in project_dis_backend_needs.md. */}
+          {/* BACKEND-NEEDS: per-round CSV export endpoint. When it lands, restore the
+              Download column and the "CSV exports arrive after each round closes." copy.
+              Tracking in project_dis_backend_needs.md. */}
+          For now, use the GitHub repo to re-run the math; per-round CSV exports are coming.
         </TableCaption>
         </RoundsBlock>
       </Card>

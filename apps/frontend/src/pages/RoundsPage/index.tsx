@@ -13,7 +13,7 @@ import {
   faLock,
   faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons'
-import { Button, Tag } from '@ensdomains/thorin'
+import { Button } from '@ensdomains/thorin'
 import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
@@ -37,6 +37,8 @@ import {
   buildRoundListFromCurrentRound,
   buildUnavailableAddressHistory,
 } from './roundFallback'
+import { AprTag, LotteryTag } from './components/RewardTags'
+import { formatPositiveReward, statusLabel } from './status'
 
 /* ─── Page shell ─── */
 
@@ -707,20 +709,6 @@ const RewardCellRow = styled.div`
   flex-wrap: wrap;
 `
 
-// Thorin's *Secondary styles still read a bit saturated next to white table rows.
-// Override the background with the lighter design token; text colour stays from the DS.
-const AprTag = styled(Tag)`
-  && {
-    background-color: ${tokens.color.lightYellow};
-  }
-`
-
-const LotteryTag = styled(Tag)`
-  && {
-    background-color: ${tokens.color.lightOrange};
-  }
-`
-
 const RewardValueText = styled.span`
   color: ${tokens.color.positiveEmphasis};
   font-weight: ${tokens.font.weight.bold};
@@ -937,13 +925,6 @@ function renderDelegateRewards(r: RewardsBreakdown) {
   return <RewardValueText>{r.delegate}</RewardValueText>
 }
 
-function formatPositiveReward(value: string | null | undefined): string | null {
-  if (!value) return null
-  const n = Number(value)
-  if (!Number.isFinite(n) || n <= 0) return null
-  return `+${formatEnsAmount(value, { maximumFractionDigits: 4 })}`
-}
-
 function formatRewardsBreakdown(opts: {
   activeAddress: string
   addressRound: AddressDistributionRound | null
@@ -1007,13 +988,6 @@ function progressPercent(start: string | null, end: string | null): number {
   if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) return 0
   const now = Date.now()
   return Math.max(0, Math.min(100, ((now - s) / (e - s)) * 100))
-}
-
-function statusLabel(status: RoundStatus): string {
-  if (status === 'live') return 'Ongoing'
-  if (status === 'paid') return 'Complete'
-  if (status === 'pending') return 'Pending'
-  return 'Ended'
 }
 
 function formatDaysRemaining(daysRemaining: number | null, status: RoundStatus): string {

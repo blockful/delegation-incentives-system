@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
@@ -7,23 +7,19 @@ import {
   faArrowLeft,
   faArrowRight,
   faArrowTrendUp,
-  faArrowUpRightFromSquare,
   faCircleCheck,
   faCircleInfo,
+  faUserSlash,
   faCoins,
-  faDownload,
   faHourglassHalf,
   faMagnifyingGlass,
   faRankingStar,
   faTrophy,
 } from '@fortawesome/free-solid-svg-icons'
-import { Tag } from '@ensdomains/thorin'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { api, ApiClientError } from '@/api'
 import type {
-  AddressRoundReward,
-  LotteryDetail,
   RewardRank,
   RewardStatus,
   RoundDetailResponse,
@@ -35,78 +31,12 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
+import { RewardSourceTag } from './components/RewardTags'
+import { formatPositiveReward, statusLabel } from './status'
 import {
   buildRoundDetailFallback,
   buildRoundListFromCurrentRound,
 } from './roundFallback'
-
-/**
- * TEMP — flip to `false` to render real backend data instead of MOCK_ROUND_DETAIL.
- * When on, the page skips loading/error gating and uses the hardcoded payload
- * below so the layout can be reviewed without a backend.
- */
-const SHOW_MOCK_ROUND_DETAIL = true
-
-const MOCK_ROUND_DETAIL: RoundDetailResponse = {
-  roundNumber: 7,
-  month: '2026-07',
-  startDate: '2026-07-01T00:00:00.000Z',
-  endDate: '2026-07-31T23:59:59.999Z',
-  status: 'paid',
-  distributionDataStatus: 'available',
-  isCurrent: false,
-  percentComplete: 100,
-  daysRemaining: 0,
-  tierIndex: 2,
-  tierLabel: 'Tier 3',
-  vpGrowthPct: '1.45',
-  poolSize: '12500000000000000000000',
-  poolSizeEns: '12500',
-  totalDistributed: '12500000000000000000000',
-  totalDistributedEns: '12500',
-  activeVoterCount: 38,
-  eligibleTokenHolderCount: 1247,
-  lotteryBucketCount: 3,
-  lotteryEntryCount: 412,
-  lotteryParticipantCount: 41,
-  lotteryWinnerCount: 3,
-  lotteryPrize: '30000000000000000000',
-  lotteryPrizeEns: '30',
-  computedAt: '2026-08-01T00:10:00.000Z',
-  addressReward: {
-    address: '0xAbCdef0123456789abcdef0123456789abcdef01',
-    rewardStatus: 'paid',
-    voterReward: '0',
-    voterRewardEns: '0',
-    tokenHolderReward: '420000000000000000',
-    tokenHolderRewardEns: '0.4200',
-    lotteryReward: '0',
-    lotteryRewardEns: '0',
-    totalReward: '420000000000000000',
-    totalRewardEns: '0.4200',
-  },
-  topVoterRewards: [
-    { rank: 1, address: '0x1a2b3c4d5e6f70819203040506070809a0b1c2d3', ensName: 'nick.eth',         role: 'voter', reward: '3250000000000000000', rewardEns: '3.2487', source: 'direct', votingPower: '482350000000000000000000', delegationCount: 1820 },
-    { rank: 2, address: '0x2b3c4d5e6f70819203040506070809a0b1c2d3e4', ensName: 'griff.eth',        role: 'voter', reward: '2980000000000000000', rewardEns: '2.9812', source: 'direct', votingPower: '438120000000000000000000', delegationCount: 1564 },
-    { rank: 3, address: '0x3c4d5e6f70819203040506070809a0b1c2d3e4f5', ensName: 'coltron.eth',      role: 'voter', reward: '2640000000000000000', rewardEns: '2.6403', source: 'direct', votingPower: '391040000000000000000000', delegationCount: 1402 },
-    { rank: 4, address: '0x4d5e6f70819203040506070809a0b1c2d3e4f506', ensName: 'limes.eth',        role: 'voter', reward: '2110000000000000000', rewardEns: '2.1075', source: 'direct', votingPower: '312870000000000000000000', delegationCount: 1180 },
-    { rank: 5, address: '0x5e6f70819203040506070809a0b1c2d3e4f50617', ensName: 'fireeyesdao.eth',  role: 'voter', reward: '1840000000000000000', rewardEns: '1.8421', source: 'direct', votingPower: '273520000000000000000000', delegationCount: 942  },
-    { rank: 6, address: '0x6f70819203040506070809a0b1c2d3e4f5061728', ensName: 'simona.eth',       role: 'voter', reward: '1520000000000000000', rewardEns: '1.5234', source: 'direct', votingPower: '226140000000000000000000', delegationCount: 783  },
-    { rank: 7, address: '0x70819203040506070809a0b1c2d3e4f506172839', ensName: null,              role: 'voter', reward: '1180000000000000000', rewardEns: '1.1842', source: 'direct', votingPower: '176280000000000000000000', delegationCount: 612  },
-    { rank: 8, address: '0x819203040506070809a0b1c2d3e4f50617283940', ensName: 'jameshhouk.eth',   role: 'voter', reward: '0890000000000000000', rewardEns: '0.8905', source: 'lottery', votingPower: '132040000000000000000000', delegationCount: 489 },
-  ],
-  topTokenHolderRewards: [
-    { rank: 1, address: '0x9203040506070809a0b1c2d3e4f5061728394050', ensName: 'vault.eth',        role: 'token_holder', reward: '1240000000000000000', rewardEns: '1.2410', source: 'direct',  votingPower: null, delegationCount: null },
-    { rank: 2, address: '0xa3040506070809b1c2d3e4f50617283940506172', ensName: 'whale.eth',        role: 'token_holder', reward: '0980000000000000000', rewardEns: '0.9836', source: 'direct',  votingPower: null, delegationCount: null },
-    { rank: 3, address: '0xb40506070809c1d2e3f4051627384950617283a4', ensName: 'patient.eth',      role: 'token_holder', reward: '0760000000000000000', rewardEns: '0.7612', source: 'direct',  votingPower: null, delegationCount: null },
-    { rank: 4, address: '0xc506070809d1e2f30415263748596071829304b5', ensName: null,               role: 'token_holder', reward: '0540000000000000000', rewardEns: '0.5408', source: 'direct',  votingPower: null, delegationCount: null },
-    { rank: 5, address: '0xd6070809e1f2031425364758697081930405c6d7', ensName: 'compounder.eth',   role: 'token_holder', reward: '0320000000000000000', rewardEns: '0.3217', source: 'direct',  votingPower: null, delegationCount: null },
-    { rank: 6, address: '0xe70809f10213243546576879809a1b2c3d4e5f60', ensName: null,               role: 'token_holder', reward: '0180000000000000000', rewardEns: '0.1843', source: 'direct',  votingPower: null, delegationCount: null },
-    { rank: 7, address: '0xf809a1b2c3d4e5f6071829304a5b6c7d8e9f0010', ensName: 'frenly.eth',       role: 'token_holder', reward: '0090000000000000000', rewardEns: '0.0921', source: 'lottery', votingPower: null, delegationCount: null },
-    { rank: 8, address: '0x09a1b2c3d4e5f60718293041526374859607a1b2', ensName: null,               role: 'token_holder', reward: '0040000000000000000', rewardEns: '0.0418', source: 'lottery', votingPower: null, delegationCount: null },
-  ],
-  lottery: null,
-}
 
 /* ─── Page layout ─── */
 
@@ -247,48 +177,6 @@ const StatusTag = styled.span<{ $status: RoundStatus | RewardStatus }>`
   }
 `
 
-const SocialLinks = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-`
-
-const SocialChip = styled.a`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 14px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  text-decoration: none;
-  transition: border-color ${tokens.transition.fast}, color ${tokens.transition.fast};
-
-  &:hover {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.blue};
-    text-decoration: none;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.blue};
-    outline-offset: 2px;
-  }
-`
-
-const SocialIcon = styled.span`
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-`
-
 const CtaRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -427,7 +315,7 @@ function RoundProgressRing({
   const [measuredSize, setMeasuredSize] = useState(220)
   const [animatedPct, setAnimatedPct] = useState(0)
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const el = wrapRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver((entries) => {
@@ -603,12 +491,6 @@ const SectionTitle = styled.h2`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.25;
-`
-
-const RowCount = styled.span`
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
 `
 
 const AddressResultStrip = styled.div<{ $tone: 'success' | 'neutral' | 'pending' }>`
@@ -872,28 +754,51 @@ const RewardValueText = styled.span`
   font-variant-numeric: tabular-nums;
 `
 
-const AprTag = styled(Tag)`
-  && {
-    background-color: ${tokens.color.lightYellow};
-  }
-`
-
-const LotteryTag = styled(Tag)`
-  && {
-    background-color: ${tokens.color.lightOrange};
-  }
-`
-
-const DelegateTag = styled(Tag)`
-  && {
-    background-color: ${tokens.color.lightBlueOpacity};
-  }
-`
-
 const EmptyTableBody = styled.div`
-  padding: ${tokens.spacing.xl};
-  color: ${tokens.color.darkGray};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
   text-align: center;
+`
+
+const EmptyTableTextStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`
+
+const EmptyTableIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: ${tokens.color.borderLight};
+  color: ${tokens.color.darkGray};
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`
+
+const EmptyTableTitle = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const EmptyTableBodyText = styled.span`
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  line-height: 1.5;
+  max-width: 320px;
 `
 
 /* ─── Helpers ─── */
@@ -905,16 +810,6 @@ function getWalletAddress(walletState: ReturnType<typeof useWalletState>): strin
 
 function isLegacyEndpointError(error: unknown): boolean {
   return error instanceof ApiClientError && error.status === 404
-}
-
-function statusLabel(status: RoundStatus | RewardStatus): string {
-  if (status === 'live') return 'Ongoing'
-  if (status === 'paid') return 'Complete'
-  if (status === 'pending') return 'Pending'
-  if (status === 'not_eligible') return 'Not eligible'
-  if (status === 'no_reward') return 'No payout'
-  if (status === 'unavailable') return 'Unavailable'
-  return 'Ended'
 }
 
 function formatEns(value: string | null, empty = 'Unavailable', maximumFractionDigits = 4): string {
@@ -943,18 +838,14 @@ function formatPoolEns(value: string | null): string {
   return `${Math.round(n).toLocaleString('en-US')} ENS`
 }
 
-function formatPositiveReward(value: string | null | undefined): string {
-  if (!value) return '—'
-  const n = Number(value)
-  if (!Number.isFinite(n) || n <= 0) return '—'
-  return `+${formatEnsAmount(value, { maximumFractionDigits: 4 })}`
-}
-
-function formatAddressReward(reward: AddressRoundReward | null): string {
-  if (!reward) return 'No address'
-  if (reward.rewardStatus === 'pending') return 'Pending'
-  if (reward.rewardStatus === 'unavailable') return 'Unavailable'
-  return formatEns(reward.totalRewardEns, '0 ENS')
+function computeRoundProgress(startDate: string, endDate: string): number {
+  const start = new Date(startDate).getTime()
+  const end = new Date(endDate).getTime()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0
+  const now = Date.now()
+  if (now <= start) return 0
+  if (now >= end) return 100
+  return ((now - start) / (end - start)) * 100
 }
 
 function formatVotingPower(vpWei: string | null): string {
@@ -989,30 +880,6 @@ function buildRoundPath(roundNumber: number, activeAddress: string, activeAddres
   return `/rounds/${roundNumber}${addressQuery}`
 }
 
-/* ─── Reward source tag ─── */
-
-function RewardSourceTag({ source }: { source: RewardRank['source'] }) {
-  if (source === 'lottery') {
-    return (
-      <LotteryTag colorStyle="orangeSecondary" size="small">
-        Lottery
-      </LotteryTag>
-    )
-  }
-  if (source === 'combined') {
-    return (
-      <DelegateTag colorStyle="blueSecondary" size="small">
-        Combined
-      </DelegateTag>
-    )
-  }
-  return (
-    <AprTag colorStyle="yellowSecondary" size="small">
-      APR
-    </AprTag>
-  )
-}
-
 /* ─── Rewards table ─── */
 
 interface RewardsTableProps {
@@ -1025,7 +892,19 @@ function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableP
   const highlightLower = highlightAddress.toLowerCase()
 
   if (rows.length === 0) {
-    return <EmptyTableBody>No recipients in this round.</EmptyTableBody>
+    return (
+      <EmptyTableBody>
+        <EmptyTableIcon aria-hidden>
+          <FontAwesomeIcon icon={faUserSlash} />
+        </EmptyTableIcon>
+        <EmptyTableTextStack>
+          <EmptyTableTitle>No recipients in this round</EmptyTableTitle>
+          <EmptyTableBodyText>
+            Nothing got paid out here yet. Check back once the round closes.
+          </EmptyTableBodyText>
+        </EmptyTableTextStack>
+      </EmptyTableBody>
+    )
   }
 
   return (
@@ -1073,7 +952,7 @@ function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableP
             <TableCell $weight={1.4} $align="end">
               <MobileLabel>Reward</MobileLabel>
               <RewardCellRow>
-                <RewardValueText>{formatPositiveReward(row.rewardEns)}</RewardValueText>
+                <RewardValueText>{formatPositiveReward(row.rewardEns) ?? '—'}</RewardValueText>
                 <RewardSourceTag source={row.source} />
               </RewardCellRow>
             </TableCell>
@@ -1122,7 +1001,7 @@ export function RoundDetailPage() {
       return buildRoundDetailFallback(summary, activeAddressValid ? activeAddress : undefined)
     }
   }, [roundNumber, activeAddress, activeAddressValid])
-  const round = useAsync(fetchRound, !SHOW_MOCK_ROUND_DETAIL && Number.isInteger(roundNumber) && roundNumber > 0)
+  const round = useAsync(fetchRound, Number.isInteger(roundNumber) && roundNumber > 0)
 
   const fetchRoundList = useCallback(async () => {
     try {
@@ -1213,7 +1092,7 @@ export function RoundDetailPage() {
     setInputError(null)
   }
 
-  if (!SHOW_MOCK_ROUND_DETAIL && round.loading) {
+  if (round.loading) {
     return <RoundDetailPageSkeleton />
   }
 
@@ -1229,7 +1108,7 @@ export function RoundDetailPage() {
     )
   }
 
-  if (!SHOW_MOCK_ROUND_DETAIL && (round.error || !round.data)) {
+  if (round.error || !round.data) {
     return (
       <Page>
         <BackLinkButton type="button" onClick={() => navigate(backTo)}>
@@ -1241,9 +1120,7 @@ export function RoundDetailPage() {
     )
   }
 
-  const roundData: RoundDetailResponse = SHOW_MOCK_ROUND_DETAIL
-    ? { ...MOCK_ROUND_DETAIL, roundNumber }
-    : (round.data as RoundDetailResponse)
+  const roundData: RoundDetailResponse = round.data
 
   // Title follows the round being viewed (URL), so prev/next navigation updates it.
   const titleRoundNumber = roundData.roundNumber
@@ -1256,8 +1133,7 @@ export function RoundDetailPage() {
       : 'Unavailable'
 
   // Priority: live current-round payload (when viewing the ongoing round) →
-  // the rounds-list summary for the viewed round → roundData fallback (real
-  // detail when mock is off, or MOCK_ROUND_DETAIL while QA'ing the layout).
+  // the rounds-list summary for the viewed round → round detail fallback.
   const liveCurrentRound = currentRound.data ?? null
   const isViewingLiveRound =
     liveCurrentRound != null &&
@@ -1273,17 +1149,14 @@ export function RoundDetailPage() {
     roundData.endDate
   const displayStatus: RoundStatus =
     viewedRoundSummary?.status ?? roundData.status
-  // Past/closed rounds: full ring (100%). Future rounds: empty (0%).
-  // For the ongoing round only, read the actual live percent from the API
-  // (rounds-list returns null for non-live rounds, which would render empty).
+  // Closed rounds: full ring. Pending: empty. Live: compute the actual percent
+  // from the round's start/end window (always accurate, no dependency on an
+  // API field that may not refresh between deploys).
   const displayPercentComplete =
     displayStatus === 'paid' || displayStatus === 'ended'
       ? 100
       : displayStatus === 'live'
-        ? (isViewingLiveRound ? liveCurrentRound.percentComplete : null) ??
-          viewedRoundSummary?.percentComplete ??
-          roundData.percentComplete ??
-          0
+        ? computeRoundProgress(displayStartDate, displayEndDate)
         : 0
   const displayPoolSizeEns =
     (isViewingLiveRound ? liveCurrentRound.poolSizeEns : null) ??
@@ -1307,9 +1180,6 @@ export function RoundDetailPage() {
     reachedTier?.estimatedAprPct != null
       ? `${reachedTier.estimatedAprPct}% APR reached`
       : 'Tier reached'
-
-  const csvHref = `/api/rounds/${roundData.roundNumber}/distribution.csv`
-  const etherscanHref = `https://etherscan.io/block/0`
 
   // Address inspector result strip
   const addressInsight: { tone: 'success' | 'neutral' | 'pending'; title: string; body: string } =
@@ -1359,29 +1229,6 @@ export function RoundDetailPage() {
               <NameTitle>Round {titleRoundNumber}</NameTitle>
             </NameRow>
           </TitleBlock>
-
-          <SocialLinks>
-            <SocialChip
-              href={etherscanHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="View on Etherscan"
-            >
-              <SocialIcon>
-                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </SocialIcon>
-              View on Etherscan
-            </SocialChip>
-            <SocialChip
-              href={csvHref}
-              aria-label="Download distribution CSV"
-            >
-              <SocialIcon>
-                <FontAwesomeIcon icon={faDownload} />
-              </SocialIcon>
-              Download CSV
-            </SocialChip>
-          </SocialLinks>
 
           <CtaRow>
             <RoundNavButton
@@ -1455,9 +1302,6 @@ export function RoundDetailPage() {
             <SectionLabel>Check a wallet</SectionLabel>
             <SectionTitle>See what this round paid an address</SectionTitle>
           </SectionLabelGroup>
-          {hasActiveAddress ? (
-            <RowCount>{formatAddressReward(roundData.addressReward)}</RowCount>
-          ) : null}
         </SectionHeader>
         <AddressLookupForm
           value={addressInput}
@@ -1521,6 +1365,3 @@ export function RoundDetailPage() {
   )
 }
 
-// Suppress "imported but unused" for LotteryDetail — kept so the
-// RoundDetailResponse type continues to type-check when SHOW_MOCK_ROUND_DETAIL flips.
-export type { LotteryDetail }

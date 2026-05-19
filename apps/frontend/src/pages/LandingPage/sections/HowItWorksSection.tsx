@@ -14,8 +14,6 @@ const Section = styled.section`
   }
 `
 
-const Sticky = styled.div``
-
 const Inner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
@@ -303,8 +301,7 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
 
   return (
     <Section id="how-it-works">
-      <Sticky>
-        <Inner>
+      <Inner>
           <Header>
             <Eyebrow>How it works</Eyebrow>
             <Heading>
@@ -330,8 +327,7 @@ export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionPro
               </RevealStep>
             ))}
           </StepsRow>
-        </Inner>
-      </Sticky>
+      </Inner>
     </Section>
   )
 }

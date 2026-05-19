@@ -3,21 +3,23 @@ import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+  faArrowLeft,
+  faArrowUpRightFromSquare,
+  faBolt,
+  faCheck,
   faCircleCheck,
   faCircleMinus,
   faCircleXmark,
-  faBolt,
-  faUsers,
-  faSquarePollVertical,
   faClock,
-  faArrowLeft,
   faCopy,
-  faCheck,
+  faShareNodes,
+  faSquarePollVertical,
+  faUsers,
 } from '@fortawesome/free-solid-svg-icons'
 import { faXTwitter } from '@fortawesome/free-brands-svg-icons'
-import { faShareNodes } from '@fortawesome/free-solid-svg-icons'
+import { isAddress } from 'viem'
 import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
-import { MOCK_ENS_PROFILES, MOCK_ENS_TO_ADDRESS } from '@/api/mock'
+import { MOCK_ENS_TO_ADDRESS } from '@/api/mock'
 import { env } from '@/config/env'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
@@ -27,7 +29,6 @@ import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
-import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
 
 /* ─── Helpers ─── */
@@ -54,10 +55,6 @@ function formatActiveSinceShort(iso: string | null): string {
   const month = date.toLocaleDateString('en-US', { month: 'short' })
   const year = String(date.getFullYear()).slice(-2)
   return `${month} ‘${year}`
-}
-
-function isAddress(value: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/.test(value)
 }
 
 /* ─── Page layout ─── */
@@ -604,14 +601,6 @@ function useEnsTextRecord(name: string | null, key: string): string | undefined 
   return typeof data === 'string' && data.trim().length > 0 ? data : undefined
 }
 
-function getMockProfileField(
-  address: string | undefined,
-  key: 'description' | 'twitter' | 'url',
-): string | undefined {
-  if (!env.useMockApi || !address) return undefined
-  return MOCK_ENS_PROFILES[address.toLowerCase()]?.[key]
-}
-
 interface ProposalRow {
   id: number
   title: string
@@ -699,11 +688,8 @@ export function VoterProfilePage() {
   const ensName = voter?.ensName ?? (isEnsParam ? rawParam : resolvedEnsName) ?? null
 
   // ENS text records — description + Twitter handle (the only social we surface)
-  const liveDescription = useEnsTextRecord(ensName, 'description')
-  const liveTwitter = useEnsTextRecord(ensName, 'com.twitter')
-  const voterAddrForMock = voter?.address
-  const description = liveDescription ?? getMockProfileField(voterAddrForMock, 'description')
-  const twitter = liveTwitter ?? getMockProfileField(voterAddrForMock, 'twitter')
+  const description = useEnsTextRecord(ensName, 'description')
+  const twitter = useEnsTextRecord(ensName, 'com.twitter')
 
   const [copied, setCopied] = useState(false)
 

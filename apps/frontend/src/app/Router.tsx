@@ -19,7 +19,7 @@ const TransparencyPage = lazy(() => import('@/pages/TransparencyPage').then((mod
 
 function LazyPage({ children, fallback }: { children: ReactNode; fallback?: ReactElement }) {
   return (
-    <Suspense fallback={fallback ?? <DashboardPageSkeleton compact />}>
+    <Suspense fallback={fallback ?? <DashboardPageSkeleton />}>
       {children}
     </Suspense>
   )
