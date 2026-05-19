@@ -22,7 +22,7 @@ async function ensureOutDir() {
 }
 
 async function testOgImage() {
-  const { default: handler } = await import('../api/og/voter.tsx')
+  const { default: handler } = await import('../../../api/og/voter.tsx')
   for (const { slug, query } of CASES) {
     const req = new Request(`http://localhost:3000/api/og/voter?${query}`)
     const res = await handler(req)
@@ -61,7 +61,7 @@ async function testVoterHtml() {
   }) as typeof fetch
 
   try {
-    const { default: handler } = await import('../api/voter-html.ts')
+    const { default: handler } = await import('../../../api/voter-html.ts')
     for (const { slug, query } of CASES) {
       const address = new URLSearchParams(query).get('address') ?? new URLSearchParams(query).get('name')!
       const req = new Request(`http://localhost:3000/api/voter-html?address=${encodeURIComponent(address)}`)
