@@ -23,6 +23,10 @@ const Card = styled.div`
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 560px;
   background: radial-gradient(
     ellipse 100% 110% at 50% 50%,
     #3889ff 0%,
@@ -35,7 +39,7 @@ const Card = styled.div`
   border-radius: 24px;
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  padding: ${tokens.spacing['6xl']} ${tokens.spacing.xl} ${tokens.spacing['5xl']};
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['4xl']};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -52,7 +56,8 @@ const Card = styled.div`
   }
 
   @media (min-width: 768px) {
-    padding: 120px ${tokens.spacing['4xl']} ${tokens.spacing['6xl']};
+    min-height: 720px;
+    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['5xl']};
   }
 `
 
@@ -166,13 +171,12 @@ const SecondaryCta = styled.a`
 const Marquee = styled.div`
   position: relative;
   z-index: 1;
-  margin-top: ${tokens.spacing['3xl']};
   margin-left: calc(-1 * ${tokens.spacing.xl});
   margin-right: calc(-1 * ${tokens.spacing.xl});
   display: flex;
   flex-direction: column;
   gap: 12px;
-  opacity: 0.7;
+  opacity: 0.4;
   pointer-events: none;
   user-select: none;
   mask-image: linear-gradient(
