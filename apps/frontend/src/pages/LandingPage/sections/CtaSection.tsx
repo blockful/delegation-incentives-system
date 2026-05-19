@@ -3,6 +3,8 @@ import styled, { keyframes } from 'styled-components'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight, faShareNodes } from '@fortawesome/free-solid-svg-icons'
+import { useEnsAvatar, useEnsName } from 'wagmi'
+import { isAddress } from 'viem'
 import makeBlockie from 'ethereum-blockies-base64'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
@@ -239,6 +241,7 @@ const PillAvatar = styled.img`
   height: 40px;
   border-radius: 9999px;
   border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.white};
   object-fit: cover;
   flex-shrink: 0;
 `
@@ -268,11 +271,51 @@ function buildFallbackAvatar(address: string): string {
   }
 }
 
-function buildAvatarUrl(voter: VoterDetail): string {
-  // Prefer the backend-resolved avatar (ENS metadata service); fall back to a
-  // deterministic blockie so every pill always has a visual.
-  if (voter.avatarUrl) return voter.avatarUrl
-  return buildFallbackAvatar(voter.address)
+/**
+ * Single pill in the marquee. Resolves ENS name + avatar client-side via wagmi
+ * (backend may return them as null in preview/staging) and falls back through
+ * backend-provided values → blockie / truncated address so every pill always
+ * shows something useful.
+ */
+function PillItem({ voter }: { voter: VoterDetail }) {
+  const addressOk = !!voter.address && isAddress(voter.address)
+
+  const { data: resolvedName } = useEnsName({
+    address: addressOk ? (voter.address as `0x${string}`) : undefined,
+    query: { enabled: addressOk && !voter.ensName },
+  })
+
+  const ensName = voter.ensName ?? resolvedName ?? null
+
+  const { data: resolvedAvatar } = useEnsAvatar({
+    name: ensName ?? undefined,
+    query: { enabled: !!ensName && !voter.avatarUrl },
+  })
+
+  const fallbackSrc = buildFallbackAvatar(voter.address)
+  const avatarSrc =
+    voter.avatarUrl ?? resolvedAvatar ?? fallbackSrc
+  const label = ensName ?? truncateAddress(voter.address)
+
+  return (
+    <Pill>
+      <PillAvatar
+        src={avatarSrc}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        onError={(event) => {
+          // If the ENS metadata avatar 404s or fails to load, swap in the
+          // blockie so the marquee never shows a broken image.
+          const img = event.currentTarget
+          if (fallbackSrc && img.src !== fallbackSrc) {
+            img.src = fallbackSrc
+          }
+        }}
+      />
+      <PillName>{label}</PillName>
+    </Pill>
+  )
 }
 
 interface PillRowProps {
@@ -289,31 +332,9 @@ function PillRow({ voters, direction, duration }: PillRowProps) {
   const items = [...voters, ...voters]
   return (
     <MarqueeTrack $direction={direction} $duration={duration}>
-      {items.map((voter, i) => {
-        const label =
-          voter.ensName ??
-          (voter.address ? truncateAddress(voter.address) : 'voter')
-        const fallbackSrc = buildFallbackAvatar(voter.address)
-        return (
-          <Pill key={`${voter.address}-${i}`}>
-            <PillAvatar
-              src={buildAvatarUrl(voter)}
-              alt=""
-              aria-hidden
-              loading="lazy"
-              onError={(event) => {
-                // If the ENS metadata avatar 404s or fails to load, swap in
-                // the blockie so the marquee never shows a broken image.
-                const img = event.currentTarget
-                if (fallbackSrc && img.src !== fallbackSrc) {
-                  img.src = fallbackSrc
-                }
-              }}
-            />
-            <PillName>{label}</PillName>
-          </Pill>
-        )
-      })}
+      {items.map((voter, i) => (
+        <PillItem key={`${voter.address}-${i}`} voter={voter} />
+      ))}
     </MarqueeTrack>
   )
 }
