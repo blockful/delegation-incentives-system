@@ -6,7 +6,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faMagnifyingGlass,
   faCoins,
-  faRankingStar,
   faPercent,
   faChevronRight,
   faWallet,
@@ -137,60 +136,6 @@ const SummaryBlock = styled.div`
   width: 100%;
 `
 
-const StatsRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  width: 100%;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-`
-
-const StatCard = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 20px;
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-`
-
-const StatTopRow = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-`
-
-const StatValue = styled.span<{ $tone?: 'default' | 'positive' }>`
-  font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${({ $tone }) =>
-    $tone === 'positive' ? tokens.color.positiveEmphasis : tokens.color.darkBlue};
-  line-height: 1.1;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-`
-
-const StatIconBox = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: ${tokens.color.textSubtle};
-  font-size: 18px;
-`
-
-const StatLabel = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
-`
-
 const ProgressBlock = styled.div`
   display: flex;
   flex-direction: column;
@@ -292,18 +237,40 @@ const TierCardHeading = styled.span`
   line-height: 1.3;
 `
 
-const TierAprBadge = styled.span`
+const TierBadgeRow = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+`
+
+const TierBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
   border-radius: 9999px;
-  background: ${tokens.color.status.success.bg};
-  color: ${tokens.color.positiveEmphasis};
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   line-height: 20px;
   white-space: nowrap;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    color: currentColor;
+  }
+`
+
+const TierPoolBadge = styled(TierBadge)`
+  background: ${tokens.color.lightBlueOpacity};
+  color: ${tokens.color.blue};
+`
+
+const TierAprBadge = styled(TierBadge)`
+  background: ${tokens.color.status.success.bg};
+  color: ${tokens.color.positiveEmphasis};
 `
 
 const TierLadder = styled.div`
@@ -785,6 +752,45 @@ const RewardPositive = styled.span`
   font-weight: ${tokens.font.weight.bold};
 `
 
+const RewardBadgeRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+`
+
+const RewardBadge = styled.span<{ $tone: 'apr' | 'lottery' | 'delegate' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 14px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 18px;
+  white-space: nowrap;
+  background: ${({ $tone }) =>
+    $tone === 'apr'
+      ? tokens.color.status.success.bg
+      : $tone === 'lottery'
+        ? tokens.color.lightOrange
+        : tokens.color.lightBlueOpacity};
+  color: ${({ $tone }) =>
+    $tone === 'apr'
+      ? tokens.color.positiveEmphasis
+      : $tone === 'lottery'
+        ? tokens.color.orange
+        : tokens.color.blue};
+`
+
+const RewardBadgeTag = styled.small`
+  font-size: 10px;
+  font-weight: ${tokens.font.weight.bold};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+`
+
 const VpGrowthPositive = styled.span`
   color: ${tokens.color.positiveEmphasis};
   font-weight: ${tokens.font.weight.bold};
@@ -883,13 +889,24 @@ const EmptyBody = styled.span`
 
 /* ─── Helpers ─── */
 
+type RewardsState = 'inspect' | 'loading' | 'pending' | 'unavailable' | 'paid'
+
+interface RewardsBreakdown {
+  state: RewardsState
+  /** Direct payout for being an active delegator (≥1 ENS share, paid via APR). */
+  apr: string | null
+  /** Lottery winnings (sub-1 ENS shares pooled, paid to bucket winners). */
+  lottery: string | null
+  /** Reward for being an active delegate (10% pool slice). */
+  delegate: string | null
+}
+
 interface RoundsRow {
   roundNumber: number
   period: string
   pool: string | null
   vpGrowth: string | null
-  lottery: string | null
-  yourRewards: string | null
+  rewards: RewardsBreakdown
   status: RoundStatus
   to: string
   hasAddress: boolean
@@ -912,39 +929,207 @@ function formatVpGrowth(value: string | null): string | null {
   return `${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
 }
 
-function formatLottery(round: RoundSummary): string | null {
-  if (round.distributionDataStatus === 'in_progress' || round.distributionDataStatus === 'not_started') {
-    return null
-  }
-  if (round.lotteryEntryCount == null || round.lotteryWinnerCount == null) return null
-  const buckets = round.lotteryBucketCount?.toLocaleString('en-US') ?? '0'
-  return `${buckets} ${round.lotteryBucketCount === 1 ? 'bucket' : 'buckets'}`
+/**
+ * TEMP — toggle to render every reward-cell variation against fixed mock data.
+ * Flip back to `false` (or delete the block + import) when done QA'ing.
+ */
+const SHOW_MOCK_REWARDS = true
+
+const MOCK_ROUNDS_ROWS: RoundsRow[] = [
+  // No address inspected
+  {
+    roundNumber: 11,
+    period: 'Nov 2026',
+    pool: '12K ENS',
+    vpGrowth: '+1.2%',
+    rewards: { state: 'inspect', apr: null, lottery: null, delegate: null },
+    status: 'live',
+    to: '/rounds/11',
+    hasAddress: false,
+  },
+  // Loading
+  {
+    roundNumber: 10,
+    period: 'Oct 2026',
+    pool: '10K ENS',
+    vpGrowth: '+0.8%',
+    rewards: { state: 'loading', apr: null, lottery: null, delegate: null },
+    status: 'live',
+    to: '/rounds/10',
+    hasAddress: true,
+  },
+  // Round not closed yet
+  {
+    roundNumber: 9,
+    period: 'Sep 2026',
+    pool: '9.5K ENS',
+    vpGrowth: '+0.4%',
+    rewards: { state: 'pending', apr: null, lottery: null, delegate: null },
+    status: 'live',
+    to: '/rounds/9',
+    hasAddress: true,
+  },
+  // Data unavailable
+  {
+    roundNumber: 8,
+    period: 'Aug 2026',
+    pool: '8K ENS',
+    vpGrowth: '+0.2%',
+    rewards: { state: 'unavailable', apr: null, lottery: null, delegate: null },
+    status: 'paid',
+    to: '/rounds/8',
+    hasAddress: true,
+  },
+  // Holder: APR only
+  {
+    roundNumber: 7,
+    period: 'Jul 2026',
+    pool: '7.5K ENS',
+    vpGrowth: '+1.1%',
+    rewards: { state: 'paid', apr: '+0.1234 ENS', lottery: null, delegate: null },
+    status: 'paid',
+    to: '/rounds/7',
+    hasAddress: true,
+  },
+  // Holder: lottery only (sub-1 ENS winner)
+  {
+    roundNumber: 6,
+    period: 'Jun 2026',
+    pool: '7K ENS',
+    vpGrowth: '+0.9%',
+    rewards: { state: 'paid', apr: null, lottery: '+10.0000 ENS', delegate: null },
+    status: 'paid',
+    to: '/rounds/6',
+    hasAddress: true,
+  },
+  // Holder: APR + lottery (rare)
+  {
+    roundNumber: 5,
+    period: 'May 2026',
+    pool: '6.5K ENS',
+    vpGrowth: '+0.7%',
+    rewards: { state: 'paid', apr: '+0.4250 ENS', lottery: '+10.0000 ENS', delegate: null },
+    status: 'paid',
+    to: '/rounds/5',
+    hasAddress: true,
+  },
+  // Delegate only (no holdings)
+  {
+    roundNumber: 4,
+    period: 'Apr 2026',
+    pool: '6K ENS',
+    vpGrowth: '+0.6%',
+    rewards: { state: 'paid', apr: null, lottery: null, delegate: '+2.5000 ENS' },
+    status: 'paid',
+    to: '/rounds/4',
+    hasAddress: true,
+  },
+  // Delegate + APR
+  {
+    roundNumber: 3,
+    period: 'Mar 2026',
+    pool: '5.5K ENS',
+    vpGrowth: '+0.5%',
+    rewards: { state: 'paid', apr: '+0.1875 ENS', lottery: null, delegate: '+3.0000 ENS' },
+    status: 'paid',
+    to: '/rounds/3',
+    hasAddress: true,
+  },
+  // Delegate + APR + Lottery (the full house)
+  {
+    roundNumber: 2,
+    period: 'Feb 2026',
+    pool: '5K ENS',
+    vpGrowth: '+0.4%',
+    rewards: { state: 'paid', apr: '+0.3120 ENS', lottery: '+10.0000 ENS', delegate: '+2.7500 ENS' },
+    status: 'paid',
+    to: '/rounds/2',
+    hasAddress: true,
+  },
+  // Eligible but no payout this round
+  {
+    roundNumber: 1,
+    period: 'Jan 2026',
+    pool: '4K ENS',
+    vpGrowth: '+0.1%',
+    rewards: { state: 'paid', apr: null, lottery: null, delegate: null },
+    status: 'paid',
+    to: '/rounds/1',
+    hasAddress: true,
+  },
+]
+
+function renderHolderRewards(r: RewardsBreakdown) {
+  if (r.state === 'loading') return <SkeletonBlock $height="14px" $width="120px" $radius="6px" />
+  if (r.state === 'inspect') return <MutedCell>Inspect an address</MutedCell>
+  if (r.state === 'pending') return <MutedCell>Pending</MutedCell>
+  if (r.state === 'unavailable') return <MutedCell>—</MutedCell>
+  if (!r.apr && !r.lottery) return <MutedCell>—</MutedCell>
+  return (
+    <RewardBadgeRow>
+      {r.apr && (
+        <RewardBadge $tone="apr">
+          <RewardBadgeTag>APR</RewardBadgeTag>
+          {r.apr}
+        </RewardBadge>
+      )}
+      {r.lottery && (
+        <RewardBadge $tone="lottery">
+          <RewardBadgeTag>Lottery</RewardBadgeTag>
+          {r.lottery}
+        </RewardBadge>
+      )}
+    </RewardBadgeRow>
+  )
 }
 
-function formatReward(opts: {
+function renderDelegateRewards(r: RewardsBreakdown) {
+  if (r.state === 'loading') return <SkeletonBlock $height="14px" $width="120px" $radius="6px" />
+  if (r.state === 'inspect') return <MutedCell>Inspect an address</MutedCell>
+  if (r.state === 'pending') return <MutedCell>Pending</MutedCell>
+  if (r.state === 'unavailable') return <MutedCell>—</MutedCell>
+  if (!r.delegate) return <MutedCell>—</MutedCell>
+  return (
+    <RewardBadgeRow>
+      <RewardBadge $tone="delegate">
+        <RewardBadgeTag>Delegate</RewardBadgeTag>
+        {r.delegate}
+      </RewardBadge>
+    </RewardBadgeRow>
+  )
+}
+
+function formatPositiveReward(value: string | null | undefined): string | null {
+  if (!value) return null
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return null
+  return `+${formatEnsAmount(value, { maximumFractionDigits: 4 })} ENS`
+}
+
+function formatRewardsBreakdown(opts: {
   activeAddress: string
   addressRound: AddressDistributionRound | null
   addressLoading: boolean
   addressError: string | null
   fallbackStatus: RoundSummary['distributionDataStatus']
-}): { value: string | null; tone: 'positive' | 'neutral' } {
+}): RewardsBreakdown {
   const { activeAddress, addressRound, addressLoading, addressError, fallbackStatus } = opts
-  if (!activeAddress || !isAddress(activeAddress)) return { value: null, tone: 'neutral' }
-  if (addressLoading) return { value: 'Loading…', tone: 'neutral' }
-  if (addressError) return { value: null, tone: 'neutral' }
+  const empty = { apr: null, lottery: null, delegate: null }
+  if (!activeAddress || !isAddress(activeAddress)) return { state: 'inspect', ...empty }
+  if (addressLoading) return { state: 'loading', ...empty }
+  if (addressError) return { state: 'unavailable', ...empty }
   if (!addressRound) {
     return fallbackStatus === 'in_progress' || fallbackStatus === 'not_started'
-      ? { value: 'Pending', tone: 'neutral' }
-      : { value: null, tone: 'neutral' }
+      ? { state: 'pending', ...empty }
+      : { state: 'unavailable', ...empty }
   }
-  if (addressRound.rewardStatus === 'pending') return { value: 'Pending', tone: 'neutral' }
-  if (addressRound.rewardStatus === 'unavailable') return { value: null, tone: 'neutral' }
-  if (addressRound.rewardStatus === 'not_eligible' || addressRound.rewardStatus === 'no_reward') {
-    return { value: '0 ENS', tone: 'neutral' }
-  }
+  if (addressRound.rewardStatus === 'pending') return { state: 'pending', ...empty }
+  if (addressRound.rewardStatus === 'unavailable') return { state: 'unavailable', ...empty }
   return {
-    value: `${formatEnsAmount(addressRound.totalRewardEns, { maximumFractionDigits: 4, signDisplay: 'exceptZero' })} ENS`,
-    tone: 'positive',
+    state: 'paid',
+    apr: formatPositiveReward(addressRound.tokenHolderRewardEns),
+    lottery: formatPositiveReward(addressRound.lotteryRewardEns),
+    delegate: formatPositiveReward(addressRound.voterRewardEns),
   }
 }
 
@@ -959,26 +1144,22 @@ function buildRoundsRows(
     ? `?address=${encodeURIComponent(activeAddress)}`
     : ''
   const rewardsByRound = new Map((addressRounds ?? []).map((r) => [r.roundNumber, r]))
-  return rounds.map((r) => {
-    const reward = formatReward({
+  return rounds.map((r) => ({
+    roundNumber: r.roundNumber,
+    period: formatUtcMonthRange(r.startDate, r.endDate),
+    pool: formatPool(r.poolSizeEns),
+    vpGrowth: formatVpGrowth(r.vpGrowthPct),
+    rewards: formatRewardsBreakdown({
       activeAddress,
       addressRound: rewardsByRound.get(r.roundNumber) ?? null,
       addressLoading,
       addressError,
       fallbackStatus: r.distributionDataStatus,
-    })
-    return {
-      roundNumber: r.roundNumber,
-      period: formatUtcMonthRange(r.startDate, r.endDate),
-      pool: formatPool(r.poolSizeEns),
-      vpGrowth: formatVpGrowth(r.vpGrowthPct),
-      lottery: formatLottery(r),
-      yourRewards: reward.value,
-      status: r.status,
-      to: `/rounds/${r.roundNumber}${addressQuery}`,
-      hasAddress: Boolean(activeAddress && isAddress(activeAddress)),
-    }
-  })
+    }),
+    status: r.status,
+    to: `/rounds/${r.roundNumber}${addressQuery}`,
+    hasAddress: Boolean(activeAddress && isAddress(activeAddress)),
+  }))
 }
 
 function progressPercent(start: string | null, end: string | null): number {
@@ -1096,13 +1277,15 @@ export function RoundsPage() {
 
   const rows = useMemo(
     () =>
-      buildRoundsRows(
-        roundList.data?.rounds ?? [],
-        activeAddress,
-        addressHistory.data?.rounds ?? null,
-        addressHistory.loading,
-        addressHistory.error,
-      ),
+      SHOW_MOCK_REWARDS
+        ? MOCK_ROUNDS_ROWS
+        : buildRoundsRows(
+            roundList.data?.rounds ?? [],
+            activeAddress,
+            addressHistory.data?.rounds ?? null,
+            addressHistory.loading,
+            addressHistory.error,
+          ),
     [roundList.data, activeAddress, addressHistory.data, addressHistory.loading, addressHistory.error],
   )
 
@@ -1172,7 +1355,6 @@ export function RoundsPage() {
   const aprLabel = currentTier?.estimatedAprPct
     ? `~${Number(currentTier.estimatedAprPct).toFixed(2)}%`
     : '—'
-  const tierLabel = `#${currentTierIndex + 1}`
 
   const progressPct = progressPercent(currentRound.startDate, currentRound.endDate)
   const daysLeftLabel = formatDaysRemaining(currentRound.daysRemaining, currentRound.status)
@@ -1228,36 +1410,6 @@ export function RoundsPage() {
       </HeaderBlock>
 
       <SummaryBlock>
-        <StatsRow>
-          <StatCard>
-            <StatTopRow>
-              <StatValue>{poolLabel}</StatValue>
-              <StatIconBox aria-hidden>
-                <FontAwesomeIcon icon={faCoins} />
-              </StatIconBox>
-            </StatTopRow>
-            <StatLabel>ENS Pool</StatLabel>
-          </StatCard>
-          <StatCard>
-            <StatTopRow>
-              <StatValue>{tierLabel}</StatValue>
-              <StatIconBox aria-hidden>
-                <FontAwesomeIcon icon={faRankingStar} />
-              </StatIconBox>
-            </StatTopRow>
-            <StatLabel>Tier</StatLabel>
-          </StatCard>
-          <StatCard>
-            <StatTopRow>
-              <StatValue $tone={currentTier ? 'positive' : 'default'}>{aprLabel}</StatValue>
-              <StatIconBox aria-hidden>
-                <FontAwesomeIcon icon={faPercent} />
-              </StatIconBox>
-            </StatTopRow>
-            <StatLabel>APR</StatLabel>
-          </StatCard>
-        </StatsRow>
-
         <ProgressBlock>
           <ProgressTrack>
             <ProgressFill $pct={progressPct} />
@@ -1281,10 +1433,16 @@ export function RoundsPage() {
               Tier {currentTierIndex + 1} of {tierLadder.length}
             </TierCardHeading>
           </TierCardLabel>
-          <TierAprBadge>
-            <FontAwesomeIcon icon={faPercent} />
-            {aprLabel} APR
-          </TierAprBadge>
+          <TierBadgeRow>
+            <TierPoolBadge>
+              <FontAwesomeIcon icon={faCoins} />
+              {poolLabel} ENS pool
+            </TierPoolBadge>
+            <TierAprBadge>
+              <FontAwesomeIcon icon={faPercent} />
+              {aprLabel} APR
+            </TierAprBadge>
+          </TierBadgeRow>
         </TierCardHeader>
 
         <TierLadder>
@@ -1403,8 +1561,8 @@ export function RoundsPage() {
             <TableHeadCell $weight={0.9}>Round</TableHeadCell>
             <TableHeadCell>Pool</TableHeadCell>
             <TableHeadCell>VP growth</TableHeadCell>
-            <TableHeadCell $weight={1.2}>Lottery</TableHeadCell>
-            <TableHeadCell $weight={1.2}>Rewards</TableHeadCell>
+            <TableHeadCell $weight={1.4}>Holder rewards</TableHeadCell>
+            <TableHeadCell $weight={1.4}>Delegate rewards</TableHeadCell>
             <TableHeadCell $weight={0.7}>Status</TableHeadCell>
             <TableHeadCell $weight={0.25}>{' '}</TableHeadCell>
           </TableHeadRow>
@@ -1443,23 +1601,13 @@ export function RoundsPage() {
                     <span>{row.vpGrowth}</span>
                   )}
                 </TableCell>
-                <TableCell $weight={1.2}>
-                  <MobileLabel>Lottery</MobileLabel>
-                  {row.lottery ? <span>{row.lottery}</span> : <MutedCell>Pending</MutedCell>}
+                <TableCell $weight={1.4}>
+                  <MobileLabel>Holder rewards</MobileLabel>
+                  {renderHolderRewards(row.rewards)}
                 </TableCell>
-                <TableCell $weight={1.2}>
-                  <MobileLabel>Rewards</MobileLabel>
-                  {row.hasAddress && addressHistory.loading ? (
-                    <SkeletonBlock $height="14px" $width="84px" $radius="6px" />
-                  ) : !row.hasAddress ? (
-                    <MutedCell>Inspect an address</MutedCell>
-                  ) : row.yourRewards == null ? (
-                    <MutedCell>—</MutedCell>
-                  ) : row.yourRewards.startsWith('+') ? (
-                    <RewardPositive>{row.yourRewards}</RewardPositive>
-                  ) : (
-                    <span>{row.yourRewards}</span>
-                  )}
+                <TableCell $weight={1.4}>
+                  <MobileLabel>Delegate rewards</MobileLabel>
+                  {renderDelegateRewards(row.rewards)}
                 </TableCell>
                 <TableCell $weight={0.7}>
                   <MobileLabel>Status</MobileLabel>
