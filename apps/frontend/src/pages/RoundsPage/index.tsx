@@ -11,7 +11,7 @@ import {
   faXmark,
   faShareNodes,
   faLock,
-  faCheck,
+  faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { Tag } from '@ensdomains/thorin'
 import { api, ApiClientError } from '@/api'
@@ -299,18 +299,14 @@ const TierPip = styled.div<{ $state: TierPipState }>`
   padding: 8px 4px;
   border-radius: 8px;
   background: ${({ $state }) =>
-    $state === 'current'
-      ? tokens.color.status.success.bg
-      : $state === 'unlocked'
-        ? tokens.color.lightBlueOpacity
-        : tokens.color.bgSubtle};
+    $state === 'locked'
+      ? tokens.color.bgSubtle
+      : tokens.color.status.success.bg};
   border: 1px solid
     ${({ $state }) =>
-      $state === 'current'
-        ? tokens.color.status.success.border
-        : $state === 'unlocked'
-          ? tokens.color.lightBlue
-          : tokens.color.borderLight};
+      $state === 'locked'
+        ? tokens.color.borderLight
+        : tokens.color.status.success.border};
   min-width: 0;
 `
 
@@ -318,29 +314,18 @@ const TierPipIcon = styled.span<{ $state: TierPipState }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 9999px;
-  background: ${({ $state }) =>
-    $state === 'current'
-      ? tokens.color.positiveEmphasis
-      : $state === 'unlocked'
-        ? tokens.color.blue
-        : 'transparent'};
+  width: 24px;
+  height: 24px;
   color: ${({ $state }) =>
-    $state === 'locked' ? tokens.color.textSubtle : tokens.color.white};
-  font-size: 14px;
+    $state === 'locked' ? tokens.color.textSubtle : tokens.color.positiveEmphasis};
+  font-size: 22px;
 `
 
 const TierPipLabel = styled.span<{ $state: TierPipState }>`
   font-size: 12px;
   font-weight: ${tokens.font.weight.bold};
   color: ${({ $state }) =>
-    $state === 'current'
-      ? tokens.color.positiveEmphasis
-      : $state === 'locked'
-        ? tokens.color.textSubtle
-        : tokens.color.darkBlue};
+    $state === 'locked' ? tokens.color.textSubtle : tokens.color.positiveEmphasis};
   white-space: nowrap;
 `
 
@@ -1581,7 +1566,7 @@ export function RoundsPage() {
                     ? 'unlocked'
                     : 'locked'
             const icon =
-              state === 'current' || state === 'unlocked' ? faCheck : faLock
+              state === 'locked' ? faLock : faCircleCheck
             return (
               <TierPip key={tier.index} $state={state}>
                 <TierPipIcon $state={state} aria-hidden>
