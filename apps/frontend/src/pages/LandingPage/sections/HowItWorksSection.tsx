@@ -238,40 +238,45 @@ type Step = {
   tagColor: string
 }
 
-const steps: Step[] = [
-  {
-    number: '1',
-    title: 'Delegate to an active voter',
-    desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens, and gas is sponsored.',
-    tag: 'Gas sponsored. Free to delegate.',
-    tagBg: tokens.color.tierHighlight,
-    tagColor: tokens.color.positiveEmphasis,
-  },
-  {
-    number: '2',
-    title: 'Your share grows with time',
-    desc: 'Rewards are based on your average ENS balance over the last 180 days. Longer holding means a bigger share.',
-    tag: 'No claiming needed',
-    tagBg: tokens.color.lightBlue,
-    tagColor: tokens.color.blue,
-  },
-  {
-    number: '3',
-    title: 'Receive ENS at round end',
-    desc: 'If your share is 1 ENS or more, it’s sent directly to your wallet at the end of each monthly round.',
-    tag: 'Currently earning ~5.75% APR',
-    tagBg: tokens.color.lightOrange,
-    tagColor: tokens.color.orange,
-  },
-  {
-    number: '4',
-    title: 'Small balance? Enter the lottery',
-    desc: 'Payouts under 1 ENS pool together until they reach 10 ENS, and one winner takes the full prize.',
-    tag: 'Lottery prize: 10 ENS',
-    tagBg: tokens.color.lightOrange,
-    tagColor: tokens.color.orange,
-  },
-]
+function buildSteps(currentAprPct: string | null): Step[] {
+  const aprTag = currentAprPct
+    ? `Currently earning ~${currentAprPct}% APR`
+    : 'Earn APR on your ENS'
+  return [
+    {
+      number: '1',
+      title: 'Delegate to an active voter',
+      desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens, and gas is sponsored.',
+      tag: 'Gas sponsored. Free to delegate.',
+      tagBg: tokens.color.tierHighlight,
+      tagColor: tokens.color.positiveEmphasis,
+    },
+    {
+      number: '2',
+      title: 'Your share grows with time',
+      desc: 'Rewards are based on your average ENS balance over the last 180 days. Longer holding means a bigger share.',
+      tag: 'No claiming needed',
+      tagBg: tokens.color.lightBlue,
+      tagColor: tokens.color.blue,
+    },
+    {
+      number: '3',
+      title: 'Receive ENS at round end',
+      desc: 'If your share is 1 ENS or more, it’s sent directly to your wallet at the end of each monthly round.',
+      tag: aprTag,
+      tagBg: tokens.color.lightOrange,
+      tagColor: tokens.color.orange,
+    },
+    {
+      number: '4',
+      title: 'Small balance? Enter the lottery',
+      desc: 'Payouts under 1 ENS pool together until they reach 10 ENS, and one winner takes the full prize.',
+      tag: 'Lottery prize: 10 ENS',
+      tagBg: tokens.color.lightOrange,
+      tagColor: tokens.color.orange,
+    },
+  ]
+}
 
 // Reveal arc inside the section's scroll-lock range (0..1):
 // Steps stagger across [STEP_REVEAL_START, STEP_REVEAL_END].
@@ -282,12 +287,17 @@ const RISE_PX = 80
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 
-export function HowItWorksSection() {
+interface HowItWorksSectionProps {
+  currentAprPct?: string | null
+}
+
+export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionProps = {}) {
   const sectionRef = useRef<HTMLElement>(null)
   const stepsRef = useRef<HTMLDivElement>(null)
   const [progress, setProgress] = useState(1)
   const [enabled, setEnabled] = useState(false)
   const [stepsVisible, setStepsVisible] = useState(false)
+  const steps = buildSteps(currentAprPct)
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches

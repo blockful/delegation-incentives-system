@@ -24,7 +24,7 @@ export function DisconnectedLanding({ tierData, roundData }: DisconnectedLanding
         roundEndDate={roundData.endDate}
       />
       <TierTableSection tiers={tierData.tiers} />
-      <HowItWorksSection />
+      <HowItWorksSection currentAprPct={currentAprPct} />
       <CtaSection />
     </>
   )
