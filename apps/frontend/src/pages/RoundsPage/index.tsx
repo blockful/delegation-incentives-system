@@ -243,6 +243,13 @@ const TierCardHeading = styled.span`
   line-height: 1.3;
 `
 
+const TierCardApr = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positiveEmphasis};
+  line-height: 1.3;
+`
+
 const TierBadgeRow = styled.div`
   display: inline-flex;
   align-items: center;
@@ -475,7 +482,8 @@ const SearchRow = styled.div`
   gap: 12px;
 
   @media (max-width: 767px) {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
   }
 `
 
@@ -527,6 +535,14 @@ const ActionButtons = styled.div`
   gap: 8px;
   align-items: center;
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    width: 100%;
+
+    button {
+      flex: 1;
+    }
+  }
 `
 
 const SearchButton = styled.button`
@@ -1524,6 +1540,7 @@ export function RoundsPage() {
             <TierCardHeading>
               Tier {currentTierIndex + 1} of {tierLadder.length}
             </TierCardHeading>
+            <TierCardApr>{aprLabel} APR</TierCardApr>
           </TierCardLabel>
           <TierBadgeRow>
             <TierPoolBadge>
