@@ -6,7 +6,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faMagnifyingGlass,
   faCoins,
-  faPercent,
   faChevronRight,
   faWallet,
   faXmark,
@@ -244,10 +243,12 @@ const TierCardHeading = styled.span`
 `
 
 const TierCardApr = styled.span`
-  font-size: ${tokens.font.size.base};
+  margin-top: 4px;
+  font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.positiveEmphasis};
-  line-height: 1.3;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 `
 
 const TierBadgeRow = styled.div`
@@ -279,11 +280,6 @@ const TierBadge = styled.span`
 const TierPoolBadge = styled(TierBadge)`
   background: ${tokens.color.lightBlueOpacity};
   color: ${tokens.color.blue};
-`
-
-const TierAprBadge = styled(TierBadge)`
-  background: ${tokens.color.status.success.bg};
-  color: ${tokens.color.positiveEmphasis};
 `
 
 const TierLadder = styled.div`
@@ -322,8 +318,8 @@ const TierPipIcon = styled.span<{ $state: TierPipState }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
   border-radius: 9999px;
   background: ${({ $state }) =>
     $state === 'current'
@@ -333,11 +329,11 @@ const TierPipIcon = styled.span<{ $state: TierPipState }>`
         : 'transparent'};
   color: ${({ $state }) =>
     $state === 'locked' ? tokens.color.textSubtle : tokens.color.white};
-  font-size: 9px;
+  font-size: 14px;
 `
 
 const TierPipLabel = styled.span<{ $state: TierPipState }>`
-  font-size: ${tokens.font.size.xs};
+  font-size: 12px;
   font-weight: ${tokens.font.weight.bold};
   color: ${({ $state }) =>
     $state === 'current'
@@ -360,6 +356,21 @@ const TierProgressLine = styled.div`
   align-items: baseline;
   gap: 12px;
   flex-wrap: wrap;
+`
+
+const SecuredNote = styled.div`
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: ${tokens.color.status.success.bg};
+  color: ${tokens.color.positiveEmphasis};
+  border: 1px solid ${tokens.color.status.success.border};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
 `
 
 const TierProgressLabel = styled.span`
@@ -1448,7 +1459,37 @@ export function RoundsPage() {
   // currentTotalVP, requiredTotalVP, additionalVPNeeded — so the section
   // tracks the live backend instead of any derived percentage math.
   const tierLadder = tierData.tiers ?? []
-  const nextTier = tierLadder[currentTierIndex + 1] ?? null
+
+  // immediateNextTier  = idx === currentTierIndex + 1 (used for the ladder pip
+  //                       labels + "Tier N secured for this round" note)
+  // nextMilestoneTier  = first tier above current whose additionalVPNeeded > 0.
+  //                       This is where the progress bar + share CTA aim,
+  //                       because once a tier's VP threshold is cleared the
+  //                       meaningful "next goal" is the tier after that.
+  const immediateNextTier = tierLadder[currentTierIndex + 1] ?? null
+  const nextMilestoneTier =
+    tierLadder.find(
+      (t, idx) =>
+        idx > currentTierIndex && Number(t.additionalVPNeeded ?? '0') > 0,
+    ) ?? null
+  // The progress span starts at the highest already-cleared tier above current
+  // (or the current tier itself if nothing has been cleared yet).
+  const progressFloorTier = (() => {
+    let floor = currentTier
+    for (let i = currentTierIndex + 1; i < tierLadder.length; i++) {
+      if (Number(tierLadder[i].additionalVPNeeded ?? '0') <= 0) {
+        floor = tierLadder[i]
+      } else {
+        break
+      }
+    }
+    return floor
+  })()
+  const securedTier = progressFloorTier !== currentTier ? progressFloorTier : null
+
+  // `nextTier` from here on means "the milestone we're aiming for next" so
+  // existing share/label code keeps working with one source.
+  const nextTier = nextMilestoneTier
 
   const nextTierVpNeededLabel = nextTier?.additionalVPNeeded
     ? formatVpNeeded(nextTier.additionalVPNeeded)
@@ -1460,12 +1501,16 @@ export function RoundsPage() {
     ? formatVpNeeded(tierData.currentTotalVP)
     : ''
 
+  // "Threshold cleared" now lives on the immediate-next tier — that's what the
+  // ladder pip / "secured for this round" note refer to. The progress bar is
+  // never in this state because it always points at a NOT-cleared milestone.
   const thresholdCleared =
-    nextTier != null && Number(nextTier.additionalVPNeeded ?? '0') <= 0
+    immediateNextTier != null &&
+    Number(immediateNextTier.additionalVPNeeded ?? '0') <= 0
 
   const tierProgressPct = nextTier
     ? computeVpProgress(
-        currentTier?.requiredTotalVP ?? '0',
+        progressFloorTier?.requiredTotalVP ?? '0',
         nextTier.requiredTotalVP,
         nextTier.additionalVPNeeded,
       )
@@ -1476,18 +1521,14 @@ export function RoundsPage() {
     : null
   const tierShareText = !nextTier
     ? "We're at the top tier of the ENS Delegation Incentives Program. Keep the active-voter pool growing:"
-    : thresholdCleared
-      ? `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program is locked in for this round. Keep growing the active-voter pool to climb higher:`
-      : `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
+    : `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
   const tierShareUrl =
     typeof window !== 'undefined'
       ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(tierShareText)}&url=${encodeURIComponent(window.location.origin)}`
       : '#'
-  const tierShareCta = !nextTier
-    ? 'Share the program'
-    : thresholdCleared
-      ? 'Share to keep growing'
-      : `Share to unlock Tier ${nextTier.index + 1}`
+  const tierShareCta = nextTier
+    ? `Share to unlock Tier ${nextTier.index + 1}`
+    : 'Share the program'
 
   const showWalletHint =
     Boolean(walletAddress) &&
@@ -1545,12 +1586,8 @@ export function RoundsPage() {
           <TierBadgeRow>
             <TierPoolBadge>
               <FontAwesomeIcon icon={faCoins} />
-              {poolLabel} ENS pool
+              Pool · {poolLabel} ENS
             </TierPoolBadge>
-            <TierAprBadge>
-              <FontAwesomeIcon icon={faPercent} />
-              {aprLabel} APR
-            </TierAprBadge>
           </TierBadgeRow>
         </TierCardHeader>
 
@@ -1593,15 +1630,19 @@ export function RoundsPage() {
           })}
         </TierLadder>
 
+        {securedTier ? (
+          <SecuredNote>
+            Tier {securedTier.index + 1} is already secured for this round.
+          </SecuredNote>
+        ) : null}
+
         {nextTier ? (
           <TierProgressBlock>
             <TierProgressLine>
               <TierProgressLabel>
-                {thresholdCleared
-                  ? `Threshold cleared. Tier ${nextTier.index + 1} applies to this round's payout.`
-                  : nextTierVpNeededLabel
-                    ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
-                    : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
+                {nextTierVpNeededLabel
+                  ? `${nextTierVpNeededLabel} more ENS delegated unlocks Tier ${nextTier.index + 1}`
+                  : `Tier ${nextTier.index + 1} unlocks once more ENS is delegated to active voters`}
               </TierProgressLabel>
               {currentDelegatedLabel && nextTierTargetLabel ? (
                 <TierProgressValue>
@@ -1617,11 +1658,9 @@ export function RoundsPage() {
 
         <TierShareRow>
           <TierShareCopy>
-            {!nextTier
-              ? "You're at the top tier. Help keep the active-voter pool growing."
-              : thresholdCleared
-                ? `Tier ${nextTier.index + 1} is on track for this round. Keep growing the program to lift everyone's APR further.`
-                : `Bring in more delegators to unlock ${nextTierAprLabel ?? 'a higher'} APR for everyone.`}
+            {nextTier
+              ? `Bring in more delegators to unlock ${nextTierAprLabel ?? 'a higher'} APR for everyone.`
+              : "You're at the top tier. Help keep the active-voter pool growing."}
           </TierShareCopy>
           <TierShareButton
             href={tierShareUrl}
@@ -1685,7 +1724,7 @@ export function RoundsPage() {
               {showActivePill && (
                 <ActiveAddressPill>
                   <FontAwesomeIcon icon={faWallet} />
-                  Showing rewards for your connected wallet · {truncateAddress(walletAddress)}
+                  Inspecting your wallet · {truncateAddress(walletAddress)}
                 </ActiveAddressPill>
               )}
               {inputError && <InputError>{inputError}</InputError>}
