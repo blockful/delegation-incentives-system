@@ -13,6 +13,7 @@ import {
   faShareNodes,
   faArrowRight,
 } from '@fortawesome/free-solid-svg-icons'
+import { Button } from '@ensdomains/thorin'
 import { api } from '@/api'
 import type { AddressDistributionRound } from '@/api/types'
 import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
@@ -138,37 +139,27 @@ const ChipIcon = styled.span<{ $tone?: 'default' | 'positive' | 'muted' }>`
         : tokens.color.textSecondary};
 `
 
-const ShareButton = styled.a`
+const HeroCtaWrap = styled.div`
   align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: ${tokens.spacing.sm};
-  padding: 10px 16px;
-  background: ${tokens.color.blue};
-  color: ${tokens.color.white};
-  border: none;
-  border-radius: 8px;
-  font-family: ${tokens.font.family};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
 
-  &:hover {
+  a {
     text-decoration: none;
-    background: ${tokens.color.accent};
+    display: inline-block;
   }
 
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.accent};
-    outline-offset: 2px;
-  }
-`
+  @media (max-width: 519px) {
+    width: 100%;
 
-const DelegateButton = styled(ShareButton).attrs({ as: 'button' })`
-  align-self: flex-start;
+    a {
+      display: block;
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `
 
 /* ─── Avatar column ─── */
@@ -557,15 +548,26 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
           </ChipsRow>
 
           {isDelegated ? (
-            <ShareButton href={shareUrl} target="_blank" rel="noopener noreferrer">
-              <FontAwesomeIcon icon={faShareNodes} />
-              Share how much you&rsquo;re earning
-            </ShareButton>
+            <HeroCtaWrap>
+              <a href={shareUrl} target="_blank" rel="noopener noreferrer">
+                <Button
+                  colorStyle="bluePrimary"
+                  prefix={<FontAwesomeIcon icon={faShareNodes} />}
+                >
+                  Share how much you&rsquo;re earning
+                </Button>
+              </a>
+            </HeroCtaWrap>
           ) : (
-            <DelegateButton onClick={() => navigate('/voters')}>
-              Pick a delegate
-              <FontAwesomeIcon icon={faArrowRight} />
-            </DelegateButton>
+            <HeroCtaWrap>
+              <Button
+                colorStyle="bluePrimary"
+                suffix={<FontAwesomeIcon icon={faArrowRight} />}
+                onClick={() => navigate('/voters')}
+              >
+                Pick a delegate
+              </Button>
+            </HeroCtaWrap>
           )}
         </HeroText>
 
