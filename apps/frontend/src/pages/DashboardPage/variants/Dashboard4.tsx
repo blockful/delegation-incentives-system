@@ -440,7 +440,7 @@ function DashboardContent({ address }: { address: `0x${string}` }) {
   const { data, loading, error } = useDashboardData(address)
 
   if (loading) {
-    return <DashboardPageSkeleton compact />
+    return <DashboardPageSkeleton />
   }
 
   if (error) {
