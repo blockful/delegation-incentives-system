@@ -1,7 +1,7 @@
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
+import { Link } from 'react-router-dom'
 import { useEnsName } from 'wagmi'
 import { tokens } from '@/styles/tokens'
-import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { truncateAddress } from '@/utils/format'
 import { useStreamingCounter } from '@/hooks/useStreamingCounter'
 
@@ -11,12 +11,8 @@ interface EarningsStripProps {
   tierIndex: number
   delegatedTo: string
   delegateEnsName?: string
-  delegateAvatarUrl?: string
-  balanceEns: string
   roundStartDate: string
   roundEndDate: string
-  roundNumber: number
-  daysRemaining: number
 }
 
 const Card = styled.section`
@@ -72,68 +68,61 @@ const AprLabel = styled.span`
   }
 `
 
-const PillsRow = styled.div`
+const ChipRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.sm};
   flex-wrap: wrap;
 `
 
-const TierBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.lightBlueOpacity};
-  color: ${tokens.color.blue};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  letter-spacing: 0;
-`
-
-const Pill = styled.div`
+const chipStyles = css`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid ${tokens.color.gray};
+  height: 30px;
+  padding: 0 ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkGray};
-  background: ${tokens.color.surface};
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.borderLight};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
   white-space: nowrap;
+  text-decoration: none;
+  cursor: default;
+  transition: border-color ${tokens.transition.fast};
 `
 
-const TimePill = styled(Pill)`
-  background: ${tokens.color.lightOrange};
-  border-color: transparent;
-  color: ${tokens.color.orange};
-  font-weight: ${tokens.font.weight.bold};
+const Chip = styled.span`
+  ${chipStyles}
 `
 
-const ButtonsRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${tokens.spacing.md};
-`
-
-const ShareButton = styled.button<{ $primary?: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${tokens.spacing.sm};
-  padding: 10px ${tokens.spacing.lg};
-  border-radius: ${tokens.radius.md};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
+const ChipLink = styled(Link)`
+  ${chipStyles}
   cursor: pointer;
-  transition: opacity ${tokens.transition.fast};
-  border: 1px solid ${({ $primary }) => ($primary ? tokens.color.blue : tokens.color.gray)};
-  background: ${({ $primary }) => ($primary ? tokens.color.blue : tokens.color.surface)};
-  color: ${({ $primary }) => ($primary ? '#fff' : tokens.color.darkGray)};
 
   &:hover {
-    opacity: 0.85;
+    border-color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+`
+
+const ChipButton = styled.button`
+  ${chipStyles}
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
   }
 `
 
@@ -143,11 +132,8 @@ export function EarningsStrip({
   tierIndex,
   delegatedTo,
   delegateEnsName,
-  delegateAvatarUrl,
   roundStartDate,
   roundEndDate,
-  roundNumber,
-  daysRemaining,
 }: EarningsStripProps) {
   const { data: resolvedName } = useEnsName({
     address: delegatedTo as `0x${string}`,
@@ -167,36 +153,25 @@ export function EarningsStrip({
 
       <AprRow>
         <AprLabel>Earning at <strong>{aprPct}% APR</strong></AprLabel>
-        <TierBadge>Tier {tierIndex + 1}</TierBadge>
       </AprRow>
 
-      <PillsRow>
-        <Pill>
-          <EnsAvatar
-            address={delegatedTo}
-            name={delegateEnsName ?? resolvedName ?? undefined}
-            avatarUrl={delegateAvatarUrl}
-            size={16}
-          />
-          Delegating to <strong style={{ color: tokens.color.darkBlue }}>{displayName}</strong>
-        </Pill>
-        <Pill>Round {roundNumber}</Pill>
-        <TimePill>{daysRemaining}d left</TimePill>
-      </PillsRow>
-
-      <ButtonsRow>
-        <ShareButton
-          $primary
-          onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank')}
+      <ChipRow>
+        <Chip>Tier {tierIndex + 1}</Chip>
+        <ChipLink to={`/voters/${delegatedTo}`}>
+          Delegated to {displayName} ↗
+        </ChipLink>
+        <ChipButton
+          type="button"
+          onClick={() =>
+            window.open(
+              `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+              '_blank',
+            )
+          }
         >
-          𝕏 Share your rewards
-        </ShareButton>
-        <ShareButton
-          onClick={() => window.open(`https://t.me/share/url?text=${encodeURIComponent(shareText)}`, '_blank')}
-        >
-          ✈ Share on Telegram
-        </ShareButton>
-      </ButtonsRow>
+          Share APR ↗
+        </ChipButton>
+      </ChipRow>
     </Card>
   )
 }

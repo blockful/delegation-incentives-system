@@ -16,21 +16,22 @@ const StyledHeader = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 57px;
-  border-bottom: 1px solid ${tokens.color.border};
-  background: ${tokens.color.surface};
+  padding: 20px;
+  border-bottom: 1px solid ${tokens.color.white};
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
   z-index: 100;
 
   @media (max-width: 360px) {
-    padding: 0 12px;
+    padding: 20px 12px;
   }
 
   @media (min-width: 768px) {
-    padding: 0 40px;
-    height: 72px;
+    padding: 20px 40px;
   }
 `
 
@@ -41,12 +42,18 @@ const Brand = styled(Link)`
   text-decoration: none;
   color: inherit;
   flex-shrink: 0;
+  transition: opacity ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
+    opacity: 0.6;
+  }
 `
 
 const BrandText = styled.span`
   font-weight: ${tokens.font.weight.bold};
   font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkBlue};
+  color: ${tokens.color.blue};
   white-space: nowrap;
 
   @media (max-width: 360px) {
@@ -62,7 +69,7 @@ const DesktopNav = styled.nav`
   display: none;
   gap: 6px;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: flex;
     align-items: center;
   }
@@ -73,25 +80,26 @@ const navLinkStyles = css`
   min-height: 40px;
   display: inline-flex;
   align-items: center;
-  padding: 0 ${tokens.spacing.md};
+  justify-content: center;
+  padding: 8px 16px;
   border-radius: ${tokens.radius.sm};
   text-decoration: none;
-  font-size: ${tokens.font.size.base};
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
+  color: ${tokens.color.textSecondary};
   transition:
     background ${tokens.transition.fast},
     color ${tokens.transition.fast};
 
   &:hover {
-    color: ${tokens.color.darkBlue};
-    background: ${tokens.color.bgSubtle};
+    color: ${tokens.color.blue};
   }
 
   &.active {
-    color: ${tokens.color.darkBlue};
+    color: ${tokens.color.blue};
     font-weight: ${tokens.font.weight.medium};
-    background: ${tokens.color.lightBlue};
+    background: ${tokens.color.lightBlueOpacity};
+    border-radius: 9999px;
   }
 `
 
@@ -110,7 +118,7 @@ const ProfileScaler = styled.div`
 `
 
 const MobileOnly = styled.span`
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 `
@@ -118,7 +126,7 @@ const MobileOnly = styled.span`
 const DesktopOnly = styled.span`
   display: none;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: inline;
   }
 `
@@ -136,14 +144,12 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: ${tokens.radius.sm};
-  transition: background ${tokens.transition.fast};
 
-  &:hover {
-    background: ${tokens.color.surfaceAlt};
+  &:hover span {
+    background: ${tokens.color.blue};
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 
@@ -153,7 +159,10 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
     width: 100%;
     background: ${tokens.color.text};
     border-radius: 1px;
-    transition: transform 0.25s ease, opacity 0.2s ease;
+    transition:
+      transform 0.25s ease,
+      opacity 0.2s ease,
+      background ${tokens.transition.fast};
   }
 
   ${({ $open }) =>
@@ -172,35 +181,57 @@ const HamburgerButton = styled.button<{ $open: boolean }>`
 `
 
 const slideIn = keyframes`
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(-12px); }
   to   { opacity: 1; transform: translateY(0); }
 `
 
-const Overlay = styled.div`
+const slideOut = keyframes`
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-12px); }
+`
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to   { opacity: 1; }
+`
+
+const fadeOut = keyframes`
+  from { opacity: 1; }
+  to   { opacity: 0; }
+`
+
+const DRAWER_ANIM_MS = 220
+
+const Overlay = styled.div<{ $closing: boolean }>`
   position: fixed;
   inset: 0;
-  top: 57px;
   background: rgba(1, 26, 37, 0.3);
   z-index: 99;
+  animation: ${({ $closing }) => ($closing ? fadeOut : fadeIn)}
+    ${DRAWER_ANIM_MS}ms ease both;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 `
 
-const MobileDrawer = styled.nav`
-  position: fixed;
-  top: 57px;
-  left: 0;
-  right: 0;
-  background: ${tokens.color.surface};
-  border-bottom: 1px solid ${tokens.color.border};
+const MobileDrawer = styled.nav<{ $closing: boolean }>`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
   padding: 8px 0;
-  z-index: 100;
-  animation: ${slideIn} 0.2s ease;
+  overflow: hidden;
   box-shadow: ${tokens.shadow.lg};
+  animation: ${({ $closing }) => ($closing ? slideOut : slideIn)}
+    ${DRAWER_ANIM_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1032px) {
     display: none;
   }
 `
@@ -231,13 +262,61 @@ const publicNavItems = [
   { to: '/', label: 'Home' },
   { to: '/voters', label: 'Voters' },
   { to: '/rounds', label: 'Rounds' },
-  { to: '/lottery', label: 'Lottery' },
   { to: '/transparency', label: 'Transparency' },
 ] as const
 
 const walletNavItems = [
   { to: '/dashboard', label: 'Dashboard' },
 ] as const
+
+const ConnectedAccountWrap = styled.div`
+  display: flex;
+  align-items: center;
+`
+
+const DesktopProfile = styled(ProfileScaler)`
+  display: none;
+
+  @media (min-width: 768px) {
+    display: block;
+  }
+`
+
+const MobileAvatarButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: opacity ${tokens.transition.fast};
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9999px;
+  }
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+`
 
 function ConnectedAccount({
   address,
@@ -252,24 +331,34 @@ function ConnectedAccount({
   })
   const avatar = resolvedAvatar ?? makeBlockie(address)
   return (
-    <ProfileScaler>
-      <Profile
-        address={address}
-        ensName={ensName ?? undefined}
-        avatar={avatar}
-        size="medium"
-        alignDropdown="right"
-        dropdownItems={[
-          { label: 'Account', onClick: () => { void openWalletModal() }, icon: <WalletSVG /> },
-        ]}
-      />
-    </ProfileScaler>
+    <ConnectedAccountWrap>
+      <DesktopProfile>
+        <Profile
+          address={address}
+          ensName={ensName ?? undefined}
+          avatar={avatar}
+          size="medium"
+          alignDropdown="right"
+          dropdownItems={[
+            { label: 'Account', onClick: () => { void openWalletModal() }, icon: <WalletSVG /> },
+          ]}
+        />
+      </DesktopProfile>
+      <MobileAvatarButton
+        type="button"
+        onClick={() => { void openWalletModal() }}
+        aria-label="Open wallet account"
+      >
+        <img src={avatar} alt="" />
+      </MobileAvatarButton>
+    </ConnectedAccountWrap>
   )
 }
 
 export function Header() {
   const walletState = useWalletState()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [drawerMounted, setDrawerMounted] = useState(false)
   const location = useLocation()
   const isConnected = walletState.status !== 'disconnected'
   const address = isConnected ? walletState.address : undefined
@@ -295,6 +384,17 @@ export function Header() {
     }
   }, [menuOpen])
 
+  // Keep the drawer mounted until the close animation finishes
+  useEffect(() => {
+    if (menuOpen) {
+      setDrawerMounted(true)
+      return
+    }
+    if (!drawerMounted) return
+    const t = setTimeout(() => setDrawerMounted(false), DRAWER_ANIM_MS)
+    return () => clearTimeout(t)
+  }, [menuOpen, drawerMounted])
+
   return (
     <>
       <StyledHeader>
@@ -304,8 +404,8 @@ export function Header() {
         </Brand>
 
         <DesktopNav>
-          {publicNavItems.filter((item) => item.to !== '/').map(({ to, label }) => (
-            <StyledNavLink key={to} to={to}>
+          {publicNavItems.map(({ to, label }) => (
+            <StyledNavLink key={to} to={to} end={to === '/'}>
               {label}
             </StyledNavLink>
           ))}
@@ -341,11 +441,9 @@ export function Header() {
             <span />
           </HamburgerButton>
         </RightArea>
-      </StyledHeader>
 
-      {menuOpen && (
-        <>
-          <MobileDrawer>
+        {drawerMounted && (
+          <MobileDrawer $closing={!menuOpen}>
             {publicNavItems.map(({ to, label }) => (
               <MobileNavLink key={to} to={to} end={to === '/'} onClick={closeMenu}>
                 {label}
@@ -357,9 +455,10 @@ export function Header() {
               </MobileNavLink>
             ))}
           </MobileDrawer>
-          <Overlay onClick={closeMenu} />
-        </>
-      )}
+        )}
+      </StyledHeader>
+
+      {drawerMounted && <Overlay $closing={!menuOpen} onClick={closeMenu} />}
     </>
   )
 }

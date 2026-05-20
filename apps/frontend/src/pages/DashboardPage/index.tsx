@@ -1,142 +1,646 @@
-import { Navigate } from 'react-router-dom'
+import { useCallback } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { useEnsName } from 'wagmi'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faCircleCheck,
+  faCircleXmark,
+  faWallet,
+  faClock,
+  faCalendarDay,
+  faArrowUpRightFromSquare,
+  faShareNodes,
+  faArrowRight,
+} from '@fortawesome/free-solid-svg-icons'
+import { Button } from '@ensdomains/thorin'
+import { api } from '@/api'
+import type { AddressDistributionRound } from '@/api/types'
 import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { useAsync } from '@/hooks/useAsync'
+import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
-import { StatCard } from '@/components/shared/StatCard'
+import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { useDashboardData } from './useDashboardData'
-import { EarningsStrip } from './sections/EarningsStrip'
-import { RoundProgressCard } from './sections/RoundTimeline'
-import { RewardTiers } from './sections/RewardTiers'
-import { LotteryCard } from './sections/LotteryBanner'
-import { formatShortDate } from '@/utils/dashboard'
+
+/* ─── Page shell ─── */
 
 const Page = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
   animation: ${fadeInUp} 0.4s ease both;
+`
+
+/* ─── Hero card ─── */
+
+const HeroCard = styled.section`
+  display: flex;
+  flex-direction: column-reverse;
+  gap: ${tokens.spacing['2xl']};
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['5xl']} ${tokens.spacing['4xl']};
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: ${tokens.spacing['4xl']};
+    row-gap: ${tokens.spacing['2xl']};
+    align-items: stretch;
   }
 `
 
-const MainGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${tokens.spacing['3xl']};
-
-  @media (min-width: 768px) {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-`
-
-const Column = styled.div`
+const HeroText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.xl};
+  gap: ${tokens.spacing['2xl']};
+  min-width: 0;
 `
 
-const SectionLabel = styled.span`
-  display: block;
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0;
+const RewardsLabel = styled.span`
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
-  margin-bottom: ${tokens.spacing.md};
+  line-height: 1.6;
 `
 
-const RoundDetailsGrid = styled.div`
+const RewardsStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`
+
+const RewardsNumber = styled.p<{ $delegated: boolean }>`
+  margin: 0;
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${({ $delegated }) =>
+    $delegated ? tokens.color.positiveEmphasis : tokens.color.darkGray};
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+
+  @media (min-width: 768px) {
+    font-size: 68px;
+  }
+`
+
+const AprLine = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const AprLineMuted = styled(AprLine)`
+  color: ${tokens.color.darkGray};
+  font-weight: ${tokens.font.weight.medium};
+`
+
+const ChipsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+`
+
+const InfoChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 14px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+const ChipIcon = styled.span<{ $tone?: 'default' | 'positive' | 'muted' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 12px;
+  color: ${({ $tone }) =>
+    $tone === 'positive'
+      ? tokens.color.positiveEmphasis
+      : $tone === 'muted'
+        ? tokens.color.textSubtle
+        : tokens.color.textSecondary};
+`
+
+const HeroCtaWrap = styled.div`
+  align-self: flex-start;
+
+  a {
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  @media (max-width: 519px) {
+    width: 100%;
+
+    a {
+      display: block;
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+`
+
+/* ─── Avatar column ─── */
+
+const AvatarColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
+`
+
+const AvatarRing = styled.div<{ $delegated: boolean }>`
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 9999px;
+  padding: 24px;
+  border: 12px solid
+    ${({ $delegated }) =>
+      $delegated ? tokens.color.positiveEmphasis : tokens.color.borderLight};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color ${tokens.transition.base};
+`
+
+const AvatarInner = styled.div`
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  border: 1px solid ${tokens.color.borderLight};
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const StatusTag = styled.span<{ $delegated: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 14px;
+  background: ${({ $delegated }) =>
+    $delegated ? tokens.color.status.success.bg : tokens.color.bgSubtle};
+  color: ${({ $delegated }) =>
+    $delegated ? tokens.color.positiveEmphasis : tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  white-space: nowrap;
+`
+
+/* ─── Recent payouts card ─── */
+
+const PayoutsCard = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const PayoutsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.sm};
+`
+
+const PayoutsTitle = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+const PayoutsLink = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
+  line-height: 20px;
+  cursor: pointer;
+  transition: gap ${tokens.transition.fast}, opacity ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
+    gap: 10px;
+    opacity: 0.85;
+  }
+`
+
+const PayoutsRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: ${tokens.spacing.md};
+  grid-template-columns: 1fr;
+  gap: 8px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 `
 
+const PayoutCard = styled.button`
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.bgSubtle};
+  border: none;
+  border-radius: 8px;
+  font-family: ${tokens.font.family};
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: background ${tokens.transition.fast}, transform ${tokens.transition.fast};
+
+  &:hover {
+    background: ${tokens.color.lightBlueOpacity};
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover { transform: none; }
+  }
+`
+
+const PayoutCardInner = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`
+
+const PayoutRound = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const PayoutAmount = styled.span<{ $tone: 'positive' | 'neutral' | 'muted' }>`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${({ $tone }) =>
+    $tone === 'positive'
+      ? tokens.color.positiveEmphasis
+      : $tone === 'muted'
+        ? tokens.color.textSubtle
+        : tokens.color.darkBlue};
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+`
+
+const PayoutMonth = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+const PayoutBadge = styled.span<{ $tone: 'muted' | 'success' }>`
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 14px;
+  background: ${({ $tone }) =>
+    $tone === 'success' ? tokens.color.status.success.bg : tokens.color.borderLight};
+  color: ${({ $tone }) =>
+    $tone === 'success' ? tokens.color.positiveEmphasis : tokens.color.textSecondary};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  white-space: nowrap;
+`
+
+const PayoutArrow = styled.span`
+  display: inline-flex;
+  align-self: flex-start;
+  margin-left: auto;
+  color: ${tokens.color.textSecondary};
+  font-size: 14px;
+`
+
+const PayoutsEmpty = styled.div`
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.bgSubtle};
+  border-radius: 8px;
+  text-align: center;
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  line-height: 1.5;
+`
+
+/* ─── Helpers ─── */
+
+function formatEnsReward(value: string | number, { signed = true }: { signed?: boolean } = {}): string {
+  const num = typeof value === 'string' ? Number(value) : value
+  if (!Number.isFinite(num)) return '0.00000'
+  const abs = Math.abs(num)
+  const formatted = abs.toLocaleString('en-US', {
+    minimumFractionDigits: 5,
+    maximumFractionDigits: 5,
+  })
+  if (!signed) return formatted
+  const sign = num >= 0 ? '+' : '-'
+  return `${sign}${formatted}`
+}
+
+function formatBalance(value: string | number): string {
+  const n = typeof value === 'string' ? Number(value) : value
+  if (!Number.isFinite(n)) return '0'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
+  return Math.round(n).toString()
+}
+
+function formatMonthLabel(month: string | null | undefined): string {
+  if (!month) return '—'
+  const [y, m] = month.split('-').map(Number)
+  if (!y || !m) return month
+  const date = new Date(Date.UTC(y, m - 1, 1))
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+function formatDaysLeft(daysRemaining: number | null): string {
+  if (daysRemaining == null) return 'Pending'
+  if (daysRemaining <= 0) return 'Last day'
+  if (daysRemaining === 1) return '1d left'
+  return `${daysRemaining}d left`
+}
+
+interface PayoutRow {
+  roundNumber: number
+  month: string
+  reward: number
+  status: 'paid' | 'no_reward' | 'not_eligible' | 'pending' | 'unavailable'
+  hasReward: boolean
+}
+
+function buildPayoutRows(rounds: AddressDistributionRound[]): PayoutRow[] {
+  // Most recent first; cap at 3
+  const sorted = [...rounds].sort((a, b) => b.roundNumber - a.roundNumber)
+  return sorted.slice(0, 3).map((r) => {
+    const status = r.rewardStatus
+    const num = Number(r.totalRewardEns ?? '0')
+    const reward = Number.isFinite(num) ? num : 0
+    return {
+      roundNumber: r.roundNumber,
+      month: r.month ?? '',
+      reward,
+      status,
+      hasReward: status === 'paid' && reward > 0,
+    }
+  })
+}
+
+/* ─── Component ─── */
 
 export function DashboardPage() {
   const wallet = useWalletState()
   if (wallet.status === 'disconnected') return <Navigate to="/" replace />
-  return <DashboardContent address={wallet.address} />
+  return <DashboardContent address={wallet.address} isDelegated={wallet.status === 'delegated'} />
 }
 
-function DashboardContent({ address }: { address: `0x${string}` }) {
+interface DashboardContentProps {
+  address: `0x${string}`
+  isDelegated: boolean
+}
+
+function DashboardContent({ address, isDelegated }: DashboardContentProps) {
+  const navigate = useNavigate()
   const { data, loading, error } = useDashboardData(address)
 
-  if (loading) {
-    return <DashboardPageSkeleton />
-  }
+  const fetchDistributions = useCallback(
+    () => api.distributionsForAddress(address),
+    [address],
+  )
+  const distributions = useAsync(fetchDistributions)
+
+  const { data: resolvedEnsName } = useEnsName({
+    address,
+    query: { enabled: !!address },
+  })
+
+  if (loading) return <DashboardPageSkeleton />
+
   if (error) {
-    return <Page><ErrorMessage>Failed to load dashboard: {error}</ErrorMessage></Page>
+    return (
+      <Page>
+        <ErrorMessage>Failed to load dashboard: {error}</ErrorMessage>
+      </Page>
+    )
   }
+
   if (!data) return null
 
-  const { apr, tiers, round } = data
-  const currentTierIndex = tiers.currentTierIndex
-  const delegatedTo = (apr.delegatedTo ?? address) as `0x${string}`
+  const { apr, round } = data
 
-  const balanceLabel = `${parseFloat(apr.currentBalanceEns).toFixed(2)} ENS`
-  const timeLeft = `${round.daysRemaining}d`
-  const roundEndFormatted = formatShortDate(round.endDate)
-  const poolLabel = `${Math.round(Number(tiers.tiers[currentTierIndex]?.poolSizeEns ?? 0) / 1000)}K ENS`
+  const reward = Number(apr.estimatedMonthlyRewardEns ?? '0')
+  const aprPct = apr.estimatedAprPct ?? '0'
+  const delegateEns = apr.delegatedToEnsName ?? null
+  const delegateAddr = apr.delegatedTo ?? null
+  const balanceEns = Number(apr.currentBalanceEns ?? '0')
+  const userDisplayName = resolvedEnsName ?? truncateAddress(address)
+
+  const delegateLabel = isDelegated
+    ? delegateEns ?? (delegateAddr ? truncateAddress(delegateAddr) : 'an active voter')
+    : null
+
+  const payoutRows = distributions.data?.rounds
+    ? buildPayoutRows(distributions.data.rounds as AddressDistributionRound[])
+    : []
+  const hasPayouts = payoutRows.length > 0
+
+  const tweetText = isDelegated
+    ? `I'm earning ${aprPct}% APR on my ENS just by delegating to ${delegateLabel}. Gas is sponsored, payouts are automatic — see the program 👇`
+    : ''
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(window.location.origin)}`
 
   return (
     <Page>
-      <MainGrid>
-        <Column>
-          <div>
-            <SectionLabel>Your Rewards</SectionLabel>
-            <EarningsStrip
-              earnedEns={apr.estimatedMonthlyRewardEns}
-              aprPct={apr.estimatedAprPct}
-              tierIndex={currentTierIndex}
-              delegatedTo={delegatedTo}
-              delegateEnsName={apr.delegatedToEnsName ?? undefined}
-              delegateAvatarUrl={apr.delegatedToAvatarUrl ?? undefined}
-              balanceEns={apr.currentBalanceEns}
-              roundStartDate={round.startDate}
-              roundEndDate={round.endDate}
-              roundNumber={round.roundNumber}
-              daysRemaining={round.daysRemaining}
-            />
-          </div>
-        </Column>
+      {/* Hero card */}
+      <HeroCard>
+        <HeroText>
+          <RewardsStack>
+            <RewardsLabel>
+              {isDelegated ? 'Your rewards this round' : 'You’re not earning yet'}
+            </RewardsLabel>
+            <RewardsNumber $delegated={isDelegated}>
+              {isDelegated ? formatEnsReward(reward) : '0.00000'}
+            </RewardsNumber>
+            {isDelegated ? (
+              <AprLine>Earning at {aprPct}% APR</AprLine>
+            ) : (
+              <AprLineMuted>
+                Pick an active voter to start earning ~{aprPct}% APR.
+              </AprLineMuted>
+            )}
+          </RewardsStack>
 
-        <Column>
-          <div>
-            <SectionLabel>Round Details</SectionLabel>
-            <RoundDetailsGrid>
-              <StatCard label="Balance" value={balanceLabel} sub="180-day avg" />
-              <StatCard label="Round Ends" value={timeLeft} sub={roundEndFormatted} />
-              <StatCard label="Pool" value={poolLabel} sub="reward pool" />
-            </RoundDetailsGrid>
-          </div>
+          <ChipsRow>
+            <InfoChip>
+              <ChipIcon $tone={isDelegated ? 'positive' : 'muted'}>
+                <FontAwesomeIcon icon={isDelegated ? faCircleCheck : faCircleXmark} />
+              </ChipIcon>
+              {isDelegated ? `Delegating to ${delegateLabel}` : 'Not delegating yet'}
+            </InfoChip>
+            <InfoChip>
+              <ChipIcon>
+                <FontAwesomeIcon icon={faWallet} />
+              </ChipIcon>
+              Holding {formatBalance(balanceEns)} ENS
+            </InfoChip>
+            <InfoChip>
+              <ChipIcon>
+                <FontAwesomeIcon icon={faCalendarDay} />
+              </ChipIcon>
+              Round {round.roundNumber}
+            </InfoChip>
+            <InfoChip>
+              <ChipIcon>
+                <FontAwesomeIcon icon={faClock} />
+              </ChipIcon>
+              {formatDaysLeft(round.daysRemaining)}
+            </InfoChip>
+          </ChipsRow>
 
-          <div>
-            <SectionLabel>Share Your Rewards</SectionLabel>
-            <Column>
-              <RoundProgressCard
-                roundNumber={round.roundNumber}
-                percentComplete={round.percentComplete}
+          {isDelegated ? (
+            <HeroCtaWrap>
+              <a href={shareUrl} target="_blank" rel="noopener noreferrer">
+                <Button
+                  colorStyle="bluePrimary"
+                  prefix={<FontAwesomeIcon icon={faShareNodes} />}
+                >
+                  Share to earn more
+                </Button>
+              </a>
+            </HeroCtaWrap>
+          ) : (
+            <HeroCtaWrap>
+              <Button
+                colorStyle="bluePrimary"
+                suffix={<FontAwesomeIcon icon={faArrowRight} />}
+                onClick={() => navigate('/voters')}
+              >
+                Pick a delegate
+              </Button>
+            </HeroCtaWrap>
+          )}
+        </HeroText>
+
+        <AvatarColumn>
+          <AvatarRing $delegated={isDelegated}>
+            <AvatarInner>
+              <EnsAvatar
+                address={address}
+                name={resolvedEnsName ?? undefined}
+                size={140}
               />
-              {apr.qualifiesForLottery && (
-                <LotteryCard expectedPayout={apr.estimatedMonthlyRewardEns} />
-              )}
-            </Column>
-          </div>
-        </Column>
-      </MainGrid>
+            </AvatarInner>
+          </AvatarRing>
+          <StatusTag $delegated={isDelegated}>
+            <FontAwesomeIcon icon={isDelegated ? faCircleCheck : faCircleXmark} />
+            {isDelegated ? 'Delegating' : 'Not delegating'}
+          </StatusTag>
+        </AvatarColumn>
+      </HeroCard>
 
-      <RewardTiers
-        tiers={tiers.tiers}
-        currentTierIndex={currentTierIndex}
-        userEstimatedReward={apr.estimatedMonthlyRewardEns}
-      />
+      {/* Recent payouts */}
+      <PayoutsCard>
+        <PayoutsHeader>
+          <PayoutsTitle>Recent payouts</PayoutsTitle>
+          <PayoutsLink type="button" onClick={() => navigate(`/rounds?address=${address}`)}>
+            View all rounds <FontAwesomeIcon icon={faArrowRight} />
+          </PayoutsLink>
+        </PayoutsHeader>
+
+        {!hasPayouts ? (
+          <PayoutsEmpty>
+            No payouts yet. Your first round closes when the current one ends — check back in {formatDaysLeft(round.daysRemaining).replace(' left', '')}.
+          </PayoutsEmpty>
+        ) : (
+          <PayoutsRow>
+            {payoutRows.map((row) => {
+              const isUnavailable = row.status === 'unavailable'
+              const isPending = row.status === 'pending'
+              const amount =
+                row.status === 'paid'
+                  ? `+${formatEnsAmount(String(row.reward), { maximumFractionDigits: 4 })} ENS`
+                  : row.status === 'not_eligible' || row.status === 'no_reward'
+                    ? '0 ENS'
+                    : '—'
+              const tone: 'positive' | 'neutral' | 'muted' =
+                row.hasReward ? 'positive' : isUnavailable ? 'muted' : 'neutral'
+              return (
+                <PayoutCard
+                  key={row.roundNumber}
+                  type="button"
+                  onClick={() => navigate(`/rounds/${row.roundNumber}?address=${address}`)}
+                  aria-label={`View Round ${row.roundNumber} details`}
+                >
+                  <PayoutCardInner>
+                    <PayoutRound>Round {row.roundNumber}</PayoutRound>
+                    <PayoutAmount $tone={tone}>{amount}</PayoutAmount>
+                    <PayoutMonth>{formatMonthLabel(row.month)}</PayoutMonth>
+                  </PayoutCardInner>
+                  {isUnavailable ? (
+                    <PayoutBadge $tone="muted">Unavailable</PayoutBadge>
+                  ) : isPending ? (
+                    <PayoutBadge $tone="muted">Pending</PayoutBadge>
+                  ) : (
+                    <PayoutArrow aria-hidden>
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                    </PayoutArrow>
+                  )}
+                </PayoutCard>
+              )
+            })}
+          </PayoutsRow>
+        )}
+      </PayoutsCard>
     </Page>
   )
 }

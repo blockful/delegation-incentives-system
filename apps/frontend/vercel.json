@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/voters/:address", "destination": "/api/voter-html?address=:address" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

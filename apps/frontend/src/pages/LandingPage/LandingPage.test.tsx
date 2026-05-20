@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS could be earning/),
+        screen.getByText(/on your ENS/),
       ).toBeInTheDocument()
     })
   })
@@ -41,10 +41,12 @@ describe('LandingPage', () => {
   })
 
   it('shows current APR in hero from tier data', async () => {
-    // Fixture: maxTokenHolderAprPct='5400.00'
-    renderApp(<LandingPage />)
+    // Mock API (`src/api/mock.ts`) returns maxTokenHolderAprPct='120.00'.
+    // The MSW fixture (`src/test/mocks/fixtures/rounds.ts`) is unused because
+    // VITE_USE_MOCK_API=true makes the api.* helpers bypass HTTP.
+    const { container } = renderApp(<LandingPage />)
     await waitFor(() => {
-      expect(screen.getByText('5400.00% APR')).toBeInTheDocument()
+      expect(container.textContent).toMatch(/120\.00% APR/)
     })
   })
 
@@ -54,7 +56,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS could be earning/),
+        screen.getByText(/on your ENS/),
       ).toBeInTheDocument()
     })
   })
@@ -69,7 +71,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS could be earning/),
+        screen.getByText(/on your ENS/),
       ).toBeInTheDocument()
     })
   })

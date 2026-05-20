@@ -1,6 +1,10 @@
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles/tokens'
-import { formatEnsWhole, formatTimeLeft } from '@/utils/format'
+import { formatTimeLeft } from '@/utils/format'
+import { formatPool } from '@/utils/dashboard'
+import { LiveDot } from '@/components/shared/LiveDot'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
@@ -10,37 +14,68 @@ interface RoundStatusBarProps {
   roundEndDate: string
 }
 
+/**
+ * Outer Wrapper container — `Outer` paints solid white across the full row so
+ * the AppLayout body gradient doesn't bleed through this strip between the
+ * Hero and the next section. `Inner` keeps the max-width + translateY(-50%)
+ * overlap effect for the card.
+ */
+const Outer = styled.div`
+  width: 100%;
+  background: ${tokens.color.white};
+  position: relative;
+  z-index: 1;
+`
+
 const Wrapper = styled.div`
   max-width: 600px;
   margin: 0 auto;
   padding: 0 ${tokens.spacing.xl};
-  position: relative;
-  z-index: 1;
   transform: translateY(-50%);
 `
 
 const Card = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 24px;
-  background: #ffffff;
-  border: 1px solid #d0d7de;
+  padding: 0;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
   border-radius: 10px;
-  box-shadow: 0px 1px 3px #0000000f;
+  box-shadow: ${tokens.shadow.sm};
+  overflow: hidden;
 `
 
-const Tagline = styled.span`
-  font-size: 13px;
-  font-weight: ${tokens.font.weight.bold};
-  color: #1a7f37;
-  text-align: center;
+const TrustRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  padding: 12px 16px;
   width: 100%;
+`
 
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size.base};
+const TrustItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.positiveEmphasis};
+  line-height: 1.3;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
+`
+
+const Separator = styled.div`
+  width: 100%;
+  height: 1px;
+  background: ${tokens.color.borderLight};
+  flex-shrink: 0;
 `
 
 const DataRow = styled.div`
@@ -48,10 +83,7 @@ const DataRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f6f8fa;
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
-  padding: 10px 16px;
+  padding: 12px 16px;
 `
 
 const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
@@ -64,10 +96,10 @@ const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
 `
 
 const ColLabel = styled.span`
-  font-size: 14px;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
-  color: #1f2328;
-  line-height: 18px;
+  color: ${tokens.color.darkBlue};
+  line-height: 1.3;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -78,29 +110,21 @@ const ColLabel = styled.span`
 `
 
 const ColSub = styled.span`
-  font-size: 12px;
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.normal};
-  color: #57606a;
-  line-height: 16px;
+  color: ${tokens.color.darkGray};
+  line-height: 1.35;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.base};
   }
 `
 
-const LiveDot = styled.span`
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #1a7f37;
-  flex-shrink: 0;
-`
-
 const GrowthLabel = styled.span<{ $negative?: boolean }>`
-  font-size: 14px;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
-  color: ${({ $negative }) => ($negative ? tokens.color.negative : '#1a7f37')};
-  line-height: 18px;
+  color: ${({ $negative }) => ($negative ? tokens.color.negative : tokens.color.positiveEmphasis)};
+  line-height: 1.3;
 
   @media (min-width: 768px) {
     font-size: ${tokens.font.size.lg};
@@ -116,20 +140,35 @@ export function RoundStatusBar({
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
-  const growthPrefix = isNegative ? '\u2013' : '+'
+  const growthPrefix = isNegative ? '–' : '+'
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
   const displayRound = roundNumber
   const displayTimeLeft = formatTimeLeft(roundEndDate)
-  const displayPoolSizeEns = formatEnsWhole(poolSizeEns)
+  const displayPoolSizeEns = formatPool(poolSizeEns).toLowerCase()
 
   return (
-    <Wrapper>
-      <Card>
-        <Tagline>No tokens locked · Gas sponsored · Rewards auto-sent</Tagline>
+    <Outer>
+      <Wrapper>
+        <Card>
+        <TrustRow>
+          <TrustItem>
+            <FontAwesomeIcon icon={faCircleCheck} />
+            No tokens locked
+          </TrustItem>
+          <TrustItem>
+            <FontAwesomeIcon icon={faCircleCheck} />
+            Gas sponsored
+          </TrustItem>
+          <TrustItem>
+            <FontAwesomeIcon icon={faCircleCheck} />
+            Rewards auto-sent
+          </TrustItem>
+        </TrustRow>
+        <Separator />
         <DataRow>
           <Col $align="left">
             <ColLabel>
-              <LiveDot />
+              <LiveDot pulse />
               Round {displayRound}
             </ColLabel>
             <ColSub>{displayTimeLeft}</ColSub>
@@ -145,7 +184,8 @@ export function RoundStatusBar({
             <ColSub>{displayPoolSizeEns} ENS pool</ColSub>
           </Col>
         </DataRow>
-      </Card>
-    </Wrapper>
+        </Card>
+      </Wrapper>
+    </Outer>
   )
 }

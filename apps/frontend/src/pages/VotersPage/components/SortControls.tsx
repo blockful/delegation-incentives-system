@@ -32,29 +32,30 @@ const Wrapper = styled.div`
 
 const SortLabel = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkGray};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.textSecondary};
   flex-shrink: 0;
   margin-right: ${tokens.spacing.xs};
 `
 
 const Pill = styled.button<{ $active: boolean }>`
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
-  border-radius: ${tokens.radius.pill};
+  padding: 6px 12px;
+  border-radius: 9999px;
   border: 1px solid ${({ $active }) =>
     $active ? tokens.color.darkBlue : tokens.color.borderLight};
   background: ${({ $active }) =>
-    $active ? tokens.color.darkBlue : 'transparent'};
+    $active ? tokens.color.darkBlue : tokens.color.surface};
   color: ${({ $active }) =>
-    $active ? tokens.color.white : tokens.color.darkGray};
+    $active ? tokens.color.white : tokens.color.textSecondary};
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
   cursor: pointer;
   transition: all ${tokens.transition.fast};
   flex-shrink: 0;
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.85;
   }
 `
 

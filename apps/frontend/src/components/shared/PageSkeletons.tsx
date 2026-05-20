@@ -11,32 +11,12 @@ import {
   SkeletonText,
 } from './Skeleton'
 
-const SectionLabelSkeleton = styled(SkeletonBlock)`
-  text-transform: uppercase;
-`
-
 const FluidSkeletonBlock = styled(SkeletonBlock)`
   flex: 1;
 `
 
-const CenteredSkeletonBlock = styled(SkeletonBlock)`
-  align-self: center;
-`
-
 const SpaceBetweenInline = styled(SkeletonInline)`
   justify-content: space-between;
-`
-
-const SectionLabelWithMargin = styled(SectionLabelSkeleton)`
-  margin-bottom: ${tokens.spacing.md};
-`
-
-const TableCellSkeleton = styled(SkeletonBlock)`
-  margin: ${tokens.spacing.md};
-`
-
-const TableBodyRow = styled(SkeletonGrid)`
-  border-top: 1px solid ${tokens.color.borderLight};
 `
 
 const FullWidthCenteredStack = styled(SkeletonStack)`
@@ -48,16 +28,6 @@ const AlignedStack = styled(SkeletonStack)<{ $align: 'flex-start' | 'center' | '
   align-items: ${({ $align }) => $align};
 `
 
-function MiniStatSkeleton() {
-  return (
-    <SkeletonCard $gap={tokens.spacing.xs}>
-      <SkeletonBlock $height="10px" $width="58%" />
-      <SkeletonBlock $height="22px" $width="74%" />
-      <SkeletonBlock $height="10px" $width="48%" />
-    </SkeletonCard>
-  )
-}
-
 function AddressFormSkeleton() {
   return (
     <SkeletonCard $padding={tokens.spacing.lg} $radius={tokens.radius.sm}>
@@ -66,37 +36,6 @@ function AddressFormSkeleton() {
         <SkeletonBlock $height="42px" $width="118px" />
       </SkeletonInline>
       <SkeletonBlock $height="12px" $width="42%" />
-    </SkeletonCard>
-  )
-}
-
-function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
-  return (
-    <SkeletonCard $padding="0" $gap="0" $radius={tokens.radius.sm}>
-      <SkeletonGrid $columns={`repeat(${columns}, minmax(0, 1fr))`} $gap="0">
-        {Array.from({ length: columns }, (_, index) => (
-          <TableCellSkeleton
-            key={`head-${index}`}
-            $height="14px"
-            $width="64%"
-          />
-        ))}
-      </SkeletonGrid>
-      {Array.from({ length: rows }, (_, rowIndex) => (
-        <TableBodyRow
-          key={rowIndex}
-          $columns={`repeat(${columns}, minmax(0, 1fr))`}
-          $gap="0"
-        >
-          {Array.from({ length: columns }, (_, columnIndex) => (
-            <TableCellSkeleton
-              key={columnIndex}
-              $height="14px"
-              $width={columnIndex === 0 ? '46%' : columnIndex === columns - 1 ? '58%' : '74%'}
-            />
-          ))}
-        </TableBodyRow>
-      ))}
     </SkeletonCard>
   )
 }
@@ -127,8 +66,10 @@ const LandingRoot = styled(SkeletonRegion)`
 const LandingHero = styled.section`
   padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl};
   text-align: center;
-  background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.white});
-  border-bottom: 1px solid ${tokens.color.middleGray};
+  background:
+    linear-gradient(180deg, rgba(56, 137, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 60%),
+    ${tokens.color.white};
+  border-bottom: 1px solid ${tokens.color.borderLight};
 
   @media (min-width: 768px) {
     padding: 100px ${tokens.spacing['4xl']} ${tokens.spacing['9xl']};
@@ -179,13 +120,98 @@ const LandingTierSection = styled.section`
 const LandingTierInner = styled.div`
   max-width: ${tokens.maxWidth.section};
   margin: 0 auto;
-  display: grid;
-  gap: ${tokens.spacing['4xl']};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${tokens.spacing['3xl']};
+`
+
+const LandingTierHeader = styled(SkeletonStack)`
+  align-items: center;
+  text-align: center;
+  max-width: 720px;
+`
+
+const LandingHowItWorksSection = styled.section`
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl} ${tokens.spacing['2xl']};
+  background: ${tokens.color.surfaceAlt};
 
   @media (min-width: 768px) {
-    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
-    align-items: center;
+    padding: ${tokens.spacing['6xl']} ${tokens.spacing['4xl']} ${tokens.spacing['4xl']};
   }
+`
+
+const LandingHowItWorksInner = styled.div`
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['3xl']};
+`
+
+const LandingStepsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+    gap: ${tokens.spacing.xl};
+  }
+`
+
+const LandingStepCard = styled(SkeletonStack)`
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.white};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+
+  @media (min-width: 768px) {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+`
+
+const LandingCtaSection = styled.section`
+  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl};
+  background: ${tokens.color.surfaceAlt};
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']};
+  }
+`
+
+const LandingCtaCard = styled(SkeletonStack)`
+  max-width: ${tokens.maxWidth.section};
+  margin: 0 auto;
+  padding: ${tokens.spacing['5xl']} ${tokens.spacing.xl} ${tokens.spacing['4xl']};
+  background: ${tokens.color.blue};
+  border-radius: 24px;
+  align-items: center;
+  text-align: center;
+
+  @media (min-width: 768px) {
+    padding: ${tokens.spacing['7xl']} ${tokens.spacing['4xl']} ${tokens.spacing['5xl']};
+  }
+`
+
+const LandingMarqueeRow = styled(SkeletonInline)`
+  width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  opacity: 0.4;
+`
+
+const LandingPill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 4px 4px;
+  background: ${tokens.color.white};
+  border-radius: 9999px;
+  flex-shrink: 0;
 `
 
 export function LandingPageSkeleton() {
@@ -193,20 +219,26 @@ export function LandingPageSkeleton() {
     <LandingRoot label="Loading landing page">
       <LandingHero>
         <LandingHeroInner $gap={tokens.spacing.lg}>
-          <SkeletonBlock $height="14px" $width="260px" $maxWidth="80%" />
-          <FullWidthCenteredStack $gap={tokens.spacing.md} $maxWidth="680px">
-            <SkeletonBlock $height="54px" $width="88%" />
-            <SkeletonBlock $height="54px" $width="56%" />
+          {/* Eyebrow: LiveDot + "Round N · ends in M days" inline */}
+          <SkeletonInline $gap={tokens.spacing.sm}>
+            <SkeletonCircle $size="8px" />
+            <SkeletonBlock $height="14px" $width="220px" $maxWidth="80%" />
+          </SkeletonInline>
+          {/* Headline: 2 lines, "Earn X% APR on your ENS,\nautomatically." */}
+          <FullWidthCenteredStack $gap={tokens.spacing.md} $maxWidth="720px">
+            <SkeletonBlock $height="54px" $width="92%" />
+            <SkeletonBlock $height="54px" $width="48%" />
           </FullWidthCenteredStack>
+          {/* Subtitle: single line now */}
           <SkeletonText
-            lines={2}
-            lineHeight="18px"
-            maxWidth="520px"
-            widths={['100%', '72%']}
+            lines={1}
+            lineHeight="22px"
+            maxWidth="440px"
+            widths={['88%']}
           />
           <LandingActions $gap={tokens.spacing.md}>
             <SkeletonBlock $height="44px" $width="160px" />
-            <SkeletonBlock $height="44px" $width="132px" />
+            <SkeletonBlock $height="44px" $width="160px" />
           </LandingActions>
         </LandingHeroInner>
       </LandingHero>
@@ -229,171 +261,279 @@ export function LandingPageSkeleton() {
       </LandingStatusWrap>
       <LandingTierSection>
         <LandingTierInner>
-          <SkeletonStack $gap={tokens.spacing.lg}>
-            <SkeletonBlock $height="12px" $width="140px" />
-            <SkeletonText lines={2} lineHeight="36px" widths={['86%', '64%']} />
-            <SkeletonText lines={3} lineHeight="16px" widths={['100%', '92%', '70%']} />
-            <SkeletonBlock $height="40px" $width="138px" />
-          </SkeletonStack>
+          <LandingTierHeader $gap={tokens.spacing.md}>
+            <SkeletonBlock $height="24px" $width="140px" $radius={tokens.radius.pill} />
+            <SkeletonText lines={2} lineHeight="36px" widths={['72%', '52%']} maxWidth="640px" />
+            <SkeletonText lines={2} lineHeight="20px" widths={['96%', '74%']} maxWidth="640px" />
+          </LandingTierHeader>
           <TierRowsSkeleton rows={5} />
+          <SkeletonBlock $height="44px" $width="220px" $radius={tokens.radius.sm} />
         </LandingTierInner>
       </LandingTierSection>
+      <LandingHowItWorksSection>
+        <LandingHowItWorksInner>
+          <SkeletonStack $gap={tokens.spacing.md}>
+            <SkeletonBlock $height="24px" $width="140px" $radius={tokens.radius.pill} />
+            <SkeletonText lines={2} lineHeight="36px" widths={['68%', '52%']} maxWidth="560px" />
+            <SkeletonText lines={2} lineHeight="20px" widths={['76%', '62%']} maxWidth="560px" />
+          </SkeletonStack>
+          <LandingStepsGrid>
+            {Array.from({ length: 4 }, (_, index) => (
+              <LandingStepCard key={index} $gap={tokens.spacing.md}>
+                <SkeletonBlock $height="28px" $width="28px" $radius={tokens.radius.sm} />
+                <SkeletonBlock $height="20px" $width="80%" />
+                <SkeletonText lines={3} lineHeight="14px" widths={['100%', '94%', '70%']} />
+                <SkeletonBlock $height="22px" $width="140px" $radius={tokens.radius.pill} />
+              </LandingStepCard>
+            ))}
+          </LandingStepsGrid>
+        </LandingHowItWorksInner>
+      </LandingHowItWorksSection>
+      <LandingCtaSection>
+        <LandingCtaCard $gap={tokens.spacing['2xl']}>
+          <FullWidthCenteredStack $gap={tokens.spacing.md} $maxWidth="720px">
+            <SkeletonBlock $height="44px" $width="86%" />
+            <SkeletonBlock $height="44px" $width="68%" />
+          </FullWidthCenteredStack>
+          <SkeletonText
+            lines={1}
+            lineHeight="22px"
+            maxWidth="440px"
+            widths={['88%']}
+          />
+          <SkeletonInline $gap={tokens.spacing.md}>
+            <SkeletonBlock $height="44px" $width="220px" $radius={tokens.radius.sm} />
+            <SkeletonBlock $height="44px" $width="160px" $radius={tokens.radius.sm} />
+          </SkeletonInline>
+          <LandingMarqueeRow $gap={tokens.spacing.sm}>
+            {Array.from({ length: 6 }, (_, index) => (
+              <LandingPill key={index}>
+                <SkeletonCircle $size="40px" />
+                <SkeletonBlock $height="14px" $width="90px" />
+              </LandingPill>
+            ))}
+          </LandingMarqueeRow>
+        </LandingCtaCard>
+      </LandingCtaSection>
     </LandingRoot>
   )
 }
 
-const DashboardShell = styled(SkeletonRegion)<{ $compact?: boolean }>`
-  max-width: ${({ $compact }) => ($compact ? '720px' : tokens.maxWidth.section)};
-  margin: 0 auto;
-  padding: ${({ $compact }) =>
-    $compact
-      ? `${tokens.spacing.xl} ${tokens.spacing.lg}`
-      : `${tokens.spacing['4xl']} ${tokens.spacing.xl}`};
+const DashboardShell = styled(SkeletonRegion)`
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
-  gap: ${({ $compact }) => ($compact ? tokens.spacing.md : tokens.spacing['3xl'])};
-  animation: ${fadeInUp} 0.35s ease both;
-
-  @media (min-width: 768px) {
-    padding: ${({ $compact }) =>
-      $compact
-        ? `${tokens.spacing['2xl']} ${tokens.spacing.xl}`
-        : `${tokens.spacing['5xl']} ${tokens.spacing['4xl']}`};
-    gap: ${({ $compact }) => ($compact ? tokens.spacing.lg : tokens.spacing['3xl'])};
-  }
-`
-
-const DashboardMainGrid = styled.div`
-  display: grid;
   gap: ${tokens.spacing['3xl']};
+  animation: ${fadeInUp} 0.4s ease both;
+`
+
+const DashHeroCard = styled.div`
+  display: flex;
+  flex-direction: column-reverse;
+  gap: ${tokens.spacing['2xl']};
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: ${tokens.spacing['4xl']};
+    row-gap: ${tokens.spacing['2xl']};
+    align-items: stretch;
   }
 `
 
-const DashboardColumn = styled(SkeletonStack)`
-  gap: ${tokens.spacing.xl};
+const DashHeroText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['2xl']};
+  min-width: 0;
 `
 
-const DashboardRoundGrid = styled(SkeletonGrid)`
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+const DashRewardsStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `
 
-function DashboardWideSkeleton() {
-  return (
-    <>
-      <DashboardMainGrid>
-        <DashboardColumn>
-          <SectionLabelSkeleton $height="12px" $width="112px" />
-          <SkeletonCard $padding={tokens.spacing['2xl']} $gap={tokens.spacing.lg}>
-            <SkeletonBlock $height="48px" $width="58%" />
-            <SkeletonText lines={2} lineHeight="14px" widths={['82%', '56%']} />
-            <SkeletonInline>
-              <SkeletonCircle $size="36px" />
-              <SkeletonText lines={2} lineHeight="12px" widths={['140px', '96px']} />
-            </SkeletonInline>
-          </SkeletonCard>
-        </DashboardColumn>
-        <DashboardColumn>
-          <div>
-            <SectionLabelWithMargin $height="12px" $width="112px" />
-            <DashboardRoundGrid>
-              {Array.from({ length: 3 }, (_, index) => (
-                <MiniStatSkeleton key={index} />
-              ))}
-            </DashboardRoundGrid>
-          </div>
-          <div>
-            <SectionLabelWithMargin $height="12px" $width="142px" />
-            <SkeletonStack $gap={tokens.spacing.xl}>
-              <SkeletonCard $padding={tokens.spacing.xl}>
-                <SpaceBetweenInline>
-                  <SkeletonBlock $height="18px" $width="112px" />
-                  <SkeletonBlock $height="18px" $width="56px" />
-                </SpaceBetweenInline>
-                <SkeletonBlock $height="8px" $width="100%" $radius={tokens.radius.pill} />
-              </SkeletonCard>
-              <SkeletonCard $padding={tokens.spacing.xl}>
-                <SkeletonBlock $height="20px" $width="44%" />
-                <SkeletonText lines={2} lineHeight="14px" widths={['92%', '68%']} />
-              </SkeletonCard>
-            </SkeletonStack>
-          </div>
-        </DashboardColumn>
-      </DashboardMainGrid>
-      <SkeletonCard $padding={tokens.spacing.xl}>
-        <SpaceBetweenInline>
-          <SectionLabelSkeleton $height="12px" $width="112px" />
-          <SkeletonBlock $height="12px" $width="84px" />
-        </SpaceBetweenInline>
-        <TierRowsSkeleton rows={5} />
-      </SkeletonCard>
-    </>
-  )
-}
+const DashChipsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+`
 
-function DashboardCompactSkeleton() {
-  return (
-    <>
-      <SkeletonCard $padding={tokens.spacing.lg} $gap={tokens.spacing.sm}>
-        <SpaceBetweenInline>
-          <SkeletonBlock $height="28px" $width="152px" />
-          <SkeletonBlock $height="14px" $width="92px" />
-        </SpaceBetweenInline>
-        <SkeletonInline>
-          <SkeletonCircle $size="22px" />
-          <SkeletonBlock $height="12px" $width="180px" />
-        </SkeletonInline>
-      </SkeletonCard>
-      <SkeletonCard $padding={tokens.spacing.lg}>
-        <SpaceBetweenInline>
-          <SkeletonBlock $height="16px" $width="112px" />
-          <SkeletonBlock $height="16px" $width="64px" />
-        </SpaceBetweenInline>
-        <SkeletonBlock $height="8px" $radius={tokens.radius.pill} />
-        <SpaceBetweenInline>
-          <SkeletonBlock $height="12px" $width="86px" />
-          <SkeletonBlock $height="12px" $width="86px" />
-        </SpaceBetweenInline>
-      </SkeletonCard>
-      <SkeletonGrid $columns="repeat(3, minmax(0, 1fr))">
-        {Array.from({ length: 3 }, (_, index) => (
-          <MiniStatSkeleton key={index} />
-        ))}
-      </SkeletonGrid>
-      <TierRowsSkeleton rows={5} />
-    </>
-  )
-}
+const DashChipSkeleton = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 14px;
+  height: 24px;
+`
 
-export function DashboardPageSkeleton({ compact = false }: { compact?: boolean }) {
+const DashAvatarColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
+`
+
+const DashAvatarRingSkeleton = styled.div`
+  width: 200px;
+  height: 200px;
+  border-radius: 9999px;
+  padding: 24px;
+  border: 12px solid ${tokens.color.borderLight};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const DashPayoutsCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const DashPayoutsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.sm};
+`
+
+const DashPayoutsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+`
+
+const DashPayoutCardSkeleton = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.bgSubtle};
+  border-radius: 8px;
+`
+
+const DashPayoutInner = styled(SkeletonStack)`
+  flex: 1;
+  min-width: 0;
+  gap: 6px;
+`
+
+const CHIP_WIDTHS = ['148px', '108px', '64px', '56px']
+
+export function DashboardPageSkeleton() {
   return (
-    <DashboardShell $compact={compact} label="Loading dashboard">
-      {compact ? <DashboardCompactSkeleton /> : <DashboardWideSkeleton />}
+    <DashboardShell label="Loading dashboard">
+      {/* Hero card */}
+      <DashHeroCard>
+        <DashHeroText>
+          <DashRewardsStack>
+            {/* RewardsLabel */}
+            <SkeletonBlock $height="20px" $width="220px" $maxWidth="100%" />
+            {/* RewardsNumber — large, drops on mobile */}
+            <SkeletonBlock
+              $height="68px"
+              $width="320px"
+              $maxWidth="100%"
+              $radius="8px"
+            />
+            {/* AprLine */}
+            <SkeletonBlock $height="20px" $width="180px" $maxWidth="100%" />
+          </DashRewardsStack>
+
+          {/* Info chips */}
+          <DashChipsRow>
+            {CHIP_WIDTHS.map((w, i) => (
+              <DashChipSkeleton key={i}>
+                <SkeletonCircle $size="14px" />
+                <SkeletonBlock $height="14px" $width={w} />
+              </DashChipSkeleton>
+            ))}
+          </DashChipsRow>
+
+          {/* Primary CTA (Share / Pick a delegate) */}
+          <SkeletonBlock
+            $height="40px"
+            $width="240px"
+            $maxWidth="100%"
+            $radius="8px"
+          />
+        </DashHeroText>
+
+        <DashAvatarColumn>
+          <DashAvatarRingSkeleton>
+            <SkeletonCircle $size="140px" />
+          </DashAvatarRingSkeleton>
+          <SkeletonBlock $height="24px" $width="128px" $radius="14px" />
+        </DashAvatarColumn>
+      </DashHeroCard>
+
+      {/* Recent payouts card */}
+      <DashPayoutsCard>
+        <DashPayoutsHeader>
+          <SkeletonBlock $height="20px" $width="120px" />
+          <SkeletonBlock $height="20px" $width="124px" />
+        </DashPayoutsHeader>
+        <DashPayoutsRow>
+          {Array.from({ length: 3 }, (_, i) => (
+            <DashPayoutCardSkeleton key={i}>
+              <DashPayoutInner>
+                <SkeletonBlock $height="20px" $width="72px" />
+                <SkeletonBlock $height="32px" $width="148px" $radius="6px" />
+                <SkeletonBlock $height="20px" $width="104px" />
+              </DashPayoutInner>
+              <SkeletonBlock
+                $height="14px"
+                $width="14px"
+                $radius="4px"
+              />
+            </DashPayoutCardSkeleton>
+          ))}
+        </DashPayoutsRow>
+      </DashPayoutsCard>
     </DashboardShell>
   )
 }
 
 const StatsBar = styled(SkeletonGrid)`
   grid-template-columns: repeat(3, 1fr);
-  border: 1px solid ${tokens.color.gray};
-  border-radius: ${tokens.radius.md};
-  box-shadow: ${tokens.shadow.sm};
-  background: ${tokens.color.surface};
-  overflow: hidden;
-  gap: 0;
+  gap: ${tokens.spacing.md};
+  width: 100%;
 `
 
 const StatsCell = styled(SkeletonStack)`
-  align-items: center;
+  align-items: stretch;
   gap: ${tokens.spacing.xs};
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
 
-  &:not(:last-child) {
-    border-right: 1px solid ${tokens.color.borderLight};
-  }
+const StatsCellTopRow = styled(SkeletonInline)`
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
 `
 
 export function StatsBarSkeleton() {
@@ -402,8 +542,11 @@ export function StatsBarSkeleton() {
       <StatsBar>
         {Array.from({ length: 3 }, (_, index) => (
           <StatsCell key={index}>
-            <SkeletonBlock $height="22px" $width="58px" />
-            <SkeletonBlock $height="12px" $width={index === 2 ? '136px' : '92px'} />
+            <StatsCellTopRow>
+              <SkeletonBlock $height="32px" $width="72px" $radius="6px" />
+              <SkeletonBlock $height="24px" $width="24px" $radius="4px" />
+            </StatsCellTopRow>
+            <SkeletonBlock $height="14px" $width={index === 1 ? '160px' : '108px'} />
           </StatsCell>
         ))}
       </StatsBar>
@@ -415,40 +558,77 @@ const VoterGrid = styled(SkeletonRegion)`
   display: grid;
   grid-template-columns: 1fr;
   gap: ${tokens.spacing.lg};
+  width: 100%;
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(3, 1fr);
   }
 `
 
+const VoterSkeletonCard = styled(SkeletonCard)`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+`
+
+const FluidSegment = styled(SkeletonBlock)`
+  flex: 1;
+  min-width: 0;
+`
+
+const NameStackSkeleton = styled(SkeletonStack)`
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+`
+
+const NameRowSkeleton = styled(SkeletonInline)`
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+`
+
 function VoterCardSkeleton() {
   return (
-    <SkeletonCard $padding={tokens.spacing.xl} $gap={tokens.spacing.lg}>
-      <SkeletonInline>
-        <SkeletonCircle $size="40px" />
-        <SkeletonText lines={2} lineHeight="12px" widths={['132px', '92px']} />
-      </SkeletonInline>
-      <SkeletonStack $gap={tokens.spacing.xs}>
-        <SkeletonBlock $height="12px" $width="112px" />
-        <SkeletonInline $gap={tokens.spacing.xs}>
-          {Array.from({ length: 10 }, (_, index) => (
-            <FluidSkeletonBlock key={index} $height="18px" $radius="4px" />
-          ))}
+    <VoterSkeletonCard $padding={tokens.spacing.lg} $gap={tokens.spacing.xl}>
+      {/* Header: avatar + name stack + proposals */}
+      <SkeletonStack $gap={tokens.spacing.lg}>
+        <SkeletonInline $gap={tokens.spacing.md}>
+          <SkeletonCircle $size="48px" />
+          <NameStackSkeleton>
+            <NameRowSkeleton>
+              <SkeletonBlock $height="20px" $width="118px" $radius="4px" />
+              <SkeletonBlock $height="24px" $width="88px" $radius="14px" />
+            </NameRowSkeleton>
+            <SkeletonBlock $height="20px" $width="92px" />
+          </NameStackSkeleton>
         </SkeletonInline>
+
+        {/* Proposal section: label + count, then 10 segment pills */}
+        <SkeletonStack $gap={tokens.spacing.xs}>
+          <SpaceBetweenInline>
+            <SkeletonBlock $height="20px" $width="120px" />
+            <SkeletonBlock $height="20px" $width="44px" $radius="4px" />
+          </SpaceBetweenInline>
+          <SkeletonInline $gap="4px">
+            {Array.from({ length: 10 }, (_, index) => (
+              <FluidSegment key={index} $height="12px" $radius="9999px" />
+            ))}
+          </SkeletonInline>
+        </SkeletonStack>
       </SkeletonStack>
-      <SkeletonGrid $columns="repeat(3, minmax(0, 1fr))">
+
+      {/* Stats row: 3 stats (value + label) */}
+      <SkeletonGrid $columns="repeat(3, minmax(0, 1fr))" $gap={tokens.spacing.md}>
         {Array.from({ length: 3 }, (_, index) => (
-          <SkeletonStack key={index} $gap="4px">
-            <SkeletonBlock $height="16px" $width="70%" />
-            <SkeletonBlock $height="12px" $width="88%" />
+          <SkeletonStack key={index} $gap="2px">
+            <SkeletonBlock $height="20px" $width={index === 2 ? '60px' : '48px'} />
+            <SkeletonBlock $height="20px" $width={index === 0 ? '78px' : index === 1 ? '60px' : '76px'} />
           </SkeletonStack>
         ))}
       </SkeletonGrid>
-      <SkeletonStack>
-        <SkeletonBlock $height="36px" />
-        <CenteredSkeletonBlock $height="14px" $width="84px" />
-      </SkeletonStack>
-    </SkeletonCard>
+    </VoterSkeletonCard>
   )
 }
 
@@ -462,352 +642,1247 @@ export function VoterCardsSkeleton() {
   )
 }
 
-const ProfileShell = styled(SkeletonRegion)`
-  max-width: ${tokens.maxWidth.lg};
-  margin: 0 auto;
-  padding: ${tokens.spacing['2xl']} ${tokens.spacing.xl};
+/* ─── Full-page Voters skeleton (Suspense fallback) ──── */
+
+const VotersPageShell = styled(SkeletonRegion)`
+  width: 100%;
+  max-width: 1120px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: ${tokens.spacing['2xl']};
+
+  @media (min-width: 768px) {
+    gap: 64px;
+  }
+`
+
+const VotersTopSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${tokens.spacing['4xl']};
+  width: 100%;
+`
+
+const VotersHeaderBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+`
+
+const VotersShareStrip = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px 16px;
+  background: ${tokens.color.lightBlueOpacity};
+  border: 1px solid ${tokens.color.lightBlue};
+  border-radius: 12px;
+
+  @media (min-width: 720px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`
+
+const VotersFilterRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.lg};
+  width: 100%;
+  flex-wrap: wrap;
+`
+
+const VotersSortPills = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.sm};
+  align-items: center;
+`
+
+const CardsAndFiltersShell = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['2xl']};
-  animation: ${fadeInUp} 0.35s ease both;
+  width: 100%;
+`
+
+export function VotersPageSkeleton() {
+  return (
+    <VotersPageShell label="Loading voters page">
+      <VotersTopSection>
+        <VotersHeaderBlock>
+          {/* Eyebrow pill */}
+          <SkeletonBlock $height="28px" $width="180px" $radius="14px" />
+          {/* Title — two lines at 68px */}
+          <SkeletonStack $gap="8px" $maxWidth="720px">
+            <SkeletonBlock $height="68px" $width="640px" $maxWidth="100%" $radius="8px" />
+            <SkeletonBlock $height="68px" $width="420px" $maxWidth="100%" $radius="8px" />
+          </SkeletonStack>
+          {/* Description — two lines */}
+          <SkeletonStack $gap="4px" $maxWidth="564px">
+            <SkeletonBlock $height="20px" $width="100%" />
+            <SkeletonBlock $height="20px" $width="78%" />
+          </SkeletonStack>
+        </VotersHeaderBlock>
+
+        {/* Stats row — reuses the same skeleton as the live component */}
+        <StatsBarSkeleton />
+
+        {/* Share strip — matches the live network-effect band */}
+        <VotersShareStrip>
+          <SkeletonBlock $height="20px" $width="60%" $maxWidth="420px" />
+          <SkeletonBlock $height="32px" $width="180px" $radius="8px" />
+        </VotersShareStrip>
+      </VotersTopSection>
+
+      <CardsAndFiltersShell>
+        <VotersFilterRow>
+          {/* Search */}
+          <SkeletonBlock $height="44px" $width="400px" $maxWidth="100%" $radius="9999px" />
+          {/* Sort label + 4 pills */}
+          <VotersSortPills>
+            <SkeletonBlock $height="20px" $width="52px" />
+            <SkeletonBlock $height="32px" $width="124px" $radius="9999px" />
+            <SkeletonBlock $height="32px" $width="74px" $radius="9999px" />
+            <SkeletonBlock $height="32px" $width="92px" $radius="9999px" />
+            <SkeletonBlock $height="32px" $width="74px" $radius="9999px" />
+          </VotersSortPills>
+        </VotersFilterRow>
+
+        <VoterCardsSkeleton />
+      </CardsAndFiltersShell>
+    </VotersPageShell>
+  )
+}
+
+/* ─── Voter Profile skeleton (new design) ─── */
+
+const ProfileShell = styled(SkeletonRegion)`
+  width: 100%;
+  max-width: 1120px;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['3xl']};
+`
+
+const ProfileHeaderCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['2xl']};
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+    flex-direction: row;
+    align-items: stretch;
+    gap: ${tokens.spacing['4xl']};
   }
 `
 
-const ProfileHero = styled(SkeletonCard)`
+const ProfileHeaderText = styled(SkeletonStack)`
+  flex: 1;
+  min-width: 0;
+  gap: ${tokens.spacing['2xl']};
+`
+
+const ProfileTitleBlock = styled(SkeletonStack)`
+  gap: ${tokens.spacing.md};
+`
+
+const ProfileNameRow = styled(SkeletonInline)`
+  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+  align-items: baseline;
+`
+
+const ProfileSocialRow = styled(SkeletonInline)`
+  flex-wrap: wrap;
+  gap: 4px;
+`
+
+const ProfileAvatarColumn = styled.div`
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  text-align: center;
-  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['3xl']};
-  }
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
 `
 
-const ProfileStatsGrid = styled(SkeletonGrid)`
+const ProfileStatsRow = styled.div`
+  display: grid;
   grid-template-columns: repeat(2, 1fr);
+  gap: ${tokens.spacing.md};
+  width: 100%;
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(4, 1fr);
   }
 `
 
+const ProfileAvatarSkeleton = styled(SkeletonCircle)`
+  @media (max-width: 767px) {
+    width: 160px;
+    height: 160px;
+    min-width: 160px;
+  }
+`
+
+const ProfileStatCard = styled(SkeletonStack)`
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  gap: ${tokens.spacing.xs};
+`
+
+const ProfileStatTopRow = styled(SkeletonInline)`
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+`
+
+const ProfileVotingRecordSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+  width: 100%;
+`
+
+const ProfileTableCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+`
+
+const ProfileTableHead = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+`
+
+const ProfileTableHeadCell = styled.div<{ $width?: string }>`
+  padding: 12px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+`
+
+const ProfileTableRow = styled.div`
+  display: flex;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+`
+
+const ProfileTableCell = styled.div<{ $width?: string }>`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  padding: 12px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+`
+
 export function DelegateProfileSkeleton() {
   return (
     <ProfileShell label="Loading delegate profile">
-      <SkeletonBlock $height="18px" $width="112px" />
-      <ProfileHero $gap={tokens.spacing.lg}>
-        <SkeletonCircle $size="96px" />
-        <SkeletonText lines={2} lineHeight="18px" widths={['220px', '160px']} />
-        <SkeletonBlock $height="50px" $width="100%" $maxWidth="400px" />
-        <SkeletonBlock $height="12px" $width="116px" />
-      </ProfileHero>
-      <ProfileStatsGrid>
+      <ProfileHeaderCard>
+        <ProfileHeaderText>
+          <ProfileTitleBlock>
+            {/* Back link */}
+            <SkeletonBlock $height="20px" $width="148px" />
+            {/* Name + address tag */}
+            <ProfileNameRow>
+              <SkeletonBlock $height="68px" $width="280px" $radius="8px" />
+              <SkeletonBlock $height="24px" $width="120px" $radius="14px" />
+            </ProfileNameRow>
+            {/* Description — two lines */}
+            <SkeletonStack $gap="4px" $maxWidth="720px">
+              <SkeletonBlock $height="20px" $width="92%" />
+              <SkeletonBlock $height="20px" $width="68%" />
+            </SkeletonStack>
+          </ProfileTitleBlock>
+
+          {/* Social chip placeholders — Twitter / ENS profile / Anticapture */}
+          <ProfileSocialRow>
+            <SkeletonBlock $height="24px" $width="124px" $radius="14px" />
+            <SkeletonBlock $height="24px" $width="108px" $radius="14px" />
+            <SkeletonBlock $height="24px" $width="112px" $radius="14px" />
+          </ProfileSocialRow>
+
+          {/* Delegate CTA */}
+          <SkeletonBlock $height="40px" $width="180px" $radius="8px" />
+        </ProfileHeaderText>
+
+        {/* Right column: 200×200 avatar circle (160 on mobile) + participation tag */}
+        <ProfileAvatarColumn>
+          <ProfileAvatarSkeleton $size="200px" />
+          <SkeletonBlock $height="24px" $width="148px" $radius="14px" />
+        </ProfileAvatarColumn>
+      </ProfileHeaderCard>
+
+      {/* 4-stat row */}
+      <ProfileStatsRow>
         {Array.from({ length: 4 }, (_, index) => (
-          <MiniStatSkeleton key={index} />
+          <ProfileStatCard key={index}>
+            <ProfileStatTopRow>
+              <SkeletonBlock $height="36px" $width="84px" $radius="6px" />
+              <SkeletonBlock $height="24px" $width="24px" $radius="4px" />
+            </ProfileStatTopRow>
+            <SkeletonBlock $height="20px" $width={index === 2 ? '180px' : '120px'} />
+          </ProfileStatCard>
         ))}
-      </ProfileStatsGrid>
-      <SkeletonCard $padding={tokens.spacing.xl}>
-        <SectionLabelSkeleton $height="12px" $width="220px" />
-        <SkeletonInline $gap={tokens.spacing.xs}>
-          {Array.from({ length: 10 }, (_, index) => (
-            <FluidSkeletonBlock key={index} $height="34px" $radius="6px" />
-          ))}
-        </SkeletonInline>
-      </SkeletonCard>
-      <CenteredSkeletonBlock $height="18px" $width="260px" />
+      </ProfileStatsRow>
+
+      {/* Voting record section — title + table */}
+      <ProfileVotingRecordSection>
+        <SkeletonBlock $height="24px" $width="160px" $radius="6px" />
+        <ProfileTableCard>
+        <ProfileTableHead>
+          <ProfileTableHeadCell>
+            <SkeletonBlock $height="20px" $width="124px" />
+          </ProfileTableHeadCell>
+          <ProfileTableHeadCell $width="200px">
+            <SkeletonBlock $height="20px" $width="104px" />
+          </ProfileTableHeadCell>
+          <ProfileTableHeadCell $width="200px">
+            <SkeletonBlock $height="20px" $width="54px" />
+          </ProfileTableHeadCell>
+        </ProfileTableHead>
+        {Array.from({ length: 10 }, (_, index) => (
+          <ProfileTableRow key={index}>
+            <ProfileTableCell>
+              <SkeletonBlock $height="20px" $width="68%" $maxWidth="360px" />
+            </ProfileTableCell>
+            <ProfileTableCell $width="200px">
+              <SkeletonCircle $size="16px" />
+              <SkeletonBlock $height="20px" $width="40px" />
+            </ProfileTableCell>
+            <ProfileTableCell $width="200px">
+              <SkeletonCircle $size="16px" />
+              <SkeletonBlock $height="20px" $width="40px" />
+            </ProfileTableCell>
+          </ProfileTableRow>
+        ))}
+        </ProfileTableCard>
+      </ProfileVotingRecordSection>
     </ProfileShell>
   )
 }
 
-const RoundsShell = styled(SkeletonRegion)`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+const RoundDetailShell = styled(SkeletonRegion)`
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
-  animation: ${fadeInUp} 0.35s ease both;
+  animation: ${fadeInUp} 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+`
+
+const RoundDetailHeaderCard = styled.div`
+  display: flex;
+  flex-direction: column-reverse;
+  gap: ${tokens.spacing['2xl']};
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "text avatar";
+    column-gap: ${tokens.spacing['4xl']};
+    row-gap: ${tokens.spacing['2xl']};
+    align-items: center;
   }
 `
 
-const RoundsHeadingRow = styled(SkeletonInline)`
+const RoundDetailHeaderText = styled(SkeletonStack)`
+  gap: ${tokens.spacing.lg};
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    grid-area: text;
+  }
+`
+
+const RoundDetailAvatarColumn = styled.div`
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    grid-area: avatar;
+  }
+`
+
+const RoundDetailRing = styled.div`
+  width: 220px;
+  height: 220px;
+  border-radius: 9999px;
+  border: 12px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surface};
+
+  @media (min-width: 768px) {
+    width: 240px;
+    height: 240px;
+  }
+`
+
+const RoundDetailSocialRow = styled(SkeletonInline)`
   flex-wrap: wrap;
+  gap: 4px;
+`
+
+const RoundDetailCtaRow = styled(SkeletonInline)`
+  gap: 8px;
+  flex-wrap: wrap;
+`
+
+const RoundDetailStatsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${tokens.spacing.md};
+  width: 100%;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+`
+
+const RoundDetailStatCard = styled(SkeletonStack)`
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  gap: 4px;
+`
+
+const RoundDetailStatTopRow = styled(SkeletonInline)`
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+`
+
+const RoundDetailSection = styled.section`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   gap: ${tokens.spacing.lg};
 `
 
-const RoundsGrid = styled.div`
-  display: grid;
-  gap: ${tokens.spacing['3xl']};
-  min-width: 0;
+const RoundDetailTableCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
 
-  @media (min-width: 1024px) {
-    grid-template-columns: 2fr minmax(280px, 1fr);
+  @media (max-width: 767px) {
+    border: none;
+    background: transparent;
+    overflow: visible;
+    gap: 12px;
   }
 `
 
-const RoundsLeftColumn = styled(SkeletonStack)`
-  gap: ${tokens.spacing['3xl']};
-`
-
-function RoundSummaryCardSkeleton() {
-  return (
-    <SkeletonCard $padding={tokens.spacing.xl} $gap={tokens.spacing.lg}>
-      <SpaceBetweenInline>
-        <SkeletonBlock $height="22px" $width="132px" />
-        <SkeletonBlock $height="28px" $width="96px" $radius={tokens.radius.pill} />
-      </SpaceBetweenInline>
-      <SkeletonBlock $height="10px" $radius={tokens.radius.pill} />
-      <SkeletonGrid $columns="repeat(2, minmax(0, 1fr))">
-        {Array.from({ length: 4 }, (_, index) => (
-          <SkeletonStack key={index} $gap="4px">
-            <SkeletonBlock $height="12px" $width="58%" />
-            <SkeletonBlock $height="18px" $width="76%" />
-          </SkeletonStack>
-        ))}
-      </SkeletonGrid>
-    </SkeletonCard>
-  )
-}
-
-export function RoundsPageSkeleton() {
-  return (
-    <RoundsShell label="Loading rounds page">
-      <SkeletonStack $gap={tokens.spacing.lg}>
-        <SectionLabelSkeleton $height="12px" $width="72px" />
-        <RoundsHeadingRow>
-          <SkeletonBlock $height="54px" $width="310px" $maxWidth="100%" />
-          <SkeletonBlock $height="54px" $width="156px" $radius={tokens.radius.sm} />
-        </RoundsHeadingRow>
-        <SkeletonStack $gap={tokens.spacing.lg}>
-          <SectionLabelSkeleton $height="12px" $width="124px" />
-          <AddressFormSkeleton />
-        </SkeletonStack>
-      </SkeletonStack>
-      <RoundsGrid>
-        <RoundsLeftColumn>
-          <RoundSummaryCardSkeleton />
-          <TableSkeleton rows={5} columns={4} />
-        </RoundsLeftColumn>
-        <TierRowsSkeleton rows={5} />
-      </RoundsGrid>
-    </RoundsShell>
-  )
-}
-
-const RoundDetailHeaderActions = styled(SkeletonInline)`
+const RoundDetailTableHeader = styled.div`
+  display: flex;
   justify-content: space-between;
-  flex-wrap: wrap;
-`
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 12px;
 
-const RoundDetailSummaryGrid = styled(SkeletonGrid)`
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  @media (max-width: 767px) {
+    padding: 0;
   }
 `
 
-function RoundDetailSectionSkeleton({
-  columns = 4,
-  rows = 4,
-  titleWidth = '160px',
-}: {
-  columns?: number
-  rows?: number
-  titleWidth?: string
-}) {
-  return (
-    <SkeletonStack $gap={tokens.spacing.lg}>
-      <SpaceBetweenInline>
-        <SectionLabelSkeleton $height="12px" $width={titleWidth} />
-        <SkeletonBlock $height="12px" $width="88px" />
-      </SpaceBetweenInline>
-      <TableSkeleton rows={rows} columns={columns} />
-    </SkeletonStack>
-  )
-}
+const RoundDetailTableHeadRow = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-top: 1px solid ${tokens.color.borderLight};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`
+
+const RoundDetailTableHeadCell = styled.div<{ $weight?: number; $end?: boolean }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $end }) => ($end ? 'flex-end' : 'flex-start')};
+  padding: 12px;
+`
+
+const RoundDetailTableRow = styled.div`
+  display: flex;
+  width: 100%;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    padding: 16px;
+    gap: 8px;
+    border: 1px solid ${tokens.color.borderLight};
+    border-radius: 12px;
+    background: ${tokens.color.surface};
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+    &:not(:last-child) {
+      border-bottom: 1px solid ${tokens.color.borderLight};
+    }
+  }
+`
+
+const RoundDetailTableCell = styled.div<{ $weight?: number; $end?: boolean }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: ${({ $end }) => ($end ? 'flex-end' : 'flex-start')};
+  padding: 14px 12px;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    padding: 0;
+    justify-content: space-between;
+  }
+`
 
 export function RoundDetailPageSkeleton() {
   return (
-    <RoundsShell label="Loading round detail">
-      <SkeletonStack $gap={tokens.spacing.lg}>
-        <RoundDetailHeaderActions>
-          <SkeletonBlock $height="18px" $width="112px" />
-          <SkeletonInline $gap={tokens.spacing.sm}>
-            <SkeletonBlock $height="36px" $width="124px" />
-            <SkeletonBlock $height="36px" $width="102px" />
-          </SkeletonInline>
-        </RoundDetailHeaderActions>
-        <RoundDetailHeaderActions>
-          <SkeletonStack>
-            <SectionLabelSkeleton $height="12px" $width="116px" />
-            <SkeletonBlock $height="42px" $width="170px" />
-          </SkeletonStack>
-          <SkeletonBlock $height="28px" $width="72px" $radius={tokens.radius.pill} />
-        </RoundDetailHeaderActions>
-        <AddressFormSkeleton />
-      </SkeletonStack>
-      <RoundDetailSummaryGrid>
-        {Array.from({ length: 14 }, (_, index) => (
-          <SkeletonStack key={index} $gap="5px">
-            <SkeletonBlock $height="11px" $width={index % 3 === 0 ? '72%' : '58%'} />
-            <SkeletonBlock $height="18px" $width={index % 4 === 0 ? '84%' : '64%'} />
-          </SkeletonStack>
+    <RoundDetailShell label="Loading round detail">
+      {/* Header card */}
+      <RoundDetailHeaderCard>
+        <RoundDetailHeaderText>
+          {/* Back link */}
+          <SkeletonBlock $height="20px" $width="120px" />
+          {/* Title */}
+          <SkeletonBlock $height="68px" $width="280px" $maxWidth="100%" $radius="8px" />
+          {/* Social chips */}
+          <RoundDetailSocialRow>
+            <SkeletonBlock $height="24px" $width="148px" $radius="14px" />
+            <SkeletonBlock $height="24px" $width="132px" $radius="14px" />
+          </RoundDetailSocialRow>
+          {/* Prev / next nav */}
+          <RoundDetailCtaRow>
+            <SkeletonBlock $height="36px" $width="124px" $radius="8px" />
+            <SkeletonBlock $height="36px" $width="124px" $radius="8px" />
+          </RoundDetailCtaRow>
+        </RoundDetailHeaderText>
+
+        <RoundDetailAvatarColumn>
+          <RoundDetailRing />
+          <SkeletonBlock $height="28px" $width="120px" $radius="14px" />
+        </RoundDetailAvatarColumn>
+      </RoundDetailHeaderCard>
+
+      {/* 4-stat row */}
+      <RoundDetailStatsRow>
+        {Array.from({ length: 4 }, (_, i) => (
+          <RoundDetailStatCard key={i}>
+            <RoundDetailStatTopRow>
+              <SkeletonBlock $height="36px" $width={i === 0 ? '120px' : '84px'} $radius="6px" />
+              <SkeletonBlock $height="24px" $width="24px" $radius="4px" />
+            </RoundDetailStatTopRow>
+            <SkeletonBlock $height="20px" $width={i === 0 ? '110px' : i === 1 ? '128px' : '96px'} />
+          </RoundDetailStatCard>
         ))}
-      </RoundDetailSummaryGrid>
-      <RoundDetailSectionSkeleton titleWidth="132px" rows={2} columns={3} />
-      <RoundDetailSectionSkeleton titleWidth="112px" rows={5} columns={5} />
-      <RoundDetailSectionSkeleton titleWidth="118px" rows={5} columns={4} />
-      <RoundDetailSectionSkeleton titleWidth="126px" rows={4} columns={4} />
-    </RoundsShell>
+      </RoundDetailStatsRow>
+
+      {/* Address inspector */}
+      <RoundDetailSection>
+        <SkeletonStack $gap="4px">
+          <SkeletonBlock $height="14px" $width="112px" />
+          <SkeletonBlock $height="24px" $width="320px" $maxWidth="100%" />
+        </SkeletonStack>
+        <AddressFormSkeleton />
+      </RoundDetailSection>
+
+      {/* Top voter rewards table */}
+      <RoundDetailTableCard>
+        <RoundDetailTableHeader>
+          <SkeletonStack $gap="4px">
+            <SkeletonBlock $height="14px" $width="148px" />
+            <SkeletonBlock $height="20px" $width="220px" />
+          </SkeletonStack>
+        </RoundDetailTableHeader>
+        <RoundDetailTableHeadRow>
+          <RoundDetailTableHeadCell $weight={0.6}>
+            <SkeletonBlock $height="16px" $width="44px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={2}>
+            <SkeletonBlock $height="16px" $width="64px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={1.2} $end>
+            <SkeletonBlock $height="16px" $width="92px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={1.4} $end>
+            <SkeletonBlock $height="16px" $width="60px" />
+          </RoundDetailTableHeadCell>
+        </RoundDetailTableHeadRow>
+        {Array.from({ length: 5 }, (_, i) => (
+          <RoundDetailTableRow key={i}>
+            <RoundDetailTableCell $weight={0.6}>
+              <SkeletonBlock $height="22px" $width="36px" $radius="9999px" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={2}>
+              <SkeletonCircle $size="28px" />
+              <SkeletonBlock $height="20px" $width={i % 2 === 0 ? '160px' : '120px'} $maxWidth="100%" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={1.2} $end>
+              <SkeletonBlock $height="20px" $width="84px" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={1.4} $end>
+              <SkeletonBlock $height="20px" $width="80px" />
+              <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+            </RoundDetailTableCell>
+          </RoundDetailTableRow>
+        ))}
+      </RoundDetailTableCard>
+
+      {/* Top token holder rewards table */}
+      <RoundDetailTableCard>
+        <RoundDetailTableHeader>
+          <SkeletonStack $gap="4px">
+            <SkeletonBlock $height="14px" $width="180px" />
+            <SkeletonBlock $height="20px" $width="200px" />
+          </SkeletonStack>
+        </RoundDetailTableHeader>
+        <RoundDetailTableHeadRow>
+          <RoundDetailTableHeadCell $weight={0.6}>
+            <SkeletonBlock $height="16px" $width="44px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={2}>
+            <SkeletonBlock $height="16px" $width="64px" />
+          </RoundDetailTableHeadCell>
+          <RoundDetailTableHeadCell $weight={1.4} $end>
+            <SkeletonBlock $height="16px" $width="60px" />
+          </RoundDetailTableHeadCell>
+        </RoundDetailTableHeadRow>
+        {Array.from({ length: 5 }, (_, i) => (
+          <RoundDetailTableRow key={i}>
+            <RoundDetailTableCell $weight={0.6}>
+              <SkeletonBlock $height="22px" $width="36px" $radius="9999px" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={2}>
+              <SkeletonCircle $size="28px" />
+              <SkeletonBlock $height="20px" $width={i % 2 === 0 ? '140px' : '108px'} $maxWidth="100%" />
+            </RoundDetailTableCell>
+            <RoundDetailTableCell $weight={1.4} $end>
+              <SkeletonBlock $height="20px" $width="76px" />
+              <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+            </RoundDetailTableCell>
+          </RoundDetailTableRow>
+        ))}
+      </RoundDetailTableCard>
+    </RoundDetailShell>
   )
 }
 
-const LotteryRoot = styled(SkeletonRegion)`
+/* ─── Transparency full-page skeleton (matches new design) ─── */
+
+const TransparencyShell = styled(SkeletonRegion)`
   width: 100%;
-  animation: ${fadeInUp} 0.35s ease both;
-`
-
-const LotteryHeaderBand = styled.section`
-  width: 100%;
-  background: linear-gradient(to bottom, ${tokens.color.lightBlue}, ${tokens.color.white});
-  border-bottom: 1px solid ${tokens.color.borderLight};
-`
-
-const LotteryHeaderContent = styled(SkeletonStack)`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing['4xl']} ${tokens.spacing.xl} ${tokens.spacing['3xl']};
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['6xl']} ${tokens.spacing['2xl']} ${tokens.spacing['4xl']};
-  }
-`
-
-const LotteryContent = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl} ${tokens.spacing['7xl']};
-  display: grid;
-  gap: ${tokens.spacing['3xl']};
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']} ${tokens.spacing['7xl']};
-  }
-`
-
-const LotteryExplorerGrid = styled.div`
-  display: grid;
-  gap: ${tokens.spacing.lg};
-
-  @media (min-width: 980px) {
-    grid-template-columns: minmax(280px, 0.36fr) minmax(0, 0.64fr);
-  }
-`
-
-const LotteryTopGrid = styled.div`
-  display: grid;
-  gap: ${tokens.spacing.lg};
-
-  @media (min-width: 980px) {
-    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  }
-`
-
-function RoundOptionSkeleton() {
-  return (
-    <SkeletonCard $padding={tokens.spacing.md} $gap={tokens.spacing.xs} $radius={tokens.radius.sm}>
-      <SpaceBetweenInline>
-        <SkeletonBlock $height="16px" $width="72px" />
-        <SkeletonBlock $height="22px" $width="48px" $radius={tokens.radius.pill} />
-      </SpaceBetweenInline>
-      <SkeletonBlock $height="12px" $width="84%" />
-    </SkeletonCard>
-  )
-}
-
-export function LotteryPageSkeleton() {
-  return (
-    <LotteryRoot label="Loading lottery page">
-      <LotteryHeaderBand>
-        <LotteryHeaderContent $gap={tokens.spacing.lg}>
-          <SectionLabelSkeleton $height="12px" $width="72px" />
-          <SkeletonBlock $height="50px" $width="340px" $maxWidth="100%" />
-          <SkeletonText lines={2} lineHeight="16px" maxWidth="680px" widths={['100%', '68%']} />
-          <SkeletonBlock $height="14px" $width="420px" $maxWidth="100%" />
-        </LotteryHeaderContent>
-      </LotteryHeaderBand>
-      <LotteryContent>
-        <LotteryExplorerGrid>
-          <SkeletonCard $padding={tokens.spacing['2xl']}>
-            <SpaceBetweenInline>
-              <SkeletonBlock $height="24px" $width="116px" />
-              <SkeletonBlock $height="14px" $width="64px" />
-            </SpaceBetweenInline>
-            {Array.from({ length: 4 }, (_, index) => (
-              <RoundOptionSkeleton key={index} />
-            ))}
-          </SkeletonCard>
-          <SkeletonCard $padding={tokens.spacing['2xl']}>
-            <SpaceBetweenInline>
-              <SkeletonBlock $height="26px" $width="190px" />
-              <SkeletonBlock $height="28px" $width="86px" $radius={tokens.radius.pill} />
-            </SpaceBetweenInline>
-            <SkeletonGrid $columns="repeat(4, minmax(0, 1fr))">
-              {Array.from({ length: 4 }, (_, index) => (
-                <MiniStatSkeleton key={index} />
-              ))}
-            </SkeletonGrid>
-            <TableSkeleton rows={4} columns={4} />
-          </SkeletonCard>
-        </LotteryExplorerGrid>
-        <LotteryTopGrid>
-          <SkeletonCard $padding={tokens.spacing['2xl']}>
-            <SkeletonBlock $height="26px" $width="210px" />
-            <SkeletonText lines={2} lineHeight="14px" widths={['100%', '70%']} />
-            <SkeletonGrid $columns="repeat(3, minmax(0, 1fr))">
-              {Array.from({ length: 3 }, (_, index) => (
-                <MiniStatSkeleton key={index} />
-              ))}
-            </SkeletonGrid>
-          </SkeletonCard>
-          <SkeletonCard $padding={tokens.spacing['2xl']}>
-            <SkeletonBlock $height="26px" $width="160px" />
-            <SkeletonText lines={2} lineHeight="14px" widths={['78%', '48%']} />
-            <AddressFormSkeleton />
-          </SkeletonCard>
-        </LotteryTopGrid>
-      </LotteryContent>
-    </LotteryRoot>
-  )
-}
-
-const TransparencyStatsRegion = styled(SkeletonRegion)`
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  align-items: center;
+  gap: 40px;
 `
 
-const TransparencyStatGrid = styled(SkeletonGrid)`
-  grid-template-columns: 1fr 1fr;
+const TransparencyHeader = styled(SkeletonStack)`
+  align-items: center;
+  width: 100%;
+  gap: 16px;
 `
 
-export function TransparencyStatsSkeleton() {
+const TransparencyCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['3xl']};
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const SectionHeaderStack = styled(SkeletonStack)`
+  gap: 12px;
+`
+
+const StaircaseRowSkeleton = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+`
+
+const StaircaseColumnSkeleton = styled.div<{ $offset: number }>`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: ${({ $offset }) => $offset}px;
+
+  @media (max-width: 767px) {
+    padding-top: 0;
+  }
+`
+
+const StaircaseBodySkeleton = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  background: ${tokens.color.bgSubtle};
+`
+
+const GuardrailsRowSkeleton = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+`
+
+const DividerSkeleton = styled.div`
+  height: 1px;
+  background: ${tokens.color.borderLight};
+  width: 100%;
+`
+
+const VerifyBlockSkeleton = styled(SkeletonStack)`
+  gap: 12px;
+`
+
+const VerifyRowSkeleton = styled.div`
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+`
+
+const VerifyCardSkeleton = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 12px 12px;
+  background: ${tokens.color.bgSubtle};
+  border-radius: 8px;
+`
+
+const ConditionGridSkeleton = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+`
+
+const ConditionChipSkeleton = styled(SkeletonStack)`
+  flex: 1;
+  min-width: 220px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: ${tokens.color.bgSubtle};
+  gap: 4px;
+`
+
+const RoundsBlockSkeleton = styled(SkeletonStack)`
+  gap: 8px;
+`
+
+const RoundsTableSkeleton = styled.div`
+  display: flex;
+  flex-direction: column;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+`
+
+const RoundsHeadRowSkeleton = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`
+
+const RoundsHeadCellSkeleton = styled.div<{ $width?: string }>`
+  padding: 12px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+`
+
+const RoundsRowSkeleton = styled.div`
+  display: flex;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+`
+
+const RoundsCellSkeleton = styled.div<{ $width?: string }>`
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  ${({ $width }) => ($width ? `width: ${$width}; flex-shrink: 0;` : `flex: 1; min-width: 0;`)}
+
+  @media (max-width: 767px) {
+    width: 100%;
+    flex: none;
+  }
+`
+
+const STAIR_OFFSETS = [120, 80, 40, 0]
+
+export function TransparencyPageSkeleton() {
   return (
-    <TransparencyStatsRegion label="Loading transparency stats">
-      <SectionLabelSkeleton $height="12px" $width="170px" />
-      <TransparencyStatGrid>
-        {Array.from({ length: 4 }, (_, index) => (
-          <MiniStatSkeleton key={index} />
-        ))}
-      </TransparencyStatGrid>
-    </TransparencyStatsRegion>
+    <TransparencyShell label="Loading transparency page">
+      {/* Hero */}
+      <TransparencyHeader>
+        <SkeletonBlock $height="28px" $width="220px" $radius="14px" />
+        <SkeletonStack $gap="8px" $maxWidth="720px">
+          <SkeletonBlock $height="68px" $width="640px" $maxWidth="100%" $radius="8px" />
+          <SkeletonBlock $height="68px" $width="420px" $maxWidth="100%" $radius="8px" />
+        </SkeletonStack>
+        <SkeletonStack $gap="4px" $maxWidth="646px">
+          <SkeletonBlock $height="20px" $width="100%" />
+          <SkeletonBlock $height="20px" $width="84%" />
+        </SkeletonStack>
+      </TransparencyHeader>
+
+      {/* Methodology card */}
+      <TransparencyCard>
+        <SectionHeaderStack>
+          <SkeletonBlock $height="20px" $width="112px" />
+          <SkeletonBlock $height="34px" $width="380px" $radius="6px" />
+          <SkeletonStack $gap="4px" $maxWidth="720px">
+            <SkeletonBlock $height="20px" $width="100%" />
+            <SkeletonBlock $height="20px" $width="72%" />
+          </SkeletonStack>
+        </SectionHeaderStack>
+
+        <StaircaseRowSkeleton>
+          {STAIR_OFFSETS.map((offset, i) => (
+            <StaircaseColumnSkeleton key={i} $offset={offset}>
+              <SkeletonBlock $height="4px" $width="100%" $radius="9999px" />
+              <StaircaseBodySkeleton>
+                <SkeletonBlock $height="20px" $width="80%" />
+                <SkeletonBlock $height="14px" $width="100%" />
+                <SkeletonBlock $height="14px" $width="92%" />
+                <SkeletonBlock $height="14px" $width="74%" />
+              </StaircaseBodySkeleton>
+            </StaircaseColumnSkeleton>
+          ))}
+        </StaircaseRowSkeleton>
+
+        <GuardrailsRowSkeleton>
+          <SkeletonBlock $height="20px" $width="140px" />
+          <SkeletonBlock $height="32px" $width="148px" $radius="9999px" />
+          <SkeletonBlock $height="32px" $width="138px" $radius="9999px" />
+          <SkeletonBlock $height="32px" $width="156px" $radius="9999px" />
+          <SkeletonBlock $height="32px" $width="158px" $radius="9999px" />
+        </GuardrailsRowSkeleton>
+
+        <DividerSkeleton />
+
+        <VerifyBlockSkeleton>
+          <SkeletonBlock $height="20px" $width="172px" />
+          <VerifyRowSkeleton>
+            {Array.from({ length: 2 }, (_, i) => (
+              <VerifyCardSkeleton key={i}>
+                <SkeletonBlock $height="40px" $width="40px" $radius="8px" />
+                <SkeletonStack $gap="2px" $maxWidth="160px">
+                  <SkeletonBlock $height="20px" $width="120px" />
+                  <SkeletonBlock $height="20px" $width="180px" />
+                </SkeletonStack>
+              </VerifyCardSkeleton>
+            ))}
+          </VerifyRowSkeleton>
+        </VerifyBlockSkeleton>
+      </TransparencyCard>
+
+      {/* Eligibility card */}
+      <TransparencyCard>
+        <SectionHeaderStack>
+          <SkeletonBlock $height="20px" $width="92px" />
+          <SkeletonBlock $height="34px" $width="320px" $radius="6px" />
+        </SectionHeaderStack>
+        <ConditionGridSkeleton>
+          {Array.from({ length: 3 }, (_, i) => (
+            <ConditionChipSkeleton key={i}>
+              <SkeletonBlock $height="20px" $width={i === 1 ? '180px' : '128px'} />
+              <SkeletonBlock $height="20px" $width="100%" />
+            </ConditionChipSkeleton>
+          ))}
+        </ConditionGridSkeleton>
+      </TransparencyCard>
+
+      {/* Round data card */}
+      <TransparencyCard>
+        <SectionHeaderStack>
+          <SkeletonBlock $height="20px" $width="96px" />
+          <SkeletonBlock $height="34px" $width="320px" $radius="6px" />
+          <SkeletonStack $gap="4px" $maxWidth="720px">
+            <SkeletonBlock $height="20px" $width="100%" />
+            <SkeletonBlock $height="20px" $width="92%" />
+            <SkeletonBlock $height="20px" $width="64%" />
+          </SkeletonStack>
+        </SectionHeaderStack>
+
+        <RoundsBlockSkeleton>
+          <RoundsTableSkeleton>
+            <RoundsHeadRowSkeleton>
+              <RoundsHeadCellSkeleton><SkeletonBlock $height="20px" $width="64px" /></RoundsHeadCellSkeleton>
+              <RoundsHeadCellSkeleton $width="200px"><SkeletonBlock $height="20px" $width="64px" /></RoundsHeadCellSkeleton>
+              <RoundsHeadCellSkeleton $width="140px"><SkeletonBlock $height="20px" $width="60px" /></RoundsHeadCellSkeleton>
+              <RoundsHeadCellSkeleton $width="200px"><SkeletonBlock $height="20px" $width="86px" /></RoundsHeadCellSkeleton>
+            </RoundsHeadRowSkeleton>
+            {Array.from({ length: 5 }, (_, i) => (
+              <RoundsRowSkeleton key={i}>
+                <RoundsCellSkeleton><SkeletonBlock $height="20px" $width="76px" /></RoundsCellSkeleton>
+                <RoundsCellSkeleton $width="200px"><SkeletonBlock $height="20px" $width="120px" /></RoundsCellSkeleton>
+                <RoundsCellSkeleton $width="140px"><SkeletonBlock $height="20px" $width="56px" $radius="9999px" /></RoundsCellSkeleton>
+                <RoundsCellSkeleton $width="200px">
+                  <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+                  <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+                </RoundsCellSkeleton>
+              </RoundsRowSkeleton>
+            ))}
+          </RoundsTableSkeleton>
+          <SkeletonBlock $height="18px" $width="68%" $maxWidth="540px" />
+        </RoundsBlockSkeleton>
+      </TransparencyCard>
+    </TransparencyShell>
+  )
+}
+
+/* ─── Rounds full-page skeleton (matches new design) ─── */
+
+const RoundsPageShell = styled(SkeletonRegion)`
+  width: 100%;
+  max-width: 1120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+`
+
+const RoundsHeaderStack = styled(SkeletonStack)`
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+`
+
+const RoundsTitleRow = styled(SkeletonInline)`
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+`
+
+const RoundsProgressBlock = styled(SkeletonStack)`
+  gap: 8px;
+  width: 100%;
+`
+
+const RoundsBarLabels = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+`
+
+const RoundsTierCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const RoundsTierHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`
+
+const RoundsTierLadder = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+`
+
+const RoundsTierPip = styled(SkeletonStack)`
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 10px;
+`
+
+const RoundsTierShareRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  border-top: 1px solid ${tokens.color.borderLight};
+  padding-top: 20px;
+
+  @media (min-width: 720px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`
+
+const RoundsInspectCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const RoundsInspectHeader = styled(SkeletonStack)`
+  gap: 12px;
+`
+
+const RoundsSearchRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    flex-wrap: wrap;
+  }
+`
+
+const RoundsTableCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+`
+
+const RoundsTableHeadRow = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`
+
+const RoundsTableHeadCellSkeleton = styled.div<{ $weight?: number }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+`
+
+const RoundsTableRowSkeleton = styled.div`
+  display: flex;
+  width: 100%;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    padding: 4px 0;
+  }
+`
+
+const RoundsTableCellSkeleton = styled.div<{ $weight?: number }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 14px 12px;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    flex: none;
+    justify-content: space-between;
+    padding: 10px 16px;
+  }
+`
+
+const COL_WEIGHTS = [0.9, 1, 1, 1.4, 1.4, 0.7, 0.25]
+
+export function RoundsPageSkeleton() {
+  return (
+    <RoundsPageShell label="Loading rounds page">
+      {/* Hero */}
+      <RoundsHeaderStack>
+        <SkeletonBlock $height="28px" $width="92px" $radius="14px" />
+        <RoundsTitleRow>
+          <SkeletonBlock $height="68px" $width="420px" $maxWidth="100%" $radius="8px" />
+          <SkeletonCircle $size="20px" />
+        </RoundsTitleRow>
+        <SkeletonStack $gap="4px" $maxWidth="646px">
+          <SkeletonBlock $height="20px" $width="100%" />
+          <SkeletonBlock $height="20px" $width="78%" />
+        </SkeletonStack>
+      </RoundsHeaderStack>
+
+      {/* Round progress bar */}
+      <RoundsProgressBlock>
+        <SkeletonBlock $height="12px" $width="100%" $radius="9999px" />
+        <RoundsBarLabels>
+          <SkeletonBlock $height="20px" $width="160px" />
+          <SkeletonBlock $height="20px" $width="220px" />
+        </RoundsBarLabels>
+      </RoundsProgressBlock>
+
+      {/* Current tier card */}
+      <RoundsTierCard>
+        <RoundsTierHeader>
+          <SkeletonStack $gap="4px">
+            <SkeletonBlock $height="24px" $width="180px" />
+          </SkeletonStack>
+          <SkeletonBlock $height="32px" $width="120px" $radius="9999px" />
+        </RoundsTierHeader>
+
+        <RoundsTierLadder>
+          {Array.from({ length: 7 }, (_, i) => (
+            <RoundsTierPip key={i}>
+              <SkeletonCircle $size="24px" />
+              <SkeletonBlock $height="18px" $width="48px" />
+              <SkeletonBlock $height="16px" $width="68px" />
+              <SkeletonBlock $height="4px" $width="100%" $radius="9999px" />
+            </RoundsTierPip>
+          ))}
+        </RoundsTierLadder>
+
+        <RoundsTierShareRow>
+          <SkeletonBlock $height="20px" $width="60%" $maxWidth="420px" />
+          <SkeletonBlock $height="40px" $width="200px" $radius="8px" />
+        </RoundsTierShareRow>
+      </RoundsTierCard>
+
+      {/* Inspect card */}
+      <RoundsInspectCard>
+        <RoundsInspectHeader>
+          <SkeletonBlock $height="20px" $width="124px" />
+          <RoundsSearchRow>
+            <SkeletonBlock $height="44px" $width="100%" $radius="9999px" />
+            <SkeletonBlock $height="40px" $width="112px" $radius="8px" />
+            <SkeletonBlock $height="40px" $width="80px" $radius="8px" />
+          </RoundsSearchRow>
+        </RoundsInspectHeader>
+
+        <RoundsTableCard>
+          <RoundsTableHeadRow>
+            {COL_WEIGHTS.map((w, i) => (
+              <RoundsTableHeadCellSkeleton key={i} $weight={w}>
+                {w > 0.3 && <SkeletonBlock $height="20px" $width={i === 2 ? '88px' : i === 3 ? '60px' : '64px'} />}
+              </RoundsTableHeadCellSkeleton>
+            ))}
+          </RoundsTableHeadRow>
+          {Array.from({ length: 5 }, (_, rowIdx) => (
+            <RoundsTableRowSkeleton key={rowIdx}>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[0]}>
+                <SkeletonBlock $height="20px" $width="76px" />
+              </RoundsTableCellSkeleton>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[1]}>
+                <SkeletonBlock $height="20px" $width="68px" />
+              </RoundsTableCellSkeleton>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[2]}>
+                <SkeletonBlock $height="20px" $width="56px" />
+              </RoundsTableCellSkeleton>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[3]}>
+                <SkeletonBlock $height="20px" $width="92px" />
+              </RoundsTableCellSkeleton>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[4]}>
+                <SkeletonBlock $height="20px" $width="104px" />
+              </RoundsTableCellSkeleton>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[5]}>
+                <SkeletonBlock $height="24px" $width="64px" $radius="9999px" />
+              </RoundsTableCellSkeleton>
+              <RoundsTableCellSkeleton $weight={COL_WEIGHTS[6]}>
+                <SkeletonBlock $height="14px" $width="14px" $radius="4px" />
+              </RoundsTableCellSkeleton>
+            </RoundsTableRowSkeleton>
+          ))}
+        </RoundsTableCard>
+      </RoundsInspectCard>
+    </RoundsPageShell>
   )
 }
