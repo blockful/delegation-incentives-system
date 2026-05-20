@@ -40,6 +40,10 @@ pnpm --filter @ens-dis/backend dev
 | `DATABASE_URL` | PostgreSQL connection string (required) |
 | `BACKEND_PORT` | API port (default: 42069) |
 | `ROUND_MONTHS` | Comma-separated configured round months, e.g. `2026-03,2026-04,2026-05` |
+| `BLOCKFUL_API_TOKEN` | Bearer token forwarded by the backend to the Gateful relayer (required when relayer is enabled) |
+| `GATEFUL_UPSTREAM_URL` | Upstream Gateful relayer base URL (required when relayer is enabled) |
+| `ALLOWED_ORIGINS` | Comma-separated frontend origins permitted to call this backend cross-origin (required in production when the SPA hits the backend directly via `VITE_RELAYER_BASE_URL`) |
+| `VITE_RELAYER_BASE_URL` | Frontend build env. Absolute origin of the backend that serves `/api/gateful/*`. Empty in dev/test (vite proxy / MSW handle same-origin); set to the backend origin in production. |
 
 ## API Endpoints
 
@@ -74,6 +78,12 @@ The backend also starts an automatic distribution scheduler in normal runs. It w
 - **Arithmetic**: BigInt throughout — no floating point
 - **Testing**: Vitest, fast-check (property-based)
 - **Package manager**: pnpm workspaces
+
+## Gasless Delegation (Relayer)
+
+The frontend delegates voting power via a gasless relayer (when eligible) or falls back to a direct on-chain `delegate(address)` call. Backend routes at `/api/gateful/:dao/relay/*` proxy the upstream Gateful relayer with the bearer token injected server-side.
+
+Eligibility is the only gate: if the relayer's `/balance` reports `hasEnoughBalance: false`, the upstream is unreachable, or the user is over their rate limit / under `minVotingPower`, the modal switches to direct-tx automatically. To take gasless offline cluster-wide without a redeploy, make `/balance` return `hasEnoughBalance: false`.
 
 ## Resources
 
