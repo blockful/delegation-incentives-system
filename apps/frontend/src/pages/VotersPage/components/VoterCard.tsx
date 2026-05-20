@@ -9,6 +9,7 @@ import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
+import { useRelayerBalance } from '@/features/delegate/hooks/useGaslessRelayer'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { truncateAddress } from '@/utils/format'
 import { contracts } from '@/config/contracts'
@@ -305,6 +306,7 @@ export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterC
   const { data: resolvedEnsName } = useEnsName({
     address: voter.address as `0x${string}`,
   })
+  const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const ensName = voter.ensName ?? resolvedEnsName ?? null
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
@@ -406,7 +408,7 @@ export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterC
               handleDelegate()
             }}
           >
-            Delegate<FreeBadge>Free</FreeBadge>
+            Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
           </Button>
           <ProfileLink to={profileUrl} onClick={(e) => e.stopPropagation()}>
             View profile <ProfileArrow aria-hidden>→</ProfileArrow>

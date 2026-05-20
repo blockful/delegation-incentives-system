@@ -27,6 +27,7 @@ import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
+import { useRelayerBalance } from '@/features/delegate/hooks/useGaslessRelayer'
 import { contracts } from '@/config/contracts'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
@@ -730,6 +731,7 @@ export function VoterProfilePage() {
     : rawParam
   const { voter, loading, error } = useVoter(resolvedAddr)
   const walletState = useWalletState()
+  const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const [modalOpen, setModalOpen] = useState(false)
 
   const { data: resolvedEnsName } = useEnsName({
@@ -879,7 +881,7 @@ export function VoterProfilePage() {
           <CtaRow>
             {!isDelegated && (
               <Button colorStyle="bluePrimary" width="auto" onClick={handleDelegate}>
-                Delegate and earn<FreeBadge>Free</FreeBadge>
+                Delegate and earn{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
               </Button>
             )}
             <Button
