@@ -35,10 +35,28 @@ const ApiBaseUrlSchema = z
     return value.replace(/\/+$/, '')
   })
 
+const RelayerBaseUrlSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\/+$/, ''))
+  .refine(
+    (value) => {
+      if (value === '') return true
+      try {
+        new URL(value)
+        return true
+      } catch {
+        return false
+      }
+    },
+    { message: 'Expected an absolute URL or empty string (same-origin)' },
+  )
+
 const PublicFrontendEnvSchema = z.object({
   VITE_API_BASE_URL: ApiBaseUrlSchema,
   VITE_USE_MOCK_API: BooleanEnvSchema,
   VITE_REOWN_PROJECT_ID: z.string().trim().min(1),
+  VITE_RELAYER_BASE_URL: RelayerBaseUrlSchema.default(''),
 })
 
 const FrontendDevServerEnvSchema = z.object({
@@ -74,6 +92,7 @@ export interface PublicFrontendEnv {
   apiBaseUrl: string
   useMockApi: boolean
   reownProjectId: string
+  relayerBaseUrl: string
 }
 
 export interface FrontendDevServerEnv {
@@ -92,6 +111,7 @@ export function parsePublicFrontendEnv(rawEnv: Record<string, unknown>): PublicF
     apiBaseUrl: env.VITE_API_BASE_URL,
     useMockApi: env.VITE_USE_MOCK_API,
     reownProjectId: env.VITE_REOWN_PROJECT_ID,
+    relayerBaseUrl: env.VITE_RELAYER_BASE_URL,
   }
 }
 
