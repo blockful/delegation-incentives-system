@@ -10,6 +10,7 @@ import rounds from "./routes/rounds.js";
 import tiers from "./routes/tiers.js";
 import distributions from "./routes/distributions.js";
 import stats from "./routes/stats.js";
+import relayerProxy from "./relayer-proxy.js";
 import { startAutomaticDistributionScheduler } from "./distribution-scheduler.js";
 
 const app = new OpenAPIHono();
@@ -25,6 +26,7 @@ app.route("/", rounds);
 app.route("/", tiers);
 app.route("/", distributions);
 app.route("/", stats);
+app.route("/", relayerProxy);
 
 app.doc("/openapi.json", {
   openapi: "3.0.0",
