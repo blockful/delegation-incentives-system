@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { useEnsName, useEnsAddress } from 'wagmi'
@@ -7,8 +7,10 @@ import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { DelegationModal } from '@/features/delegate/components/DelegationModal'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
+import { contracts } from '@/config/contracts'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { formatEnsAmount } from '@/utils/format'
@@ -229,6 +231,7 @@ export function VoterProfilePage() {
   const resolvedAddr = isEnsParam ? (resolvedAddress ?? '') : rawParam
   const { voter, loading, error } = useVoter(resolvedAddr)
   const walletState = useWalletState()
+  const [modalOpen, setModalOpen] = useState(false)
 
   const fetchTiers = useCallback(() => api.tierProgression(), [])
   const tiers = useAsync(fetchTiers)
@@ -269,71 +272,84 @@ export function VoterProfilePage() {
   const delegateUrl = getAnticaptureDelegateUrl(voter.address)
 
   const handleDelegate = () => {
-    // TODO: call relayer for gasless delegation
+    if (walletState.status === 'disconnected') return
+    setModalOpen(true)
   }
 
   return (
-    <Page>
-      <BackLink to="/voters">← All voters</BackLink>
+    <>
+      <Page>
+        <BackLink to="/voters">← All voters</BackLink>
 
-      <HeroCard>
-        <Identity
-          address={voter.address}
-          ensName={ensName}
-          avatarUrl={voter.avatarUrl}
-          showAvatar
-          avatarSize={96}
-          layout="stack"
-          size="xl"
-        />
-        <CtaWrapper>
-          {isDelegated ? (
-            <DelegatedStatus>
-              {aprPct ? `Delegated · Earn up to ${aprPct}% APR` : 'Delegated'}
-            </DelegatedStatus>
-          ) : (
-            <DelegateAction type="button" onClick={handleDelegate}>
-              {aprPct ? `Delegate · Earn up to ${aprPct}% APR` : 'Delegate'}{' '}
-              <FreeTag>Free</FreeTag>
-            </DelegateAction>
-          )}
-          {!isDelegated && <CtaHint>Gas sponsored by the incentives program</CtaHint>}
-        </CtaWrapper>
-      </HeroCard>
+        <HeroCard>
+          <Identity
+            address={voter.address}
+            ensName={ensName}
+            avatarUrl={voter.avatarUrl}
+            showAvatar
+            avatarSize={96}
+            layout="stack"
+            size="xl"
+          />
+          <CtaWrapper>
+            {isDelegated ? (
+              <DelegatedStatus>
+                {aprPct ? `Delegated · Earn up to ${aprPct}% APR` : 'Delegated'}
+              </DelegatedStatus>
+            ) : (
+              <DelegateAction type="button" onClick={handleDelegate}>
+                {aprPct ? `Delegate · Earn up to ${aprPct}% APR` : 'Delegate'}{' '}
+                <FreeTag>Free</FreeTag>
+              </DelegateAction>
+            )}
+            {!isDelegated && <CtaHint>Gas sponsored by the incentives program</CtaHint>}
+          </CtaWrapper>
+        </HeroCard>
 
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{formatVotingPower(voter.votingPower)} ENS</StatValue>
-          <StatLabel>Voting Power</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{voter.tokenHolderCount}</StatValue>
-          <StatLabel>Token holders</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{votingPercentage}%</StatValue>
-          <StatLabel>Participation</StatLabel>
-        </StatCard>
-        {voter.activeSince && (
+        <StatsGrid>
           <StatCard>
-            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
-            <StatLabel>Active since</StatLabel>
+            <StatValue>{formatVotingPower(voter.votingPower)} ENS</StatValue>
+            <StatLabel>Voting Power</StatLabel>
           </StatCard>
-        )}
-      </StatsGrid>
+          <StatCard>
+            <StatValue>{voter.tokenHolderCount}</StatValue>
+            <StatLabel>Token holders</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{votingPercentage}%</StatValue>
+            <StatLabel>Participation</StatLabel>
+          </StatCard>
+          {voter.activeSince && (
+            <StatCard>
+              <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
+              <StatLabel>Active since</StatLabel>
+            </StatCard>
+          )}
+        </StatsGrid>
 
-      <VotingCard>
-        <CardTitle>Voting Record (last 10 proposals)</CardTitle>
-        <ProposalBar votes={voter.last10ProposalsVoted} />
-      </VotingCard>
+        <VotingCard>
+          <CardTitle>Voting Record (last 10 proposals)</CardTitle>
+          <ProposalBar votes={voter.last10ProposalsVoted} />
+        </VotingCard>
 
-      <ExternalLink
-        href={delegateUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        View full governance profile on Anticapture ↗
-      </ExternalLink>
-    </Page>
+        <ExternalLink
+          href={delegateUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View full governance profile on Anticapture ↗
+        </ExternalLink>
+      </Page>
+      {modalOpen && (
+        <DelegationModal
+          open
+          onClose={() => setModalOpen(false)}
+          delegateAddress={voter.address as `0x${string}`}
+          delegateEnsName={ensName}
+          delegateAvatarUrl={voter.avatarUrl}
+          tokenAddress={contracts.ensToken}
+        />
+      )}
+    </>
   )
 }

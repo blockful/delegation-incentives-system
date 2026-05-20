@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
 import type { VoterDetail } from '@/api/types'
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { ProposalBar } from '@/components/shared/ProposalBar'
+import { DelegationModal } from '@/features/delegate/components/DelegationModal'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { contracts } from '@/config/contracts'
 import { tokens } from '@/styles'
 
 interface VoterCardProps {
@@ -170,6 +173,7 @@ const FreeTag = styled.span.attrs({ 'aria-hidden': true })`
 
 export function VoterCard({ voter }: VoterCardProps) {
   const walletState = useWalletState()
+  const [modalOpen, setModalOpen] = useState(false)
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
@@ -182,58 +186,71 @@ export function VoterCard({ voter }: VoterCardProps) {
   const profileLabel = `View profile for ${ensName ?? voter.address}`
 
   const handleDelegate = () => {
-    // TODO: call relayer for gasless delegation
+    if (walletState.status === 'disconnected') return
+    setModalOpen(true)
   }
 
   return (
-    <StyledCard>
-      <CardLink to={profileHref} aria-label={profileLabel}>
-        {profileLabel}
-      </CardLink>
+    <>
+      <StyledCard>
+        <CardLink to={profileHref} aria-label={profileLabel}>
+          {profileLabel}
+        </CardLink>
 
-      <IdentityRow>
-        <AddressIdentity
-          address={voter.address}
-          ensName={ensName}
-          avatarUrl={voter.avatarUrl}
-          showAvatar
-          avatarSize={40}
-          layout="stack"
-          size="md"
-        />
-      </IdentityRow>
+        <IdentityRow>
+          <AddressIdentity
+            address={voter.address}
+            ensName={ensName}
+            avatarUrl={voter.avatarUrl}
+            showAvatar
+            avatarSize={40}
+            layout="stack"
+            size="md"
+          />
+        </IdentityRow>
 
-      <ProposalSection>
-        <ProposalLabel>Last 10 proposals</ProposalLabel>
-        <ProposalBar votes={voter.last10ProposalsVoted} />
-      </ProposalSection>
+        <ProposalSection>
+          <ProposalLabel>Last 10 proposals</ProposalLabel>
+          <ProposalBar votes={voter.last10ProposalsVoted} />
+        </ProposalSection>
 
-      <StatsRow>
-        <Stat>
-          <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
-          <StatLabel>Voting Power</StatLabel>
-        </Stat>
-        <Stat>
-          <StatValue>{voter.tokenHolderCount}</StatValue>
-          <StatLabel>Token holders</StatLabel>
-        </Stat>
-        {voter.activeSince && (
+        <StatsRow>
           <Stat>
-            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
-            <StatLabel>Active since</StatLabel>
+            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
+            <StatLabel>Voting Power</StatLabel>
           </Stat>
-        )}
-      </StatsRow>
+          <Stat>
+            <StatValue>{voter.tokenHolderCount}</StatValue>
+            <StatLabel>Token holders</StatLabel>
+          </Stat>
+          {voter.activeSince && (
+            <Stat>
+              <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
+              <StatLabel>Active since</StatLabel>
+            </Stat>
+          )}
+        </StatsRow>
 
-      <ActionsBlock>
-        {isDelegated ? (
-          <DelegatedStatus>Delegated</DelegatedStatus>
-        ) : (
-          <DelegateAction type="button" onClick={handleDelegate}>
-            Delegate <FreeTag>Free</FreeTag>
-          </DelegateAction>
-        )}
-      </ActionsBlock>
-    </StyledCard>
+        <ActionsBlock>
+          {isDelegated ? (
+            <DelegatedStatus>Delegated</DelegatedStatus>
+          ) : (
+            <DelegateAction type="button" onClick={handleDelegate}>
+              Delegate <FreeTag>Free</FreeTag>
+            </DelegateAction>
+          )}
+        </ActionsBlock>
+      </StyledCard>
+      {modalOpen && (
+        <DelegationModal
+          open
+          onClose={() => setModalOpen(false)}
+          delegateAddress={voter.address as `0x${string}`}
+          delegateEnsName={ensName}
+          delegateAvatarUrl={voter.avatarUrl}
+          tokenAddress={contracts.ensToken}
+        />
+      )}
+    </>
   )
 }
