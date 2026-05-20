@@ -3,6 +3,8 @@ import {
   type RelayDelegatePathParamsDaoEnumKey,
 } from "@anticapture/client";
 
+import { env } from "@/config/env";
+
 export const FRONTEND_CLIENT_SOURCE = "ens-dis-frontend";
 
 setClientConfig({
@@ -11,9 +13,10 @@ setClientConfig({
 
 export const RELAYER_DAO_KEY: RelayDelegatePathParamsDaoEnumKey = "ens";
 
-// Empty in dev/test (same-origin via vite dev proxy or MSW). Set to the
-// backend's absolute origin in production so the SPA calls it cross-origin —
-// backend CORS allowlist gates which frontends can reach the relayer proxy.
-export const RELAYER_BASE_URL = (
-  import.meta.env.VITE_RELAYER_BASE_URL ?? ""
-).replace(/\/+$/, "");
+// Same backend as the rest API. In dev `apiBaseUrl` is a relative path
+// (`/api`) that the vite proxy rewrites — leave empty so the browser hits
+// same-origin and the proxy catches `/api/gateful/*`. In prod it's the
+// backend's absolute origin — use it directly as the relayer prefix.
+export const RELAYER_BASE_URL = env.apiBaseUrl.startsWith("/")
+  ? ""
+  : env.apiBaseUrl;

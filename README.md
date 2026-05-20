@@ -42,8 +42,7 @@ pnpm --filter @ens-dis/backend dev
 | `ROUND_MONTHS` | Comma-separated configured round months, e.g. `2026-03,2026-04,2026-05` |
 | `BLOCKFUL_API_TOKEN` | Bearer token forwarded by the backend to the Gateful relayer (required when relayer is enabled) |
 | `GATEFUL_UPSTREAM_URL` | Upstream Gateful relayer base URL (required when relayer is enabled) |
-| `ALLOWED_ORIGINS` | Comma-separated frontend origins permitted to call this backend cross-origin (required in production when the SPA hits the backend directly via `VITE_RELAYER_BASE_URL`) |
-| `VITE_RELAYER_BASE_URL` | Frontend build env. Absolute origin of the backend that serves `/api/gateful/*`. Empty in dev/test (vite proxy / MSW handle same-origin); set to the backend origin in production. |
+| `ALLOWED_ORIGINS` | Comma-separated frontend origins permitted to call this backend cross-origin (required in production when the SPA hits the backend on a different origin) |
 
 ## API Endpoints
 
