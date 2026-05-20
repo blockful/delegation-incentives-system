@@ -11,6 +11,7 @@ import {
   faCircleInfo,
   faUserSlash,
   faCoins,
+  faDownload,
   faHourglassHalf,
   faMagnifyingGlass,
   faRankingStar,
@@ -240,6 +241,51 @@ const RoundNavButton = styled.button`
     color: ${tokens.color.textSubtle};
     cursor: not-allowed;
     opacity: 0.6;
+  }
+`
+
+const DownloadCsvButton = styled.button`
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: ${tokens.color.blue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity ${tokens.transition.fast}, gap ${tokens.transition.fast};
+
+  svg {
+    color: currentColor;
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.8;
+    gap: 8px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  &:disabled {
+    color: ${tokens.color.textSubtle};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 767px) {
+    align-self: center;
   }
 `
 
@@ -1250,6 +1296,15 @@ export function RoundDetailPage() {
             <NameRow>
               <NameTitle>Round {titleRoundNumber}</NameTitle>
             </NameRow>
+            <DownloadCsvButton
+              type="button"
+              disabled
+              aria-label={`Download Round ${titleRoundNumber} CSV (coming soon)`}
+              title="CSV export coming soon"
+            >
+              <FontAwesomeIcon icon={faDownload} />
+              Download CSV
+            </DownloadCsvButton>
           </TitleBlock>
           <CtaRow>
             <RoundNavButton

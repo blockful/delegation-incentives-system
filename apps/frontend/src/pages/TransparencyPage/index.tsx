@@ -8,6 +8,7 @@ import {
   faChartPie,
   faCoins,
   faWallet,
+  faDownload,
 } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { api } from '@/api'
@@ -460,6 +461,30 @@ const StatusPill = styled.span<{ $status: 'paid' | 'live' | 'pending' }>`
 `
 
 
+const DownloadButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: ${tokens.color.bgSubtle};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 8px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textSecondary};
+  line-height: 16px;
+  cursor: not-allowed;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+`
+
 const TableCaption = styled.p`
   margin: 0;
   padding: 0 4px;
@@ -684,6 +709,7 @@ export function TransparencyPage() {
             <RoundsHeadCell>Round</RoundsHeadCell>
             <RoundsHeadCell $width="280px">Period</RoundsHeadCell>
             <RoundsHeadCell $width="160px">Status</RoundsHeadCell>
+            <RoundsHeadCell $width="160px">Download</RoundsHeadCell>
           </RoundsHeadRow>
 
           {rows.length === 0 && (
@@ -708,15 +734,24 @@ export function TransparencyPage() {
                   {row.status}
                 </StatusPill>
               </RoundsCell>
+              <RoundsCell $width="160px">
+                <MobileLabel>Download</MobileLabel>
+                <DownloadButton
+                  type="button"
+                  disabled
+                  aria-label={`Download Round ${row.number} CSV (coming soon)`}
+                  title="CSV export coming soon"
+                >
+                  <FontAwesomeIcon icon={faDownload} aria-hidden />
+                  CSV
+                </DownloadButton>
+              </RoundsCell>
             </RoundsRow>
           ))}
         </RoundsTable>
 
         <TableCaption>
-          {/* BACKEND-NEEDS: per-round CSV export endpoint. When it lands, restore the
-              Download column and the "CSV exports arrive after each round closes." copy.
-              Tracking in project_dis_backend_needs.md. */}
-          For now, use the GitHub repo to re-run the math; per-round CSV exports are coming.
+          CSV exports arrive after each round closes. For now, use the GitHub repo to re-run the math.
         </TableCaption>
         </RoundsBlock>
       </Card>

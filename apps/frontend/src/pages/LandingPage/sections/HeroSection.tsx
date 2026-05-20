@@ -267,7 +267,7 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
           ENS Governance · Live program
         </HeroEyebrow>
         <Headline>
-          Earn <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS
+          Earn up to <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS
           automatically
         </Headline>
         <Subtitle>
