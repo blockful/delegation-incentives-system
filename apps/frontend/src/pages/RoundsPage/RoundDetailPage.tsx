@@ -53,7 +53,8 @@ const Page = styled.div`
 
 const HeaderCard = styled.section`
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
+  align-items: center;
   gap: ${tokens.spacing['2xl']};
   padding: ${tokens.spacing['2xl']};
   background: ${tokens.color.surface};
@@ -69,17 +70,24 @@ const HeaderCard = styled.section`
       "text avatar";
     column-gap: ${tokens.spacing['4xl']};
     row-gap: ${tokens.spacing['2xl']};
+    align-items: stretch;
   }
 `
 
 const HeaderText = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: ${tokens.spacing['2xl']};
   min-width: 0;
+  width: 100%;
+  text-align: center;
 
   @media (min-width: 768px) {
     grid-area: text;
+    align-items: stretch;
+    text-align: left;
+    width: auto;
   }
 `
 
@@ -106,6 +114,7 @@ const BackLinkButton = styled.button`
   transition: opacity ${tokens.transition.fast}, gap ${tokens.transition.fast};
 
   &:hover {
+    text-decoration: none;
     opacity: 0.8;
     gap: ${tokens.spacing.sm};
   }
@@ -135,11 +144,12 @@ const NameTitle = styled.h1`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
+  letter-spacing: -0.02em;
   word-break: break-word;
   text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: 68px;
+    font-size: ${tokens.font.size['5xl']};
   }
 `
 
@@ -179,13 +189,12 @@ const StatusTag = styled.span<{ $status: RoundStatus | RewardStatus }>`
 
 const CtaRow = styled.div`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
   width: 100%;
 
   @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: center;
     width: auto;
   }
 `
@@ -206,6 +215,11 @@ const RoundNavButton = styled.button`
   font-weight: ${tokens.font.weight.bold};
   cursor: pointer;
   white-space: nowrap;
+  flex: 1;
+
+  @media (min-width: 768px) {
+    flex: 0 0 auto;
+  }
   transition:
     border-color ${tokens.transition.fast},
     color ${tokens.transition.fast},
@@ -400,7 +414,7 @@ function RoundProgressRing({
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: ${tokens.spacing.md};
 
   @media (min-width: 768px) {
@@ -425,12 +439,18 @@ const StatTopRow = styled.div`
 `
 
 const StatValue = styled.span`
-  font-size: ${tokens.font.size['3xl']};
+  font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['3xl']};
+  }
 `
 
 const StatIconBox = styled.span`
@@ -762,6 +782,8 @@ const EmptyTableBody = styled.div`
   gap: 12px;
   padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
   text-align: center;
+  background: ${tokens.color.bgSubtle};
+  border-radius: 12px;
 `
 
 const EmptyTableTextStack = styled.div`
@@ -812,7 +834,7 @@ function isLegacyEndpointError(error: unknown): boolean {
   return error instanceof ApiClientError && error.status === 404
 }
 
-function formatEns(value: string | null, empty = 'Unavailable', maximumFractionDigits = 4): string {
+function formatEns(value: string | null, empty = '—', maximumFractionDigits = 4): string {
   if (value == null) return empty
   return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
 }
@@ -822,9 +844,9 @@ function formatEns(value: string | null, empty = 'Unavailable', maximumFractionD
  * "12,5K ENS" / "1,2M ENS". Smaller amounts render as a plain integer.
  */
 function formatPoolEns(value: string | null): string {
-  if (value == null) return 'Unavailable'
+  if (value == null) return '—'
   const n = Number(value)
-  if (!Number.isFinite(n)) return 'Unavailable'
+  if (!Number.isFinite(n)) return '—'
   if (n >= 1_000_000) {
     const m = Math.round((n / 1_000_000) * 10) / 10
     const text = (m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)).replace('.', ',')
@@ -900,7 +922,7 @@ function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableP
         <EmptyTableTextStack>
           <EmptyTableTitle>No recipients in this round</EmptyTableTitle>
           <EmptyTableBodyText>
-            Nothing got paid out here yet. Check back once the round closes.
+            Nothing got paid out here yet.<br />Check back once the round closes.
           </EmptyTableBodyText>
         </EmptyTableTextStack>
       </EmptyTableBody>
@@ -1130,7 +1152,7 @@ export function RoundDetailPage() {
   const lotteryShareValue =
     roundData.lotteryPrizeEns != null
       ? `${formatEnsAmount(roundData.lotteryPrizeEns, { maximumFractionDigits: 2 })} ENS`
-      : 'Unavailable'
+      : '—'
 
   // Priority: live current-round payload (when viewing the ongoing round) →
   // the rounds-list summary for the viewed round → round detail fallback.
@@ -1229,7 +1251,6 @@ export function RoundDetailPage() {
               <NameTitle>Round {titleRoundNumber}</NameTitle>
             </NameRow>
           </TitleBlock>
-
           <CtaRow>
             <RoundNavButton
               type="button"

@@ -58,12 +58,13 @@ const PageTitle = styled.h1`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
+  letter-spacing: -0.02em;
   text-align: center;
   max-width: 720px;
   text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: 68px;
+    font-size: ${tokens.font.size['5xl']};
   }
 `
 

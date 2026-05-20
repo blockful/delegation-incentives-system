@@ -169,29 +169,21 @@ const ProposalCount = styled.span`
 
 const StatsRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: ${tokens.spacing.sm};
 
   @media (min-width: 480px) {
-    flex-direction: row;
     gap: ${tokens.spacing.md};
   }
 `
 
 const Stat = styled.div`
   display: flex;
-  flex-direction: row-reverse;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: ${tokens.spacing.sm};
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex: 1;
   min-width: 0;
-
-  @media (min-width: 480px) {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    flex: 1;
-  }
 `
 
 const StatValue = styled.span`

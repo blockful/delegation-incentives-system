@@ -215,7 +215,6 @@ const CtaWrap = styled.div`
   display: flex;
   justify-content: center;
   width: 100%;
-  margin-top: ${tokens.spacing['2xl']};
 `
 
 const ShareButton = styled.a`

@@ -821,12 +821,20 @@ const ProfileAvatarColumn = styled.div`
 
 const ProfileStatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: ${tokens.spacing.md};
   width: 100%;
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(4, 1fr);
+  }
+`
+
+const ProfileAvatarSkeleton = styled(SkeletonCircle)`
+  @media (max-width: 767px) {
+    width: 160px;
+    height: 160px;
+    min-width: 160px;
   }
 `
 
@@ -841,6 +849,13 @@ const ProfileStatCard = styled(SkeletonStack)`
 const ProfileStatTopRow = styled(SkeletonInline)`
   justify-content: space-between;
   align-items: flex-start;
+  width: 100%;
+`
+
+const ProfileVotingRecordSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
   width: 100%;
 `
 
@@ -912,9 +927,9 @@ export function DelegateProfileSkeleton() {
           <SkeletonBlock $height="40px" $width="180px" $radius="8px" />
         </ProfileHeaderText>
 
-        {/* Right column: 200×200 avatar circle + participation tag */}
+        {/* Right column: 200×200 avatar circle (160 on mobile) + participation tag */}
         <ProfileAvatarColumn>
-          <SkeletonCircle $size="200px" />
+          <ProfileAvatarSkeleton $size="200px" />
           <SkeletonBlock $height="24px" $width="148px" $radius="14px" />
         </ProfileAvatarColumn>
       </ProfileHeaderCard>
@@ -932,8 +947,10 @@ export function DelegateProfileSkeleton() {
         ))}
       </ProfileStatsRow>
 
-      {/* Voting record table */}
-      <ProfileTableCard>
+      {/* Voting record section — title + table */}
+      <ProfileVotingRecordSection>
+        <SkeletonBlock $height="24px" $width="160px" $radius="6px" />
+        <ProfileTableCard>
         <ProfileTableHead>
           <ProfileTableHeadCell>
             <SkeletonBlock $height="20px" $width="124px" />
@@ -960,7 +977,8 @@ export function DelegateProfileSkeleton() {
             </ProfileTableCell>
           </ProfileTableRow>
         ))}
-      </ProfileTableCard>
+        </ProfileTableCard>
+      </ProfileVotingRecordSection>
     </ProfileShell>
   )
 }

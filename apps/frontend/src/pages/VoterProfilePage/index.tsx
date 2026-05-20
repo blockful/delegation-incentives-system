@@ -96,9 +96,13 @@ const HeaderText = styled.div`
   flex-direction: column;
   gap: ${tokens.spacing['2xl']};
   min-width: 0;
+  align-items: center;
+  text-align: center;
 
   @media (min-width: 768px) {
     grid-area: text;
+    align-items: stretch;
+    text-align: left;
   }
 `
 
@@ -106,6 +110,11 @@ const TitleBlock = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.md};
+  align-items: center;
+
+  @media (min-width: 768px) {
+    align-items: stretch;
+  }
 `
 
 const BackLinkButton = styled.button`
@@ -146,6 +155,11 @@ const NameRow = styled.div`
   align-items: baseline;
   flex-wrap: wrap;
   gap: ${tokens.spacing.md};
+  justify-content: center;
+
+  @media (min-width: 768px) {
+    justify-content: flex-start;
+  }
 `
 
 const NameTitle = styled.h1`
@@ -155,12 +169,12 @@ const NameTitle = styled.h1`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   word-break: break-word;
   text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: 68px;
+    font-size: ${tokens.font.size['5xl']};
   }
 `
 
@@ -221,6 +235,11 @@ const SocialLinks = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  justify-content: center;
+
+  @media (min-width: 768px) {
+    justify-content: flex-start;
+  }
 `
 
 const SocialChip = styled.a`
@@ -308,6 +327,11 @@ const RingWrap = styled.div`
   width: 240px;
   height: 240px;
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    width: 160px;
+    height: 160px;
+  }
 `
 
 const RingSvg = styled.svg`
@@ -429,7 +453,7 @@ function ParticipationRing({ percent, address, name, avatarUrl }: ParticipationR
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: ${tokens.spacing.md};
 
   @media (min-width: 768px) {
@@ -479,6 +503,22 @@ const StatLabel = styled.span`
 `
 
 /* ─── Voting record table ─── */
+
+const VotingRecordSection = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+  width: 100%;
+`
+
+const SectionTitle = styled.h2`
+  margin: 0;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.25;
+`
 
 const TableCard = styled.div`
   display: flex;
@@ -531,8 +571,10 @@ const TableRow = styled.a`
   }
 
   @media (max-width: 767px) {
-    flex-direction: column;
-    padding: 4px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 12px 16px;
+    gap: ${tokens.spacing.sm} ${tokens.spacing.md};
   }
 `
 
@@ -549,13 +591,20 @@ const TableCell = styled.div<{ $width?: string; $primary?: boolean }>`
 
   @media (max-width: 767px) {
     width: 100%;
-    flex: none;
-    justify-content: space-between;
-    padding: 10px 16px;
+    padding: 0;
     ${({ $primary }) =>
       $primary
-        ? `font-weight: ${tokens.font.weight.bold}; color: ${tokens.color.darkBlue}; word-break: break-word;`
-        : ''}
+        ? `
+          grid-column: 1 / -1;
+          font-weight: ${tokens.font.weight.bold};
+          color: ${tokens.color.darkBlue};
+          word-break: break-word;
+        `
+        : `
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        `}
   }
 `
 
@@ -867,7 +916,9 @@ export function VoterProfilePage() {
         </StatCard>
       </StatsRow>
 
-      <TableCard>
+      <VotingRecordSection>
+        <SectionTitle>Voting record</SectionTitle>
+        <TableCard>
         <TableHeadRow>
           <TableHeadCell>Proposal Name</TableHeadCell>
           <TableHeadCell $width="200px">
@@ -924,7 +975,8 @@ export function VoterProfilePage() {
             </TableCell>
           </TableRow>
         ))}
-      </TableCard>
+        </TableCard>
+      </VotingRecordSection>
     </Page>
   )
 }

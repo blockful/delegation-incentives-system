@@ -88,11 +88,12 @@ const PageTitle = styled.h1`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
+  letter-spacing: -0.02em;
   text-align: center;
   text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: 68px;
+    font-size: ${tokens.font.size['5xl']};
   }
 `
 
@@ -270,17 +271,21 @@ const TierPoolBadge = styled(TierBadge)`
 
 const TierLadder = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
 
-  @media (min-width: 600px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+  @media (max-width: 767px) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 
-  @media (min-width: 960px) {
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 6px;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 `
 
@@ -303,6 +308,11 @@ const TierPip = styled.div<{ $state: TierPipState }>`
         ? tokens.color.borderLight
         : tokens.color.status.success.border};
   min-width: 0;
+
+  @media (max-width: 767px) {
+    flex: 0 0 120px;
+    width: 120px;
+  }
 `
 
 const TierPipIcon = styled.span<{ $state: TierPipState }>`
@@ -1245,11 +1255,11 @@ export function RoundsPage() {
             <ProgressFill $pct={progressPct} />
           </ProgressTrack>
           <BarLabels>
-            <BarLabel>Started {formatUtcDate(currentRound.startDate, { year: 'numeric' })}</BarLabel>
+            <BarLabel>Started {formatUtcDate(currentRound.startDate)}</BarLabel>
             <BarEndGroup>
               <TimeLeft $status={currentRound.status}>{daysLeftLabel}</TimeLeft>
               <Dot aria-hidden />
-              <BarLabel>Ends {formatUtcDate(currentRound.endDate, { year: 'numeric' })}</BarLabel>
+              <BarLabel>Ends {formatUtcDate(currentRound.endDate)}</BarLabel>
             </BarEndGroup>
           </BarLabels>
         </ProgressBlock>

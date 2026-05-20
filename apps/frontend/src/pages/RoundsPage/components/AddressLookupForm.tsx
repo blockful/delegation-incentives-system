@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faWallet } from '@fortawesome/free-solid-svg-icons'
+import { faWallet, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles'
 import { truncateAddress } from '@/utils/format'
 
@@ -33,8 +33,10 @@ const Row = styled.div`
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: ${tokens.spacing.sm};
 
+  /* On narrow screens, drop the input to its own row and keep the
+     Search + Clear buttons side-by-side below it. */
   @media (max-width: 560px) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr 1fr;
   }
 `
 
@@ -52,9 +54,17 @@ const Input = styled.input`
     outline: 2px solid ${tokens.color.lightBlue};
     border-color: ${tokens.color.blue};
   }
+
+  @media (max-width: 560px) {
+    grid-column: 1 / -1;
+  }
 `
 
 const Button = styled.button<{ $secondary?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid ${({ $secondary }) => ($secondary ? tokens.color.middleGray : tokens.color.blue)};
   border-radius: ${tokens.radius.sm};
   padding: 10px ${tokens.spacing.md};
@@ -170,7 +180,10 @@ export function AddressLookupForm({
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
-        <Button type="submit">Inspect</Button>
+        <Button type="submit">
+          <FontAwesomeIcon icon={faMagnifyingGlass} />
+          Search
+        </Button>
         <Button type="button" $secondary onClick={onClear}>Clear</Button>
       </Row>
       {(showUseConnectedChip || activeMatchesConnected) ? (

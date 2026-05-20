@@ -10,11 +10,40 @@ interface StatsBarProps {
   holdersEarning?: number
 }
 
-const Bar = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: ${tokens.spacing.md};
+/**
+ * Outer wrapper — on mobile, breaks out of the page's 16px horizontal
+ * padding so its inner scroll surface can reach the viewport edges.
+ * Desktop keeps the normal 100% width (cards stay inside the page container).
+ */
+const BarOverflowWrap = styled.div`
   width: 100%;
+
+  @media (max-width: 767px) {
+    margin-left: -${tokens.spacing.lg};
+    margin-right: -${tokens.spacing.lg};
+    width: auto;
+  }
+`
+
+/**
+ * Inner wrapper — flex row with horizontal scroll for the cards.
+ * Padding on mobile keeps the first card visually aligned with the rest
+ * of the page content at scroll origin (matches the parent's 16px padding).
+ */
+const Bar = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.md};
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    padding: 0 ${tokens.spacing.lg};
+  }
 `
 
 const Cell = styled.div`
@@ -25,6 +54,8 @@ const Cell = styled.div`
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
   border-radius: 12px;
+  flex: 1 0 280px;
+  min-width: 280px;
 `
 
 const ValueRow = styled.div`
@@ -66,8 +97,9 @@ export function StatsBar({
   holdersEarning,
 }: StatsBarProps) {
   return (
-    <Bar>
-      <Cell>
+    <BarOverflowWrap>
+      <Bar>
+        <Cell>
         <ValueRow>
           <CellValue>{activeVoterCount ?? '—'}</CellValue>
           <IconWrap aria-hidden>
@@ -83,7 +115,7 @@ export function StatsBar({
             <FontAwesomeIcon icon={faHandshake} />
           </IconWrap>
         </ValueRow>
-        <CellLabel>ENS delegated to active wallets</CellLabel>
+        <CellLabel>ENS delegated to active voters</CellLabel>
       </Cell>
       <Cell>
         <ValueRow>
@@ -94,6 +126,7 @@ export function StatsBar({
         </ValueRow>
         <CellLabel>wallets earning</CellLabel>
       </Cell>
-    </Bar>
+      </Bar>
+    </BarOverflowWrap>
   )
 }

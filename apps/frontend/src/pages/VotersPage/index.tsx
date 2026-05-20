@@ -86,14 +86,14 @@ const PageTitle = styled.h1`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   margin: 0;
   text-align: center;
   max-width: 800px;
   text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: 68px;
+    font-size: ${tokens.font.size['5xl']};
   }
 `
 
@@ -168,8 +168,11 @@ const FilterRow = styled.div`
 const SearchRow = styled.div`
   position: relative;
   width: 100%;
-  max-width: 400px;
   flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    max-width: 400px;
+  }
 `
 
 const SearchIcon = styled.span`

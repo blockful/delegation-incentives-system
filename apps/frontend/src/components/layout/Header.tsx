@@ -269,6 +269,55 @@ const walletNavItems = [
   { to: '/dashboard', label: 'Dashboard' },
 ] as const
 
+const ConnectedAccountWrap = styled.div`
+  display: flex;
+  align-items: center;
+`
+
+const DesktopProfile = styled(ProfileScaler)`
+  display: none;
+
+  @media (min-width: 768px) {
+    display: block;
+  }
+`
+
+const MobileAvatarButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: opacity ${tokens.transition.fast};
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9999px;
+  }
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+`
+
 function ConnectedAccount({
   address,
   ensName,
@@ -282,18 +331,27 @@ function ConnectedAccount({
   })
   const avatar = resolvedAvatar ?? makeBlockie(address)
   return (
-    <ProfileScaler>
-      <Profile
-        address={address}
-        ensName={ensName ?? undefined}
-        avatar={avatar}
-        size="medium"
-        alignDropdown="right"
-        dropdownItems={[
-          { label: 'Account', onClick: () => { void openWalletModal() }, icon: <WalletSVG /> },
-        ]}
-      />
-    </ProfileScaler>
+    <ConnectedAccountWrap>
+      <DesktopProfile>
+        <Profile
+          address={address}
+          ensName={ensName ?? undefined}
+          avatar={avatar}
+          size="medium"
+          alignDropdown="right"
+          dropdownItems={[
+            { label: 'Account', onClick: () => { void openWalletModal() }, icon: <WalletSVG /> },
+          ]}
+        />
+      </DesktopProfile>
+      <MobileAvatarButton
+        type="button"
+        onClick={() => { void openWalletModal() }}
+        aria-label="Open wallet account"
+      >
+        <img src={avatar} alt="" />
+      </MobileAvatarButton>
+    </ConnectedAccountWrap>
   )
 }
 

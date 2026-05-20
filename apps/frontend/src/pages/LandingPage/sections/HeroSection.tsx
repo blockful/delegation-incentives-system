@@ -89,7 +89,7 @@ const HeroEyebrow = styled.span`
 `
 
 const Headline = styled.h1`
-  font-size: ${tokens.font.size['5xl']};
+  font-size: 40px;
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.1;
