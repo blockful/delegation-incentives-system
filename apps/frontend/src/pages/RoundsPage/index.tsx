@@ -37,6 +37,8 @@ import {
   buildRoundListFromCurrentRound,
   buildUnavailableAddressHistory,
 } from './roundFallback'
+import { looksLikeEnsName } from '@/utils/ens'
+import { useResolveEnsName } from '@/features/ens/useResolveEnsName'
 import { AprTag, LotteryTag } from './components/RewardTags'
 import { formatPositiveReward, statusLabel } from './status'
 
@@ -1041,6 +1043,7 @@ export function RoundsPage() {
   const [inputError, setInputError] = useState<string | null>(null)
   const hasPrefilledRef = useRef(false)
   const userClearedRef = useRef(false)
+  const { resolve: resolveEns, isResolving } = useResolveEnsName()
 
   const { data: tierData, loading: tiersLoading, error: tiersError } = useRounds()
   const fetchRounds = useCallback(async () => {
@@ -1119,21 +1122,34 @@ export function RoundsPage() {
     [roundList.data, activeAddress, addressHistory.data, addressHistory.loading, addressHistory.error],
   )
 
-  function handleSubmit(addressOverride?: string) {
+  async function handleSubmit(addressOverride?: string) {
     const next = (addressOverride ?? addressInput).trim()
     if (!next) {
       handleClear()
       return
     }
-    if (!isAddress(next)) {
-      setInputError('Invalid address')
+    if (isAddress(next)) {
+      userClearedRef.current = false
+      setSearchParams((p) => {
+        p.set('address', next)
+        return p
+      })
       return
     }
-    userClearedRef.current = false
-    setSearchParams((p) => {
-      p.set('address', next)
-      return p
-    })
+    if (looksLikeEnsName(next)) {
+      const resolved = await resolveEns(next)
+      if (!resolved) {
+        setInputError(`Couldn't resolve ${next}`)
+        return
+      }
+      userClearedRef.current = false
+      setSearchParams((p) => {
+        p.set('address', resolved)
+        return p
+      })
+      return
+    }
+    setInputError('Invalid address')
   }
 
   function handleClear() {
@@ -1150,7 +1166,7 @@ export function RoundsPage() {
     if (!walletAddress) return
     userClearedRef.current = false
     setAddressInput(walletAddress)
-    handleSubmit(walletAddress)
+    void handleSubmit(walletAddress)
   }
 
   if (tiersLoading || roundList.loading) {
@@ -1376,7 +1392,7 @@ export function RoundsPage() {
                   if (inputError) setInputError(null)
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSubmit()
+                  if (e.key === 'Enter') { void handleSubmit() }
                 }}
                 aria-label="Search by ENS name or address"
               />
@@ -1385,11 +1401,11 @@ export function RoundsPage() {
               <Button
                 size="small"
                 colorStyle="bluePrimary"
-                disabled={!addressInput.trim()}
-                onClick={() => handleSubmit()}
+                disabled={!addressInput.trim() || isResolving}
+                onClick={() => { void handleSubmit() }}
                 prefix={<FontAwesomeIcon icon={faMagnifyingGlass} />}
               >
-                Search
+                {isResolving ? 'Resolving…' : 'Search'}
               </Button>
               {(addressInput || activeAddress) && (
                 <Button
