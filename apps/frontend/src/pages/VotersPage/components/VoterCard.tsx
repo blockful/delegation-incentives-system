@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
@@ -19,6 +19,10 @@ interface VoterCardProps {
   voter: VoterDetail
   isSelected?: boolean
   onToggleCompare?: () => void
+  /** Reverse-resolved ENS name supplied by the parent page (preferred when v.ensName is null). */
+  resolvedEnsName?: string | null
+  /** Called when this card's own useEnsName settles, so the page can use it in filters. */
+  onEnsResolved?: (lowercasedAddress: string, name: string | null) => void
 }
 
 function formatVotingPower(vpWei: string): string {
@@ -289,18 +293,31 @@ const CompareIcon = styled.span`
   display: inline-flex;
 `
 
-export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterCardProps) {
+export function VoterCard({
+  voter,
+  isSelected = false,
+  onToggleCompare,
+  resolvedEnsName,
+  onEnsResolved,
+}: VoterCardProps) {
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
 
-  const { data: resolvedEnsName } = useEnsName({
+  const { data: localResolved } = useEnsName({
     address: voter.address as `0x${string}`,
+    query: { enabled: !voter.ensName },
   })
+
+  useEffect(() => {
+    if (!onEnsResolved) return
+    onEnsResolved(voter.address.toLowerCase(), localResolved ?? null)
+  }, [voter.address, localResolved, onEnsResolved])
+
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
-  const ensName = voter.ensName ?? resolvedEnsName ?? null
+  const ensName = voter.ensName ?? resolvedEnsName ?? localResolved ?? null
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
 
