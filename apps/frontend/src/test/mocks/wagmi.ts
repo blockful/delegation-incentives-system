@@ -32,9 +32,13 @@ vi.mock('wagmi', async () => {
     ...actual,
     useEnsName: vi.fn().mockReturnValue({ data: null }),
     useEnsAvatar: vi.fn().mockReturnValue({ data: null }),
+    useEnsAddress: vi.fn().mockReturnValue({ data: null }),
     useAccount: vi.fn().mockReturnValue({ address: undefined, isConnected: false }),
     useDisconnect: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
     useReadContract: vi.fn().mockReturnValue(readContractResult()),
     useWalletClient: vi.fn().mockReturnValue(walletClientResult()),
+    usePublicClient: vi.fn().mockReturnValue({
+      getEnsAddress: vi.fn().mockResolvedValue(null),
+    }),
   }
 })
