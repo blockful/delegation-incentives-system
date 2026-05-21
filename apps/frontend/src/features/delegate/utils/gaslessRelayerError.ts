@@ -53,7 +53,7 @@ export const isUserRejection = (error: unknown): boolean => {
       : typeof error === "string"
         ? error
         : "";
-  return /rejected|denied|user (denied|rejected)/i.test(message);
+  return /user (rejected|denied)|rejected (by user|the request)|user cancell?ed/i.test(message);
 };
 
 export const isRelayerError = (

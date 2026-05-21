@@ -78,7 +78,7 @@ export const handlers = [
 
   http.post('/api/gateful/ens/relay/delegate', () =>
     HttpResponse.json({
-      txHash: '0x' + 'ab'.repeat(32),
+      transactionHash: '0x' + 'ab'.repeat(32),
     }),
   ),
 ]

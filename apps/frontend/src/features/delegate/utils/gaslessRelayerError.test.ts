@@ -98,6 +98,16 @@ describe("isUserRejection", () => {
     expect(isUserRejection(new Error("Out of gas"))).toBe(false);
   });
 
+  it('returns false for Error("permission denied") (not a user rejection)', () => {
+    expect(isUserRejection(new Error("permission denied"))).toBe(false);
+  });
+
+  it('returns false for Error("RPC request rejected by node")', () => {
+    expect(isUserRejection(new Error("RPC request rejected by node"))).toBe(
+      false,
+    );
+  });
+
   it('returns true for the string "rejected by user"', () => {
     expect(isUserRejection("rejected by user")).toBe(true);
   });

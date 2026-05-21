@@ -53,10 +53,10 @@ async function proxyRequest(
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch (err) {
-    if (err instanceof Error && err.name === "TimeoutError") {
-      return c.json({ error: "Upstream relayer timed out" }, 504);
-    }
-    if (err instanceof Error && err.name === "AbortError") {
+    if (
+      err instanceof Error &&
+      (err.name === "TimeoutError" || err.name === "AbortError")
+    ) {
       return c.json({ error: "Upstream relayer timed out" }, 504);
     }
     return c.json({ error: "Upstream relayer unreachable" }, 502);
