@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
@@ -7,8 +8,11 @@ import { Button } from '@ensdomains/thorin'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
+import { DelegationModal } from '@/features/delegate/components/DelegationModal'
+import { useRelayerBalance } from '@/features/delegate/hooks/useGaslessRelayer'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { truncateAddress } from '@/utils/format'
+import { contracts } from '@/config/contracts'
 import { tokens } from '@/styles'
 
 interface VoterCardProps {
@@ -287,6 +291,7 @@ const CompareIcon = styled.span`
 
 export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterCardProps) {
   const walletState = useWalletState()
+  const [modalOpen, setModalOpen] = useState(false)
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
@@ -294,88 +299,102 @@ export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterC
   const { data: resolvedEnsName } = useEnsName({
     address: voter.address as `0x${string}`,
   })
+  const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const ensName = voter.ensName ?? resolvedEnsName ?? null
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
 
   const handleDelegate = () => {
-    // TODO: call relayer for gasless delegation
+    if (walletState.status === 'disconnected') return
+    setModalOpen(true)
   }
 
   return (
-    <StyledCard>
-      {onToggleCompare && (
-        <CompareChip
-          type="button"
-          $selected={isSelected}
-          onClick={onToggleCompare}
-          aria-pressed={isSelected}
-          aria-label={isSelected ? 'Remove from compare' : 'Add to compare'}
-        >
-          <CompareIcon aria-hidden>
-            <FontAwesomeIcon icon={isSelected ? faCheck : faPlus} />
-          </CompareIcon>
-          {isSelected ? 'Selected' : 'Compare'}
-        </CompareChip>
+    <>
+      <StyledCard>
+        {onToggleCompare && (
+          <CompareChip
+            type="button"
+            $selected={isSelected}
+            onClick={onToggleCompare}
+            aria-pressed={isSelected}
+            aria-label={isSelected ? 'Remove from compare' : 'Add to compare'}
+          >
+            <CompareIcon aria-hidden>
+              <FontAwesomeIcon icon={isSelected ? faCheck : faPlus} />
+            </CompareIcon>
+            {isSelected ? 'Selected' : 'Compare'}
+          </CompareChip>
+        )}
+
+        <CardHeader>
+          <IdentityRow>
+            <AvatarWrap>
+              <EnsAvatar
+                address={voter.address}
+                name={ensName ?? undefined}
+                avatarUrl={voter.avatarUrl}
+                size={48}
+              />
+            </AvatarWrap>
+            <NameStack>
+              <TitleRow>
+                <NameText>{displayName}</NameText>
+                {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
+              </TitleRow>
+              <AddressLine>{truncateAddress(voter.address)}</AddressLine>
+            </NameStack>
+          </IdentityRow>
+
+          <ProposalSection>
+            <ProposalHeader>
+              <ProposalLabel>Last 10 proposals</ProposalLabel>
+              <ProposalCount>
+                {voter.last10ProposalsVoted.filter(Boolean).length}/{voter.last10ProposalsVoted.length}
+              </ProposalCount>
+            </ProposalHeader>
+            <ProposalBar votes={voter.last10ProposalsVoted} showCount={false} />
+          </ProposalSection>
+        </CardHeader>
+
+        <StatsRow>
+          <Stat>
+            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
+            <StatLabel>Voting Power</StatLabel>
+          </Stat>
+          <Stat>
+            <StatValue>{voter.tokenHolderCount}</StatValue>
+            <StatLabel>Delegators</StatLabel>
+          </Stat>
+          <Stat>
+            <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
+            <StatLabel>Active Since</StatLabel>
+          </Stat>
+        </StatsRow>
+
+        <ActionsBlock>
+          <Button
+            colorStyle="bluePrimary"
+            size="small"
+            onClick={handleDelegate}
+          >
+            Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
+          </Button>
+          <ProfileLink to={profileUrl}>
+            View profile <ProfileArrow aria-hidden>→</ProfileArrow>
+          </ProfileLink>
+        </ActionsBlock>
+      </StyledCard>
+      {modalOpen && (
+        <DelegationModal
+          open
+          onClose={() => setModalOpen(false)}
+          delegateAddress={voter.address as `0x${string}`}
+          delegateEnsName={ensName}
+          delegateAvatarUrl={voter.avatarUrl}
+          tokenAddress={contracts.ensToken}
+        />
       )}
-
-      <CardHeader>
-        <IdentityRow>
-          <AvatarWrap>
-            <EnsAvatar
-              address={voter.address}
-              name={ensName ?? undefined}
-              avatarUrl={voter.avatarUrl}
-              size={48}
-            />
-          </AvatarWrap>
-          <NameStack>
-            <TitleRow>
-              <NameText>{displayName}</NameText>
-              {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
-            </TitleRow>
-            <AddressLine>{truncateAddress(voter.address)}</AddressLine>
-          </NameStack>
-        </IdentityRow>
-
-        <ProposalSection>
-          <ProposalHeader>
-            <ProposalLabel>Last 10 proposals</ProposalLabel>
-            <ProposalCount>
-              {voter.last10ProposalsVoted.filter(Boolean).length}/{voter.last10ProposalsVoted.length}
-            </ProposalCount>
-          </ProposalHeader>
-          <ProposalBar votes={voter.last10ProposalsVoted} showCount={false} />
-        </ProposalSection>
-      </CardHeader>
-
-      <StatsRow>
-        <Stat>
-          <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
-          <StatLabel>Voting Power</StatLabel>
-        </Stat>
-        <Stat>
-          <StatValue>{voter.tokenHolderCount}</StatValue>
-          <StatLabel>Delegators</StatLabel>
-        </Stat>
-        <Stat>
-          <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
-          <StatLabel>Active Since</StatLabel>
-        </Stat>
-      </StatsRow>
-
-      <ActionsBlock>
-        <Button
-          colorStyle="bluePrimary"
-          size="small"
-          onClick={handleDelegate}
-        >
-          Delegate<FreeBadge>Free</FreeBadge>
-        </Button>
-        <ProfileLink to={profileUrl}>
-          View profile <ProfileArrow aria-hidden>→</ProfileArrow>
-        </ProfileLink>
-      </ActionsBlock>
-    </StyledCard>
+    </>
   )
 }

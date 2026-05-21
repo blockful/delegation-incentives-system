@@ -17,8 +17,8 @@ export function applyCors(app: OpenAPIHono, raw: string | undefined): void {
     "*",
     cors({
       origin: (origin) => (allowed.includes(origin) ? origin : null),
-      allowMethods: ["GET", "OPTIONS"],
-      allowHeaders: ["Content-Type"],
+      allowMethods: ["GET", "POST", "OPTIONS"],
+      allowHeaders: ["Content-Type", "X-Client-Source"],
       maxAge: 600,
     }),
   );

@@ -70,6 +70,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.15)(jsdom@26.1.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2))
+      msw:
+        specifier: ^2.12.10
+        version: 2.12.10(@types/node@22.19.15)(typescript@5.9.3)
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -82,6 +85,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@anticapture/client':
+        specifier: ^1.1.0
+        version: 1.1.0(@tanstack/react-query@5.90.21(react@19.2.4))(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(react@19.2.4)
       '@ensdomains/thorin':
         specifier: ^0.6.50
         version: 0.6.50(react-dom@19.2.4(react@19.2.4))(react-transition-state@1.1.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(styled-components@6.3.11(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
@@ -210,6 +216,20 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
+
+  '@anticapture/client@1.1.0':
+    resolution: {integrity: sha512-YEgF6RRUzxw2Jh8btzcGiuVwfI3U6WcVuVIp2qLAJ+L8uh3df0PVQB4czcgTaG3zuHHx/QxEC6sSBDVeVIEGOg==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.0.0
+      msw: ^2.0.0
+      react: ^19.0.0
+    peerDependenciesMeta:
+      '@tanstack/react-query':
+        optional: true
+      msw:
+        optional: true
+      react:
+        optional: true
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -1033,6 +1053,10 @@ packages:
 
   '@escape.tech/graphql-armor-types@0.7.0':
     resolution: {integrity: sha512-RHxyyp6PDgS6NAPnnmB6JdmUJ6oqhpSHFbsglGWeCcnNzceA5AkQFpir7VIDbVyS8LNC1xhipOtk7f9ycrIemQ==}
+
+  '@faker-js/faker@9.9.0':
+    resolution: {integrity: sha512-OEl393iCOoo/z8bMezRlJu+GlRGlsKbUAN7jKB6LhnKoqKve5DXRpalbItIIcwnCjs1k/FOPjFzcA6Qn+H+YbA==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
@@ -4312,12 +4336,12 @@ packages:
   nf3@0.3.17:
     resolution: {integrity: sha512-N9zEWySuJFw+gR0lhS5863YsvNeudOdqRyFvNb+jMXbeTJOdrjDqkCpDginIZfUm0LzT1t1nCRiDeqQm/8kirQ==}
 
-  nitro-nightly@3.0.1-20260519-181425-9cc59cf7:
-    resolution: {integrity: sha512-3Yd4X9aOb/8dS1Os1aba+KOUeYut+kFbcQoteNbRCUrASNZ+g33R/Ne8VBGAm96scjwMoP9miS2GsmcpuNIX2A==}
+  nitro-nightly@3.0.1-20260520-201858-14f2fed3:
+    resolution: {integrity: sha512-JLKaCSHK/a4Y6r+3cEwWVBloGz+vzU3j2CVz0jbggJRZYM+QeMoHDLzfIka0MKo8KbzKoLCvgiJYCl72a/krWA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
-      '@vercel/queue': ^0.1.6
+      '@vercel/queue': ^0.2.0
       dotenv: '*'
       giget: '*'
       jiti: ^2.6.1
@@ -6011,6 +6035,14 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
+  '@anticapture/client@1.1.0(@tanstack/react-query@5.90.21(react@19.2.4))(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(react@19.2.4)':
+    dependencies:
+      '@faker-js/faker': 9.9.0
+    optionalDependencies:
+      '@tanstack/react-query': 5.90.21(react@19.2.4)
+      msw: 2.12.10(@types/node@22.19.15)(typescript@5.9.3)
+      react: 19.2.4
+
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
       '@csstools/css-calc': 2.1.4(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)
@@ -6608,6 +6640,8 @@ snapshots:
     dependencies:
       graphql: 16.13.1
     optional: true
+
+  '@faker-js/faker@9.9.0': {}
 
   '@fastify/busboy@2.1.1': {}
 
@@ -8635,7 +8669,7 @@ snapshots:
       '@vercel/gatsby-plugin-vercel-builder': 2.2.6
       '@vercel/nft': 1.5.0
       '@vercel/static-config': 3.3.0
-      nitro: nitro-nightly@3.0.1-20260519-181425-9cc59cf7(@electric-sql/pglite@0.2.13)(@vercel/blob@2.3.0)(chokidar@4.0.0)(dotenv@17.3.1)(drizzle-orm@0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.20.0)(postgres@3.4.8))(idb-keyval@6.2.2)(lru-cache@11.2.7)(vite@6.4.1(@types/node@22.19.15)(tsx@4.21.0)(yaml@2.8.2))
+      nitro: nitro-nightly@3.0.1-20260520-201858-14f2fed3(@electric-sql/pglite@0.2.13)(@vercel/blob@2.3.0)(chokidar@4.0.0)(dotenv@17.3.1)(drizzle-orm@0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.20.0)(postgres@3.4.8))(idb-keyval@6.2.2)(lru-cache@11.2.7)(vite@6.4.1(@types/node@22.19.15)(tsx@4.21.0)(yaml@2.8.2))
       ts-morph: 12.0.0
     transitivePeerDependencies:
       - '@azure/app-configuration'
@@ -10542,7 +10576,7 @@ snapshots:
 
   nf3@0.3.17: {}
 
-  nitro-nightly@3.0.1-20260519-181425-9cc59cf7(@electric-sql/pglite@0.2.13)(@vercel/blob@2.3.0)(chokidar@4.0.0)(dotenv@17.3.1)(drizzle-orm@0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.20.0)(postgres@3.4.8))(idb-keyval@6.2.2)(lru-cache@11.2.7)(vite@6.4.1(@types/node@22.19.15)(tsx@4.21.0)(yaml@2.8.2)):
+  nitro-nightly@3.0.1-20260520-201858-14f2fed3(@electric-sql/pglite@0.2.13)(@vercel/blob@2.3.0)(chokidar@4.0.0)(dotenv@17.3.1)(drizzle-orm@0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.20.0)(postgres@3.4.8))(idb-keyval@6.2.2)(lru-cache@11.2.7)(vite@6.4.1(@types/node@22.19.15)(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.5(srvx@0.11.15)

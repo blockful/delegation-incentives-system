@@ -55,4 +55,30 @@ export const handlers = [
       ? roundDetailFixture
       : emptyRoundDetailFixture),
   ),
+
+  http.get('/api/gateful/ens/relay/balance', () =>
+    HttpResponse.json({ hasEnoughBalance: true }),
+  ),
+
+  http.get('/api/gateful/ens/relay/config', () =>
+    HttpResponse.json({
+      minVotingPower: '1000000000000000000',
+      maxRelayPerAddressPerDay: 5,
+    }),
+  ),
+
+  http.get('/api/gateful/ens/relay/rate-limit/:address', () =>
+    HttpResponse.json({
+      delegation: { remaining: 5 },
+      vote: { remaining: 5 },
+      maxPerDay: 5,
+      resetsAt: '2099-12-31T00:00:00.000Z',
+    }),
+  ),
+
+  http.post('/api/gateful/ens/relay/delegate', () =>
+    HttpResponse.json({
+      transactionHash: '0x' + 'ab'.repeat(32),
+    }),
+  ),
 ]

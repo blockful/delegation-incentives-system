@@ -25,6 +25,9 @@ import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { DelegationModal } from '@/features/delegate/components/DelegationModal'
+import { useRelayerBalance } from '@/features/delegate/hooks/useGaslessRelayer'
+import { contracts } from '@/config/contracts'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
@@ -727,6 +730,8 @@ export function VoterProfilePage() {
     : rawParam
   const { voter, loading, error } = useVoter(resolvedAddr)
   const walletState = useWalletState()
+  const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
+  const [modalOpen, setModalOpen] = useState(false)
 
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
@@ -794,6 +799,11 @@ export function VoterProfilePage() {
     : 0
   const isFullParticipation = participationPct >= 100
 
+  const handleDelegate = () => {
+    if (walletState.status === 'disconnected') return
+    setModalOpen(true)
+  }
+
   const proposalRows = buildProposalRows(voter.last10ProposalsVoted)
 
   const twitterUrl = twitter ? `https://twitter.com/${twitter.replace(/^@/, '')}` : null
@@ -805,6 +815,7 @@ export function VoterProfilePage() {
   const displayName = ensName ?? truncateAddress(voter.address)
 
   return (
+    <>
     <Page>
       <HeaderCard>
         <BackLinkButton type="button" onClick={() => navigate('/voters')}>
@@ -868,8 +879,8 @@ export function VoterProfilePage() {
 
           <CtaRow>
             {!isDelegated && (
-              <Button colorStyle="bluePrimary" width="auto">
-                Delegate and earn<FreeBadge>Free</FreeBadge>
+              <Button colorStyle="bluePrimary" width="auto" onClick={handleDelegate}>
+                Delegate and earn{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
               </Button>
             )}
             <Button
@@ -972,5 +983,16 @@ export function VoterProfilePage() {
         </TableCard>
       </VotingRecordSection>
     </Page>
+    {modalOpen && (
+      <DelegationModal
+        open
+        onClose={() => setModalOpen(false)}
+        delegateAddress={voter.address as `0x${string}`}
+        delegateEnsName={ensName}
+        delegateAvatarUrl={voter.avatarUrl}
+        tokenAddress={contracts.ensToken}
+      />
+    )}
+    </>
   )
 }

@@ -14,6 +14,7 @@
     "codegen": "pnpm --filter @ens-dis/backend openapi:gen && openapi-typescript ./openapi.json -o src/api/schema.gen.ts"
   },
   "dependencies": {
+    "@anticapture/client": "^1.1.0",
     "@ensdomains/thorin": "^0.6.50",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-brands-svg-icons": "^7.2.0",

@@ -44,6 +44,10 @@ export default defineConfig(({ mode, command }) => {
       port: devEnv.frontendPort ?? 5173,
       proxy: shouldProxyApi && devEnv.devApiProxyTarget
         ? {
+            "/api/gateful": {
+              target: devEnv.devApiProxyTarget,
+              changeOrigin: true,
+            },
             [env.apiBaseUrl]: {
               target: devEnv.devApiProxyTarget,
               changeOrigin: true,
