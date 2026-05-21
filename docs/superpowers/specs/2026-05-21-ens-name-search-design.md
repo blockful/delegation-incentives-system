@@ -112,10 +112,12 @@ const voters = useMemo(() => {
 }, [data, sort, shuffleSeed, search, resolvedNames])
 ```
 
-VoterCard refactor: accept `resolvedEnsName?: string | null` as a prop and stop calling `useEnsName` itself. Same total network calls (still N, hoisted from N cards to one page), but the resolved data is now available for filtering.
+VoterCard refactor: accept `resolvedEnsName?: string | null` as a prop and stop calling `useEnsName` itself. Net RPC count goes from N (one per card, unconditional) to `N − (voters with API-provided ensName)` because the hoisted hook gates each call on `enabled: !voter.ensName`. So this is a small reduction, not parity.
+
+The resolution uses wagmi's public client (`usePublicClient()`), which is always available because `WagmiAdapter` is configured at app boot in `apps/frontend/src/app/providers/AppKitProvider.tsx`. No wallet connection is required for either surface.
 
 **UX during initial resolution batch:**
-On first page load, resolutions arrive asynchronously over ~1–2 s. If a user types a search before all names have resolved, matches pop in as data arrives. This matches the existing grid fade-in behavior and React's optimistic-UI ethos. We do not block filtering on the batch or show a global "resolving" spinner — the grid already has skeletons during the initial `useVoters()` load.
+On first page load, resolutions arrive asynchronously over ~1–2 s. If a user types a search before all names have resolved, matches pop in as data arrives — the `useMemo` filter re-runs whenever `resolvedNames` updates, so a voter whose name resolves *after* the user typed `nett` will appear without further interaction. This matches the existing grid fade-in behavior and React's optimistic-UI ethos. We do not block filtering on the batch or show a global "resolving" spinner — the grid already has skeletons during the initial `useVoters()` load.
 
 ### Mock-mode parity
 
