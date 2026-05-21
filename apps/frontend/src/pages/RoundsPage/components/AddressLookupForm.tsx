@@ -1,6 +1,9 @@
 import type { FormEvent } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faWallet, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles'
+import { truncateAddress } from '@/utils/format'
 
 interface AddressLookupFormProps {
   value: string
@@ -8,8 +11,15 @@ interface AddressLookupFormProps {
   sourceLabel: string
   error: string | null
   onChange: (value: string) => void
-  onSubmit: () => void
+  /**
+   * Submit the lookup. Called with no args for normal form submit (parent reads state).
+   * Called with an explicit address override from the "Use connected wallet" chip,
+   * which bypasses stale-state read after onChange in the same event tick.
+   */
+  onSubmit: (addressOverride?: string) => void
   onClear: () => void
+  /** 0x... of the connected wallet, if any. Surfaces the "Use connected wallet" chip. */
+  connectedAddress?: string
 }
 
 const Form = styled.form`
@@ -23,8 +33,10 @@ const Row = styled.div`
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: ${tokens.spacing.sm};
 
+  /* On narrow screens, drop the input to its own row and keep the
+     Search + Clear buttons side-by-side below it. */
   @media (max-width: 560px) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr 1fr;
   }
 `
 
@@ -42,9 +54,17 @@ const Input = styled.input`
     outline: 2px solid ${tokens.color.lightBlue};
     border-color: ${tokens.color.blue};
   }
+
+  @media (max-width: 560px) {
+    grid-column: 1 / -1;
+  }
 `
 
 const Button = styled.button<{ $secondary?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid ${({ $secondary }) => ($secondary ? tokens.color.middleGray : tokens.color.blue)};
   border-radius: ${tokens.radius.sm};
   padding: 10px ${tokens.spacing.md};
@@ -73,6 +93,52 @@ const ErrorText = styled.span`
   color: ${tokens.color.negative};
 `
 
+const AffordanceRow = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.sm};
+  flex-wrap: wrap;
+`
+
+const ConnectedWalletChip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: ${tokens.color.lightBlueOpacity};
+  border: 1px solid ${tokens.color.blue};
+  border-radius: 9999px;
+  color: ${tokens.color.blue};
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
+
+  &:hover {
+    background: ${tokens.color.lightBlue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+`
+
+const ActiveWalletPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: ${tokens.color.status.success.bg};
+  border-radius: 9999px;
+  color: ${tokens.color.status.success.fg};
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+`
+
 export function AddressLookupForm({
   value,
   activeAddress,
@@ -81,10 +147,28 @@ export function AddressLookupForm({
   onChange,
   onSubmit,
   onClear,
+  connectedAddress,
 }: AddressLookupFormProps) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit()
+  }
+
+  const trimmedValue = value.trim()
+  const connectedLower = connectedAddress?.toLowerCase() ?? ''
+  const activeMatchesConnected =
+    Boolean(connectedAddress) &&
+    activeAddress.toLowerCase() === connectedLower
+  const showUseConnectedChip = Boolean(
+    connectedAddress &&
+      !activeMatchesConnected &&
+      (trimmedValue === '' || trimmedValue.toLowerCase() !== connectedLower),
+  )
+
+  function handleUseConnected() {
+    if (!connectedAddress) return
+    onChange(connectedAddress)
+    onSubmit(connectedAddress)
   }
 
   return (
@@ -96,13 +180,38 @@ export function AddressLookupForm({
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
-        <Button type="submit">Inspect</Button>
+        <Button type="submit">
+          <FontAwesomeIcon icon={faMagnifyingGlass} />
+          Search
+        </Button>
         <Button type="button" $secondary onClick={onClear}>Clear</Button>
       </Row>
-      <Meta>
-        <span>{activeAddress ? sourceLabel : 'No address selected'}</span>
-        {error ? <ErrorText>{error}</ErrorText> : null}
-      </Meta>
+      {(showUseConnectedChip || activeMatchesConnected) ? (
+        <AffordanceRow>
+          {showUseConnectedChip ? (
+            <ConnectedWalletChip
+              type="button"
+              onClick={handleUseConnected}
+              aria-label="Use my connected wallet address"
+            >
+              <FontAwesomeIcon icon={faWallet} />
+              Use my connected wallet
+            </ConnectedWalletChip>
+          ) : null}
+          {activeMatchesConnected && connectedAddress ? (
+            <ActiveWalletPill>
+              <FontAwesomeIcon icon={faWallet} />
+              Inspecting your wallet · {truncateAddress(connectedAddress)}
+            </ActiveWalletPill>
+          ) : null}
+        </AffordanceRow>
+      ) : null}
+      {(activeAddress && !activeMatchesConnected) || error ? (
+        <Meta>
+          {activeAddress && !activeMatchesConnected ? <span>{sourceLabel}</span> : null}
+          {error ? <ErrorText>{error}</ErrorText> : null}
+        </Meta>
+      ) : null}
     </Form>
   )
 }

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { tokens, Eyebrow } from '@/styles'
+import { StatusPill } from '@/components/shared/StatusPill'
+import type { RoundStatus } from '@/api/types'
 
 export interface RoundHistoryEntry {
   roundNumber: number
@@ -9,6 +11,7 @@ export interface RoundHistoryEntry {
   vpGrowth: string
   lottery: string
   yourRewards: string
+  status: RoundStatus
   to: string
 }
 
@@ -58,11 +61,9 @@ const Row = styled.tr`
 const Th = styled.th`
   padding: ${tokens.spacing.sm} ${tokens.spacing.md};
   text-align: left;
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
-  text-transform: uppercase;
-  letter-spacing: 0;
   border-bottom: 1px solid ${tokens.color.borderLight};
 `
 
@@ -83,9 +84,7 @@ const Td = styled.td`
       content: attr(data-label);
       color: ${tokens.color.darkGray};
       font-size: ${tokens.font.size.sm};
-      font-weight: ${tokens.font.weight.bold};
-      text-transform: uppercase;
-      letter-spacing: 0;
+      font-weight: ${tokens.font.weight.semibold};
     }
 
     &:last-child {
@@ -152,12 +151,13 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
       <Eyebrow>Round History</Eyebrow>
       <Table>
         <colgroup>
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '24%' }} />
-          <col style={{ width: '14%' }} />
-          <col style={{ width: '14%' }} />
-          <col style={{ width: '17%' }} />
+          <col style={{ width: '13%' }} />
+          <col style={{ width: '21%' }} />
+          <col style={{ width: '12%' }} />
+          <col style={{ width: '12%' }} />
           <col style={{ width: '15%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '13%' }} />
         </colgroup>
         <Thead>
           <tr>
@@ -167,6 +167,7 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
             <Th>VP growth</Th>
             <Th>Lottery</Th>
             <Th>Your rewards</Th>
+            <Th>State</Th>
           </tr>
         </Thead>
         <Tbody>
@@ -180,6 +181,9 @@ export function RoundHistoryTable({ entries }: RoundHistoryTableProps) {
               <Td data-label="VP growth">{renderValue(entry.vpGrowth)}</Td>
               <Td data-label="Lottery">{renderValue(entry.lottery)}</Td>
               <Td data-label="Your rewards">{renderValue(entry.yourRewards)}</Td>
+              <Td data-label="State">
+                <StatusPill tone={entry.status} />
+              </Td>
             </Row>
           ))}
         </Tbody>

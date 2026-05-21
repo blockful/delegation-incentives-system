@@ -14,10 +14,16 @@
     "codegen": "pnpm --filter @ens-dis/backend openapi:gen && openapi-typescript ./openapi.json -o src/api/schema.gen.ts"
   },
   "dependencies": {
+    "@anticapture/client": "^1.1.0",
     "@ensdomains/thorin": "^0.6.50",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-brands-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1",
     "@reown/appkit": "^1.8.19",
     "@reown/appkit-adapter-wagmi": "^1.8.19",
     "@tanstack/react-query": "^5.90.21",
+    "@vercel/og": "^0.11.1",
     "ethereum-blockies-base64": "^1.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -38,7 +44,9 @@
     "jsdom": "^26.1.0",
     "msw": "^2.12.10",
     "openapi-typescript": "^7.13.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
+    "vercel": "^54.2.0",
     "vite": "^6.3.5",
     "vitest": "^4.0.18"
   },

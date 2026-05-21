@@ -24,7 +24,7 @@ export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps)
         roundEndDate={roundData.endDate}
       />
       <TierTableSection tiers={tierData.tiers} />
-      <HowItWorksSection />
+      <HowItWorksSection currentAprPct={currentAprPct} />
       <CtaSection />
     </>
   )

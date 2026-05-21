@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS could be earning/),
+        screen.getByText(/on your ENS/),
       ).toBeInTheDocument()
     })
   })
@@ -41,10 +41,12 @@ describe('LandingPage', () => {
   })
 
   it('shows current APR in hero from tier data', async () => {
-    // Fixture: maxTokenHolderAprPct='5400.00'
-    renderApp(<LandingPage />)
+    // MSW fixture (`src/test/mocks/fixtures/rounds.ts`) returns
+    // maxTokenHolderAprPct='5400.00'. `formatHeroApr` in HeroSection caps
+    // anything >=1000 at the literal '>1000%'.
+    const { container } = renderApp(<LandingPage />)
     await waitFor(() => {
-      expect(screen.getByText('5400.00% APR')).toBeInTheDocument()
+      expect(container.textContent).toMatch(/>1000% APR/)
     })
   })
 
@@ -54,7 +56,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS could be earning/),
+        screen.getByText(/on your ENS/),
       ).toBeInTheDocument()
     })
   })
@@ -69,7 +71,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/Your ENS could be earning/),
+        screen.getByText(/on your ENS/),
       ).toBeInTheDocument()
     })
   })

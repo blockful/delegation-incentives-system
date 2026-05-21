@@ -8,6 +8,9 @@ generated/
 .vercel/
 package-lock.json
 .worktrees/
-*.png
 test-results/
 .playwright-mcp/
+.vercel
+.env*.local
+.og-test/
+.claude/

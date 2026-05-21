@@ -56,6 +56,6 @@ describe('VoterCard', () => {
     renderApp(<VoterCard voter={minimalVoter} />)
     expect(screen.queryByText('Active since')).not.toBeInTheDocument()
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
-    expect(screen.getByText('Token holders')).toBeInTheDocument()
+    expect(screen.getByText('Delegators')).toBeInTheDocument()
   })
 })

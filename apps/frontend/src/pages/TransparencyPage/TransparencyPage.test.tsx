@@ -1,42 +1,49 @@
-import { screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { renderApp } from '@/test/utils'
 import { TransparencyPage } from '.'
+
+// ContractLiveness uses wagmi's usePublicClient, which throws without a
+// WagmiProvider in the tree. The global setup mock (src/test/mocks/wagmi.ts)
+// already stubs useEnsName/useEnsAvatar/useAccount/useDisconnect — extend it
+// here with usePublicClient. ContractLiveness handles `undefined` by staying
+// in its "Checking…" state.
+vi.mock('wagmi', async () => {
+  const actual = await vi.importActual<typeof import('wagmi')>('wagmi')
+  return {
+    ...actual,
+    useEnsName: vi.fn().mockReturnValue({ data: null }),
+    useEnsAvatar: vi.fn().mockReturnValue({ data: null }),
+    useAccount: vi.fn().mockReturnValue({ address: undefined, isConnected: false }),
+    useDisconnect: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
+    usePublicClient: vi.fn().mockReturnValue(undefined),
+  }
+})
 
 describe('TransparencyPage', () => {
   it('renders heading', () => {
     renderApp(<TransparencyPage />)
     expect(
-      screen.getByText('Verify everything on-chain'),
+      screen.getByText('Verify everything onchain'),
     ).toBeInTheDocument()
   })
 
   it('renders 3 verify links', () => {
     renderApp(<TransparencyPage />)
-    expect(screen.getByText('GitHub')).toBeInTheDocument()
+    expect(screen.getByText('GitHub repo')).toBeInTheDocument()
     expect(screen.getByText('Anticapture')).toBeInTheDocument()
-    expect(screen.getByText('Dune Analytics')).toBeInTheDocument()
+    expect(screen.getByText('RFC & specs')).toBeInTheDocument()
   })
 
-  it('renders 3 smart contracts with Verified badges', () => {
+  it('renders the methodology section with all 4 steps', () => {
     renderApp(<TransparencyPage />)
-    expect(screen.getByText('ENS Incentives')).toBeInTheDocument()
-    expect(screen.getByText('Delegate By Sig')).toBeInTheDocument()
-    expect(screen.getByText('Reward Distributor')).toBeInTheDocument()
-
-    const verifiedTags = screen.getAllByText('Verified')
-    expect(verifiedTags).toHaveLength(3)
-  })
-
-  it('renders how rewards calculated steps', async () => {
-    renderApp(<TransparencyPage />)
+    expect(screen.getByText('Methodology')).toBeInTheDocument()
     expect(
-      screen.getByText('How rewards are calculated'),
+      screen.getByText('How rewards are computed'),
     ).toBeInTheDocument()
-    await waitFor(() => {
-      expect(screen.getByText(/180-day moving average/)).toBeInTheDocument()
-    })
-    expect(screen.getByText(/Month-over-month growth/)).toBeInTheDocument()
-    expect(screen.getByText(/proportional to your share/)).toBeInTheDocument()
+    expect(screen.getByText('1. Balance check')).toBeInTheDocument()
+    expect(screen.getByText('2. Your share')).toBeInTheDocument()
+    expect(screen.getByText('3. The pool')).toBeInTheDocument()
+    expect(screen.getByText('4. You earn')).toBeInTheDocument()
   })
 })

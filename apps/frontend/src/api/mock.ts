@@ -10,6 +10,7 @@ import type {
   RoundListResponse,
   RoundDetailResponse,
   AddressDistributionHistoryResponse,
+  AddressRoundReward,
 } from './types'
 
 function delay<T>(value: T, ms = 400): Promise<T> {
@@ -119,13 +120,16 @@ const MOCK_TIERS: TierProgressionResponse = {
   ],
 }
 
+// ENS metadata service serves real avatars by name; falls back gracefully if unset.
+const ensAvatar = (name: string) => `https://metadata.ens.domains/mainnet/avatar/${name}`
+
 const MOCK_VOTERS: ActiveVotersResponse = {
   count: 38,
   voters: [
     {
       address: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
       ensName: 'nick.eth',
-      avatarUrl: null,
+      avatarUrl: ensAvatar('nick.eth'),
       votingPower: '450000000000000000000000',
       votesInLast10: 8,
       tokenHolderCount: 214,
@@ -135,7 +139,7 @@ const MOCK_VOTERS: ActiveVotersResponse = {
     {
       address: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
       ensName: 'avsa.eth',
-      avatarUrl: null,
+      avatarUrl: ensAvatar('avsa.eth'),
       votingPower: '320000000000000000000000',
       votesInLast10: 9,
       tokenHolderCount: 98,
@@ -145,7 +149,7 @@ const MOCK_VOTERS: ActiveVotersResponse = {
     {
       address: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
       ensName: 'slobo.eth',
-      avatarUrl: null,
+      avatarUrl: ensAvatar('slobo.eth'),
       votingPower: '210000000000000000000000',
       votesInLast10: 9,
       tokenHolderCount: 67,
@@ -155,7 +159,7 @@ const MOCK_VOTERS: ActiveVotersResponse = {
     {
       address: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
       ensName: 'alisha.eth',
-      avatarUrl: null,
+      avatarUrl: ensAvatar('alisha.eth'),
       votingPower: '180000000000000000000000',
       votesInLast10: 9,
       tokenHolderCount: 53,
@@ -165,7 +169,7 @@ const MOCK_VOTERS: ActiveVotersResponse = {
     {
       address: '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
       ensName: 'validator.eth',
-      avatarUrl: null,
+      avatarUrl: ensAvatar('validator.eth'),
       votingPower: '95000000000000000000000',
       votesInLast10: 8,
       tokenHolderCount: 31,
@@ -182,7 +186,169 @@ const MOCK_VOTERS: ActiveVotersResponse = {
       activeSince: '2023-06-05T00:00:00Z',
       last10ProposalsVoted: [true, true, true, true, true, true, false, true, true, true],
     },
+    {
+      address: '0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b',
+      ensName: 'brantly.eth',
+      avatarUrl: ensAvatar('brantly.eth'),
+      votingPower: '65000000000000000000000',
+      votesInLast10: 8,
+      tokenHolderCount: 22,
+      activeSince: '2022-11-12T00:00:00Z',
+      last10ProposalsVoted: [true, true, false, true, true, true, true, true, true, false],
+    },
+    {
+      address: '0x8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c',
+      ensName: 'griff.eth',
+      avatarUrl: ensAvatar('griff.eth'),
+      votingPower: '58000000000000000000000',
+      votesInLast10: 9,
+      tokenHolderCount: 14,
+      activeSince: '2023-02-18T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, true, false, true, true, true, true],
+    },
+    {
+      address: '0x9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d',
+      ensName: 'jefflau.eth',
+      avatarUrl: ensAvatar('jefflau.eth'),
+      votingPower: '52000000000000000000000',
+      votesInLast10: 7,
+      tokenHolderCount: 11,
+      activeSince: '2022-09-30T00:00:00Z',
+      last10ProposalsVoted: [true, false, true, true, true, true, false, true, true, true],
+    },
+    {
+      address: '0x0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e',
+      ensName: 'limes.eth',
+      avatarUrl: ensAvatar('limes.eth'),
+      votingPower: '44000000000000000000000',
+      votesInLast10: 9,
+      tokenHolderCount: 17,
+      activeSince: '2023-03-08T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, false, true, true, true, true, true],
+    },
+    {
+      address: '0x1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f',
+      ensName: 'she256.eth',
+      avatarUrl: ensAvatar('she256.eth'),
+      votingPower: '39000000000000000000000',
+      votesInLast10: 8,
+      tokenHolderCount: 9,
+      activeSince: '2023-05-14T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, true, true, true, false, true, false],
+    },
+    {
+      address: '0x2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a',
+      ensName: 'simona.eth',
+      avatarUrl: ensAvatar('simona.eth'),
+      votingPower: '36000000000000000000000',
+      votesInLast10: 9,
+      tokenHolderCount: 13,
+      activeSince: '2023-01-25T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, true, true, false, true, true, true],
+    },
+    {
+      address: '0x3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b',
+      ensName: 'leontalbert.eth',
+      avatarUrl: ensAvatar('leontalbert.eth'),
+      votingPower: '32000000000000000000000',
+      votesInLast10: 8,
+      tokenHolderCount: 8,
+      activeSince: '2023-07-02T00:00:00Z',
+      last10ProposalsVoted: [false, true, true, true, true, true, true, true, false, true],
+    },
+    {
+      address: '0x4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c',
+      ensName: 'spencecoin.eth',
+      avatarUrl: ensAvatar('spencecoin.eth'),
+      votingPower: '28000000000000000000000',
+      votesInLast10: 9,
+      tokenHolderCount: 12,
+      activeSince: '2022-12-19T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, true, false, true, true, true, true],
+    },
+    {
+      address: '0x5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d',
+      ensName: 'fireeyesdao.eth',
+      avatarUrl: ensAvatar('fireeyesdao.eth'),
+      votingPower: '25000000000000000000000',
+      votesInLast10: 7,
+      tokenHolderCount: 7,
+      activeSince: '2023-04-04T00:00:00Z',
+      last10ProposalsVoted: [true, false, true, true, false, true, true, true, true, true],
+    },
+    {
+      address: '0x6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e',
+      ensName: 'coinbase.eth',
+      avatarUrl: ensAvatar('coinbase.eth'),
+      votingPower: '22000000000000000000000',
+      votesInLast10: 8,
+      tokenHolderCount: 6,
+      activeSince: '2023-08-21T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, true, true, false, true, false, true],
+    },
+    {
+      address: '0x7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f',
+      ensName: 'wslyvh.eth',
+      avatarUrl: ensAvatar('wslyvh.eth'),
+      votingPower: '18000000000000000000000',
+      votesInLast10: 9,
+      tokenHolderCount: 5,
+      activeSince: '2023-06-17T00:00:00Z',
+      last10ProposalsVoted: [true, true, true, true, false, true, true, true, true, true],
+    },
   ],
+}
+
+/**
+ * Mock ENS text records for the seeded voters above.
+ * Keyed by lowercased address. Read by VoterProfilePage when env.useMockApi is true
+ * so the bio + verified-link chips render without a working mainnet RPC.
+ */
+/**
+ * Mock reverse-resolution for ENS names → addresses.
+ * Used by VoterProfilePage when env.useMockApi is true so navigating to
+ * /voters/nick.eth (etc.) resolves locally instead of hanging on wagmi
+ * waiting for a mainnet RPC.
+ */
+export const MOCK_ENS_TO_ADDRESS: Record<string, string> = {
+  'nick.eth': '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
+  'avsa.eth': '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
+  'slobo.eth': '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
+  'alisha.eth': '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
+  'validator.eth': '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
+}
+
+export const MOCK_ENS_PROFILES: Record<
+  string,
+  { description?: string; twitter?: string; url?: string }
+> = {
+  '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b': {
+    description:
+      'Building ENS. Caring for the namespace. Mostly opinions, occasionally good ones. Working on making web3 less painful, one resolver at a time.',
+    twitter: 'nicksdjohnson',
+    url: 'ens.domains',
+  },
+  '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c': {
+    description:
+      'ENS Labs co-founder. Focused on governance, integrations, and the long-term sustainability of the ENS DAO.',
+    twitter: 'avsa',
+    url: 'avsa.io',
+  },
+  '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d': {
+    description:
+      'Long-time ENS community member and active governance participant. I vote on every proposal and write public reasoning.',
+    twitter: 'slobo_eth',
+  },
+  '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e': {
+    description:
+      'Independent delegate. Engineering background, focused on protocol upgrades and treasury responsibility.',
+    url: 'alisha.xyz',
+  },
+  '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f': {
+    description:
+      'Validator-operator delegate. Vote on infra, security, and ecosystem health proposals.',
+    twitter: 'validator_eth',
+  },
 }
 
 function createMockRound(): RoundInfoResponse {
@@ -303,16 +469,16 @@ const MOCK_ROUNDS: RoundListResponse = {
       vpGrowthPct: '20.00',
       poolSize: '8000000000000000000000',
       poolSizeEns: '8000.000000000000000000',
-      totalDistributed: '155000000000000000000',
-      totalDistributedEns: '155.000000000000000000',
+      totalDistributed: '7820000000000000000000',
+      totalDistributedEns: '7820.000000000000000000',
       activeVoterCount: 42,
       eligibleTokenHolderCount: 312,
-      lotteryBucketCount: 1,
-      lotteryEntryCount: 12,
-      lotteryParticipantCount: 12,
-      lotteryWinnerCount: 1,
-      lotteryPrize: '10000000000000000000',
-      lotteryPrizeEns: '10.000000000000000000',
+      lotteryBucketCount: 4,
+      lotteryEntryCount: 48,
+      lotteryParticipantCount: 48,
+      lotteryWinnerCount: 4,
+      lotteryPrize: '40000000000000000000',
+      lotteryPrizeEns: '40.000000000000000000',
       computedAt: '2026-05-01T00:00:00.000Z',
     },
     {
@@ -320,29 +486,92 @@ const MOCK_ROUNDS: RoundListResponse = {
       month: '2026-03',
       startDate: '2026-03-01T00:00:00.000Z',
       endDate: '2026-03-31T23:59:59.999Z',
-      status: 'ended',
-      distributionDataStatus: 'missing',
+      status: 'paid',
+      distributionDataStatus: 'available',
       isCurrent: false,
       percentComplete: 100,
       daysRemaining: 0,
-      tierIndex: null,
-      tierLabel: null,
-      vpGrowthPct: null,
-      poolSize: null,
-      poolSizeEns: null,
-      totalDistributed: null,
-      totalDistributedEns: null,
-      activeVoterCount: null,
-      eligibleTokenHolderCount: null,
-      lotteryBucketCount: null,
-      lotteryEntryCount: null,
-      lotteryParticipantCount: null,
-      lotteryWinnerCount: null,
-      lotteryPrize: null,
-      lotteryPrizeEns: null,
-      computedAt: null,
+      tierIndex: 0,
+      tierLabel: 'Tier #1',
+      vpGrowthPct: '8.50',
+      poolSize: '5000000000000000000000',
+      poolSizeEns: '5000.000000000000000000',
+      totalDistributed: '4910000000000000000000',
+      totalDistributedEns: '4910.000000000000000000',
+      activeVoterCount: 36,
+      eligibleTokenHolderCount: 248,
+      lotteryBucketCount: 2,
+      lotteryEntryCount: 26,
+      lotteryParticipantCount: 26,
+      lotteryWinnerCount: 2,
+      lotteryPrize: '20000000000000000000',
+      lotteryPrizeEns: '20.000000000000000000',
+      computedAt: '2026-04-01T00:00:00.000Z',
+    },
+    {
+      roundNumber: 0,
+      month: '2026-02',
+      startDate: '2026-02-01T00:00:00.000Z',
+      endDate: '2026-02-28T23:59:59.999Z',
+      status: 'paid',
+      distributionDataStatus: 'available',
+      isCurrent: false,
+      percentComplete: 100,
+      daysRemaining: 0,
+      tierIndex: 0,
+      tierLabel: 'Tier #1',
+      vpGrowthPct: '4.20',
+      poolSize: '5000000000000000000000',
+      poolSizeEns: '5000.000000000000000000',
+      totalDistributed: '4880000000000000000000',
+      totalDistributedEns: '4880.000000000000000000',
+      activeVoterCount: 33,
+      eligibleTokenHolderCount: 198,
+      lotteryBucketCount: 2,
+      lotteryEntryCount: 22,
+      lotteryParticipantCount: 22,
+      lotteryWinnerCount: 2,
+      lotteryPrize: '20000000000000000000',
+      lotteryPrizeEns: '20.000000000000000000',
+      computedAt: '2026-03-01T00:00:00.000Z',
     },
   ],
+}
+
+/**
+ * Per-voter, per-round mock reward amounts (voter share of the 10% pool).
+ * Keyed by lowercased voter address, then round number.
+ * Powers the Rewards History strip on VoterProfilePage and the
+ * connected user's history on Dashboard.
+ */
+const MOCK_VOTER_REWARDS: Record<string, Record<number, string>> = {
+  '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b': { 2: '24.50', 1: '18.20', 0: '15.40' },
+  '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c': { 2: '17.80', 1: '13.50', 0: '11.20' },
+  '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d': { 2: '11.70', 1: '8.90', 0: '7.40' },
+  '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e': { 2: '10.00', 1: '7.50', 0: '6.20' },
+  '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f': { 2: '5.20', 1: '3.90', 0: '3.30' },
+}
+
+function buildMockAddressReward(
+  address: string,
+  roundNumber: number,
+): AddressRoundReward | null {
+  const lower = address.toLowerCase()
+  const reward = MOCK_VOTER_REWARDS[lower]?.[roundNumber]
+  if (!reward) return null
+  const wei = (parseFloat(reward) * 1e18).toString()
+  return {
+    address: lower,
+    rewardStatus: 'paid',
+    voterReward: wei,
+    voterRewardEns: reward,
+    tokenHolderReward: '0',
+    tokenHolderRewardEns: '0',
+    lotteryReward: '0',
+    lotteryRewardEns: '0',
+    totalReward: wei,
+    totalRewardEns: reward,
+  }
 }
 
 const MOCK_ADDRESS_HISTORY: AddressDistributionHistoryResponse = {
@@ -576,14 +805,19 @@ export const mockApi = {
 
   rounds: () => delay(MOCK_ROUNDS),
 
-  round: (roundNumber: number, _address?: string) => {
-    if (roundNumber === 2) return delay(MOCK_PAID_ROUND_DETAIL)
+  round: (roundNumber: number, address?: string) => {
+    const addressReward = address ? buildMockAddressReward(address, roundNumber) : null
+
+    if (roundNumber === 2) {
+      return delay({ ...MOCK_PAID_ROUND_DETAIL, addressReward })
+    }
 
     const summary = MOCK_ROUNDS.rounds.find((round) => round.roundNumber === roundNumber)
       ?? MOCK_ROUNDS.rounds[0]
     return delay({
       ...MOCK_ROUND_DETAIL,
       ...summary,
+      addressReward,
     })
   },
 } as const

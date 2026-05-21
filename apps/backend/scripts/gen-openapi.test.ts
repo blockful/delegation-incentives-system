@@ -2,7 +2,13 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { it } from "vitest";
-import api from "../src/api/index.js";
+
+// The relayer proxy validates these at import time; codegen only needs the
+// static OpenAPI spec (relayer routes are plain Hono and not part of it).
+process.env.BLOCKFUL_API_TOKEN ||= "codegen-dummy-token";
+process.env.GATEFUL_UPSTREAM_URL ||= "https://codegen-dummy.invalid";
+
+const { default: api } = await import("../src/api/index.js");
 
 it("emits OpenAPI spec to apps/frontend/openapi.json", () => {
   const doc = (

@@ -28,9 +28,7 @@ export const fadeIn = keyframes`
 export const Eyebrow = styled.span`
   display: block;
   font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0;
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkGray};
 `
 
@@ -139,10 +137,8 @@ export const CardLink = styled.a`
 /* ─── Labels & Stats ─── */
 
 export const StatLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.textMuted};
 `
 

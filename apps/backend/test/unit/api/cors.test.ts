@@ -6,6 +6,7 @@ function makeApp(allowed: string | undefined) {
   const app = new OpenAPIHono();
   applyCors(app, allowed);
   app.get("/ping", (c) => c.json({ ok: true }));
+  app.post("/echo", async (c) => c.json({ body: await c.req.json() }));
   return app;
 }
 
@@ -47,5 +48,24 @@ describe("applyCors", () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("allows POST preflight with x-client-source for the relayer proxy", async () => {
+    const app = makeApp("https://foo.example");
+    const res = await app.request("/echo", {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://foo.example",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type, x-client-source",
+      },
+    });
+    expect(res.status).toBe(204);
+    const allowMethods = res.headers.get("access-control-allow-methods") ?? "";
+    expect(allowMethods.toUpperCase()).toContain("POST");
+    const allowHeaders =
+      res.headers.get("access-control-allow-headers")?.toLowerCase() ?? "";
+    expect(allowHeaders).toContain("content-type");
+    expect(allowHeaders).toContain("x-client-source");
   });
 });

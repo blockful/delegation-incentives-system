@@ -1,13 +1,26 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faArrowLeft,
+  faArrowRight,
+  faArrowTrendUp,
+  faCircleCheck,
+  faCircleInfo,
+  faUserSlash,
+  faCoins,
+  faDownload,
+  faHourglassHalf,
+  faMagnifyingGlass,
+  faRankingStar,
+  faTrophy,
+} from '@fortawesome/free-solid-svg-icons'
+import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { api, ApiClientError } from '@/api'
 import type {
-  AddressRoundReward,
-  LotteryBucketDetail,
-  LotteryDetail,
-  LotteryEntryDetail,
   RewardRank,
   RewardStatus,
   RoundDetailResponse,
@@ -16,359 +29,847 @@ import type {
 import { RoundDetailPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { CopyableAddress } from '@/components/shared/CopyableAddress'
-import { tokens, fadeInUp, Eyebrow, PageTitle, ErrorMessage } from '@/styles'
-import { formatEnsAmount, formatUtcMonthRange, truncateAddress } from '@/utils/format'
+import { tokens, fadeInUp, ErrorMessage } from '@/styles'
+import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
+import { RewardSourceTag } from './components/RewardTags'
+import { formatPositiveReward, statusLabel } from './status'
 import {
   buildRoundDetailFallback,
   buildRoundListFromCurrentRound,
 } from './roundFallback'
 
+/* ─── Page layout ─── */
+
 const Page = styled.div`
-  max-width: ${tokens.maxWidth.section};
-  margin: 0 auto;
-  padding: ${tokens.spacing.lg} ${tokens.spacing.xl};
+  width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing['3xl']};
-  animation: ${fadeInUp} 0.4s ease both;
-  min-width: 0;
-
-  @media (min-width: 768px) {
-    padding: ${tokens.spacing['4xl']} ${tokens.spacing['2xl']};
-  }
+  animation: ${fadeInUp} 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 `
 
-const Header = styled.header`
+/* ─── Header card ─── */
+
+const HeaderCard = styled.section`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
-  min-width: 0;
-`
+  align-items: center;
+  gap: ${tokens.spacing['2xl']};
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
-const BackLink = styled(Link)`
-  color: ${tokens.color.blue};
-  font-weight: ${tokens.font.weight.bold};
-  text-decoration: none;
-  width: fit-content;
-
-  &:hover {
-    text-decoration: underline;
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "back avatar"
+      "text avatar";
+    column-gap: ${tokens.spacing['4xl']};
+    row-gap: ${tokens.spacing['2xl']};
+    align-items: stretch;
   }
 `
 
-const HeaderActions = styled.div`
+const HeaderText = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: ${tokens.spacing['2xl']};
+  min-width: 0;
+  width: 100%;
+  text-align: center;
+
+  @media (min-width: 768px) {
+    grid-area: text;
+    align-items: stretch;
+    text-align: left;
+    width: auto;
+  }
+`
+
+const TitleBlock = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: ${tokens.spacing.md};
-  flex-wrap: wrap;
 `
 
-const RoundNav = styled.nav`
-  display: flex;
+const BackLinkButton = styled.button`
+  display: inline-flex;
   align-items: center;
-  gap: ${tokens.spacing.sm};
-  flex-wrap: wrap;
+  gap: ${tokens.spacing.xs};
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  align-self: flex-start;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  color: ${tokens.color.blue};
+  transition: opacity ${tokens.transition.fast}, gap ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
+    opacity: 0.8;
+    gap: ${tokens.spacing.sm};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (min-width: 768px) {
+    grid-area: back;
+  }
 `
 
-const RoundNavButton = styled(Link)`
+const NameRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.md};
+`
+
+const NameTitle = styled.h1`
+  margin: 0;
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+  text-wrap: balance;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['5xl']};
+  }
+`
+
+const StatusTag = styled.span<{ $status: RoundStatus | RewardStatus }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 14px;
+  background: ${({ $status }) =>
+    $status === 'live'
+      ? tokens.color.status.success.bg
+      : $status === 'paid'
+        ? tokens.color.lightBlueOpacity
+        : tokens.color.bgSubtle};
+  color: ${({ $status }) =>
+    $status === 'live'
+      ? tokens.color.status.success.fg
+      : $status === 'paid'
+        ? tokens.color.blue
+        : tokens.color.darkGray};
+  font-family: ${tokens.font.family};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+`
+
+const CtaRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  @media (min-width: 768px) {
+    width: auto;
+  }
+`
+
+const RoundNavButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   min-height: 36px;
-  padding: 0 ${tokens.spacing.md};
-  border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.sm};
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.surface};
   color: ${tokens.color.darkBlue};
+  font-family: inherit;
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
-  text-decoration: none;
+  cursor: pointer;
   white-space: nowrap;
+  flex: 1;
 
-  &:hover {
+  @media (min-width: 768px) {
+    flex: 0 0 auto;
+  }
+  transition:
+    border-color ${tokens.transition.fast},
+    color ${tokens.transition.fast},
+    gap ${tokens.transition.fast};
+
+  svg {
+    color: currentColor;
+    width: 10px;
+    height: 10px;
+  }
+
+  &:hover:not(:disabled) {
     border-color: ${tokens.color.blue};
     color: ${tokens.color.blue};
   }
-`
 
-const DisabledRoundNavButton = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 0 ${tokens.spacing.md};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.sm};
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  opacity: 0.55;
-  white-space: nowrap;
-`
-
-const TitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${tokens.spacing.lg};
-  flex-wrap: wrap;
-`
-
-const StatusPill = styled.span<{ $status: RoundStatus | RewardStatus }>`
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  padding: 4px 10px;
-  border-radius: ${tokens.radius.pill};
-  background: ${({ $status }) =>
-    $status === 'live'
-      ? tokens.color.lightBlueOpacity
-      : $status === 'paid'
-        ? tokens.color.tierHighlight
-        : tokens.color.borderLight};
-  color: ${({ $status }) =>
-    $status === 'live'
-      ? tokens.color.blue
-      : $status === 'paid'
-        ? tokens.color.positiveEmphasis
-        : tokens.color.darkGray};
-`
-
-const SummaryGrid = styled.section`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${tokens.spacing.md};
-
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  &:disabled {
+    color: ${tokens.color.textSubtle};
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 `
 
-const SummaryItem = styled.div`
+const DownloadCsvButton = styled.button`
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: ${tokens.color.blue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity ${tokens.transition.fast}, gap ${tokens.transition.fast};
+
+  svg {
+    color: currentColor;
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.8;
+    gap: 8px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  &:disabled {
+    color: ${tokens.color.textSubtle};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 767px) {
+    align-self: center;
+  }
+`
+
+/* ─── Avatar column with round badge ─── */
+
+const AvatarColumn = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    grid-area: avatar;
+    align-self: center;
+  }
+`
+
+const RingWrap = styled.div`
+  position: relative;
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    width: 240px;
+    height: 240px;
+  }
+`
+
+const RingSvg = styled.svg`
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+`
+
+const RingCenter = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 4px;
-  min-width: 0;
+  text-align: center;
+  pointer-events: none;
 `
 
-const SummaryLabel = styled.span`
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.xs};
+const RingDateRange = styled.span`
+  font-size: 44px;
   font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0;
-`
-
-const SummaryValue = styled.span`
   color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.bold};
-  overflow-wrap: anywhere;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+
+  @media (min-width: 768px) {
+    font-size: 56px;
+  }
 `
+
+const RingMonth = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkGray};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+`
+
+interface RoundProgressRingProps {
+  percent: number
+  startDate: string
+  endDate: string
+  status: RoundStatus
+}
+
+function RoundProgressRing({
+  percent,
+  startDate,
+  endDate,
+  status,
+}: RoundProgressRingProps) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [measuredSize, setMeasuredSize] = useState(220)
+  const [animatedPct, setAnimatedPct] = useState(0)
+
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect
+      if (!rect) return
+      const next = Math.max(180, Math.min(rect.width, rect.height || rect.width))
+      setMeasuredSize(next)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => setAnimatedPct(percent), 120)
+    return () => window.clearTimeout(handle)
+  }, [percent])
+
+  const stroke = 12
+  const radius = (measuredSize - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+  const safePct = Math.max(0, Math.min(100, animatedPct))
+  const offset = circumference - (safePct / 100) * circumference
+
+  const ringColor =
+    status === 'live'
+      ? tokens.color.positiveEmphasis
+      : status === 'paid'
+        ? tokens.color.blue
+        : tokens.color.textSubtle
+
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const startDay = Number.isNaN(start.getTime()) ? '' : start.getUTCDate()
+  const endDay = Number.isNaN(end.getTime()) ? '' : end.getUTCDate()
+  const monthLabel = Number.isNaN(start.getTime())
+    ? ''
+    : start.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+
+  return (
+    <RingWrap ref={wrapRef} aria-label={`${Math.round(percent)}% complete`}>
+      <RingSvg
+        viewBox={`0 0 ${measuredSize} ${measuredSize}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <circle
+          cx={measuredSize / 2}
+          cy={measuredSize / 2}
+          r={radius}
+          fill="none"
+          stroke={tokens.color.borderLight}
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={measuredSize / 2}
+          cy={measuredSize / 2}
+          r={radius}
+          fill="none"
+          stroke={ringColor}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{
+            transition:
+              'stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease',
+          }}
+        />
+      </RingSvg>
+      <RingCenter>
+        <RingDateRange>
+          {startDay}
+          {'-'}
+          {endDay}
+        </RingDateRange>
+        <RingMonth>{monthLabel}</RingMonth>
+      </RingCenter>
+    </RingWrap>
+  )
+}
+
+/* ─── Stats row ─── */
+
+const StatsRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: ${tokens.spacing.md};
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+`
+
+const StatCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+`
+
+const StatTopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+`
+
+const StatValue = styled.span`
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    font-size: ${tokens.font.size['3xl']};
+  }
+`
+
+const StatIconBox = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: ${tokens.color.textSubtle};
+  font-size: 18px;
+`
+
+const StatLabel = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+/* ─── Address inspector ─── */
 
 const Section = styled.section`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
-  min-width: 0;
+  width: 100%;
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
 `
 
 const SectionHeader = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: ${tokens.spacing.md};
   flex-wrap: wrap;
-  width: 100%;
-  max-width: 680px;
 `
 
-const WideSectionHeader = styled(SectionHeader)`
-  max-width: 840px;
+const SectionLabelGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `
 
-const RowCount = styled.span`
-  color: ${tokens.color.darkGray};
+const SectionLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
+  color: ${tokens.color.darkGray};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 `
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
+const SectionTitle = styled.h2`
+  margin: 0;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.25;
+`
 
-  @media (max-width: 720px) {
-    display: block;
+const AddressResultStrip = styled.div<{ $tone: 'success' | 'neutral' | 'pending' }>`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.lg};
+  border-radius: 12px;
+  background: ${({ $tone }) =>
+    $tone === 'success'
+      ? tokens.color.status.success.bg
+      : $tone === 'pending'
+        ? tokens.color.lightBlueOpacity
+        : tokens.color.bgSubtle};
+  border: 1px solid
+    ${({ $tone }) =>
+      $tone === 'success'
+        ? tokens.color.status.success.border
+        : $tone === 'pending'
+          ? tokens.color.lightBlue
+          : tokens.color.borderLight};
+`
+
+const AddressResultIcon = styled.span<{ $tone: 'success' | 'neutral' | 'pending' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  background: ${({ $tone }) =>
+    $tone === 'success'
+      ? tokens.color.status.success.border
+      : $tone === 'pending'
+        ? tokens.color.lightBlue
+        : tokens.color.borderLight};
+  color: ${({ $tone }) =>
+    $tone === 'success'
+      ? tokens.color.white
+      : $tone === 'pending'
+        ? tokens.color.blue
+        : tokens.color.darkGray};
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `
 
-const TableWrap = styled.div`
+const AddressResultText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+`
+
+const AddressResultTitle = styled.span<{ $tone: 'success' | 'neutral' | 'pending' }>`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${({ $tone }) =>
+    $tone === 'success'
+      ? tokens.color.status.success.fg
+      : $tone === 'pending'
+        ? tokens.color.blue
+        : tokens.color.darkBlue};
+`
+
+const AddressResultBody = styled.span`
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkBlue};
+  line-height: 1.5;
+`
+
+/* ─── Rewards table (Voter Profile pattern) ─── */
+
+const TableCard = styled.div`
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 680px;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+
+  @media (max-width: 767px) {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+    gap: 12px;
+  }
 `
 
-const WideTableWrap = styled(TableWrap)`
-  max-width: 840px;
+const TableCardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.surface};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+  flex-wrap: wrap;
+
+  @media (max-width: 767px) {
+    padding: 0 4px 8px;
+    background: transparent;
+    border-bottom: none;
+  }
 `
 
-const Thead = styled.thead`
-  @media (max-width: 720px) {
+const TableHeadRow = styled.div`
+  display: flex;
+  background: ${tokens.color.bgSubtle};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 767px) {
     display: none;
   }
 `
 
-const Tbody = styled.tbody`
-  @media (max-width: 720px) {
-    display: grid;
-    gap: ${tokens.spacing.sm};
-  }
-`
-
-const Row = styled.tr`
-  @media (max-width: 720px) {
-    display: grid;
-    border: 1px solid ${tokens.color.borderLight};
-    border-radius: ${tokens.radius.sm};
-    overflow: hidden;
-  }
-`
-
-const Th = styled.th`
-  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
-  text-align: left;
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
+const TableHeadCell = styled.div<{ $weight?: number; $align?: 'start' | 'end' }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $align }) => ($align === 'end' ? 'flex-end' : 'flex-start')};
+  padding: 12px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
-  text-transform: uppercase;
-  letter-spacing: 0;
-  border-bottom: 1px solid ${tokens.color.borderLight};
+  line-height: 20px;
 `
 
-const Td = styled.td`
-  padding: ${tokens.spacing.md};
-  color: ${tokens.color.darkBlue};
-  border-bottom: 1px solid ${tokens.color.borderLight};
-  vertical-align: middle;
-  overflow-wrap: anywhere;
+const TableRow = styled.a<{ $highlighted?: boolean }>`
+  display: flex;
+  width: 100%;
+  background: ${({ $highlighted }) =>
+    $highlighted ? tokens.color.lightBlueOpacity : tokens.color.surface};
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
 
-  @media (max-width: 720px) {
-    display: grid;
-    grid-template-columns: minmax(82px, 34%) minmax(0, 1fr);
-    gap: ${tokens.spacing.md};
-    padding: ${tokens.spacing.sm} ${tokens.spacing.md};
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
 
-    &::before {
-      content: attr(data-label);
-      color: ${tokens.color.darkGray};
-      font-size: ${tokens.font.size.sm};
-      font-weight: ${tokens.font.weight.bold};
-      text-transform: uppercase;
-      letter-spacing: 0;
-    }
+  &:hover {
+    text-decoration: none;
+    background: ${tokens.color.bgSubtle};
+  }
 
-    &:last-child {
-      border-bottom: 0;
+  @media (max-width: 767px) {
+    flex-direction: column;
+    padding: 16px;
+    gap: 4px;
+    border: 1px solid
+      ${({ $highlighted }) =>
+        $highlighted ? tokens.color.blue : tokens.color.borderLight};
+    border-radius: 12px;
+    background: ${({ $highlighted }) =>
+      $highlighted ? tokens.color.lightBlueOpacity : tokens.color.surface};
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+    &:not(:last-child) {
+      border-bottom: 1px solid
+        ${({ $highlighted }) =>
+          $highlighted ? tokens.color.blue : tokens.color.borderLight};
     }
   }
+`
+
+const TableCell = styled.div<{ $weight?: number; $align?: 'start' | 'end'; $primary?: boolean }>`
+  flex: ${({ $weight }) => $weight ?? 1};
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $align }) => ($align === 'end' ? 'flex-end' : 'flex-start')};
+  gap: ${tokens.spacing.sm};
+  padding: 14px 12px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    flex: none;
+    justify-content: space-between;
+    padding: 6px 0;
+    white-space: normal;
+    ${({ $primary }) =>
+      $primary
+        ? `
+          justify-content: flex-start;
+          font-weight: ${tokens.font.weight.bold};
+          color: ${tokens.color.darkBlue};
+          font-size: ${tokens.font.size.lg};
+          padding: 2px 0 10px;
+          margin-bottom: 4px;
+          border-bottom: 1px solid ${tokens.color.borderLight};
+        `
+        : ''}
+  }
+`
+
+const MobileLabel = styled.span`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: inline-block;
+    color: ${tokens.color.darkGray};
+    font-weight: ${tokens.font.weight.medium};
+  }
+`
+
+const RankPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 9999px;
+  background: ${tokens.color.bgSubtle};
+  color: ${tokens.color.darkBlue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  font-variant-numeric: tabular-nums;
 `
 
 const AddressText = styled.span`
   font-variant-numeric: tabular-nums;
-`
-
-const RewardValue = styled.span`
-  color: ${tokens.color.positiveEmphasis};
-  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 `
 
-const MetaGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${tokens.spacing.md};
-  width: 100%;
-  max-width: 840px;
+const VotingPowerText = styled.span`
+  color: ${tokens.color.darkBlue};
+  font-variant-numeric: tabular-nums;
+`
 
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+const RewardCellRow = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+`
+
+const RewardValueText = styled.span`
+  color: ${tokens.color.positiveEmphasis};
+  font-weight: ${tokens.font.weight.bold};
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+`
+
+const EmptyTableBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
+  text-align: center;
+  background: ${tokens.color.bgSubtle};
+  border-radius: 12px;
+`
+
+const EmptyTableTextStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`
+
+const EmptyTableIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: ${tokens.color.borderLight};
+  color: ${tokens.color.darkGray};
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `
 
-const MetaItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-`
-
-const MetaLabel = styled.span`
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.bold};
-  text-transform: uppercase;
-  letter-spacing: 0;
-`
-
-const MetaValue = styled.span`
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  overflow-wrap: anywhere;
-`
-
-const EmptyState = styled.p`
-  margin: 0;
-  color: ${tokens.color.darkGray};
-`
-
-const TableNote = styled.p`
-  margin: ${tokens.spacing.sm} 0 0;
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.sm};
-  line-height: 1.5;
-`
-
-const AddressLotteryPanel = styled.section<{ $tone: 'neutral' | 'success' | 'warning' | 'pending' | 'error' }>`
-  width: 100%;
-  max-width: 840px;
-  border: 1px solid ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.positiveEmphasis
-    if ($tone === 'warning') return tokens.color.orange
-    if ($tone === 'pending') return tokens.color.blue
-    if ($tone === 'error') return tokens.color.negative
-    return tokens.color.borderLight
-  }};
-  border-radius: ${tokens.radius.sm};
-  background: ${({ $tone }) => {
-    if ($tone === 'success') return tokens.color.tierHighlight
-    if ($tone === 'warning') return tokens.color.lightOrange
-    if ($tone === 'pending') return tokens.color.lightBlue
-    if ($tone === 'error') return '#FEE9F0'
-    return tokens.color.surface
-  }};
-  padding: ${tokens.spacing['2xl']};
-  display: grid;
-  gap: ${tokens.spacing.lg};
-`
-
-const AddressLotteryTitle = styled.h2`
-  margin: 0;
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size['2xl']};
-  font-weight: ${tokens.font.weight.bold};
-`
-
-const AddressLotteryBody = styled.p`
-  margin: 0;
-  color: ${tokens.color.darkGray};
+const EmptyTableTitle = styled.span`
   font-size: ${tokens.font.size.base};
-  line-height: 1.6;
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
 `
+
+const EmptyTableBodyText = styled.span`
+  font-size: ${tokens.font.size.base};
+  color: ${tokens.color.darkGray};
+  line-height: 1.5;
+  max-width: 320px;
+`
+
+/* ─── Helpers ─── */
 
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
   if (walletState.status === 'disconnected') return ''
@@ -379,229 +880,65 @@ function isLegacyEndpointError(error: unknown): boolean {
   return error instanceof ApiClientError && error.status === 404
 }
 
-function statusLabel(status: RoundStatus | RewardStatus): string {
-  if (status === 'live') return 'Live'
-  if (status === 'paid') return 'Paid'
-  if (status === 'pending') return 'Pending'
-  if (status === 'not_eligible') return 'Not eligible'
-  if (status === 'no_reward') return 'No payout'
-  if (status === 'unavailable') return 'Unavailable'
-  return 'Ended'
-}
-
-function formatEns(value: string | null, empty = 'Unavailable', maximumFractionDigits = 4): string {
+function formatEns(value: string | null, empty = '—', maximumFractionDigits = 4): string {
   if (value == null) return empty
   return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
 }
 
+/**
+ * Format an ENS pool amount in compact form using a comma decimal — e.g.
+ * "12,5K ENS" / "1,2M ENS". Smaller amounts render as a plain integer.
+ */
+function formatPoolEns(value: string | null): string {
+  if (value == null) return '—'
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '—'
+  if (n >= 1_000_000) {
+    const m = Math.round((n / 1_000_000) * 10) / 10
+    const text = (m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)).replace('.', ',')
+    return `${text}M ENS`
+  }
+  if (n >= 1_000) {
+    const k = Math.round((n / 1_000) * 10) / 10
+    const text = (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)).replace('.', ',')
+    return `${text}K ENS`
+  }
+  return `${Math.round(n).toLocaleString('en-US')} ENS`
+}
+
+function computeRoundProgress(startDate: string, endDate: string): number {
+  const start = new Date(startDate).getTime()
+  const end = new Date(endDate).getTime()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0
+  const now = Date.now()
+  if (now <= start) return 0
+  if (now >= end) return 100
+  return ((now - start) / (end - start)) * 100
+}
+
+function formatVotingPower(vpWei: string | null): string {
+  if (!vpWei) return '—'
+  const ens = Number(vpWei) / 1e18
+  if (!Number.isFinite(ens)) return '—'
+  if (ens >= 1_000_000) {
+    const m = ens / 1_000_000
+    const rounded = Math.round(m * 10) / 10
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}M ENS`
+  }
+  if (ens >= 1_000) {
+    const k = ens / 1_000
+    const rounded = Math.round(k * 10) / 10
+    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K ENS`
+  }
+  return `${formatEnsAmount(ens.toString())} ENS`
+}
+
 function formatVpGrowth(value: string | null): string {
-  if (value == null) return 'Unavailable'
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return 'Unavailable'
-  if (numericValue > 0) return `+${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
-  return `${numericValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
-}
-
-function formatAddressReward(reward: AddressRoundReward | null): string {
-  if (!reward) return 'No address'
-  if (reward.rewardStatus === 'pending') return 'Pending'
-  if (reward.rewardStatus === 'unavailable') return 'Unavailable'
-  return formatEns(reward.totalRewardEns, '0 ENS')
-}
-
-function formatCount(value: number | null | undefined, empty = 'Unavailable'): string {
-  return value == null ? empty : value.toLocaleString('en-US')
-}
-
-function formatProbability(value: string | null): string {
-  if (value == null) return 'Unavailable'
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return 'Unavailable'
-  return `${(numericValue * 100).toLocaleString('en-US', {
-    maximumFractionDigits: 2,
-  })}%`
-}
-
-function formatBlockNumber(value: string): string {
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return value
-  return `#${numericValue.toLocaleString('en-US')}`
-}
-
-function sameAddress(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase()
-}
-
-interface AddressLotteryEntry {
-  bucket: LotteryBucketDetail
-  entry: LotteryEntryDetail
-  won: boolean
-}
-
-interface AddressLotteryInsight {
-  tone: 'neutral' | 'success' | 'warning' | 'pending' | 'error'
-  title: string
-  body: string
-  metrics: Array<{ label: string; value: string }>
-}
-
-const LOTTERY_ENTRY_DISPLAY_LIMIT = 100
-
-function getAddressLotteryEntries(lottery: LotteryDetail | null, address: string): AddressLotteryEntry[] {
-  if (!lottery || !address) return []
-
-  const entries: AddressLotteryEntry[] = []
-  for (const bucket of lottery.buckets) {
-    for (const entry of bucket.entries) {
-      if (sameAddress(entry.address, address)) {
-        entries.push({
-          bucket,
-          entry,
-          won: sameAddress(bucket.winner, address),
-        })
-      }
-    }
-  }
-
-  return entries
-}
-
-function sumEntryAmountEns(entries: AddressLotteryEntry[]): string {
-  const total = entries.reduce((acc, item) => acc + Number(item.entry.amountEns), 0)
-  if (!Number.isFinite(total)) return 'Unavailable'
-  return `${total.toLocaleString('en-US', { maximumFractionDigits: 4 })} ENS`
-}
-
-function bestEntryProbability(entries: AddressLotteryEntry[]): string {
-  const best = entries.reduce((max, item) => {
-    const probability = Number(item.entry.probability)
-    return Number.isFinite(probability) ? Math.max(max, probability) : max
-  }, 0)
-  return best > 0 ? formatProbability(String(best)) : 'Unavailable'
-}
-
-function bucketList(entries: AddressLotteryEntry[]): string {
-  const buckets = [...new Set(entries.map((item) => item.bucket.bucketIndex + 1))]
-  return buckets.map((bucket) => `#${bucket}`).join(', ')
-}
-
-function hasDirectReward(round: RoundDetailResponse): boolean {
-  const reward = round.addressReward
-  if (!reward) return false
-  return Number(reward.voterRewardEns) > 0 || Number(reward.tokenHolderRewardEns) > 0
-}
-
-function buildAddressLotteryInsight(
-  round: RoundDetailResponse,
-  activeAddress: string,
-  activeAddressValid: boolean,
-): AddressLotteryInsight {
-  if (!activeAddress) {
-    return {
-      tone: 'neutral',
-      title: 'No address selected',
-      body: 'Enter an address above to see whether it had a lottery entry, which bucket it entered, and whether it won.',
-      metrics: [
-        { label: 'Lottery entry', value: 'Unknown' },
-        { label: 'Buckets entered', value: 'Unknown' },
-        { label: 'Lottery reward', value: 'Unknown' },
-      ],
-    }
-  }
-
-  if (!activeAddressValid) {
-    return {
-      tone: 'error',
-      title: 'Invalid address',
-      body: 'Enter a valid Ethereum address before checking lottery participation.',
-      metrics: [
-        { label: 'Lottery entry', value: 'Unknown' },
-        { label: 'Buckets entered', value: 'Unknown' },
-        { label: 'Lottery reward', value: 'Unknown' },
-      ],
-    }
-  }
-
-  if (round.distributionDataStatus !== 'available') {
-    return {
-      tone: 'pending',
-      title: 'Lottery pending',
-      body: 'Final lottery entries are not available until this round has completed distribution data.',
-      metrics: [
-        { label: 'Round status', value: statusLabel(round.status) },
-        { label: 'Lottery entry', value: 'Pending' },
-        { label: 'Lottery reward', value: 'Pending' },
-      ],
-    }
-  }
-
-  if (!round.lottery) {
-    return {
-      tone: 'neutral',
-      title: 'No lottery data',
-      body: 'This round does not have lottery bucket data available.',
-      metrics: [
-        { label: 'Lottery entry', value: 'Unavailable' },
-        { label: 'Buckets entered', value: '0' },
-        { label: 'Lottery reward', value: '0 ENS' },
-      ],
-    }
-  }
-
-  const entries = getAddressLotteryEntries(round.lottery, activeAddress)
-  const winningEntries = entries.filter((item) => item.won)
-
-  if (winningEntries.length > 0) {
-    return {
-      tone: 'success',
-      title: winningEntries.length === 1
-        ? `Won bucket #${winningEntries[0].bucket.bucketIndex + 1}`
-        : `Won ${winningEntries.length} buckets`,
-      body: 'This address was selected by the final deterministic draw for the selected round.',
-      metrics: [
-        { label: 'Lottery reward', value: formatEns(round.addressReward?.lotteryRewardEns ?? null, '0 ENS') },
-        { label: 'Buckets won', value: bucketList(winningEntries) },
-        { label: 'Best weighted odds', value: bestEntryProbability(winningEntries) },
-      ],
-    }
-  }
-
-  if (entries.length > 0) {
-    return {
-      tone: 'warning',
-      title: 'Entered lottery, not selected',
-      body: 'This address had a sub-1 ENS calculated reward and entered the lottery, but another entry won the bucket.',
-      metrics: [
-        { label: 'Buckets entered', value: bucketList(entries) },
-        { label: 'Entry amount', value: sumEntryAmountEns(entries) },
-        { label: 'Best weighted odds', value: bestEntryProbability(entries) },
-      ],
-    }
-  }
-
-  if (hasDirectReward(round)) {
-    return {
-      tone: 'success',
-      title: 'Direct payout, no lottery entry',
-      body: 'This address received at least 1 ENS directly, so it did not enter a lottery bucket for this round.',
-      metrics: [
-        { label: 'Direct reward', value: formatEns(round.addressReward?.totalRewardEns ?? null, '0 ENS') },
-        { label: 'Lottery entry', value: 'No' },
-        { label: 'Lottery reward', value: '0 ENS' },
-      ],
-    }
-  }
-
-  return {
-    tone: 'neutral',
-    title: 'No lottery entry for this round',
-    body: 'This address was not present in the final lottery entries for the selected round.',
-    metrics: [
-      { label: 'Lottery entry', value: 'No' },
-      { label: 'Buckets entered', value: '0' },
-      { label: 'Lottery reward', value: '0 ENS' },
-    ],
-  }
+  if (value == null) return '—'
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '—'
+  if (n > 0) return `+${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+  return `${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
 }
 
 function buildRoundPath(roundNumber: number, activeAddress: string, activeAddressValid: boolean): string {
@@ -611,214 +948,93 @@ function buildRoundPath(roundNumber: number, activeAddress: string, activeAddres
   return `/rounds/${roundNumber}${addressQuery}`
 }
 
-function RankingTable({ rows }: { rows: RewardRank[] }) {
+/* ─── Rewards table ─── */
+
+interface RewardsTableProps {
+  rows: RewardRank[]
+  highlightAddress: string
+  showVotingPower: boolean
+}
+
+function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableProps) {
+  const highlightLower = highlightAddress.toLowerCase()
+
   if (rows.length === 0) {
-    return <EmptyState>No distribution data.</EmptyState>
+    return (
+      <EmptyTableBody>
+        <EmptyTableIcon aria-hidden>
+          <FontAwesomeIcon icon={faUserSlash} />
+        </EmptyTableIcon>
+        <EmptyTableTextStack>
+          <EmptyTableTitle>No recipients in this round</EmptyTableTitle>
+          <EmptyTableBodyText>
+            Nothing got paid out here yet.<br />Check back once the round closes.
+          </EmptyTableBodyText>
+        </EmptyTableTextStack>
+      </EmptyTableBody>
+    )
   }
 
   return (
-    <TableWrap>
-      <Table>
-        <colgroup>
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '56%' }} />
-          <col style={{ width: '28%' }} />
-        </colgroup>
-        <Thead>
-          <tr>
-            <Th>Rank</Th>
-            <Th>Address</Th>
-            <Th>Reward</Th>
-          </tr>
-        </Thead>
-        <Tbody>
-          {rows.map((rank) => (
-            <Row key={`${rank.role}-${rank.rank}-${rank.address}`}>
-              <Td data-label="Rank">#{rank.rank}</Td>
-              <Td data-label="Address">
-                <AddressText>{rank.ensName ?? truncateAddress(rank.address)}</AddressText>
-              </Td>
-              <Td data-label="Reward">
-                <RewardValue>{formatEns(rank.rewardEns)}</RewardValue>
-              </Td>
-            </Row>
-          ))}
-        </Tbody>
-      </Table>
-    </TableWrap>
+    <>
+      <TableHeadRow>
+        <TableHeadCell $weight={0.6}>Rank</TableHeadCell>
+        <TableHeadCell $weight={2}>Delegate</TableHeadCell>
+        {showVotingPower ? (
+          <TableHeadCell $weight={1.2} $align="end">Voting power</TableHeadCell>
+        ) : null}
+        <TableHeadCell $weight={1.4} $align="end">Reward</TableHeadCell>
+      </TableHeadRow>
+      {rows.map((row) => {
+        const isHighlighted =
+          highlightLower !== '' && row.address.toLowerCase() === highlightLower
+        const displayName = row.ensName ?? truncateAddress(row.address)
+        return (
+          <TableRow
+            key={`${row.role}-${row.rank}-${row.address}`}
+            href={getAnticaptureDelegateUrl(row.address)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`View ${displayName} on Anticapture`}
+            $highlighted={isHighlighted}
+            aria-current={isHighlighted ? 'true' : undefined}
+          >
+            <TableCell $weight={0.6}>
+              <MobileLabel>Rank</MobileLabel>
+              <RankPill>#{row.rank}</RankPill>
+            </TableCell>
+            <TableCell $weight={2} $primary>
+              <EnsAvatar
+                address={row.address}
+                name={row.ensName ?? undefined}
+                size={28}
+              />
+              <AddressText>{displayName}</AddressText>
+            </TableCell>
+            {showVotingPower ? (
+              <TableCell $weight={1.2} $align="end">
+                <MobileLabel>Voting power</MobileLabel>
+                <VotingPowerText>{formatVotingPower(row.votingPower)}</VotingPowerText>
+              </TableCell>
+            ) : null}
+            <TableCell $weight={1.4} $align="end">
+              <MobileLabel>Reward</MobileLabel>
+              <RewardCellRow>
+                <RewardValueText>{formatPositiveReward(row.rewardEns) ?? '—'}</RewardValueText>
+                <RewardSourceTag source={row.source} />
+              </RewardCellRow>
+            </TableCell>
+          </TableRow>
+        )
+      })}
+    </>
   )
 }
 
-function rewardCountLabel(count: number): string {
-  return `${count.toLocaleString('en-US')} ${count === 1 ? 'recipient' : 'recipients'}`
-}
-
-function lotteryBucketCountLabel(lottery: LotteryDetail | null): string {
-  if (!lottery) return 'Unavailable'
-  return `${lottery.bucketCount.toLocaleString('en-US')} ${lottery.bucketCount === 1 ? 'bucket' : 'buckets'}`
-}
-
-function lotteryEntryCountLabel(lottery: LotteryDetail | null): string {
-  if (!lottery) return 'Unavailable'
-  return `${lottery.entryCount.toLocaleString('en-US')} ${lottery.entryCount === 1 ? 'entry' : 'entries'}`
-}
-
-function visibleLotteryEntryCountLabel(totalCount: number, visibleCount: number): string {
-  if (totalCount === 0) return 'No entries'
-  if (visibleCount >= totalCount) {
-    return `${totalCount.toLocaleString('en-US')} ${totalCount === 1 ? 'entry' : 'entries'}`
-  }
-  return `Showing first ${visibleCount.toLocaleString('en-US')} of ${totalCount.toLocaleString('en-US')} entries`
-}
-
-function flattenLotteryEntries(lottery: LotteryDetail | null): LotteryEntryDetail[] {
-  if (!lottery) return []
-  return lottery.buckets.flatMap((bucket) => bucket.entries)
-}
-
-function LotteryBucketTable({ buckets }: { buckets: LotteryBucketDetail[] }) {
-  if (buckets.length === 0) {
-    return <EmptyState>No lottery results.</EmptyState>
-  }
-
-  return (
-    <WideTableWrap>
-      <Table>
-        <colgroup>
-          <col style={{ width: '14%' }} />
-          <col style={{ width: '42%' }} />
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '13%' }} />
-          <col style={{ width: '13%' }} />
-        </colgroup>
-        <Thead>
-          <tr>
-            <Th>Bucket</Th>
-            <Th>Winner</Th>
-            <Th>Prize</Th>
-            <Th>Entries</Th>
-            <Th>Chance</Th>
-          </tr>
-        </Thead>
-        <Tbody>
-          {buckets.map((bucket) => (
-            <Row key={bucket.bucketIndex}>
-              <Td data-label="Bucket">#{bucket.bucketIndex + 1}</Td>
-              <Td data-label="Winner">
-                <CopyableAddress
-                  address={bucket.winner}
-                  ensName={bucket.winnerEnsName}
-                  resolveEns={false}
-                  showEnsName
-                />
-              </Td>
-              <Td data-label="Prize">
-                <RewardValue>{formatEns(bucket.prizeEns)}</RewardValue>
-              </Td>
-              <Td data-label="Entries">{bucket.entryCount.toLocaleString('en-US')}</Td>
-              <Td data-label="Chance">{formatProbability(bucket.winnerProbability)}</Td>
-            </Row>
-          ))}
-        </Tbody>
-      </Table>
-    </WideTableWrap>
-  )
-}
-
-function LotteryEntryTable({
-  entries,
-  totalCount,
-}: {
-  entries: LotteryEntryDetail[]
-  totalCount: number
-}) {
-  if (entries.length === 0) {
-    return <EmptyState>No lottery entries.</EmptyState>
-  }
-
-  return (
-    <div>
-      <WideTableWrap>
-        <Table>
-          <colgroup>
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '48%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '18%' }} />
-          </colgroup>
-          <Thead>
-            <tr>
-              <Th>Bucket</Th>
-              <Th>Address</Th>
-              <Th>Amount</Th>
-              <Th>Chance</Th>
-            </tr>
-          </Thead>
-          <Tbody>
-            {entries.map((entry) => (
-              <Row key={`${entry.bucketIndex}-${entry.entryIndex}-${entry.address}`}>
-                <Td data-label="Bucket">#{entry.bucketIndex + 1}</Td>
-                <Td data-label="Address">
-                  <CopyableAddress
-                    address={entry.address}
-                    ensName={entry.ensName}
-                    resolveEns={false}
-                    showEnsName
-                  />
-                </Td>
-                <Td data-label="Amount">{formatEns(entry.amountEns, '0 ENS')}</Td>
-                <Td data-label="Chance">{formatProbability(entry.probability)}</Td>
-              </Row>
-            ))}
-          </Tbody>
-        </Table>
-      </WideTableWrap>
-      {entries.length < totalCount ? (
-        <TableNote>
-          Showing the first {entries.length.toLocaleString('en-US')} entries. Use the address inspector above
-          for exact wallet participation.
-        </TableNote>
-      ) : null}
-    </div>
-  )
-}
-
-function AddressLotteryInsightPanel({
-  round,
-  activeAddress,
-  activeAddressValid,
-}: {
-  round: RoundDetailResponse
-  activeAddress: string
-  activeAddressValid: boolean
-}) {
-  const insight = buildAddressLotteryInsight(round, activeAddress, activeAddressValid)
-
-  return (
-    <AddressLotteryPanel $tone={insight.tone}>
-      <AddressLotteryTitle>{insight.title}</AddressLotteryTitle>
-      <AddressLotteryBody>{insight.body}</AddressLotteryBody>
-      {activeAddress && activeAddressValid ? (
-        <MetaItem>
-          <MetaLabel>Selected Address</MetaLabel>
-          <MetaValue>
-            <CopyableAddress address={activeAddress} resolveEns={false} showEnsName />
-          </MetaValue>
-        </MetaItem>
-      ) : null}
-      <MetaGrid>
-        {insight.metrics.map((metric) => (
-          <MetaItem key={metric.label}>
-            <MetaLabel>{metric.label}</MetaLabel>
-            <MetaValue>{metric.value}</MetaValue>
-          </MetaItem>
-        ))}
-      </MetaGrid>
-    </AddressLotteryPanel>
-  )
-}
+/* ─── Component ─── */
 
 export function RoundDetailPage() {
+  const navigate = useNavigate()
   const params = useParams()
   const roundNumber = Number(params.roundNumber)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -830,33 +1046,31 @@ export function RoundDetailPage() {
   const [addressInput, setAddressInput] = useState(activeAddress)
   const [inputError, setInputError] = useState<string | null>(null)
 
-  const fetchRound = useCallback(
-    async () => {
+  const fetchRound = useCallback(async () => {
+    try {
+      return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined, {
+        rewardLimit: '25',
+      })
+    } catch (error) {
+      if (!isLegacyEndpointError(error)) throw error
+
+      let rounds = []
       try {
-        return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined, {
-          rewardLimit: '25',
-        })
-      } catch (error) {
-        if (!isLegacyEndpointError(error)) throw error
+        rounds = (await api.rounds()).rounds
+      } catch (roundsError) {
+        if (!isLegacyEndpointError(roundsError)) throw roundsError
 
-        let rounds = []
-        try {
-          rounds = (await api.rounds()).rounds
-        } catch (roundsError) {
-          if (!isLegacyEndpointError(roundsError)) throw roundsError
-
-          const currentRound = await api.currentRound()
-          rounds = buildRoundListFromCurrentRound(currentRound).rounds
-        }
-
-        const summary = rounds.find((candidate) => candidate.roundNumber === roundNumber)
-        if (!summary) throw new Error(`Unknown round ${roundNumber}`)
-        return buildRoundDetailFallback(summary, activeAddressValid ? activeAddress : undefined)
+        const currentRound = await api.currentRound()
+        rounds = buildRoundListFromCurrentRound(currentRound).rounds
       }
-    },
-    [roundNumber, activeAddress, activeAddressValid],
-  )
+
+      const summary = rounds.find((candidate) => candidate.roundNumber === roundNumber)
+      if (!summary) throw new Error(`Unknown round ${roundNumber}`)
+      return buildRoundDetailFallback(summary, activeAddressValid ? activeAddress : undefined)
+    }
+  }, [roundNumber, activeAddress, activeAddressValid])
   const round = useAsync(fetchRound, Number.isInteger(roundNumber) && roundNumber > 0)
+
   const fetchRoundList = useCallback(async () => {
     try {
       return await api.rounds()
@@ -867,7 +1081,18 @@ export function RoundDetailPage() {
       return buildRoundListFromCurrentRound(currentRound)
     }
   }, [])
-  const roundList = useAsync(fetchRoundList, Number.isInteger(roundNumber) && roundNumber > 0)
+  // Always fetch the rounds list — used both for prev/next nav and to pull
+  // real dates / status / pool / tier per round (so navigation reflects each
+  // round's actual data, not the mock detail body).
+  const roundList = useAsync(fetchRoundList)
+
+  // Live current round payload — finer-grained progress for the ongoing round.
+  const fetchCurrentRound = useCallback(() => api.currentRound(), [])
+  const currentRound = useAsync(fetchCurrentRound)
+
+  // Tier progression — used to surface the APR of the tier the round reached.
+  const fetchTierProgression = useCallback(() => api.tierProgression(), [])
+  const tierProgression = useAsync(fetchTierProgression)
 
   useEffect(() => {
     setAddressInput(activeAddress)
@@ -883,25 +1108,30 @@ export function RoundDetailPage() {
   const backTo = activeAddressValid
     ? `/rounds?address=${encodeURIComponent(activeAddress)}`
     : '/rounds'
+
   const availableRoundNumbers = useMemo(
-    () => (roundList.data?.rounds ?? [])
-      .map((candidate) => candidate.roundNumber)
-      .sort((a, b) => a - b),
+    () =>
+      (roundList.data?.rounds ?? [])
+        .map((candidate) => candidate.roundNumber)
+        .sort((a, b) => a - b),
     [roundList.data],
   )
+
+  // Real summary for the round currently being viewed — drives dates/status/
+  // pool/tier on the right-side ring + stats so prev/next show each round.
+  const viewedRoundSummary = useMemo(
+    () =>
+      (roundList.data?.rounds ?? []).find(
+        (candidate) => candidate.roundNumber === roundNumber,
+      ) ?? null,
+    [roundList.data, roundNumber],
+  )
+
   const previousRoundNumber = availableRoundNumbers
     .filter((candidate) => candidate < roundNumber)
     .at(-1) ?? null
-  const nextRoundNumber = availableRoundNumbers
-    .find((candidate) => candidate > roundNumber) ?? null
-  const lotteryEntries = useMemo(
-    () => flattenLotteryEntries(round.data?.lottery ?? null),
-    [round.data?.lottery],
-  )
-  const visibleLotteryEntries = useMemo(
-    () => lotteryEntries.slice(0, LOTTERY_ENTRY_DISPLAY_LIMIT),
-    [lotteryEntries],
-  )
+  const nextRoundNumber =
+    availableRoundNumbers.find((candidate) => candidate > roundNumber) ?? null
 
   function handleAddressSubmit() {
     const nextAddress = addressInput.trim()
@@ -937,7 +1167,10 @@ export function RoundDetailPage() {
   if (!Number.isInteger(roundNumber) || roundNumber <= 0) {
     return (
       <Page>
-        <BackLink to={backTo}>Back to rounds</BackLink>
+        <BackLinkButton type="button" onClick={() => navigate(backTo)}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Back to rounds
+        </BackLinkButton>
         <ErrorMessage>Unknown round.</ErrorMessage>
       </Page>
     )
@@ -946,173 +1179,265 @@ export function RoundDetailPage() {
   if (round.error || !round.data) {
     return (
       <Page>
+        <BackLinkButton type="button" onClick={() => navigate(backTo)}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Back to rounds
+        </BackLinkButton>
         <ErrorMessage>Failed to load round data: {round.error}</ErrorMessage>
       </Page>
     )
   }
 
+  const roundData: RoundDetailResponse = round.data
+
+  // Title follows the round being viewed (URL), so prev/next navigation updates it.
+  const titleRoundNumber = roundData.roundNumber
+
+  const hasActiveAddress = Boolean(activeAddress && activeAddressValid)
+
+  const lotteryShareValue =
+    roundData.lotteryPrizeEns != null
+      ? `${formatEnsAmount(roundData.lotteryPrizeEns, { maximumFractionDigits: 2 })} ENS`
+      : '—'
+
+  // Priority: live current-round payload (when viewing the ongoing round) →
+  // the rounds-list summary for the viewed round → round detail fallback.
+  const liveCurrentRound = currentRound.data ?? null
+  const isViewingLiveRound =
+    liveCurrentRound != null &&
+    liveCurrentRound.roundNumber === roundNumber
+
+  const displayStartDate =
+    (isViewingLiveRound ? liveCurrentRound.startDate : null) ??
+    viewedRoundSummary?.startDate ??
+    roundData.startDate
+  const displayEndDate =
+    (isViewingLiveRound ? liveCurrentRound.endDate : null) ??
+    viewedRoundSummary?.endDate ??
+    roundData.endDate
+  const displayStatus: RoundStatus =
+    viewedRoundSummary?.status ?? roundData.status
+  // Closed rounds: full ring. Pending: empty. Live: compute the actual percent
+  // from the round's start/end window (always accurate, no dependency on an
+  // API field that may not refresh between deploys).
+  const displayPercentComplete =
+    displayStatus === 'paid' || displayStatus === 'ended'
+      ? 100
+      : displayStatus === 'live'
+        ? computeRoundProgress(displayStartDate, displayEndDate)
+        : 0
+  const displayPoolSizeEns =
+    (isViewingLiveRound ? liveCurrentRound.poolSizeEns : null) ??
+    viewedRoundSummary?.poolSizeEns ??
+    roundData.poolSizeEns ??
+    null
+  const reachedTierIndex =
+    (isViewingLiveRound ? liveCurrentRound.tierIndex : null) ??
+    viewedRoundSummary?.tierIndex ??
+    roundData.tierIndex ??
+    null
+  const displayTierLabel =
+    viewedRoundSummary?.tierLabel ??
+    (reachedTierIndex != null ? `Tier ${reachedTierIndex + 1}` : '—')
+
+  const reachedTier =
+    reachedTierIndex != null
+      ? tierProgression.data?.tiers[reachedTierIndex] ?? null
+      : null
+  const tierAprSubLabel =
+    reachedTier?.estimatedAprPct != null
+      ? `${reachedTier.estimatedAprPct}% APR reached`
+      : 'Tier reached'
+
+  // Address inspector result strip
+  const addressInsight: { tone: 'success' | 'neutral' | 'pending'; title: string; body: string } =
+    !hasActiveAddress
+      ? {
+          tone: 'neutral',
+          title: 'Check a wallet',
+          body: 'Paste an ENS name or 0x address above to see what it earned this round.',
+        }
+      : roundData.distributionDataStatus !== 'available'
+        ? {
+            tone: 'pending',
+            title: 'This round hasn’t finished yet',
+            body: `Round ${roundData.roundNumber} is still ${roundData.status}. Results show up the moment it closes.`,
+          }
+        : roundData.addressReward && Number(roundData.addressReward.totalRewardEns) > 0
+          ? {
+              tone: 'success',
+              title: `Earned ${formatEns(roundData.addressReward.totalRewardEns, '0 ENS')}`,
+              body: 'Your reward landed in a single transfer.',
+            }
+          : {
+              tone: 'neutral',
+              title: 'No reward this round',
+              body: 'This wallet didn’t earn anything in this round.',
+            }
+
   return (
-    <Page>
-      <Header>
-        <HeaderActions>
-          <BackLink to={backTo}>Back to rounds</BackLink>
-          <RoundNav aria-label="Round navigation">
-            {previousRoundNumber == null ? (
-              <DisabledRoundNavButton aria-disabled="true">Previous round</DisabledRoundNavButton>
-            ) : (
-              <RoundNavButton to={buildRoundPath(previousRoundNumber, activeAddress, activeAddressValid)}>
-                Previous round
-              </RoundNavButton>
-            )}
-            {nextRoundNumber == null ? (
-              <DisabledRoundNavButton aria-disabled="true">Next round</DisabledRoundNavButton>
-            ) : (
-              <RoundNavButton to={buildRoundPath(nextRoundNumber, activeAddress, activeAddressValid)}>
-                Next round
-              </RoundNavButton>
-            )}
-          </RoundNav>
-        </HeaderActions>
-        <TitleRow>
-          <div>
-            <Eyebrow>Round Details</Eyebrow>
-            <PageTitle>Round {round.data.roundNumber}</PageTitle>
-          </div>
-          <StatusPill $status={round.data.status}>{statusLabel(round.data.status)}</StatusPill>
-        </TitleRow>
+    <Page key={roundNumber}>
+      <HeaderCard>
+        <BackLinkButton type="button" onClick={() => navigate(backTo)}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          Back to rounds
+        </BackLinkButton>
+        <AvatarColumn>
+          <RoundProgressRing
+            percent={displayPercentComplete}
+            startDate={displayStartDate}
+            endDate={displayEndDate}
+            status={displayStatus}
+          />
+          <StatusTag $status={displayStatus}>{statusLabel(displayStatus)}</StatusTag>
+        </AvatarColumn>
+        <HeaderText>
+          <TitleBlock>
+            <NameRow>
+              <NameTitle>Round {titleRoundNumber}</NameTitle>
+            </NameRow>
+            <DownloadCsvButton
+              type="button"
+              disabled
+              aria-label={`Download Round ${titleRoundNumber} CSV (coming soon)`}
+              title="CSV export coming soon"
+            >
+              <FontAwesomeIcon icon={faDownload} />
+              Download CSV
+            </DownloadCsvButton>
+          </TitleBlock>
+          <CtaRow>
+            <RoundNavButton
+              type="button"
+              onClick={() =>
+                previousRoundNumber != null &&
+                navigate(buildRoundPath(previousRoundNumber, activeAddress, activeAddressValid))
+              }
+              disabled={previousRoundNumber == null}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} />
+              {previousRoundNumber != null ? `Round ${previousRoundNumber}` : 'Previous'}
+            </RoundNavButton>
+            <RoundNavButton
+              type="button"
+              onClick={() =>
+                nextRoundNumber != null &&
+                navigate(buildRoundPath(nextRoundNumber, activeAddress, activeAddressValid))
+              }
+              disabled={nextRoundNumber == null}
+            >
+              {nextRoundNumber != null ? `Round ${nextRoundNumber}` : 'Next'}
+              <FontAwesomeIcon icon={faArrowRight} />
+            </RoundNavButton>
+          </CtaRow>
+        </HeaderText>
+      </HeaderCard>
+
+      <StatsRow>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{formatPoolEns(displayPoolSizeEns)}</StatValue>
+            <StatIconBox aria-hidden>
+              <FontAwesomeIcon icon={faCoins} />
+            </StatIconBox>
+          </StatTopRow>
+          <StatLabel>Pool size</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{displayTierLabel}</StatValue>
+            <StatIconBox aria-hidden>
+              <FontAwesomeIcon icon={faRankingStar} />
+            </StatIconBox>
+          </StatTopRow>
+          <StatLabel>{tierAprSubLabel}</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{formatVpGrowth(roundData.vpGrowthPct)}</StatValue>
+            <StatIconBox aria-hidden>
+              <FontAwesomeIcon icon={faArrowTrendUp} />
+            </StatIconBox>
+          </StatTopRow>
+          <StatLabel>VP growth</StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatTopRow>
+            <StatValue>{lotteryShareValue}</StatValue>
+            <StatIconBox aria-hidden>
+              <FontAwesomeIcon icon={faTrophy} />
+            </StatIconBox>
+          </StatTopRow>
+          <StatLabel>Lottery prize</StatLabel>
+        </StatCard>
+      </StatsRow>
+
+      <Section>
+        <SectionHeader>
+          <SectionLabelGroup>
+            <SectionLabel>Check a wallet</SectionLabel>
+            <SectionTitle>See what this round paid an address</SectionTitle>
+          </SectionLabelGroup>
+        </SectionHeader>
         <AddressLookupForm
           value={addressInput}
           activeAddress={activeAddress}
           sourceLabel={sourceLabel}
           error={addressError}
+          connectedAddress={walletAddress || undefined}
           onChange={setAddressInput}
           onSubmit={handleAddressSubmit}
           onClear={handleAddressClear}
         />
-      </Header>
+        <AddressResultStrip $tone={addressInsight.tone}>
+          <AddressResultIcon $tone={addressInsight.tone} aria-hidden>
+            <FontAwesomeIcon
+              icon={
+                addressInsight.tone === 'success'
+                  ? faCircleCheck
+                  : addressInsight.tone === 'pending'
+                    ? faHourglassHalf
+                    : hasActiveAddress
+                      ? faCircleInfo
+                      : faMagnifyingGlass
+              }
+            />
+          </AddressResultIcon>
+          <AddressResultText>
+            <AddressResultTitle $tone={addressInsight.tone}>{addressInsight.title}</AddressResultTitle>
+            <AddressResultBody>{addressInsight.body}</AddressResultBody>
+          </AddressResultText>
+        </AddressResultStrip>
+      </Section>
 
-      <SummaryGrid>
-        <SummaryItem>
-          <SummaryLabel>Dates</SummaryLabel>
-          <SummaryValue>{formatUtcMonthRange(round.data.startDate, round.data.endDate)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Tier</SummaryLabel>
-          <SummaryValue>{round.data.tierLabel ?? 'Unavailable'}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>VP Growth</SummaryLabel>
-          <SummaryValue>{formatVpGrowth(round.data.vpGrowthPct)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Pool</SummaryLabel>
-          <SummaryValue>{formatEns(round.data.poolSizeEns, 'Unavailable', 0)}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Distributed</SummaryLabel>
-          <SummaryValue>{formatEns(round.data.totalDistributedEns, round.data.status === 'live' ? 'Pending' : 'Unavailable')}</SummaryValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>Address Earned</SummaryLabel>
-          <SummaryValue>{formatAddressReward(round.data.addressReward)}</SummaryValue>
-        </SummaryItem>
-      </SummaryGrid>
-
-      <Section>
-        <WideSectionHeader>
-          <Eyebrow>Address Lottery</Eyebrow>
-          <RowCount>
-            {activeAddressValid && activeAddress
-              ? 'Address-specific'
-              : 'No address'}
-          </RowCount>
-        </WideSectionHeader>
-        <AddressLotteryInsightPanel
-          round={round.data}
-          activeAddress={activeAddress}
-          activeAddressValid={activeAddressValid}
+      <TableCard>
+        <TableCardHeader>
+          <SectionLabelGroup>
+            <SectionLabel>Top voter rewards</SectionLabel>
+            <SectionTitle>Top delegates this round</SectionTitle>
+          </SectionLabelGroup>
+        </TableCardHeader>
+        <RewardsTable
+          rows={roundData.topVoterRewards}
+          highlightAddress={hasActiveAddress ? activeAddress : ''}
+          showVotingPower
         />
-      </Section>
+      </TableCard>
 
-      <Section>
-        <WideSectionHeader>
-          <Eyebrow>Lottery Results</Eyebrow>
-          <RowCount>{lotteryBucketCountLabel(round.data.lottery)}</RowCount>
-        </WideSectionHeader>
-        {round.data.lottery ? (
-          <>
-            <MetaGrid>
-              <MetaItem>
-                <MetaLabel>Seed Source</MetaLabel>
-                <MetaValue>{round.data.lottery.seed.label}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Seed Block</MetaLabel>
-                <MetaValue>{formatBlockNumber(round.data.lottery.seed.blockNumber)}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Total Lottery Prizes</MetaLabel>
-                <MetaValue>{formatEns(round.data.lotteryPrizeEns, '0 ENS')}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Participants</MetaLabel>
-                <MetaValue>{round.data.lottery.participantCount.toLocaleString('en-US')}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Entries</MetaLabel>
-                <MetaValue>{formatCount(round.data.lotteryEntryCount)}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Winners</MetaLabel>
-                <MetaValue>{formatCount(round.data.lotteryWinnerCount)}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Bucket Target</MetaLabel>
-                <MetaValue>{formatEns(round.data.lottery.bucketTargetEns, '0 ENS')}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Algorithm</MetaLabel>
-                <MetaValue>{round.data.lottery.seed.algorithm}</MetaValue>
-              </MetaItem>
-              <MetaItem>
-                <MetaLabel>Seed</MetaLabel>
-                <MetaValue>{round.data.lottery.seed.value}</MetaValue>
-              </MetaItem>
-            </MetaGrid>
-            <LotteryBucketTable buckets={round.data.lottery.buckets} />
-          </>
-        ) : (
-          <EmptyState>No lottery data.</EmptyState>
-        )}
-      </Section>
-
-      <Section>
-        <WideSectionHeader>
-          <Eyebrow>Lottery Entries</Eyebrow>
-          <RowCount>
-            {round.data.lottery
-              ? visibleLotteryEntryCountLabel(lotteryEntries.length, visibleLotteryEntries.length)
-              : lotteryEntryCountLabel(round.data.lottery)}
-          </RowCount>
-        </WideSectionHeader>
-        <LotteryEntryTable entries={visibleLotteryEntries} totalCount={lotteryEntries.length} />
-      </Section>
-
-      <Section>
-        <SectionHeader>
-          <Eyebrow>Delegate Rewards</Eyebrow>
-          <RowCount>{rewardCountLabel(round.data.topVoterRewards.length)}</RowCount>
-        </SectionHeader>
-        <RankingTable rows={round.data.topVoterRewards} />
-      </Section>
-
-      <Section>
-        <SectionHeader>
-          <Eyebrow>Token Holder Rewards</Eyebrow>
-          <RowCount>{rewardCountLabel(round.data.topTokenHolderRewards.length)}</RowCount>
-        </SectionHeader>
-        <RankingTable rows={round.data.topTokenHolderRewards} />
-      </Section>
+      <TableCard>
+        <TableCardHeader>
+          <SectionLabelGroup>
+            <SectionLabel>Top token holder rewards</SectionLabel>
+            <SectionTitle>Top holders this round</SectionTitle>
+          </SectionLabelGroup>
+        </TableCardHeader>
+        <RewardsTable
+          rows={roundData.topTokenHolderRewards}
+          highlightAddress={hasActiveAddress ? activeAddress : ''}
+          showVotingPower={false}
+        />
+      </TableCard>
     </Page>
   )
 }
+
