@@ -9,7 +9,6 @@ import {
   faCheck,
   faCircleCheck,
   faCircleMinus,
-  faCircleXmark,
   faClock,
   faCopy,
   faShareNodes,
@@ -19,8 +18,8 @@ import {
 import { faXTwitter } from '@fortawesome/free-brands-svg-icons'
 import { isAddress } from 'viem'
 import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
-import { MOCK_ENS_TO_ADDRESS } from '@/api/mock'
 import { env } from '@/config/env'
+import { MOCK_ENS_TO_ADDRESS } from '@/api/mock'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import { useVoter } from '@/features/voters/useVoter'
@@ -719,7 +718,7 @@ export function VoterProfilePage() {
   })
 
   const mockResolvedAddress = useMemo(() => {
-    if (!env.useMockApi || !isEnsParam) return null
+    if (!isEnsParam || !env.useMockApi) return null
     return MOCK_ENS_TO_ADDRESS[rawParam.toLowerCase()] ?? null
   }, [rawParam, isEnsParam])
 
@@ -960,17 +959,12 @@ export function VoterProfilePage() {
               <MobileLabel>Result</MobileLabel>
               <CellValue>
                 {/* TODO(backend): real proposal outcome from Snapshot/Tally */}
-                {row.voted ? (
-                  <>
-                    <VoteIcon $tone="positive"><FontAwesomeIcon icon={faCircleCheck} /></VoteIcon>
-                    For
-                  </>
-                ) : (
-                  <>
-                    <VoteIcon $tone="negative"><FontAwesomeIcon icon={faCircleXmark} /></VoteIcon>
-                    Against
-                  </>
-                )}
+                <LabelWithTooltip
+                  text="Proposal outcome data not yet available"
+                  iconAriaLabel="Proposal outcome unavailable"
+                >
+                  <span aria-label="Proposal outcome unavailable">—</span>
+                </LabelWithTooltip>
               </CellValue>
             </TableCell>
           </TableRow>
