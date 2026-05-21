@@ -5,11 +5,14 @@ import { faMagnifyingGlass, faShareNodes, faXmark } from '@fortawesome/free-soli
 import { Button } from '@ensdomains/thorin'
 import { useVoters } from '@/features/voters/useVoters'
 import { useStats } from '@/features/stats/useStats'
+import { useCompare } from '@/features/voters/useCompare'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { VoterCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
 import { VoterCard } from './components/VoterCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
+import { CompareDock } from './components/CompareDock'
+import { CompareDrawer } from './components/CompareDrawer'
 import type { VoterDetail } from '@/api/types'
 
 const Page = styled.div`
@@ -267,10 +270,27 @@ const ResetLink = styled.button`
   }
 `
 
-function shuffled(voters: VoterDetail[]): VoterDetail[] {
+/**
+ * Tiny seeded PRNG (Bret Mulberry's mulberry32). Deterministic for a given
+ * seed — used so the random sort stays stable across re-renders and the
+ * `useMemo` deps can be honest. Pressing "Shuffle" bumps the seed.
+ */
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0
+  return function () {
+    t = (t + 0x6d2b79f5) >>> 0
+    let r = t
+    r = Math.imul(r ^ (r >>> 15), r | 1)
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61)
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function shuffled(voters: VoterDetail[], seed: number): VoterDetail[] {
   const copy = [...voters]
+  const rand = mulberry32(seed + 1) // avoid seed 0 (mulberry32 still works, but +1 keeps things less degenerate)
   for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rand() * (i + 1))
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
@@ -282,6 +302,8 @@ export function VotersPage() {
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
   const [search, setSearch] = useState('')
+  const { selected, isSelected, toggle, clear, count } = useCompare()
+  const [compareOpen, setCompareOpen] = useState(false)
 
   const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
 
@@ -311,7 +333,7 @@ export function VotersPage() {
 
     // Sort
     if (sort.field === 'random') {
-      filtered = shuffled(filtered)
+      filtered = shuffled(filtered, shuffleSeed)
     } else {
       const dir = sort.direction === 'desc' ? -1 : 1
       if (sort.field === 'votingPower') {
@@ -328,12 +350,21 @@ export function VotersPage() {
     }
 
     return filtered
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, sort, shuffleSeed, search])
 
   const totalCount = data?.length ?? 0
   const filteredCount = voters?.length ?? 0
   const hasFilters = search.length > 0
+
+  // Address-keyed lookup so the dock and drawer can resolve selected entries
+  // even when the current filter/search hides them. Lower-cased to match the
+  // normalization in `useCompare`.
+  const votersByAddress = useMemo(() => {
+    const map = new Map<string, VoterDetail>()
+    if (!data) return map
+    for (const v of data) map.set(v.address.toLowerCase(), v)
+    return map
+  }, [data])
 
   const resetFilters = () => {
     setSearch('')
@@ -422,11 +453,34 @@ export function VotersPage() {
           {voters && voters.length > 0 && (
             <Grid>
               {voters.map((v) => (
-                <VoterCard key={v.address} voter={v} />
+                <VoterCard
+                  key={v.address}
+                  voter={v}
+                  isSelected={isSelected(v.address)}
+                  onToggleCompare={() => toggle(v.address)}
+                />
               ))}
             </Grid>
           )}
         </CardsAndFilters>
+
+        {count > 0 && (
+          <CompareDock
+            selected={selected}
+            voters={votersByAddress}
+            onOpen={() => setCompareOpen(true)}
+            onClear={() => {
+              clear()
+              setCompareOpen(false)
+            }}
+          />
+        )}
+        <CompareDrawer
+          open={compareOpen}
+          onClose={() => setCompareOpen(false)}
+          selected={selected}
+          voters={votersByAddress}
+        />
     </Page>
   )
 }

@@ -12,53 +12,64 @@ test.describe('Rounds Page', () => {
     await expect(page.getByText('live').first()).toBeVisible()
   })
 
-  test('renders tier table', async ({ page }) => {
-    await expect(page.getByText('Tier #1').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Tier #7')).toBeVisible()
+  test('renders tier ladder with all 7 tiers', async ({ page }) => {
+    // The /rounds tier ladder renders pips labelled "Tier 1" … "Tier 7"
+    // (no "#" — the "#"-style label only lives on the landing page).
+    await expect(page.getByText('Tier 1', { exact: true }).first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Tier 7', { exact: true })).toBeVisible()
   })
 
-  test('renders round history without contradicting the current live round', async ({ page }) => {
+  test('renders round history rows for past rounds', async ({ page }) => {
     const heading = page.getByRole('heading', { level: 1, name: /Round \d+/ })
     await expect(heading).toBeVisible({ timeout: 10000 })
 
     const roundName = (await heading.textContent())?.match(/Round \d+/)?.[0]
     expect(roundName).toBeTruthy()
 
-    const currentRoundRow = page.getByRole('row').filter({ has: page.getByRole('link', { name: roundName! }) }).first()
-    await expect(currentRoundRow).toContainText('May 1–31, 2026')
-    await expect(currentRoundRow).not.toContainText('Apr 30')
-    await expect(currentRoundRow).toContainText('5,000 ENS')
-    await expect(currentRoundRow).toContainText(/[+-]?\d+(?:\.\d+)?%|Unavailable/)
-    await expect(currentRoundRow).toContainText(/Pending|Unavailable|winner/)
-    await expect(currentRoundRow).toContainText('No address')
-    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Your rewards')
-    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText('Lottery')
+    // The redesigned rounds table renders each round as a clickable button row
+    // (not a link). Each row's accessible name includes the round number,
+    // pool size, VP growth, reward state, and status pill. The period column
+    // was removed in the redesign — it now only appears on the transparency
+    // page and inside the round detail progress ring.
+    const currentRoundRow = page
+      .getByRole('button', { name: new RegExp(roundName!) })
+      .first()
+    await expect(currentRoundRow).toBeVisible()
+    // Pool renders in compact form (e.g. "5K ENS") via formatPool.
+    await expect(currentRoundRow).toContainText(/\d+(?:\.\d+)?K? ENS|Unavailable/)
+    // Status pill — guaranteed to read one of these regardless of address.
+    await expect(currentRoundRow).toContainText(/live|paid|pending/i)
 
-    await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 2' }) }).first()).toContainText('Apr 1–30, 2026')
-    await expect(page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Round 1' }) }).first()).toContainText('Mar 1–31, 2026')
+    // Sibling rows for prior rounds should also be present.
+    await expect(page.getByRole('button', { name: /Round 2/ }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /Round 1/ }).first()).toBeVisible()
+    // Paranoia check — no 4-decimal ENS reward leak from the source data.
     await expect(page.getByText('+12.3456 ENS')).toHaveCount(0)
   })
 
   test('lets a user inspect an address and open round details', async ({ page }) => {
     const address = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
 
-    await page.getByLabel('Wallet address').fill(address)
-    await page.getByRole('button', { name: 'Inspect' }).click()
+    // The redesigned inspect form uses a single search input ("Search by ENS
+    // name or address") and a "Search" submit button.
+    await page.getByLabel('Search by ENS name or address').fill(address)
+    await page.getByRole('button', { name: 'Search' }).click()
     await expect(page).toHaveURL(/address=/)
-    await expect(page.getByLabel('Wallet address')).toHaveValue(address)
-    await expect(page.locator('section').filter({ hasText: 'Round History' })).toContainText(/Pending|Unavailable|\+/)
+    await expect(page.getByLabel('Search by ENS name or address')).toHaveValue(address)
 
-    await page.locator('section').filter({ hasText: 'Round History' }).getByRole('link', { name: 'Round 3' }).click()
+    // Round rows are buttons (navigate via onClick) — pick the Round 3 row.
+    await page.getByRole('button', { name: /Round 3/ }).first().click()
     await expect(page).toHaveURL(/\/rounds\/3/)
-    await expect(page.getByText('Round Details')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Round 3', exact: true })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Previous round' })).toBeVisible()
-    await expect(page.getByText('Next round')).toBeVisible()
-    await expect(page.getByText('Delegate Rewards')).toBeVisible()
-    await expect(page.getByText('Token Holder Rewards')).toBeVisible()
-    await expect(page.getByText('Lottery Results')).toBeVisible()
-    await expect(page.getByText('Lottery Entries').nth(1)).toBeVisible()
-    await expect(page.getByText(/No distribution data|#1/).first()).toBeVisible()
+    // Prev/next nav buttons label themselves with the neighbour round number
+    // when one exists, falling back to a generic "Next"/"Previous" otherwise.
+    await expect(page.getByRole('button', { name: /Round 2/ })).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: /(Round \d+|Next)/ }).last(),
+    ).toBeVisible()
+    // The two leaderboards on the detail page.
+    await expect(page.getByRole('heading', { name: 'Top delegates this round' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Top holders this round' })).toBeVisible()
   })
 
   test('does not create horizontal page overflow on mobile or tablet widths', async ({ page }) => {
@@ -81,8 +92,8 @@ test.describe('Rounds Page', () => {
 
       expect(overflow).toBeLessThanOrEqual(0)
 
-      await page.locator('section').filter({ hasText: 'Round History' }).getByRole('link', { name: 'Round 3' }).click()
-      await expect(page.getByText('Round Details')).toBeVisible()
+      await page.getByRole('button', { name: /Round 3/ }).first().click()
+      await expect(page.getByRole('heading', { name: 'Round 3', exact: true })).toBeVisible()
 
       const detailOverflow = await page.evaluate(() => {
         const root = document.documentElement

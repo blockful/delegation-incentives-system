@@ -40,12 +40,14 @@ function formatActiveSince(iso: string | null): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return '—'
   const now = new Date()
-  const months = Math.max(
-    0,
-    (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth()),
-  )
-  const years = Math.floor(months / 12)
-  const remMonths = months % 12
+  const monthsDiff =
+    (now.getFullYear() - date.getFullYear()) * 12 +
+    (now.getMonth() - date.getMonth())
+  // Guard against future-dated ISO inputs — render an em dash instead of
+  // claiming the delegate became active "this month".
+  if (monthsDiff < 0) return '—'
+  const years = Math.floor(monthsDiff / 12)
+  const remMonths = monthsDiff % 12
   if (years > 0 && remMonths > 0) return `${years}y ${remMonths}mo ago`
   if (years > 0) return `${years}y ago`
   if (remMonths > 0) return `${remMonths}mo ago`
@@ -169,9 +171,17 @@ const DelegateButton = styled.button`
   transition: background ${tokens.transition.fast},
     border-color ${tokens.transition.fast};
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${tokens.color.accent};
     border-color: ${tokens.color.accent};
+  }
+
+  &:disabled {
+    background: ${tokens.color.middleGray};
+    border-color: ${tokens.color.middleGray};
+    color: ${tokens.color.white};
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 
   &:focus-visible {
@@ -252,9 +262,9 @@ export function CompareDrawer({
 
               <DelegateButton
                 type="button"
-                onClick={() => {
-                  // TODO: call relayer for gasless delegation
-                }}
+                disabled
+                title="Gasless delegation coming soon"
+                aria-label="Gasless delegation coming soon"
               >
                 Delegate
               </DelegateButton>

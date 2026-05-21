@@ -33,6 +33,12 @@ const AnchorLink = styled.a`
   }
 `
 
+function formatHeroApr(pct: number): string {
+  if (!Number.isFinite(pct) || pct <= 0) return '—'
+  if (pct >= 1000) return '>1000%'
+  return `${pct.toFixed(pct < 10 ? 2 : 1)}%`
+}
+
 function scrollToHowItWorks(e: React.MouseEvent<HTMLAnchorElement>) {
   const target = document.getElementById('how-it-works')
   if (!target) return
@@ -267,7 +273,7 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
           ENS Governance · Live program
         </HeroEyebrow>
         <Headline>
-          Earn up to <AprValue>{`${currentAprPct}% APR`}</AprValue> on your ENS
+          Earn up to <AprValue>{`${formatHeroApr(Number(currentAprPct))} APR`}</AprValue> on your ENS
           automatically
         </Headline>
         <Subtitle>

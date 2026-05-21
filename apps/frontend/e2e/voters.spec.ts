@@ -6,8 +6,10 @@ test.describe('Voters Page', () => {
   })
 
   test('renders page heading', async ({ page }) => {
+    // The redesigned voters page heading reads
+    // "Pick an active voter. Earn ENS automatically." (h1).
     await expect(
-      page.getByRole('heading', { name: /Delegate to someone who shows up/ }),
+      page.getByRole('heading', { level: 1, name: /Pick an active voter\. Earn ENS automatically\./i }),
     ).toBeVisible()
   })
 

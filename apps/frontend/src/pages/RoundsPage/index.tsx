@@ -1468,7 +1468,7 @@ export function RoundsPage() {
           ) : (
             rows.map((row, idx) => (
               <TableRow
-                key={`${row.roundNumber}:${activeAddress || 'none'}`}
+                key={row.roundNumber}
                 type="button"
                 $clickable
                 $index={idx}

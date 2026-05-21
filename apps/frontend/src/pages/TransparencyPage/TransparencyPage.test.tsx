@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { renderApp } from '@/test/utils'
 import { TransparencyPage } from '.'
@@ -24,46 +24,26 @@ describe('TransparencyPage', () => {
   it('renders heading', () => {
     renderApp(<TransparencyPage />)
     expect(
-      screen.getByText('Verify everything on-chain'),
+      screen.getByText('Verify everything onchain'),
     ).toBeInTheDocument()
   })
 
   it('renders 3 verify links', () => {
     renderApp(<TransparencyPage />)
-    expect(screen.getByText('GitHub')).toBeInTheDocument()
+    expect(screen.getByText('GitHub repo')).toBeInTheDocument()
     expect(screen.getByText('Anticapture')).toBeInTheDocument()
-    expect(screen.getByText('Dune Analytics')).toBeInTheDocument()
+    expect(screen.getByText('RFC & specs')).toBeInTheDocument()
   })
 
-  it('renders 3 smart contracts with Verified badges', () => {
+  it('renders the methodology section with all 4 steps', () => {
     renderApp(<TransparencyPage />)
-    expect(screen.getByText('ENS Incentives')).toBeInTheDocument()
-    expect(screen.getByText('Delegate By Sig')).toBeInTheDocument()
-    expect(screen.getByText('Reward Distributor')).toBeInTheDocument()
-
-    const verifiedTags = screen.getAllByText('Verified')
-    expect(verifiedTags).toHaveLength(3)
-  })
-
-  it('renders the algorithm methodology diagram with all 4 steps', async () => {
-    renderApp(<TransparencyPage />)
+    expect(screen.getByText('Methodology')).toBeInTheDocument()
     expect(
-      screen.getByText('How Rewards Are Calculated'),
+      screen.getByText('How rewards are computed'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Algorithm')).toBeInTheDocument()
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Snapshot balances step/i }),
-      ).toBeInTheDocument()
-    })
-    expect(
-      screen.getByRole('button', { name: /Compute shares step/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /Apply tier APR step/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /Distribute step/i }),
-    ).toBeInTheDocument()
+    expect(screen.getByText('1. Balance check')).toBeInTheDocument()
+    expect(screen.getByText('2. Your share')).toBeInTheDocument()
+    expect(screen.getByText('3. The pool')).toBeInTheDocument()
+    expect(screen.getByText('4. You earn')).toBeInTheDocument()
   })
 })

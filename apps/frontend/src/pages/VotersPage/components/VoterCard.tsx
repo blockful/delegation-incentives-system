@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
@@ -55,16 +55,10 @@ const StyledCard = styled.div`
   border: 1px solid ${tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  cursor: pointer;
   transition: border-color ${tokens.transition.base};
 
   &:hover {
     border-color: ${tokens.color.blue};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.blue};
-    outline-offset: 2px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -296,7 +290,6 @@ const CompareIcon = styled.span`
 `
 
 export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterCardProps) {
-  const navigate = useNavigate()
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
   const isDelegated =
@@ -316,34 +309,14 @@ export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterC
     setModalOpen(true)
   }
 
-  const handleCardClick = () => {
-    navigate(profileUrl)
-  }
-
-  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      navigate(profileUrl)
-    }
-  }
-
   return (
     <>
-      <StyledCard
-        role="link"
-        tabIndex={0}
-        onClick={handleCardClick}
-        onKeyDown={handleCardKeyDown}
-        aria-label={`View ${displayName}'s profile`}
-      >
+      <StyledCard>
         {onToggleCompare && (
           <CompareChip
             type="button"
             $selected={isSelected}
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleCompare()
-            }}
+            onClick={onToggleCompare}
             aria-pressed={isSelected}
             aria-label={isSelected ? 'Remove from compare' : 'Add to compare'}
           >
@@ -403,14 +376,11 @@ export function VoterCard({ voter, isSelected = false, onToggleCompare }: VoterC
           <Button
             colorStyle="bluePrimary"
             size="small"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleDelegate()
-            }}
+            onClick={handleDelegate}
           >
             Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
           </Button>
-          <ProfileLink to={profileUrl} onClick={(e) => e.stopPropagation()}>
+          <ProfileLink to={profileUrl}>
             View profile <ProfileArrow aria-hidden>→</ProfileArrow>
           </ProfileLink>
         </ActionsBlock>

@@ -219,9 +219,20 @@ type Step = {
   tagColor: string
 }
 
+function formatStepApr(pct: string | null): string | null {
+  if (pct == null) return null
+  const n = Number(pct)
+  if (!Number.isFinite(n) || n <= 0) return null
+  if (n >= 1000) return '>1000%'
+  return `${n.toFixed(n < 10 ? 2 : 1)}%`
+}
+
 function buildSteps(currentAprPct: string | null): Step[] {
-  const aprTag = currentAprPct
-    ? `Currently earning ~${currentAprPct}% APR`
+  const formattedApr = formatStepApr(currentAprPct)
+  const aprTag = formattedApr
+    ? formattedApr.startsWith('>')
+      ? `Currently earning ${formattedApr} APR`
+      : `Currently earning ~${formattedApr} APR`
     : 'Earn APR on your ENS'
   return [
     {
