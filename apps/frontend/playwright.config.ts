@@ -19,5 +19,6 @@ export default defineConfig({
     command: 'pnpm dev',
     port: Number(PORT),
     reuseExistingServer: true,
+    env: { VITE_USE_MOCK_API: 'true' },
   },
 })
