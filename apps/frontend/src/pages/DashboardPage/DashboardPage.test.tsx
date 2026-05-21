@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from '@/test/utils'
 import { DashboardPage } from '.'
@@ -14,14 +14,16 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/% APR/)).not.toBeInTheDocument()
   })
 
-  it('renders earnings when connected', async () => {
+  it('renders the not-earning hero when connected but not delegated', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
       expect(screen.getByText(/3\.95% APR/)).toBeInTheDocument()
     })
-    const earnings = screen.getByLabelText('Your rewards')
-    expect(within(earnings).getByText(/\+\d+(\.\d)?/)).toBeInTheDocument()
-    expect(screen.getByText('ENS earned so far')).toBeInTheDocument()
+    expect(screen.getByText('You’re not earning yet')).toBeInTheDocument()
+    expect(screen.getByText('Not delegating yet')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Pick a delegate/ }),
+    ).toBeInTheDocument()
   })
 
   it('shows round progress', async () => {
@@ -31,10 +33,13 @@ describe('DashboardPage', () => {
     })
   })
 
-  it('renders reward tiers table', async () => {
+  it('renders the recent payouts section', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText('Reward Tiers')).toBeInTheDocument()
+      expect(screen.getByText('Recent payouts')).toBeInTheDocument()
     })
+    expect(
+      screen.getByRole('button', { name: /View all rounds/ }),
+    ).toBeInTheDocument()
   })
 })

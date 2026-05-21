@@ -6,7 +6,7 @@ describe('VotersPage', () => {
   it('renders page heading', () => {
     renderApp(<VotersPage />)
     expect(
-      screen.getByText('Delegate to someone who shows up'),
+      screen.getByText('Pick an active voter. Earn ENS automatically.'),
     ).toBeInTheDocument()
   })
 
@@ -17,18 +17,20 @@ describe('VotersPage', () => {
     })
     expect(screen.getByText('active voters')).toBeInTheDocument()
     expect(screen.getByText('1.3M')).toBeInTheDocument()
-    expect(screen.getByText('ENS delegated')).toBeInTheDocument()
+    expect(screen.getByText('ENS delegated to active voters')).toBeInTheDocument()
     expect(screen.getByText('412')).toBeInTheDocument()
     expect(screen.getByText('wallets earning')).toBeInTheDocument()
   })
 
   it('renders voter cards after loading', async () => {
     renderApp(<VotersPage />)
+    // The truncated address appears twice per card (display name + address
+    // line), so use getAllByText and assert each set has at least one entry.
     await waitFor(() => {
-      expect(screen.getByText('0x1234…5678')).toBeInTheDocument()
+      expect(screen.getAllByText('0x1234…5678').length).toBeGreaterThan(0)
     })
-    expect(screen.getByText('0xabcd…abcd')).toBeInTheDocument()
-    expect(screen.getByText('0x9876…5432')).toBeInTheDocument()
+    expect(screen.getAllByText('0xabcd…abcd').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('0x9876…5432').length).toBeGreaterThan(0)
   })
 
   it('renders sort controls', () => {

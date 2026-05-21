@@ -41,12 +41,12 @@ describe('LandingPage', () => {
   })
 
   it('shows current APR in hero from tier data', async () => {
-    // Mock API (`src/api/mock.ts`) returns maxTokenHolderAprPct='120.00'.
-    // The MSW fixture (`src/test/mocks/fixtures/rounds.ts`) is unused because
-    // VITE_USE_MOCK_API=true makes the api.* helpers bypass HTTP.
+    // MSW fixture (`src/test/mocks/fixtures/rounds.ts`) returns
+    // maxTokenHolderAprPct='5400.00'. `formatHeroApr` in HeroSection caps
+    // anything >=1000 at the literal '>1000%'.
     const { container } = renderApp(<LandingPage />)
     await waitFor(() => {
-      expect(container.textContent).toMatch(/120\.00% APR/)
+      expect(container.textContent).toMatch(/>1000% APR/)
     })
   })
 
