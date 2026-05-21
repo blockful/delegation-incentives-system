@@ -20,3 +20,11 @@ export const RELAYER_DAO_KEY: RelayDelegatePathParamsDaoEnumKey = "ens";
 export const RELAYER_BASE_URL = env.apiBaseUrl.startsWith("/")
   ? ""
   : env.apiBaseUrl;
+
+// `@anticapture/client` defaults baseURL to "/api/gateful". When we override
+// with an absolute origin we have to re-append the prefix, otherwise the
+// generated client POSTs to `${origin}/ens/relay/delegate` — bypassing our
+// proxy mount at `/api/gateful/*` and 404-ing.
+export const RELAYER_CLIENT_BASE_URL = RELAYER_BASE_URL
+  ? `${RELAYER_BASE_URL}/api/gateful`
+  : undefined;

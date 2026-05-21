@@ -10,7 +10,7 @@ import type {
 
 import { relayDelegate } from "@anticapture/client";
 
-import { RELAYER_BASE_URL, RELAYER_DAO_KEY } from "../relayerClient";
+import { RELAYER_CLIENT_BASE_URL, RELAYER_DAO_KEY } from "../relayerClient";
 
 const ERC20VotesAbi = [
   {
@@ -117,7 +117,7 @@ const gaslessDelegate = async (
       s,
       v: Number(v),
     },
-    RELAYER_BASE_URL ? { baseURL: RELAYER_BASE_URL } : undefined,
+    RELAYER_CLIENT_BASE_URL ? { baseURL: RELAYER_CLIENT_BASE_URL } : undefined,
   );
 
   const hash = response.transactionHash as `0x${string}`;
