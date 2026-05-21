@@ -12,6 +12,11 @@ const WHITE = '#ffffff'
 const BLUE = '#3889ff'
 const BORDER_LIGHT = '#e8e8e8'
 
+// Hard cap on avatar payload size. IPFS-served ENS avatars can be many MB,
+// which blows up once base64-inlined into the rendered HTML and exhausts the
+// edge function's memory budget. 2 MB is generous for a 180px avatar.
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
 // Three-stop diagonal gradient from the Figma file — lavender → blue → sky.
 // Angle in Figma is -17.7° (i.e. roughly bottom-right → top-left); CSS
 // `linear-gradient(angle, ...)` uses the "to" direction so we flip the sign.
@@ -61,11 +66,24 @@ async function loadSatoshiWeight(weight: 500 | 700): Promise<ArrayBuffer | null>
 
 function getSatoshi(weight: 500 | 700): FontPromise {
   if (weight === 700) {
-    if (!satoshiBoldPromise) satoshiBoldPromise = loadSatoshiWeight(700)
-    return satoshiBoldPromise
+    if (satoshiBoldPromise) return satoshiBoldPromise
+    const p = loadSatoshiWeight(700)
+    satoshiBoldPromise = p
+    // If the fetch ultimately failed, drop the cached promise so a future
+    // request on this warm edge instance can retry (avoids a permanent
+    // null cache after a transient jsDelivr blip).
+    void p.then((result) => {
+      if (result === null && satoshiBoldPromise === p) satoshiBoldPromise = null
+    })
+    return p
   }
-  if (!satoshiMediumPromise) satoshiMediumPromise = loadSatoshiWeight(500)
-  return satoshiMediumPromise
+  if (satoshiMediumPromise) return satoshiMediumPromise
+  const p = loadSatoshiWeight(500)
+  satoshiMediumPromise = p
+  void p.then((result) => {
+    if (result === null && satoshiMediumPromise === p) satoshiMediumPromise = null
+  })
+  return p
 }
 
 /* ─── Avatar resolution ─── */
@@ -97,8 +115,28 @@ async function fetchAvatarDataUrl(name: string): Promise<AvatarFetchResult> {
     if (!contentType.startsWith('image/')) {
       return { dataUrl: null, diagnostic: `bad content-type=${contentType}` }
     }
+    // Cheap pre-check via content-length when the server advertises it. Saves
+    // us from buffering a multi-MB body just to throw it away.
+    const contentLengthHeader = res.headers.get('content-length')
+    if (contentLengthHeader) {
+      const advertised = Number.parseInt(contentLengthHeader, 10)
+      if (Number.isFinite(advertised) && advertised > MAX_AVATAR_BYTES) {
+        return {
+          dataUrl: null,
+          diagnostic: `too large (content-length=${advertised} > ${MAX_AVATAR_BYTES})`,
+        }
+      }
+    }
     const buf = await res.arrayBuffer()
     if (buf.byteLength === 0) return { dataUrl: null, diagnostic: 'empty body' }
+    // Enforce the cap on actual bytes too — servers can omit or lie about
+    // content-length (chunked transfer encoding, misconfigured IPFS gateways).
+    if (buf.byteLength > MAX_AVATAR_BYTES) {
+      return {
+        dataUrl: null,
+        diagnostic: `too large (bytes=${buf.byteLength} > ${MAX_AVATAR_BYTES})`,
+      }
+    }
     const bytes = new Uint8Array(buf)
     let binary = ''
     const chunkSize = 0x8000
