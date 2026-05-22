@@ -72,6 +72,26 @@ test.describe('Rounds Page', () => {
     await expect(page.getByRole('heading', { name: 'Top holders this round' })).toBeVisible()
   })
 
+  test('resolves an ENS name in the inspect search', async ({ page }) => {
+    // nick.eth is seeded in MOCK_ENS_TO_ADDRESS; e2e runs with VITE_USE_MOCK_API=true
+    await page.getByLabel('Search by ENS name or address').fill('nick.eth')
+    await page.getByRole('button', { name: /Search/i }).click()
+
+    await expect(page).toHaveURL(/[?&]address=0x[a-fA-F0-9]{40}/, { timeout: 15000 })
+  })
+
+  test('flags an ENS name that does not resolve', async ({ page }) => {
+    await page
+      .getByLabel('Search by ENS name or address')
+      .fill('definitely-not-a-real-name-please.eth')
+    await page.getByRole('button', { name: /Search/i }).click()
+
+    await expect(
+      page.getByText(/Couldn't resolve definitely-not-a-real-name-please\.eth/),
+    ).toBeVisible({ timeout: 15000 })
+    await expect(page).not.toHaveURL(/address=/)
+  })
+
   test('does not create horizontal page overflow on mobile or tablet widths', async ({ page }) => {
     for (const viewport of [
       { width: 320, height: 844 },

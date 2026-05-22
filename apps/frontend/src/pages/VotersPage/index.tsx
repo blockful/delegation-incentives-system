@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlass, faShareNodes, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import { useVoters } from '@/features/voters/useVoters'
+import { useVoterEnsNames } from '@/features/ens/useVoterEnsNames'
 import { useStats } from '@/features/stats/useStats'
 import { useCompare } from '@/features/voters/useCompare'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
@@ -298,6 +299,7 @@ function shuffled(voters: VoterDetail[], seed: number): VoterDetail[] {
 
 export function VotersPage() {
   const { data, loading, error } = useVoters()
+  const { map: resolvedEnsNames, report: reportResolvedEns } = useVoterEnsNames(data)
   const { data: stats, loading: statsLoading } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
@@ -325,9 +327,14 @@ export function VotersPage() {
     const q = search.trim().toLowerCase()
     if (q.length > 0) {
       filtered = filtered.filter((v) => {
-        const ens = v.ensName?.toLowerCase() ?? ''
-        const addr = v.address.toLowerCase()
-        return ens.includes(q) || addr.includes(q)
+        const apiEns = v.ensName?.toLowerCase() ?? ''
+        const lowerAddr = v.address.toLowerCase()
+        const resolved = (resolvedEnsNames.get(lowerAddr) ?? '').toLowerCase()
+        return (
+          apiEns.includes(q) ||
+          resolved.includes(q) ||
+          lowerAddr.includes(q)
+        )
       })
     }
 
@@ -350,7 +357,7 @@ export function VotersPage() {
     }
 
     return filtered
-  }, [data, sort, shuffleSeed, search])
+  }, [data, sort, shuffleSeed, search, resolvedEnsNames])
 
   const totalCount = data?.length ?? 0
   const filteredCount = voters?.length ?? 0
@@ -458,6 +465,8 @@ export function VotersPage() {
                   voter={v}
                   isSelected={isSelected(v.address)}
                   onToggleCompare={() => toggle(v.address)}
+                  resolvedEnsName={resolvedEnsNames.get(v.address.toLowerCase()) ?? null}
+                  onEnsResolved={reportResolvedEns}
                 />
               ))}
             </Grid>
