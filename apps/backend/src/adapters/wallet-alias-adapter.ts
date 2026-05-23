@@ -1,14 +1,14 @@
-import type { db as PonderDb } from "ponder:api";
-import { walletAlias } from "ponder:schema";
+import { getAppDb, walletAlias } from "../db/app-tables.js";
 import type { WalletAliasRepository } from "@ens-dis/domain";
 import type { Address, WalletAlias } from "@ens-dis/domain";
 
-type Db = typeof PonderDb;
-
-export function createWalletAliasAdapter(db: Db): WalletAliasRepository {
+export function createWalletAliasAdapter(): WalletAliasRepository {
   return {
     async getAliases(): Promise<readonly WalletAlias[]> {
-      // Read wallet aliases from the Ponder table (curated via offchain writes)
+      // wallet_alias is curated by operators (see OPERATOR.md) and lives in
+      // an app-owned table outside the Ponder schema — see src/db/app-tables.ts.
+      const { db, ready } = getAppDb();
+      await ready;
       const rows = await db.select().from(walletAlias);
 
       return rows.map((row) => ({

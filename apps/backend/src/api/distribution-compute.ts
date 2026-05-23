@@ -1,8 +1,7 @@
 import { runDistributionPipeline } from "@ens-dis/domain";
 import { db, publicClients } from "ponder:api";
-import { distributionResult } from "ponder:schema";
-import postgres from "postgres";
 import { createDataSource } from "../adapters/data-source.js";
+import { distributionResult, getAppDb } from "../db/app-tables.js";
 import { distributionToJson } from "../output/json-writer.js";
 import {
   getDistributionSnapshot,
@@ -46,7 +45,6 @@ export class DistributionComputeError extends Error {
 }
 
 const inFlightComputations = new Map<string, Promise<ComputeDistributionResponse>>();
-let distributionWriteSql: ReturnType<typeof postgres> | null = null;
 
 export async function computeAndStoreDistribution(
   month: string,
@@ -99,7 +97,9 @@ async function doComputeAndStoreDistribution(
 }
 
 async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
-  const rows = await db.select().from(distributionResult);
+  const { db: appDb, ready } = getAppDb();
+  await ready;
+  const rows = await appDb.select().from(distributionResult);
   return rows as DistributionStorageRow[];
 }
 
@@ -108,38 +108,15 @@ async function storeDistributionResult(
   resultJson: string,
   computedAt: bigint,
 ): Promise<void> {
-  const writeSql = getDistributionWriteSql();
-
-  await writeSql.begin(async (tx) => {
-    await tx.unsafe(`
-      create temp table live_query_tables (
-        table_name text primary key
-      ) on commit drop
-    `);
-
-    await tx.unsafe(`
-      insert into distribution_result (month, result_json, computed_at)
-      values ($1, $2, $3)
-      on conflict (month) do update
-        set result_json = excluded.result_json,
-            computed_at = excluded.computed_at
-    `, [month, resultJson, computedAt.toString()]);
-  });
-}
-
-function getDistributionWriteSql(): ReturnType<typeof postgres> {
-  if (distributionWriteSql) return distributionWriteSql;
-
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new DistributionComputeError(
-      500,
-      "DATABASE_URL is required to store distribution results",
-    );
-  }
-
-  distributionWriteSql = postgres(databaseUrl, { max: 1 });
-  return distributionWriteSql;
+  const { db: appDb, ready } = getAppDb();
+  await ready;
+  await appDb
+    .insert(distributionResult)
+    .values({ month, resultJson, computedAt })
+    .onConflictDoUpdate({
+      target: distributionResult.month,
+      set: { resultJson, computedAt },
+    });
 }
 
 function getSkipResponse(

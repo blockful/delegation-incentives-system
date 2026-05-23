@@ -30,8 +30,5 @@ export const governanceVote = makeTable("governance_vote");
 // Protocol mapping
 export const protocolMapping = makeTable("protocol_mapping");
 
-// Wallet alias
-export const walletAlias = makeTable("wallet_alias");
-
-// Distribution result
-export const distributionResult = makeTable("distribution_result");
+// Note: `walletAlias` and `distributionResult` moved to src/db/app-tables.ts —
+// they are no longer Ponder onchainTables. See ponder.schema.ts for rationale.
