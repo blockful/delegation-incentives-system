@@ -209,18 +209,7 @@ export const protocolMapping = onchainTable("protocol_mapping", (t) => ({
   protocolIdx: index().on(table.protocol),
 }));
 
-// ─── Wallet alias table (manually curated — stored via offchain writes) ──────
-
-export const walletAlias = onchainTable("wallet_alias", (t) => ({
-  secondaryAddress: t.text().primaryKey(),
-  primaryAddress: t.text().notNull(),
-  source: t.text().notNull(),
-}));
-
-// ─── Distribution result table (computed API state) ──────────────────────────
-
-export const distributionResult = onchainTable("distribution_result", (t) => ({
-  month: t.text().primaryKey(),
-  resultJson: t.text().notNull(),
-  computedAt: t.bigint().notNull(),
-}));
+// Note: `wallet_alias` (operator-curated) and `distribution_result`
+// (API-computed cache) are intentionally NOT Ponder onchainTables — they
+// must outlive Ponder schema rotations and have no relationship to indexer
+// state. They live in app-owned tables; see src/db/app-tables.ts.
