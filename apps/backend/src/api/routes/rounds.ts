@@ -1,6 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { distributionResult } from "ponder:schema";
+import { distributionResult, ensVotingPowerSnapshot } from "ponder:schema";
+import { and, desc, inArray, lte } from "drizzle-orm";
 import { POOL_TIERS } from "@ens-dis/domain";
 import {
   fetchActiveVoters,
@@ -18,6 +19,7 @@ import {
   parseDistributionRows,
   type DistributionStorageRow,
   type ParsedDistribution,
+  type RewardRank,
 } from "../distribution-utils.js";
 import {
   getConfiguredRoundMonths,
@@ -197,12 +199,47 @@ export interface RoundTierSnapshot {
 export interface RoundsRouteDeps {
   getRows?: () => Promise<DistributionStorageRow[]>;
   getTierSnapshot?: () => Promise<RoundTierSnapshot>;
+  getVotingPowers?: (
+    addresses: readonly string[],
+    asOfTimestamp: bigint,
+  ) => Promise<Map<string, string>>;
   now?: () => Date;
 }
 
 async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
   const rows = await db.select().from(distributionResult);
   return rows as DistributionStorageRow[];
+}
+
+async function getVotingPowersAt(
+  addresses: readonly string[],
+  asOfTimestamp: bigint,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (addresses.length === 0) return result;
+
+  const lowered = Array.from(new Set(addresses.map((addr) => addr.toLowerCase())));
+  const rows = await db
+    .select({
+      voterId: ensVotingPowerSnapshot.voterId,
+      votingPower: ensVotingPowerSnapshot.votingPower,
+      timestamp: ensVotingPowerSnapshot.timestamp,
+    })
+    .from(ensVotingPowerSnapshot)
+    .where(
+      and(
+        inArray(ensVotingPowerSnapshot.voterId, lowered),
+        lte(ensVotingPowerSnapshot.timestamp, asOfTimestamp),
+      ),
+    )
+    .orderBy(desc(ensVotingPowerSnapshot.timestamp));
+
+  for (const row of rows) {
+    const voterId = row.voterId.toLowerCase();
+    if (result.has(voterId)) continue;
+    result.set(voterId, BigInt(row.votingPower).toString());
+  }
+  return result;
 }
 
 async function getCurrentTierSnapshot(): Promise<RoundTierSnapshot> {
@@ -319,6 +356,7 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
   const app = new OpenAPIHono();
   const getRows = deps.getRows ?? getStoredDistributionRows;
   const getTierSnapshot = deps.getTierSnapshot ?? getCurrentTierSnapshot;
+  const getVotingPowers = deps.getVotingPowers ?? getVotingPowersAt;
   const getNow = deps.now ?? (() => new Date());
 
   app.openapi(currentRoute, async (c) => {
@@ -414,14 +452,25 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         currentTierSnapshot: tierSnapshot,
       });
 
+      const topVoterRewards = parsed ? getTopVoterRewards(parsed, rewardLimit) : [];
+      const topTokenHolderRewards = parsed
+        ? getTopTokenHolderRewards(parsed, rewardLimit)
+        : [];
+      const votingPowers = parsed && topVoterRewards.length > 0
+        ? await getVotingPowers(
+            topVoterRewards.map((row) => row.address),
+            parsed.result.metadata.monthEnd as bigint,
+          )
+        : new Map<string, string>();
+
       return c.json(
         {
           ...summary,
           addressReward: address
             ? buildAddressRoundReward(address, parsed, summary.distributionDataStatus)
             : null,
-          topVoterRewards: parsed ? getTopVoterRewards(parsed, rewardLimit) : [],
-          topTokenHolderRewards: parsed ? getTopTokenHolderRewards(parsed, rewardLimit) : [],
+          topVoterRewards: enrichWithVotingPower(topVoterRewards, votingPowers),
+          topTokenHolderRewards,
           lottery: parsed ? getLotteryDetail(parsed) : null,
         },
         200,
@@ -436,6 +485,17 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
   app.openapi(roundDistributionsRoute, handleRoundDetail);
 
   return app;
+}
+
+function enrichWithVotingPower(
+  rows: RewardRank[],
+  votingPowers: ReadonlyMap<string, string>,
+): RewardRank[] {
+  if (votingPowers.size === 0) return rows;
+  return rows.map((row) => {
+    const vp = votingPowers.get(row.address.toLowerCase());
+    return vp ? { ...row, votingPower: vp } : row;
+  });
 }
 
 function parseRewardLimit(rawRewardLimit: string | undefined): number | null {

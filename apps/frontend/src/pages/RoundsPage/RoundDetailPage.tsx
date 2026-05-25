@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
+import { useEnsName } from 'wagmi'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft,
@@ -985,49 +986,69 @@ function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableP
         ) : null}
         <TableHeadCell $weight={1.4} $align="end">Reward</TableHeadCell>
       </TableHeadRow>
-      {rows.map((row) => {
-        const isHighlighted =
-          highlightLower !== '' && row.address.toLowerCase() === highlightLower
-        const displayName = row.ensName ?? truncateAddress(row.address)
-        return (
-          <TableRow
-            key={`${row.role}-${row.rank}-${row.address}`}
-            href={getAnticaptureDelegateUrl(row.address)}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`View ${displayName} on Anticapture`}
-            $highlighted={isHighlighted}
-            aria-current={isHighlighted ? 'true' : undefined}
-          >
-            <TableCell $weight={0.6}>
-              <MobileLabel>Rank</MobileLabel>
-              <RankPill>#{row.rank}</RankPill>
-            </TableCell>
-            <TableCell $weight={2} $primary>
-              <EnsAvatar
-                address={row.address}
-                name={row.ensName ?? undefined}
-                size={28}
-              />
-              <AddressText>{displayName}</AddressText>
-            </TableCell>
-            {showVotingPower ? (
-              <TableCell $weight={1.2} $align="end">
-                <MobileLabel>Voting power</MobileLabel>
-                <VotingPowerText>{formatVotingPower(row.votingPower)}</VotingPowerText>
-              </TableCell>
-            ) : null}
-            <TableCell $weight={1.4} $align="end">
-              <MobileLabel>Reward</MobileLabel>
-              <RewardCellRow>
-                <RewardValueText>{formatPositiveReward(row.rewardEns) ?? '—'}</RewardValueText>
-                <RewardSourceTag source={row.source} />
-              </RewardCellRow>
-            </TableCell>
-          </TableRow>
-        )
-      })}
+      {rows.map((row) => (
+        <RewardsTableRow
+          key={`${row.role}-${row.rank}-${row.address}`}
+          row={row}
+          isHighlighted={
+            highlightLower !== '' && row.address.toLowerCase() === highlightLower
+          }
+          showVotingPower={showVotingPower}
+        />
+      ))}
     </>
+  )
+}
+
+interface RewardsTableRowProps {
+  row: RewardRank
+  isHighlighted: boolean
+  showVotingPower: boolean
+}
+
+function RewardsTableRow({ row, isHighlighted, showVotingPower }: RewardsTableRowProps) {
+  const { data: resolvedName } = useEnsName({
+    address: row.address as `0x${string}`,
+    query: { enabled: !row.ensName && isAddress(row.address) },
+  })
+  const ensName = row.ensName ?? resolvedName ?? null
+  const displayName = ensName ?? truncateAddress(row.address)
+
+  return (
+    <TableRow
+      href={getAnticaptureDelegateUrl(row.address)}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`View ${displayName} on Anticapture`}
+      $highlighted={isHighlighted}
+      aria-current={isHighlighted ? 'true' : undefined}
+    >
+      <TableCell $weight={0.6}>
+        <MobileLabel>Rank</MobileLabel>
+        <RankPill>#{row.rank}</RankPill>
+      </TableCell>
+      <TableCell $weight={2} $primary>
+        <EnsAvatar
+          address={row.address}
+          name={ensName ?? undefined}
+          size={28}
+        />
+        <AddressText>{displayName}</AddressText>
+      </TableCell>
+      {showVotingPower ? (
+        <TableCell $weight={1.2} $align="end">
+          <MobileLabel>Voting power</MobileLabel>
+          <VotingPowerText>{formatVotingPower(row.votingPower)}</VotingPowerText>
+        </TableCell>
+      ) : null}
+      <TableCell $weight={1.4} $align="end">
+        <MobileLabel>Reward</MobileLabel>
+        <RewardCellRow>
+          <RewardValueText>{formatPositiveReward(row.rewardEns) ?? '—'}</RewardValueText>
+          <RewardSourceTag source={row.source} />
+        </RewardCellRow>
+      </TableCell>
+    </TableRow>
   )
 }
 
