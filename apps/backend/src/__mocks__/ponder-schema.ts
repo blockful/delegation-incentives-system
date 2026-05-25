@@ -29,9 +29,3 @@ export const governanceVote = makeTable("governance_vote");
 
 // Protocol mapping
 export const protocolMapping = makeTable("protocol_mapping");
-
-// Wallet alias
-export const walletAlias = makeTable("wallet_alias");
-
-// Distribution result
-export const distributionResult = makeTable("distribution_result");

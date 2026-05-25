@@ -473,9 +473,10 @@ const DownloadButton = styled.button`
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textSecondary};
   line-height: 16px;
-  cursor: not-allowed;
+  cursor: pointer;
 
   &:disabled {
+    cursor: not-allowed;
     opacity: 0.6;
   }
 
@@ -568,15 +569,19 @@ function useInViewOnce(threshold = 0.35) {
 
 interface RoundsRowData {
   number: number
+  month: string
   period: string
   status: RoundSummary['status']
+  distributionDataStatus: RoundSummary['distributionDataStatus']
 }
 
 function buildRoundRows(rounds: RoundSummary[]): RoundsRowData[] {
   return rounds.slice(0, 8).map((r) => ({
     number: r.roundNumber,
+    month: r.month,
     period: formatUtcMonthRange(r.startDate, r.endDate),
     status: r.status,
+    distributionDataStatus: r.distributionDataStatus,
   }))
 }
 
@@ -718,40 +723,52 @@ export function TransparencyPage() {
             </RoundsRow>
           )}
 
-          {rows.map((row) => (
-            <RoundsRow key={row.number}>
-              <RoundsCell $primary>
-                <MobileLabel>Round</MobileLabel>
-                <span>Round {row.number}</span>
-              </RoundsCell>
-              <RoundsCell $width="280px">
-                <MobileLabel>Period</MobileLabel>
-                <span>{row.period}</span>
-              </RoundsCell>
-              <RoundsCell $width="160px">
-                <MobileLabel>Status</MobileLabel>
-                <StatusPill $status={row.status === 'paid' ? 'paid' : row.status === 'live' ? 'live' : 'pending'}>
-                  {row.status}
-                </StatusPill>
-              </RoundsCell>
-              <RoundsCell $width="160px">
-                <MobileLabel>Download</MobileLabel>
-                <DownloadButton
-                  type="button"
-                  disabled
-                  aria-label={`Download Round ${row.number} CSV (coming soon)`}
-                  title="CSV export coming soon"
-                >
-                  <FontAwesomeIcon icon={faDownload} aria-hidden />
-                  CSV
-                </DownloadButton>
-              </RoundsCell>
-            </RoundsRow>
-          ))}
+          {rows.map((row) => {
+            const csvAvailable = row.distributionDataStatus === 'available'
+            return (
+              <RoundsRow key={row.number}>
+                <RoundsCell $primary>
+                  <MobileLabel>Round</MobileLabel>
+                  <span>Round {row.number}</span>
+                </RoundsCell>
+                <RoundsCell $width="280px">
+                  <MobileLabel>Period</MobileLabel>
+                  <span>{row.period}</span>
+                </RoundsCell>
+                <RoundsCell $width="160px">
+                  <MobileLabel>Status</MobileLabel>
+                  <StatusPill $status={row.status === 'paid' ? 'paid' : row.status === 'live' ? 'live' : 'pending'}>
+                    {row.status}
+                  </StatusPill>
+                </RoundsCell>
+                <RoundsCell $width="160px">
+                  <MobileLabel>Download</MobileLabel>
+                  <DownloadButton
+                    type="button"
+                    disabled={!csvAvailable}
+                    aria-label={
+                      csvAvailable
+                        ? `Download Round ${row.number} CSV`
+                        : `CSV unavailable: Round ${row.number} data is not ready yet`
+                    }
+                    title={
+                      csvAvailable
+                        ? 'Download distribution CSV'
+                        : 'CSV available once the round closes'
+                    }
+                    onClick={() => api.downloadDistributionCsv(row.month)}
+                  >
+                    <FontAwesomeIcon icon={faDownload} aria-hidden />
+                    CSV
+                  </DownloadButton>
+                </RoundsCell>
+              </RoundsRow>
+            )
+          })}
         </RoundsTable>
 
         <TableCaption>
-          CSV exports arrive after each round closes. For now, use the GitHub repo to re-run the math.
+          CSVs are available once a round closes. Re-run the math with the calculation script in the GitHub repo.
         </TableCaption>
         </RoundsBlock>
       </Card>

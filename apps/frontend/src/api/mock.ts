@@ -821,4 +821,51 @@ export const mockApi = {
       addressReward,
     })
   },
+
+  downloadDistributionCsv: (month: string): void => {
+    const csv = buildMockDistributionCsv(MOCK_DISTRIBUTION)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const objectUrl = URL.createObjectURL(blob)
+    triggerMockBrowserDownload(objectUrl, `distribution-${month}.csv`)
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+  },
 } as const
+
+function buildMockDistributionCsv(dist: DistributionResponse): string {
+  const header = 'address,voter_reward,token_holder_reward,combined_reward,role,payout_type'
+  const lines: string[] = [header]
+
+  const lotteryWinners = new Set(
+    dist.lotteryPools.map((pool) => pool.winner.toLowerCase()),
+  )
+  const directAddresses = new Set<string>()
+
+  for (const payout of dist.directPayouts) {
+    directAddresses.add(payout.address.toLowerCase())
+    const voterReward = payout.role === 'voter' ? payout.amount : '0'
+    const tokenHolderReward = payout.role === 'token_holder' ? payout.amount : '0'
+    const payoutType = lotteryWinners.has(payout.address.toLowerCase()) ? 'lottery' : 'direct'
+    lines.push(
+      [payout.address, voterReward, tokenHolderReward, payout.amount, payout.role, payoutType].join(','),
+    )
+  }
+
+  for (const pool of dist.lotteryPools) {
+    if (directAddresses.has(pool.winner.toLowerCase())) continue
+    lines.push(
+      [pool.winner, '0', '0', pool.totalPrize, 'token_holder', 'lottery'].join(','),
+    )
+  }
+
+  return lines.join('\n') + '\n'
+}
+
+function triggerMockBrowserDownload(href: string, filename: string): void {
+  const anchor = document.createElement('a')
+  anchor.href = href
+  anchor.download = filename
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+}

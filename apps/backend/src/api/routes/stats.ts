@@ -1,7 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { governanceProposal, distributionResult, ensDelegation, ensBalance } from "ponder:schema";
+import { governanceProposal, ensDelegation, ensBalance } from "ponder:schema";
 import { sql, desc, inArray, and, eq } from "drizzle-orm";
+import { distributionResult, getAppDb } from "../../db/app-tables.js";
 import { fetchActiveVoters, getActiveVpTotal, formatEns } from "../helpers.js";
 
 const StatsResponse = z.object({
@@ -52,7 +53,9 @@ app.openapi(route, async (c) => {
       .from(governanceProposal);
     const proposalCount = Number(proposalCountRows[0]?.count ?? 0);
 
-    const distRows = await db
+    const { db: appDb, ready: appReady } = getAppDb();
+    await appReady;
+    const distRows = await appDb
       .select({ month: distributionResult.month })
       .from(distributionResult)
       .orderBy(desc(distributionResult.month));
