@@ -30,7 +30,7 @@ export function createDataSource(
   const multiDelegate = createMultiDelegateAdapter(db);
   const vesting = createVestingAdapter(db);
   const block = createBlockAdapter(client);
-  const walletAlias = createWalletAliasAdapter(db);
+  const walletAlias = createWalletAliasAdapter();
 
   return {
     // ProposalRepository

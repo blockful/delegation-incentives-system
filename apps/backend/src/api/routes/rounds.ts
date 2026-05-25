@@ -3,6 +3,7 @@ import { db } from "ponder:api";
 import { distributionResult, ensVotingPowerSnapshot } from "ponder:schema";
 import { and, desc, inArray, lte } from "drizzle-orm";
 import { POOL_TIERS } from "@ens-dis/domain";
+import { distributionResult, getAppDb } from "../../db/app-tables.js";
 import {
   fetchActiveVoters,
   fetchCurrentVpGrowth,
@@ -207,7 +208,9 @@ export interface RoundsRouteDeps {
 }
 
 async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
-  const rows = await db.select().from(distributionResult);
+  const { db: appDb, ready } = getAppDb();
+  await ready;
+  const rows = await appDb.select().from(distributionResult);
   return rows as DistributionStorageRow[];
 }
 

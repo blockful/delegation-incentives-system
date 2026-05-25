@@ -1,7 +1,6 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { db } from "ponder:api";
-import { distributionResult } from "ponder:schema";
 import { desc } from "drizzle-orm";
+import { distributionResult, getAppDb } from "../../db/app-tables.js";
 import { distributionToCsv } from "../../output/csv-writer.js";
 import { normalizeAddress } from "../helpers.js";
 import {
@@ -85,6 +84,8 @@ export interface DistributionRouteDeps {
 }
 
 async function getStoredDistributionRows(): Promise<DistributionStorageRow[]> {
+  const { db, ready } = getAppDb();
+  await ready;
   const rows = await db
     .select()
     .from(distributionResult)

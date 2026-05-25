@@ -1214,6 +1214,8 @@ export function RoundDetailPage() {
   // Title follows the round being viewed (URL), so prev/next navigation updates it.
   const titleRoundNumber = roundData.roundNumber
 
+  const csvAvailable = roundData.distributionDataStatus === 'available'
+
   const hasActiveAddress = Boolean(activeAddress && activeAddressValid)
 
   const lotteryShareValue =
@@ -1319,9 +1321,18 @@ export function RoundDetailPage() {
             </NameRow>
             <DownloadCsvButton
               type="button"
-              disabled
-              aria-label={`Download Round ${titleRoundNumber} CSV (coming soon)`}
-              title="CSV export coming soon"
+              disabled={!csvAvailable}
+              aria-label={
+                csvAvailable
+                  ? `Download Round ${titleRoundNumber} CSV`
+                  : `CSV unavailable: Round ${titleRoundNumber} data is not ready yet`
+              }
+              title={
+                csvAvailable
+                  ? 'Download distribution CSV'
+                  : 'CSV available once the round closes'
+              }
+              onClick={() => api.downloadDistributionCsv(roundData.month)}
             >
               <FontAwesomeIcon icon={faDownload} />
               Download CSV
