@@ -50,6 +50,16 @@ function withQuery(path: string, query?: Record<string, string | undefined>): st
   return queryString ? `${path}?${queryString}` : path;
 }
 
+function triggerBrowserDownload(href: string, filename: string): void {
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 export const api = {
   health: () => request<HealthResponse>("/health"),
 
@@ -85,6 +95,11 @@ export const api = {
       address,
       rewardLimit: options?.rewardLimit,
     })),
+
+  downloadDistributionCsv: (month: string): void => {
+    const href = `${BASE}/distributions/${encodeURIComponent(month)}/csv`;
+    triggerBrowserDownload(href, `distribution-${month}.csv`);
+  },
 } as const;
 
 export { ApiClientError };
