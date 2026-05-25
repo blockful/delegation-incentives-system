@@ -208,8 +208,3 @@ export const protocolMapping = onchainTable("protocol_mapping", (t) => ({
   operatorIdx: index().on(table.operatorAddress),
   protocolIdx: index().on(table.protocol),
 }));
-
-// Note: `wallet_alias` (operator-curated) and `distribution_result`
-// (API-computed cache) are intentionally NOT Ponder onchainTables — they
-// must outlive Ponder schema rotations and have no relationship to indexer
-// state. They live in app-owned tables; see src/db/app-tables.ts.
