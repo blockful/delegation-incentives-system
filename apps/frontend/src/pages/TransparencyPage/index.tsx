@@ -473,9 +473,10 @@ const DownloadButton = styled.button`
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textSecondary};
   line-height: 16px;
-  cursor: not-allowed;
+  cursor: pointer;
 
   &:disabled {
+    cursor: not-allowed;
     opacity: 0.6;
   }
 

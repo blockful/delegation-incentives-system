@@ -821,7 +821,7 @@ export const mockApi = {
     })
   },
 
-  downloadDistributionCsv: async (month: string): Promise<void> => {
+  downloadDistributionCsv: (month: string): void => {
     const csv = buildMockDistributionCsv(MOCK_DISTRIBUTION)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
     const objectUrl = URL.createObjectURL(blob)
@@ -863,6 +863,8 @@ function triggerMockBrowserDownload(href: string, filename: string): void {
   const anchor = document.createElement('a')
   anchor.href = href
   anchor.download = filename
-  anchor.draggable = false
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
   anchor.click()
+  anchor.remove()
 }
