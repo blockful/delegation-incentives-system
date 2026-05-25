@@ -1,3 +1,4 @@
+import "../config/env.js";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
 import { applyCors } from "./cors.js";
