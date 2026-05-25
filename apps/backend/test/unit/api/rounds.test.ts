@@ -106,7 +106,15 @@ function makeManyRewardsDistributionRow(
   };
 }
 
-function makeRoundsApp(rows: DistributionStorageRow[] = []) {
+function makeRoundsApp(
+  rows: DistributionStorageRow[] = [],
+  options: {
+    getVotingPowers?: (
+      addresses: readonly string[],
+      asOfTimestamp: bigint,
+    ) => Promise<Map<string, string>>;
+  } = {},
+) {
   return createRoundsApp({
     getRows: async () => rows,
     getTierSnapshot: async () => ({
@@ -114,6 +122,7 @@ function makeRoundsApp(rows: DistributionStorageRow[] = []) {
       poolSizeEns: "5000.000000000000000000",
       vpGrowthPct: "0.00",
     }),
+    getVotingPowers: options.getVotingPowers ?? (async () => new Map()),
     now: () => new Date("2026-05-03T12:00:00.000Z"),
   });
 }
@@ -319,6 +328,33 @@ describe("round reward responses", () => {
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "Invalid rewardLimit" });
+  });
+
+  it("enriches top voter rewards with round-end voting power", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const captured: Array<{ addresses: string[]; asOf: bigint }> = [];
+    const res = await makeRoundsApp([makeDistributionRow()], {
+      getVotingPowers: async (addresses, asOf) => {
+        captured.push({ addresses: [...addresses], asOf });
+        return new Map([
+          [ADDRESS_A, ens(7n)],
+          [ADDRESS_C, ens(3n)],
+        ]);
+      },
+    }).request("/rounds/1");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].addresses).toEqual([ADDRESS_A, ADDRESS_C]);
+    // monthEnd from makeDistributionRow fixture
+    expect(captured[0].asOf).toBe(1775001599n);
+    expect(body.topVoterRewards).toEqual([
+      expect.objectContaining({ address: ADDRESS_A, votingPower: ens(7n) }),
+      expect.objectContaining({ address: ADDRESS_C, votingPower: ens(3n) }),
+    ]);
+    expect(body.topTokenHolderRewards[0].votingPower).toBeNull();
   });
 
   it("returns clean empty detail state when a round has no stored distribution", async () => {
