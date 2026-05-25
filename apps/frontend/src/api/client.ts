@@ -50,14 +50,28 @@ function withQuery(path: string, query?: Record<string, string | undefined>): st
   return queryString ? `${path}?${queryString}` : path;
 }
 
-function triggerBrowserDownload(href: string, filename: string): void {
+// Fetch as a blob and trigger the download from a same-origin `blob:` URL.
+// Going via blob avoids two cross-origin quirks of `<a download>` pointing at
+// the API host: (1) Chrome silently ignores `download` cross-origin and (2)
+// shows a no-drop cursor while processing the click on the synthesized
+// draggable anchor. The backend already sends `Content-Disposition: attachment`,
+// so the file lands as a download either way — this just cleans up the UX.
+async function triggerBrowserDownload(href: string, filename: string): Promise<void> {
+  const res = await fetch(href);
+  if (!res.ok) {
+    throw new ApiClientError(res.status, `Failed to download ${filename}`);
+  }
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
-  anchor.href = href;
+  anchor.href = objectUrl;
   anchor.download = filename;
-  anchor.rel = "noopener";
-  document.body.appendChild(anchor);
+  anchor.draggable = false;
   anchor.click();
-  anchor.remove();
+  // Defer revoke so the browser has time to capture the blob for the download
+  // before the URL is invalidated. Revoking synchronously can race the download
+  // pipeline in some browsers.
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
 }
 
 export const api = {
@@ -96,9 +110,9 @@ export const api = {
       rewardLimit: options?.rewardLimit,
     })),
 
-  downloadDistributionCsv: (month: string): void => {
+  downloadDistributionCsv: (month: string): Promise<void> => {
     const href = `${BASE}/distributions/${encodeURIComponent(month)}/csv`;
-    triggerBrowserDownload(href, `distribution-${month}.csv`);
+    return triggerBrowserDownload(href, `distribution-${month}.csv`);
   },
 } as const;
 
