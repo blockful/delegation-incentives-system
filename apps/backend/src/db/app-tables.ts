@@ -56,7 +56,15 @@ let bootstrap: Promise<void> | null = null;
 
 export function getAppDb(): AppDbHandle {
   if (!pool) pool = createPool();
-  if (!bootstrap) bootstrap = ensureSchema(pool);
+  if (!bootstrap) {
+    // If bootstrap rejects (transient DB outage, role race during deploy),
+    // clear the cached promise so the next caller retries instead of
+    // re-throwing the same error until the process restarts.
+    bootstrap = ensureSchema(pool).catch((err) => {
+      bootstrap = null;
+      throw err;
+    });
+  }
   return { db: drizzle(pool), ready: bootstrap };
 }
 
@@ -75,6 +83,18 @@ function createPool(): ReturnType<typeof postgres> {
 }
 
 async function ensureSchema(sql: ReturnType<typeof postgres>): Promise<void> {
+  // Skip the CREATE entirely when both tables already exist. This lets
+  // hardened deployments (Postgres 15+ where the app role lacks CREATE on
+  // `public`) work as long as the tables are pre-created by ops/migrations.
+  // `to_regclass` only reads system catalogs and needs no special privilege.
+  const rows = (await sql.unsafe(`
+    select (
+      to_regclass('public.wallet_alias') is not null
+      and to_regclass('public.distribution_result') is not null
+    ) as ready
+  `)) as Array<{ ready: boolean }>;
+  if (rows[0]?.ready) return;
+
   await sql.unsafe(`
     create table if not exists public.wallet_alias (
       secondary_address text primary key,
