@@ -31,12 +31,11 @@ describe('useWalletState', () => {
     expect(result.current).toEqual(state)
   })
 
-  it('returns delegated state with ensName from context', () => {
+  it('returns delegated state from context', () => {
     const state: AppWalletState = {
       status: 'delegated',
       address: '0x1234567890abcdef1234567890abcdef12345678',
       delegatedTo: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
-      ensName: 'alice.eth',
     }
     const { result } = renderHook(() => useWalletState(), {
       wrapper: wrapper(state),
