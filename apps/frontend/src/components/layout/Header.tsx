@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
 import { Button, EnsSVG, Profile, WalletSVG } from '@ensdomains/thorin'
-import { useEnsAvatar } from 'wagmi'
+import { useEnsAvatar, useEnsName } from 'wagmi'
+import { mainnet } from 'viem/chains'
 import makeBlockie from 'ethereum-blockies-base64'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles/tokens'
@@ -320,11 +321,11 @@ const MobileAvatarButton = styled.button`
 
 function ConnectedAccount({
   address,
-  ensName,
 }: {
   address: `0x${string}`
-  ensName?: string
 }) {
+  const { data: resolvedEnsName } = useEnsName({ address, chainId: mainnet.id })
+  const ensName = resolvedEnsName ?? undefined
   const { data: resolvedAvatar } = useEnsAvatar({
     name: ensName,
     query: { enabled: !!ensName },
@@ -362,7 +363,6 @@ export function Header() {
   const location = useLocation()
   const isConnected = walletState.status !== 'disconnected'
   const address = isConnected ? walletState.address : undefined
-  const ensName = walletState.status === 'delegated' ? walletState.ensName : undefined
 
   const toggleMenu = useCallback(() => setMenuOpen((prev) => !prev), [])
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -418,7 +418,7 @@ export function Header() {
 
         <RightArea>
           {isConnected && address ? (
-            <ConnectedAccount address={address} ensName={ensName} />
+            <ConnectedAccount address={address} />
           ) : (
             <Button
               size="small"

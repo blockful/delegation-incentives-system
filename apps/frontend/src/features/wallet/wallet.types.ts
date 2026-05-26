@@ -5,5 +5,4 @@ export type AppWalletState =
       status: 'delegated'
       address: `0x${string}`
       delegatedTo: `0x${string}`
-      ensName?: string
     }
