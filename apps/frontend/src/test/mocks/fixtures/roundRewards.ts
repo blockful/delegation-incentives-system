@@ -172,6 +172,7 @@ export const roundDetailFixture: RoundDetailResponse = {
       rewardEns: '100.000000000000000000',
       source: 'direct',
       votingPower: null,
+      tokenHolderBalance: null,
       delegationCount: null,
     },
     {
@@ -183,6 +184,7 @@ export const roundDetailFixture: RoundDetailResponse = {
       rewardEns: '1.000000000000000000',
       source: 'direct',
       votingPower: null,
+      tokenHolderBalance: null,
       delegationCount: null,
     },
   ],
@@ -196,6 +198,7 @@ export const roundDetailFixture: RoundDetailResponse = {
       rewardEns: '35.000000000000000000',
       source: 'combined',
       votingPower: null,
+      tokenHolderBalance: null,
       delegationCount: null,
     },
     {
@@ -207,6 +210,7 @@ export const roundDetailFixture: RoundDetailResponse = {
       rewardEns: '1.000000000000000000',
       source: 'direct',
       votingPower: null,
+      tokenHolderBalance: null,
       delegationCount: null,
     },
   ],

@@ -612,6 +612,11 @@ export interface paths {
                                 /** @enum {string} */
                                 source: "direct" | "lottery" | "combined";
                                 votingPower: string | null;
+                                /**
+                                 * @description Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.
+                                 * @example 1500000000000000000000
+                                 */
+                                tokenHolderBalance: string | null;
                                 delegationCount: number | null;
                             }[];
                             topTokenHolderRewards: {
@@ -625,6 +630,11 @@ export interface paths {
                                 /** @enum {string} */
                                 source: "direct" | "lottery" | "combined";
                                 votingPower: string | null;
+                                /**
+                                 * @description Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.
+                                 * @example 1500000000000000000000
+                                 */
+                                tokenHolderBalance: string | null;
                                 delegationCount: number | null;
                             }[];
                             lottery: {
@@ -818,6 +828,11 @@ export interface paths {
                                 /** @enum {string} */
                                 source: "direct" | "lottery" | "combined";
                                 votingPower: string | null;
+                                /**
+                                 * @description Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.
+                                 * @example 1500000000000000000000
+                                 */
+                                tokenHolderBalance: string | null;
                                 delegationCount: number | null;
                             }[];
                             topTokenHolderRewards: {
@@ -831,6 +846,11 @@ export interface paths {
                                 /** @enum {string} */
                                 source: "direct" | "lottery" | "combined";
                                 votingPower: string | null;
+                                /**
+                                 * @description Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.
+                                 * @example 1500000000000000000000
+                                 */
+                                tokenHolderBalance: string | null;
                                 delegationCount: number | null;
                             }[];
                             lottery: {

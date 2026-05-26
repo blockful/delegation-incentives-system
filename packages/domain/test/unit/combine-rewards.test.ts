@@ -3,7 +3,7 @@ import {
   combineRewards,
   applyMinimumThreshold,
 } from "../../src/combine-rewards.js";
-import type { Address, RewardAllocation, CombinedReward } from "../../src/types.js";
+import type { Address, RewardAllocation, CombinedReward, Wei } from "../../src/types.js";
 import { wei } from "../../src/types.js";
 
 // ---------------------------------------------------------------------------
@@ -38,12 +38,44 @@ describe("combineRewards", () => {
     const aliceReward = result.find((r) => r.address === alice)!;
     expect(aliceReward.voterReward).toBe(wei(5n * ENS));
     expect(aliceReward.tokenHolderReward).toBe(wei(0n));
+    expect(aliceReward.tokenHolderBalance).toBe(wei(0n));
     expect(aliceReward.total).toBe(wei(5n * ENS));
 
     const bobReward = result.find((r) => r.address === bob)!;
     expect(bobReward.voterReward).toBe(wei(3n * ENS));
     expect(bobReward.tokenHolderReward).toBe(wei(0n));
+    expect(bobReward.tokenHolderBalance).toBe(wei(0n));
     expect(bobReward.total).toBe(wei(3n * ENS));
+  });
+
+  it("attaches per-address token-holder balance when provided", () => {
+    const tokenHolderRewards: RewardAllocation[] = [
+      alloc(alice, 10n),
+      alloc(carol, 7n),
+    ];
+    const balances = new Map<Address, Wei>([
+      [alice, wei(100n * ENS)],
+      [carol, wei(50n * ENS)],
+    ]);
+
+    const result = combineRewards([], tokenHolderRewards, balances);
+
+    const aliceReward = result.find((r) => r.address === alice)!;
+    expect(aliceReward.tokenHolderBalance).toBe(wei(100n * ENS));
+
+    const carolReward = result.find((r) => r.address === carol)!;
+    expect(carolReward.tokenHolderBalance).toBe(wei(50n * ENS));
+  });
+
+  it("self-delegating voter keeps both reward and TWB", () => {
+    const voterRewards: RewardAllocation[] = [alloc(alice, 3n)];
+    const tokenHolderRewards: RewardAllocation[] = [alloc(alice, 12n)];
+    const balances = new Map<Address, Wei>([[alice, wei(200n * ENS)]]);
+
+    const result = combineRewards(voterRewards, tokenHolderRewards, balances);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].tokenHolderBalance).toBe(wei(200n * ENS));
   });
 
   it("handles token-holder rewards only", () => {
@@ -134,6 +166,7 @@ describe("applyMinimumThreshold", () => {
         address: alice,
         voterReward: wei(1n * ENS),
         tokenHolderReward: wei(0n),
+        tokenHolderBalance: wei(0n),
         total: wei(1n * ENS),
       },
     ];
@@ -153,6 +186,7 @@ describe("applyMinimumThreshold", () => {
         address: bob,
         voterReward: wei(halfEns),
         tokenHolderReward: wei(0n),
+        tokenHolderBalance: wei(0n),
         total: wei(halfEns),
       },
     ];
@@ -172,18 +206,21 @@ describe("applyMinimumThreshold", () => {
         address: alice,
         voterReward: wei(2n * ENS),
         tokenHolderReward: wei(3n * ENS),
+        tokenHolderBalance: wei(0n),
         total: wei(5n * ENS),
       },
       {
         address: bob,
         voterReward: wei(0n),
         tokenHolderReward: wei(ENS / 10n),
+        tokenHolderBalance: wei(0n),
         total: wei(ENS / 10n),
       },
       {
         address: carol,
         voterReward: wei(1n * ENS),
         tokenHolderReward: wei(0n),
+        tokenHolderBalance: wei(0n),
         total: wei(1n * ENS),
       },
     ];
@@ -206,6 +243,7 @@ describe("applyMinimumThreshold", () => {
         address: alice,
         voterReward: wei(ENS / 2n),
         tokenHolderReward: wei(ENS / 2n),
+        tokenHolderBalance: wei(0n),
         total: wei(ENS),
       },
     ];
@@ -224,6 +262,7 @@ describe("applyMinimumThreshold", () => {
         address: alice,
         voterReward: wei(justUnder),
         tokenHolderReward: wei(0n),
+        tokenHolderBalance: wei(0n),
         total: wei(justUnder),
       },
     ];

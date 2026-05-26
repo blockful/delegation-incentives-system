@@ -201,6 +201,12 @@ export interface CombinedReward {
   readonly address: Address;
   readonly voterReward: Wei;
   readonly tokenHolderReward: Wei;
+  /**
+   * Time-weighted balance behind the token-holder reward (0 for pure voters).
+   * Persisted so historic round detail pages can show the *actual* tokens
+   * delegated during the round instead of a current-state VP snapshot.
+   */
+  readonly tokenHolderBalance: Wei;
   readonly total: Wei;
 }
 
