@@ -459,9 +459,15 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
       const topTokenHolderRewards = parsed
         ? getTopTokenHolderRewards(parsed, rewardLimit)
         : [];
-      const votingPowers = parsed && topVoterRewards.length > 0
+      const addressesForVp = Array.from(
+        new Set([
+          ...topVoterRewards.map((row) => row.address.toLowerCase()),
+          ...topTokenHolderRewards.map((row) => row.address.toLowerCase()),
+        ]),
+      );
+      const votingPowers = parsed && addressesForVp.length > 0
         ? await getVotingPowers(
-            topVoterRewards.map((row) => row.address),
+            addressesForVp,
             parsed.result.metadata.monthEnd as bigint,
           )
         : new Map<string, string>();
@@ -473,7 +479,7 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
             ? buildAddressRoundReward(address, parsed, summary.distributionDataStatus)
             : null,
           topVoterRewards: enrichWithVotingPower(topVoterRewards, votingPowers),
-          topTokenHolderRewards,
+          topTokenHolderRewards: enrichWithVotingPower(topTokenHolderRewards, votingPowers),
           lottery: parsed ? getLotteryDetail(parsed) : null,
         },
         200,

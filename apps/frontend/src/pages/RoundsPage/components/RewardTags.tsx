@@ -43,9 +43,5 @@ export function RewardSourceTag({ source }: { source: RewardRank['source'] }) {
       </DelegateTag>
     )
   }
-  return (
-    <AprTag colorStyle="yellowSecondary" size="small">
-      APR
-    </AprTag>
-  )
+  return null
 }

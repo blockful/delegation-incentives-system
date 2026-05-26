@@ -330,7 +330,7 @@ describe("round reward responses", () => {
     expect(await res.json()).toEqual({ error: "Invalid rewardLimit" });
   });
 
-  it("enriches top voter rewards with round-end voting power", async () => {
+  it("enriches top voter and token holder rewards with round-end voting power", async () => {
     process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
 
     const captured: Array<{ addresses: string[]; asOf: bigint }> = [];
@@ -347,14 +347,24 @@ describe("round reward responses", () => {
 
     expect(res.status).toBe(200);
     expect(captured).toHaveLength(1);
-    expect(captured[0].addresses).toEqual([ADDRESS_A, ADDRESS_C]);
+    // Voter addresses (A, C) followed by token holder addresses (B, C);
+    // C is deduped since it appears in both lists.
+    expect(captured[0].addresses).toEqual([ADDRESS_A, ADDRESS_C, ADDRESS_B]);
     // monthEnd from makeDistributionRow fixture
     expect(captured[0].asOf).toBe(1775001599n);
     expect(body.topVoterRewards).toEqual([
       expect.objectContaining({ address: ADDRESS_A, votingPower: ens(7n) }),
       expect.objectContaining({ address: ADDRESS_C, votingPower: ens(3n) }),
     ]);
-    expect(body.topTokenHolderRewards[0].votingPower).toBeNull();
+    // Top token holders: B (rank 1, no VP snapshot), C (rank 2, enriched)
+    expect(body.topTokenHolderRewards[0]).toMatchObject({
+      address: ADDRESS_B,
+      votingPower: null,
+    });
+    expect(body.topTokenHolderRewards[1]).toMatchObject({
+      address: ADDRESS_C,
+      votingPower: ens(3n),
+    });
   });
 
   it("returns clean empty detail state when a round has no stored distribution", async () => {
