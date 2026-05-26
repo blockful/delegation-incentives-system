@@ -22,7 +22,7 @@ async function ensureOutDir() {
 }
 
 async function testOgImage() {
-  const { default: handler } = await import('../../../api/og/voter.tsx')
+  const { default: handler } = await import('../../../api/og/voter.ts')
   for (const { slug, query } of CASES) {
     const req = new Request(`http://localhost:3000/api/og/voter?${query}`)
     const res = await handler(req)
