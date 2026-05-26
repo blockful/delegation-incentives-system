@@ -37,6 +37,13 @@ function initialsForAddress(addr: string): string {
   return addr.slice(2, 4).toUpperCase()
 }
 
+function initialsForName(name: string): string {
+  // Use the first two alphanumeric chars of the bare name (without TLD).
+  // Falls back to 'EN' if the name has fewer than 2 usable chars.
+  const bare = stripEnsTld(name).replace(/[^a-z0-9]/gi, '')
+  return bare.length >= 2 ? bare.slice(0, 2).toUpperCase() : 'EN'
+}
+
 function stripEnsTld(name: string): string {
   // Drop the trailing TLD (.eth, .xyz, .box, …) for visual density.
   return name.replace(/\.[a-z0-9-]{2,}$/i, '')
@@ -210,11 +217,14 @@ function renderVoterCard({ displayName, initials, avatarUrl, satoshiLoaded }: Vo
     ),
   )
 
+  // Render EITHER the avatar OR the initials fallback — never stacked.
+  // Stacking via position:absolute is unreliable in Satori (the later sibling
+  // doesn't always win the z-order on edge runtime, so the initials end up
+  // painted over a successfully-fetched avatar).
   const avatarSlot = h(
     'div',
     {
       style: {
-        position: 'relative',
         display: 'flex',
         width: 180,
         height: 180,
@@ -231,22 +241,18 @@ function renderVoterCard({ displayName, initials, avatarUrl, satoshiLoaded }: Vo
         fontWeight: 700,
       },
     },
-    // Initials fallback sits behind; if avatar loads, it covers the slot.
-    h('span', { style: { position: 'absolute' } }, initials),
     avatarUrl
       ? h('img', {
           src: avatarUrl,
           width: 180,
           height: 180,
           style: {
-            position: 'absolute',
-            inset: 0,
             width: '100%',
             height: '100%',
             objectFit: 'cover',
           },
         })
-      : null,
+      : h('span', null, initials),
   )
 
   const identity = h(
@@ -381,7 +387,11 @@ export default async function handler(request: Request) {
     : address
       ? truncateAddress(address)
       : 'ENS Delegate'
-  const initials = address ? initialsForAddress(address) : 'EN'
+  const initials = name
+    ? initialsForName(name)
+    : address
+      ? initialsForAddress(address)
+      : 'EN'
 
   // Fetch avatar bytes + fonts in parallel
   const [avatarResult, satoshiBold, satoshiMedium] = await Promise.all([
