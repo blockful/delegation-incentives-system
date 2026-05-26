@@ -123,9 +123,48 @@ const MOCK_TIERS: TierProgressionResponse = {
 // ENS metadata service serves real avatars by name; falls back gracefully if unset.
 const ensAvatar = (name: string) => `https://metadata.ens.domains/mainnet/avatar/${name}`
 
-const MOCK_VOTERS: ActiveVotersResponse = {
-  count: 38,
-  voters: [
+const MOCK_PROPOSAL_TITLES = [
+  'EP 6.6 — [Executable] Working Group budgets, Term 6',
+  'EP 6.5 — [Social] Service Provider Program renewal',
+  'EP 6.4 — [Executable] Public Goods WG funding allocation',
+  'EP 6.3 — [Social] Term 6 Steward elections',
+  'EP 6.2 — [Executable] Ecosystem WG quarterly budget',
+  'EP 6.1 — [Social] Endorse Term 6 Working Group Stewards',
+  'EP 5.31 — [Executable] Q4 governance facilitation budget',
+  'EP 5.30 — [Social] Service Provider Stream amendment',
+  'EP 5.29 — [Executable] Security audit budget approval',
+  'EP 5.28 — [Social] Constitution amendment — voting periods',
+] as const
+
+const MOCK_PROPOSAL_IDS = [
+  '39893466662181856279242827854933926689925858494049650894234231038376231891860',
+  '85714230187321904471028836259741268340985717625190837624089417823625781421003',
+  '12471203487123048712304871230487123048712304871230487123048712304871230487',
+  '74028371203748120374812037481203748120374812037481203748120374812037481203',
+  '38419283749182748392174839218374839218374839218374839218374839218374839218',
+  '90218374921837492183749218374921837492183749218374921837492183749218374921',
+  '52830192837492837410293847102938471029384710293847102938471029384710293847',
+  '67419283746192837461928374619283746192837461928374619283746192837461928374',
+  '18374619283746192837461928374619283746192837461928374619283746192837461928',
+  '29384710293847102938471029384710293847102938471029384710293847102938471029',
+] as const
+
+const MOCK_PROPOSAL_STATUSES = [
+  'executed', 'executed', 'defeated', 'executed', 'executed',
+  'executed', 'defeated', 'executed', 'executed', 'executed',
+] as const
+
+function buildMockProposals(voted: boolean[]) {
+  return voted.map((v, i) => ({
+    proposalId: MOCK_PROPOSAL_IDS[i],
+    title: MOCK_PROPOSAL_TITLES[i],
+    status: MOCK_PROPOSAL_STATUSES[i],
+    // Mock: voters who voted are mostly "For"; a couple of "Against" sprinkled in via index parity.
+    voterSupport: v ? (i % 5 === 2 ? 0 : i % 7 === 3 ? 2 : 1) : null,
+  }))
+}
+
+const MOCK_VOTERS_BASE = [
     {
       address: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
       ensName: 'nick.eth',
@@ -296,7 +335,14 @@ const MOCK_VOTERS: ActiveVotersResponse = {
       activeSince: '2023-06-17T00:00:00Z',
       last10ProposalsVoted: [true, true, true, true, false, true, true, true, true, true],
     },
-  ],
+  ]
+
+const MOCK_VOTERS: ActiveVotersResponse = {
+  count: MOCK_VOTERS_BASE.length,
+  voters: MOCK_VOTERS_BASE.map((v) => ({
+    ...v,
+    last10Proposals: buildMockProposals(v.last10ProposalsVoted),
+  })),
 }
 
 /**

@@ -59,6 +59,23 @@ export interface paths {
                                  *     ]
                                  */
                                 last10ProposalsVoted: boolean[];
+                                /** @description Detailed per-proposal record (same order as last10ProposalsVoted) */
+                                last10Proposals: {
+                                    /** @example 39893466662181856279242827854933926689925858494049650894234231038376231891860 */
+                                    proposalId: string;
+                                    /** @example EP 6.6 — [Executable] Working Group budgets, Term 6 */
+                                    title: string;
+                                    /**
+                                     * @description Proposal status (executed, succeeded, queued, defeated, expired)
+                                     * @example executed
+                                     */
+                                    status: string;
+                                    /**
+                                     * @description Voter's vote: 0=Against, 1=For, 2=Abstain, null=did not vote
+                                     * @example 1
+                                     */
+                                    voterSupport: number | null;
+                                }[];
                                 /** @example 42 */
                                 tokenHolderCount: number;
                                 /**
