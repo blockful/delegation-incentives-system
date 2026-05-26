@@ -6,14 +6,11 @@ import { Button } from '@ensdomains/thorin'
 import { useVoters } from '@/features/voters/useVoters'
 import { useVoterEnsNames } from '@/features/ens/useVoterEnsNames'
 import { useStats } from '@/features/stats/useStats'
-import { useCompare } from '@/features/voters/useCompare'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { VoterCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSkeletons'
 import { VoterCard } from './components/VoterCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
-import { CompareDock } from './components/CompareDock'
-import { CompareDrawer } from './components/CompareDrawer'
 import type { VoterDetail } from '@/api/types'
 
 const Page = styled.div`
@@ -304,8 +301,6 @@ export function VotersPage() {
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
   const [shuffleSeed, setShuffleSeed] = useState(0)
   const [search, setSearch] = useState('')
-  const { selected, isSelected, toggle, clear, count } = useCompare()
-  const [compareOpen, setCompareOpen] = useState(false)
 
   const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
 
@@ -359,19 +354,7 @@ export function VotersPage() {
     return filtered
   }, [data, sort, shuffleSeed, search, resolvedEnsNames])
 
-  const totalCount = data?.length ?? 0
-  const filteredCount = voters?.length ?? 0
   const hasFilters = search.length > 0
-
-  // Address-keyed lookup so the dock and drawer can resolve selected entries
-  // even when the current filter/search hides them. Lower-cased to match the
-  // normalization in `useCompare`.
-  const votersByAddress = useMemo(() => {
-    const map = new Map<string, VoterDetail>()
-    if (!data) return map
-    for (const v of data) map.set(v.address.toLowerCase(), v)
-    return map
-  }, [data])
 
   const resetFilters = () => {
     setSearch('')
@@ -463,8 +446,6 @@ export function VotersPage() {
                 <VoterCard
                   key={v.address}
                   voter={v}
-                  isSelected={isSelected(v.address)}
-                  onToggleCompare={() => toggle(v.address)}
                   resolvedEnsName={resolvedEnsNames.get(v.address.toLowerCase()) ?? null}
                   onEnsResolved={reportResolvedEns}
                 />
@@ -472,24 +453,6 @@ export function VotersPage() {
             </Grid>
           )}
         </CardsAndFilters>
-
-        {count > 0 && (
-          <CompareDock
-            selected={selected}
-            voters={votersByAddress}
-            onOpen={() => setCompareOpen(true)}
-            onClear={() => {
-              clear()
-              setCompareOpen(false)
-            }}
-          />
-        )}
-        <CompareDrawer
-          open={compareOpen}
-          onClose={() => setCompareOpen(false)}
-          selected={selected}
-          voters={votersByAddress}
-        />
     </Page>
   )
 }
