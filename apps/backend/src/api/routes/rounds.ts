@@ -1,6 +1,6 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db } from "ponder:api";
-import { distributionResult, ensVotingPowerSnapshot } from "ponder:schema";
+import { ensVotingPowerSnapshot } from "ponder:schema";
 import { and, desc, inArray, lte } from "drizzle-orm";
 import { POOL_TIERS } from "@ens-dis/domain";
 import { distributionResult, getAppDb } from "../../db/app-tables.js";
