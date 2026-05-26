@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -17,8 +15,6 @@ import { tokens } from '@/styles'
 
 interface VoterCardProps {
   voter: VoterDetail
-  isSelected?: boolean
-  onToggleCompare?: () => void
   /** Reverse-resolved ENS name supplied by the parent page (preferred when v.ensName is null). */
   resolvedEnsName?: string | null
   /** Called when this card's own useEnsName settles, so the page can use it in filters. */
@@ -80,8 +76,6 @@ const IdentityRow = styled.div`
   display: flex;
   align-items: center;
   gap: ${tokens.spacing.md};
-  position: relative;
-  z-index: 1;
 `
 
 const AvatarWrap = styled.div`
@@ -210,6 +204,8 @@ const ActionsBlock = styled.div`
   align-items: stretch;
   gap: 8px;
   width: 100%;
+  position: relative;
+  z-index: 2;
 `
 
 const FreeBadge = styled.span.attrs({ 'aria-hidden': true })`
@@ -228,59 +224,11 @@ const FreeBadge = styled.span.attrs({ 'aria-hidden': true })`
 `
 
 
-const ProfileLink = styled(Link)`
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px 16px;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.blue};
-  text-decoration: none;
-  line-height: 20px;
-  transition: gap ${tokens.transition.fast};
-
-  &:hover {
-    text-decoration: none;
-    gap: 8px;
-  }
-`
-
-const ProfileArrow = styled.span`
-  transition: transform ${tokens.transition.fast};
-`
-
-const CompareChip = styled.button<{ $selected: boolean }>`
+const CardLink = styled(Link)`
   position: absolute;
-  top: ${tokens.spacing.md};
-  right: ${tokens.spacing.md};
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px ${tokens.spacing.sm};
-  border-radius: ${tokens.radius.pill};
-  border: 1px solid
-    ${({ $selected }) =>
-      $selected ? tokens.color.blue : tokens.color.borderLight};
-  background: ${({ $selected }) =>
-    $selected ? tokens.color.lightBlue : tokens.color.surface};
-  color: ${({ $selected }) =>
-    $selected ? tokens.color.darkBlue : tokens.color.darkGray};
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.semibold};
-  cursor: pointer;
-  transition:
-    background ${tokens.transition.fast},
-    border-color ${tokens.transition.fast},
-    color ${tokens.transition.fast};
-
-  &:hover {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.darkBlue};
-  }
+  inset: 0;
+  z-index: 1;
+  border-radius: ${tokens.radius.md};
 
   &:focus-visible {
     outline: 2px solid ${tokens.color.accent};
@@ -288,15 +236,8 @@ const CompareChip = styled.button<{ $selected: boolean }>`
   }
 `
 
-const CompareIcon = styled.span`
-  font-size: 10px;
-  display: inline-flex;
-`
-
 export function VoterCard({
   voter,
-  isSelected = false,
-  onToggleCompare,
   resolvedEnsName,
   onEnsResolved,
 }: VoterCardProps) {
@@ -329,20 +270,7 @@ export function VoterCard({
   return (
     <>
       <StyledCard>
-        {onToggleCompare && (
-          <CompareChip
-            type="button"
-            $selected={isSelected}
-            onClick={onToggleCompare}
-            aria-pressed={isSelected}
-            aria-label={isSelected ? 'Remove from compare' : 'Add to compare'}
-          >
-            <CompareIcon aria-hidden>
-              <FontAwesomeIcon icon={isSelected ? faCheck : faPlus} />
-            </CompareIcon>
-            {isSelected ? 'Selected' : 'Compare'}
-          </CompareChip>
-        )}
+        <CardLink to={profileUrl} aria-label={`View profile for ${displayName}`} />
 
         <CardHeader>
           <IdentityRow>
@@ -397,9 +325,6 @@ export function VoterCard({
           >
             Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
           </Button>
-          <ProfileLink to={profileUrl}>
-            View profile <ProfileArrow aria-hidden>→</ProfileArrow>
-          </ProfileLink>
         </ActionsBlock>
       </StyledCard>
       {modalOpen && (
