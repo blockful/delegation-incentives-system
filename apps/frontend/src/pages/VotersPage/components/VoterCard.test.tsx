@@ -12,6 +12,7 @@ const fullVoter: VoterDetail = {
   tokenHolderCount: 128,
   activeSince: '2024-01-15T00:00:00Z',
   last10ProposalsVoted: [true, true, true, true, true, true, true, true, true, false],
+  last10Proposals: [],
 }
 
 const minimalVoter: VoterDetail = {
@@ -23,6 +24,7 @@ const minimalVoter: VoterDetail = {
   tokenHolderCount: 0,
   activeSince: null,
   last10ProposalsVoted: [true, true, true, true, true, true, true, false, false, false],
+  last10Proposals: [],
 }
 
 describe('VoterCard', () => {

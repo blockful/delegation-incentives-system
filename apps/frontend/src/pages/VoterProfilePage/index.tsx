@@ -9,6 +9,7 @@ import {
   faCheck,
   faCircleCheck,
   faCircleMinus,
+  faCircleXmark,
   faClock,
   faCopy,
   faShareNodes,
@@ -20,6 +21,7 @@ import { isAddress } from 'viem'
 import { useEnsName, useEnsAddress, useEnsText } from 'wagmi'
 import { env } from '@/config/env'
 import { MOCK_ENS_TO_ADDRESS } from '@/api/mock'
+import type { VoterDetail } from '@/api'
 import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import { useVoter } from '@/features/voters/useVoter'
@@ -655,58 +657,54 @@ function useEnsTextRecord(name: string | null, key: string): string | undefined 
 interface ProposalRow {
   id: number
   title: string
-  voted: boolean
+  /** Voter's vote: 0=Against, 1=For, 2=Abstain, null=did not vote */
+  voterSupport: number | null
+  /** Proposal status from backend (executed/succeeded/queued/defeated/expired). */
+  status: string
   anticaptureUrl: string
-  // NOTE(backend): we currently only have a boolean[] of "voted on last 10 proposals".
-  // See BACKEND-NEEDS in MOCK_PROPOSALS below.
 }
 
-/**
- * Placeholder data for the last 10 ENS DAO proposals.
- *
- * BACKEND-NEEDS — we don't have any of this from the API yet:
- *   1) Proposal title / EP number  → needs Snapshot or Tally feed
- *      (e.g. GET /proposals?limit=10 returning {id, epNumber, title, type})
- *   2) Delegate's vote choice (For / Against / Abstain) per proposal
- *      — currently we only know "voted at all" via `last10ProposalsVoted: boolean[]`
- *   3) Proposal outcome (Passed / Rejected) per proposal
- *   4) On-chain governance proposal id (uint256) — used to build the Anticapture URL
- *      `https://app.anticapture.com/ens/proposals/{id}`
- *
- * Until those land we render the rows from this hardcoded list mirrored against
- * the existing `boolean[]`. Vote and Result columns mirror the boolean for now.
- */
-interface MockProposal {
-  title: string
-  /** On-chain ENS governance proposal id (uint256 as decimal string). Mocked. */
-  proposalId: string
+type ProposalVote = NonNullable<
+  VoterDetail['last10Proposals']
+> extends Array<infer T>
+  ? T
+  : never
+
+function buildProposalRows(proposals: ProposalVote[]): ProposalRow[] {
+  return proposals.map((p, i) => ({
+    id: i + 1,
+    title: p.title || `Proposal #${i + 1}`,
+    voterSupport: p.voterSupport,
+    status: p.status,
+    anticaptureUrl: `https://app.anticapture.com/ens/proposals/${p.proposalId}`,
+  }))
 }
 
-const MOCK_PROPOSALS: MockProposal[] = [
-  { title: 'EP 6.6 — [Executable] Working Group budgets, Term 6',         proposalId: '39893466662181856279242827854933926689925858494049650894234231038376231891860' },
-  { title: 'EP 6.5 — [Social] Service Provider Program renewal',          proposalId: '85714230187321904471028836259741268340985717625190837624089417823625781421003' },
-  { title: 'EP 6.4 — [Executable] Public Goods WG funding allocation',    proposalId: '12471203487123048712304871230487123048712304871230487123048712304871230487' },
-  { title: 'EP 6.3 — [Social] Term 6 Steward elections',                  proposalId: '74028371203748120374812037481203748120374812037481203748120374812037481203' },
-  { title: 'EP 6.2 — [Executable] Ecosystem WG quarterly budget',         proposalId: '38419283749182748392174839218374839218374839218374839218374839218374839218' },
-  { title: 'EP 6.1 — [Social] Endorse Term 6 Working Group Stewards',     proposalId: '90218374921837492183749218374921837492183749218374921837492183749218374921' },
-  { title: 'EP 5.31 — [Executable] Q4 governance facilitation budget',    proposalId: '52830192837492837410293847102938471029384710293847102938471029384710293847' },
-  { title: 'EP 5.30 — [Social] Service Provider Stream amendment',        proposalId: '67419283746192837461928374619283746192837461928374619283746192837461928374' },
-  { title: 'EP 5.29 — [Executable] Security audit budget approval',       proposalId: '18374619283746192837461928374619283746192837461928374619283746192837461928' },
-  { title: 'EP 5.28 — [Social] Constitution amendment — voting periods',  proposalId: '29384710293847102938471029384710293847102938471029384710293847102938471029' },
-]
+interface VoteDisplay {
+  label: string
+  tone: 'positive' | 'negative' | 'neutral'
+  icon: typeof faCircleCheck
+}
 
-function buildProposalRows(votes: boolean[]): ProposalRow[] {
-  return votes.map((voted, i) => {
-    const mock = MOCK_PROPOSALS[i]
-    const title = mock?.title ?? `EP — Proposal #${i + 1}`
-    const proposalId = mock?.proposalId ?? '0'
-    return {
-      id: i + 1,
-      title,
-      voted,
-      anticaptureUrl: `https://app.anticapture.com/ens/proposals/${proposalId}`,
-    }
-  })
+function describeVote(support: number | null): VoteDisplay {
+  if (support === 1) return { label: 'For', tone: 'positive', icon: faCircleCheck }
+  if (support === 0) return { label: 'Against', tone: 'negative', icon: faCircleXmark }
+  if (support === 2) return { label: 'Abstain', tone: 'neutral', icon: faCircleMinus }
+  return { label: 'Did not vote', tone: 'neutral', icon: faCircleMinus }
+}
+
+function describeResult(status: string): VoteDisplay | null {
+  switch (status) {
+    case 'executed':
+    case 'succeeded':
+    case 'queued':
+      return { label: 'Passed', tone: 'positive', icon: faCircleCheck }
+    case 'defeated':
+    case 'expired':
+      return { label: 'Failed', tone: 'negative', icon: faCircleXmark }
+    default:
+      return null
+  }
 }
 
 export function VoterProfilePage() {
@@ -804,7 +802,7 @@ export function VoterProfilePage() {
     setModalOpen(true)
   }
 
-  const proposalRows = buildProposalRows(voter.last10ProposalsVoted)
+  const proposalRows = buildProposalRows(voter.last10Proposals ?? [])
 
   const twitterUrl = twitter ? `https://twitter.com/${twitter.replace(/^@/, '')}` : null
   const ensProfileUrl = ensName
@@ -941,45 +939,46 @@ export function VoterProfilePage() {
           </TableHeadCell>
           <TableHeadCell $width="200px">Result</TableHeadCell>
         </TableHeadRow>
-        {proposalRows.map((row) => (
-          <TableRow
-            key={row.id}
-            href={row.anticaptureUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${row.title} on Anticapture`}
-          >
-            <TableCell $primary>{row.title}</TableCell>
-            <TableCell $width="200px">
-              <MobileLabel>Delegate Vote</MobileLabel>
-              <CellValue>
-                {row.voted ? (
-                  <>
-                    <VoteIcon $tone="positive"><FontAwesomeIcon icon={faCircleCheck} /></VoteIcon>
-                    For
-                  </>
-                ) : (
-                  <>
-                    <VoteIcon $tone="neutral"><FontAwesomeIcon icon={faCircleMinus} /></VoteIcon>
-                    Did not vote
-                  </>
-                )}
-              </CellValue>
-            </TableCell>
-            <TableCell $width="200px">
-              <MobileLabel>Result</MobileLabel>
-              <CellValue>
-                {/* TODO(backend): real proposal outcome from Snapshot/Tally */}
-                <LabelWithTooltip
-                  text="Proposal outcome data not yet available"
-                  iconAriaLabel="Proposal outcome unavailable"
-                >
-                  <span aria-label="Proposal outcome unavailable">—</span>
-                </LabelWithTooltip>
-              </CellValue>
-            </TableCell>
-          </TableRow>
-        ))}
+        {proposalRows.map((row) => {
+          const vote = describeVote(row.voterSupport)
+          const result = describeResult(row.status)
+          return (
+            <TableRow
+              key={row.id}
+              href={row.anticaptureUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open ${row.title} on Anticapture`}
+            >
+              <TableCell $primary>{row.title}</TableCell>
+              <TableCell $width="200px">
+                <MobileLabel>Delegate Vote</MobileLabel>
+                <CellValue>
+                  <VoteIcon $tone={vote.tone}><FontAwesomeIcon icon={vote.icon} /></VoteIcon>
+                  {vote.label}
+                </CellValue>
+              </TableCell>
+              <TableCell $width="200px">
+                <MobileLabel>Result</MobileLabel>
+                <CellValue>
+                  {result ? (
+                    <>
+                      <VoteIcon $tone={result.tone}><FontAwesomeIcon icon={result.icon} /></VoteIcon>
+                      {result.label}
+                    </>
+                  ) : (
+                    <LabelWithTooltip
+                      text={`Proposal status: ${row.status || 'unknown'}`}
+                      iconAriaLabel="Proposal outcome unavailable"
+                    >
+                      <span aria-label="Proposal outcome unavailable">—</span>
+                    </LabelWithTooltip>
+                  )}
+                </CellValue>
+              </TableCell>
+            </TableRow>
+          )
+        })}
         </TableCard>
       </VotingRecordSection>
     </Page>
