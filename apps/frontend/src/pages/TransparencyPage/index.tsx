@@ -535,7 +535,7 @@ const METHOD_STEPS: MethodStep[] = [
   },
   {
     label: '4. You earn',
-    text: 'Rewards of 1 ENS or more land straight in your wallet. No claiming required. Smaller amounts go into a 10‑ENS lottery, one winner picked randomly each round.',
+    text: 'Rewards of 1 ENS or more land straight in your wallet. Smaller amounts go into a 10‑ENS lottery, one winner picked randomly each round. No claiming required.',
     offset: 0,
     tone: 'green',
     icon: faWallet,
@@ -643,7 +643,7 @@ export function TransparencyPage() {
             <GuardrailValue>1%</GuardrailValue> per‑delegate cap
           </GuardrailChip>
           <GuardrailChip>
-            <GuardrailValue>5%</GuardrailValue> per‑wallet cap
+            <GuardrailValue>5%</GuardrailValue> per‑holder cap
           </GuardrailChip>
           <GuardrailChip>
             <GuardrailValue>180‑day</GuardrailValue> balance window
