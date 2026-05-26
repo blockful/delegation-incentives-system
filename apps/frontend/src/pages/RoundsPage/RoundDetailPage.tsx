@@ -1039,7 +1039,9 @@ function RewardsTableRow({ row, isHighlighted, showVotingPower }: RewardsTableRo
       </TableCell>
       <TableCell $weight={1.2} $align="end">
         <MobileLabel>{showVotingPower ? 'Voting power' : 'Delegated amount'}</MobileLabel>
-        <VotingPowerText>{formatVotingPower(row.votingPower)}</VotingPowerText>
+        <VotingPowerText>
+          {formatVotingPower(showVotingPower ? row.votingPower : row.tokenHolderBalance)}
+        </VotingPowerText>
       </TableCell>
       <TableCell $weight={1.4} $align="end">
         <MobileLabel>Reward</MobileLabel>

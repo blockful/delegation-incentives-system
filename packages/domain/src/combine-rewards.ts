@@ -9,10 +9,16 @@ import { MIN_REWARD_THRESHOLD } from "./config.js";
 /**
  * Combine voter and token-holder rewards per address.
  * An address may appear in one or both pools.
+ *
+ * `tokenHolderBalances` is the per-address time-weighted balance map produced
+ * during token-holder reward allocation. It is persisted on the output so the
+ * frontend can show the *actual* tokens delegated during the round, not a
+ * current-state VP snapshot.
  */
 export function combineRewards(
   voterRewards: readonly RewardAllocation[],
   tokenHolderRewards: readonly RewardAllocation[],
+  tokenHolderBalances: ReadonlyMap<Address, Wei> = new Map(),
 ): CombinedReward[] {
   const map = new Map<
     Address,
@@ -45,10 +51,12 @@ export function combineRewards(
 
   const results: CombinedReward[] = [];
   for (const [address, { voterReward, tokenHolderReward }] of map) {
+    const balance = tokenHolderBalances.get(address) ?? wei(0n);
     results.push({
       address,
       voterReward: wei(voterReward),
       tokenHolderReward: wei(tokenHolderReward),
+      tokenHolderBalance: balance,
       total: wei(voterReward + tokenHolderReward),
     });
   }

@@ -122,6 +122,12 @@ export interface RewardRank {
   rewardEns: string
   source: 'direct' | 'lottery' | 'combined'
   votingPower: string | null
+  /**
+   * Time-weighted ENS balance backing the token-holder reward, in Wei. Null
+   * for voter rows and for historic rounds computed before this field was
+   * persisted.
+   */
+  tokenHolderBalance: string | null
   delegationCount: number | null
 }
 

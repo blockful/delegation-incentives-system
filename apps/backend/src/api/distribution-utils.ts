@@ -45,6 +45,7 @@ export interface RewardRank {
   rewardEns: string;
   source: "direct" | "lottery" | "combined";
   votingPower: string | null;
+  tokenHolderBalance: string | null;
   delegationCount: number | null;
 }
 
@@ -119,6 +120,9 @@ export function reviveDistributionResult(obj: any): DistributionResult {
       ...r,
       voterReward: BigInt(r.voterReward),
       tokenHolderReward: BigInt(r.tokenHolderReward),
+      // Backfill missing field on pre-feature JSON blobs so historic rounds
+      // still load. Round detail UI shows "—" when this is 0.
+      tokenHolderBalance: BigInt(r.tokenHolderBalance ?? "0"),
       total: BigInt(r.total),
     })),
     lottery: {
@@ -369,6 +373,7 @@ export function getTopVoterRewards(
       rewardEns: formatEns(reward.voterReward as bigint),
       source: "direct",
       votingPower: null,
+      tokenHolderBalance: null,
       delegationCount: null,
     }));
 }
@@ -377,20 +382,32 @@ export function getTopTokenHolderRewards(
   parsed: ParsedDistribution,
   limit = 10,
 ): RewardRank[] {
-  const totals = new Map<string, { direct: bigint; lottery: bigint }>();
+  const totals = new Map<
+    string,
+    { direct: bigint; lottery: bigint; balance: bigint }
+  >();
 
   for (const reward of parsed.result.rewards) {
     const tokenHolderReward = reward.tokenHolderReward as bigint;
     if (tokenHolderReward <= 0n) continue;
     const address = reward.address.toLowerCase();
-    const existing = totals.get(address) ?? { direct: 0n, lottery: 0n };
+    const existing = totals.get(address) ?? {
+      direct: 0n,
+      lottery: 0n,
+      balance: 0n,
+    };
     existing.direct += tokenHolderReward;
+    existing.balance += reward.tokenHolderBalance as bigint;
     totals.set(address, existing);
   }
 
   for (const bucket of parsed.result.lottery.buckets) {
     const address = bucket.winner.toLowerCase();
-    const existing = totals.get(address) ?? { direct: 0n, lottery: 0n };
+    const existing = totals.get(address) ?? {
+      direct: 0n,
+      lottery: 0n,
+      balance: 0n,
+    };
     existing.lottery += bucket.prize as bigint;
     totals.set(address, existing);
   }
@@ -408,6 +425,7 @@ export function getTopTokenHolderRewards(
         address,
         reward,
         source,
+        balance: rewards.balance,
       };
     })
     .filter((entry) => entry.reward > 0n)
@@ -422,6 +440,7 @@ export function getTopTokenHolderRewards(
       rewardEns: formatEns(entry.reward),
       source: entry.source,
       votingPower: null,
+      tokenHolderBalance: entry.balance > 0n ? entry.balance.toString() : null,
       delegationCount: null,
     }));
 }

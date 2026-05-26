@@ -1129,6 +1129,14 @@
                               "null"
                             ]
                           },
+                          "tokenHolderBalance": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.",
+                            "example": "1500000000000000000000"
+                          },
                           "delegationCount": {
                             "type": [
                               "number",
@@ -1145,6 +1153,7 @@
                           "rewardEns",
                           "source",
                           "votingPower",
+                          "tokenHolderBalance",
                           "delegationCount"
                         ]
                       }
@@ -1193,6 +1202,14 @@
                               "null"
                             ]
                           },
+                          "tokenHolderBalance": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.",
+                            "example": "1500000000000000000000"
+                          },
                           "delegationCount": {
                             "type": [
                               "number",
@@ -1209,6 +1226,7 @@
                           "rewardEns",
                           "source",
                           "votingPower",
+                          "tokenHolderBalance",
                           "delegationCount"
                         ]
                       }
@@ -1769,6 +1787,14 @@
                               "null"
                             ]
                           },
+                          "tokenHolderBalance": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.",
+                            "example": "1500000000000000000000"
+                          },
                           "delegationCount": {
                             "type": [
                               "number",
@@ -1785,6 +1811,7 @@
                           "rewardEns",
                           "source",
                           "votingPower",
+                          "tokenHolderBalance",
                           "delegationCount"
                         ]
                       }
@@ -1833,6 +1860,14 @@
                               "null"
                             ]
                           },
+                          "tokenHolderBalance": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.",
+                            "example": "1500000000000000000000"
+                          },
                           "delegationCount": {
                             "type": [
                               "number",
@@ -1849,6 +1884,7 @@
                           "rewardEns",
                           "source",
                           "votingPower",
+                          "tokenHolderBalance",
                           "delegationCount"
                         ]
                       }
