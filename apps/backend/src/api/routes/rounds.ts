@@ -103,6 +103,11 @@ const RewardRankSchema = z.object({
   rewardEns: z.string(),
   source: z.enum(["direct", "lottery", "combined"]),
   votingPower: z.string().nullable(),
+  tokenHolderBalance: z.string().nullable().openapi({
+    description:
+      "Time-weighted ENS balance backing the token-holder reward (Wei). Null for voter rows and for historic rounds computed before this field was persisted.",
+    example: "1500000000000000000000",
+  }),
   delegationCount: z.number().nullable(),
 });
 
@@ -459,9 +464,12 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
       const topTokenHolderRewards = parsed
         ? getTopTokenHolderRewards(parsed, rewardLimit)
         : [];
-      const votingPowers = parsed && topVoterRewards.length > 0
+      const voterAddresses = topVoterRewards.map((row) =>
+        row.address.toLowerCase(),
+      );
+      const votingPowers = parsed && voterAddresses.length > 0
         ? await getVotingPowers(
-            topVoterRewards.map((row) => row.address),
+            voterAddresses,
             parsed.result.metadata.monthEnd as bigint,
           )
         : new Map<string, string>();

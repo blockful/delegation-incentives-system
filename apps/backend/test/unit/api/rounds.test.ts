@@ -347,14 +347,64 @@ describe("round reward responses", () => {
 
     expect(res.status).toBe(200);
     expect(captured).toHaveLength(1);
+    // Only voter addresses are looked up — token holders show TWB from the
+    // persisted distribution result, not a current-state VP snapshot.
     expect(captured[0].addresses).toEqual([ADDRESS_A, ADDRESS_C]);
-    // monthEnd from makeDistributionRow fixture
     expect(captured[0].asOf).toBe(1775001599n);
     expect(body.topVoterRewards).toEqual([
       expect.objectContaining({ address: ADDRESS_A, votingPower: ens(7n) }),
       expect.objectContaining({ address: ADDRESS_C, votingPower: ens(3n) }),
     ]);
-    expect(body.topTokenHolderRewards[0].votingPower).toBeNull();
+    // Token holders never get a votingPower value back from this route.
+    for (const row of body.topTokenHolderRewards) {
+      expect(row.votingPower).toBeNull();
+    }
+  });
+
+  it("exposes persisted tokenHolderBalance on top token holder rewards", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const row = makeDistributionRow();
+    const result = JSON.parse(row.resultJson);
+    // Backfill the new field directly on the JSON fixture, matching what the
+    // pipeline now writes.
+    result.rewards = result.rewards.map((r: any) => {
+      if (r.address === ADDRESS_B) {
+        return { ...r, tokenHolderBalance: ens(500n) };
+      }
+      if (r.address === ADDRESS_C) {
+        return { ...r, tokenHolderBalance: ens(300n) };
+      }
+      return r;
+    });
+    const enrichedRow = { ...row, resultJson: JSON.stringify(result) };
+
+    const res = await makeRoundsApp([enrichedRow]).request("/rounds/1");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    const holderB = body.topTokenHolderRewards.find(
+      (r: any) => r.address === ADDRESS_B,
+    );
+    const holderC = body.topTokenHolderRewards.find(
+      (r: any) => r.address === ADDRESS_C,
+    );
+    expect(holderB.tokenHolderBalance).toBe(ens(500n));
+    expect(holderC.tokenHolderBalance).toBe(ens(300n));
+  });
+
+  it("returns null tokenHolderBalance for distributions computed before persistence", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    // makeDistributionRow's fixture omits tokenHolderBalance — exercise the
+    // reviveDistributionResult backfill path.
+    const res = await makeRoundsApp([makeDistributionRow()]).request("/rounds/1");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    for (const row of body.topTokenHolderRewards) {
+      expect(row.tokenHolderBalance).toBeNull();
+    }
   });
 
   it("returns clean empty detail state when a round has no stored distribution", async () => {

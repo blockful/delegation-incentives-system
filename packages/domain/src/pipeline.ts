@@ -261,7 +261,11 @@ export async function runDistributionPipeline(
   );
 
   // ── Step 12: Combine rewards ─────────────────────────────
-  const combined = combineRewards(voterRewards, tokenHolderRewards);
+  const combined = combineRewards(
+    voterRewards,
+    tokenHolderRewards,
+    tokenHolderTWBs,
+  );
 
   // ── Step 13: Apply threshold ─────────────────────────────
   const { directPayouts, lotteryEntries } = applyMinimumThreshold(combined);

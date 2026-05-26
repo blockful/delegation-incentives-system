@@ -30,6 +30,8 @@ import type {
 import { RoundDetailPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { useResolveEnsName } from '@/features/ens/useResolveEnsName'
+import { looksLikeEnsName } from '@/utils/ens'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
@@ -413,7 +415,7 @@ function RoundProgressRing({
   const endDay = Number.isNaN(end.getTime()) ? '' : end.getUTCDate()
   const monthLabel = Number.isNaN(start.getTime())
     ? ''
-    : start.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+    : start.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' })
 
   return (
     <RingWrap ref={wrapRef} aria-label={`${Math.round(percent)}% complete`}>
@@ -981,9 +983,9 @@ function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableP
       <TableHeadRow>
         <TableHeadCell $weight={0.6}>Rank</TableHeadCell>
         <TableHeadCell $weight={2}>Delegate</TableHeadCell>
-        {showVotingPower ? (
-          <TableHeadCell $weight={1.2} $align="end">Voting power</TableHeadCell>
-        ) : null}
+        <TableHeadCell $weight={1.2} $align="end">
+          {showVotingPower ? 'Voting power' : 'Delegated amount'}
+        </TableHeadCell>
         <TableHeadCell $weight={1.4} $align="end">Reward</TableHeadCell>
       </TableHeadRow>
       {rows.map((row) => (
@@ -1035,12 +1037,12 @@ function RewardsTableRow({ row, isHighlighted, showVotingPower }: RewardsTableRo
         />
         <AddressText>{displayName}</AddressText>
       </TableCell>
-      {showVotingPower ? (
-        <TableCell $weight={1.2} $align="end">
-          <MobileLabel>Voting power</MobileLabel>
-          <VotingPowerText>{formatVotingPower(row.votingPower)}</VotingPowerText>
-        </TableCell>
-      ) : null}
+      <TableCell $weight={1.2} $align="end">
+        <MobileLabel>{showVotingPower ? 'Voting power' : 'Delegated amount'}</MobileLabel>
+        <VotingPowerText>
+          {formatVotingPower(showVotingPower ? row.votingPower : row.tokenHolderBalance)}
+        </VotingPowerText>
+      </TableCell>
       <TableCell $weight={1.4} $align="end">
         <MobileLabel>Reward</MobileLabel>
         <RewardCellRow>
@@ -1062,10 +1064,15 @@ export function RoundDetailPage() {
   const walletState = useWalletState()
   const walletAddress = getWalletAddress(walletState)
   const searchedAddress = searchParams.get('address') ?? ''
-  const activeAddress = searchedAddress || walletAddress
+  // URL is the source of truth. Wallet only auto-fills the URL once on mount
+  // (see prefill effect below) so that Clear can truly empty everything.
+  const activeAddress = searchedAddress
   const activeAddressValid = activeAddress ? isAddress(activeAddress) : false
-  const [addressInput, setAddressInput] = useState(activeAddress)
+  const [addressInput, setAddressInput] = useState(searchedAddress)
   const [inputError, setInputError] = useState<string | null>(null)
+  const hasPrefilledRef = useRef(false)
+  const userClearedRef = useRef(false)
+  const { resolve: resolveEns } = useResolveEnsName()
 
   const fetchRound = useCallback(async () => {
     try {
@@ -1115,10 +1122,29 @@ export function RoundDetailPage() {
   const fetchTierProgression = useCallback(() => api.tierProgression(), [])
   const tierProgression = useAsync(fetchTierProgression)
 
+  // Prefill once: if the page loads with a connected wallet and no searched
+  // address yet, push the wallet address into the URL so it acts as the active
+  // address. After that, the URL is the source of truth.
   useEffect(() => {
-    setAddressInput(activeAddress)
+    if (hasPrefilledRef.current) return
+    if (userClearedRef.current) return
+    if (!walletAddress || searchedAddress) return
+    hasPrefilledRef.current = true
+    setAddressInput(walletAddress)
+    setSearchParams(
+      (p) => {
+        p.set('address', walletAddress)
+        return p
+      },
+      { replace: true },
+    )
+  }, [walletAddress, searchedAddress, setSearchParams])
+
+  // Keep the visible input in sync with the URL (e.g. external navigation).
+  useEffect(() => {
+    setAddressInput(searchedAddress)
     setInputError(null)
-  }, [activeAddress])
+  }, [searchedAddress])
 
   const sourceLabel = searchedAddress
     ? 'Searched address'
@@ -1154,30 +1180,46 @@ export function RoundDetailPage() {
   const nextRoundNumber =
     availableRoundNumbers.find((candidate) => candidate > roundNumber) ?? null
 
-  function handleAddressSubmit() {
-    const nextAddress = addressInput.trim()
+  async function handleAddressSubmit(addressOverride?: string) {
+    const nextAddress = (addressOverride ?? addressInput).trim()
     if (!nextAddress) {
       handleAddressClear()
       return
     }
 
-    if (!isAddress(nextAddress)) {
-      setInputError('Invalid address')
+    if (isAddress(nextAddress)) {
+      userClearedRef.current = false
+      setSearchParams((next) => {
+        next.set('address', nextAddress)
+        return next
+      })
       return
     }
 
-    setSearchParams((next) => {
-      next.set('address', nextAddress)
-      return next
-    })
+    if (looksLikeEnsName(nextAddress)) {
+      const resolved = await resolveEns(nextAddress)
+      if (!resolved) {
+        setInputError(`Couldn't resolve ${nextAddress}`)
+        return
+      }
+      userClearedRef.current = false
+      setSearchParams((next) => {
+        next.set('address', resolved)
+        return next
+      })
+      return
+    }
+
+    setInputError('Invalid address')
   }
 
   function handleAddressClear() {
+    userClearedRef.current = true
     setSearchParams((next) => {
       next.delete('address')
       return next
     })
-    setAddressInput(walletAddress)
+    setAddressInput('')
     setInputError(null)
   }
 
