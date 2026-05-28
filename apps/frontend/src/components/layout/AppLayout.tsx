@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import { Header } from './Header'
 import { Footer } from './Footer'
+import { PreviewBanner } from './PreviewBanner'
 import { tokens } from '@/styles/tokens'
 
 const Main = styled.main<{ $fullWidth?: boolean }>`
@@ -45,6 +46,7 @@ export function AppLayout() {
 
   return (
     <Wrapper>
+      <PreviewBanner />
       <Header />
       <Main $fullWidth={isFullWidth}>
         <Outlet />
