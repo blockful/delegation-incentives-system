@@ -39,7 +39,7 @@ import {
 } from './roundFallback'
 import { looksLikeEnsName } from '@/utils/ens'
 import { useResolveEnsName } from '@/features/ens/useResolveEnsName'
-import { AprTag, LotteryTag } from './components/RewardTags'
+import { LotteryTag } from './components/RewardTags'
 import { formatPositiveReward, statusLabel } from './status'
 
 /* ─── Page shell ─── */
@@ -913,7 +913,6 @@ function renderHolderRewards(r: RewardsBreakdown) {
     return (
       <RewardCellRow>
         <RewardValueText>{r.apr}</RewardValueText>
-        <AprTag colorStyle="yellowSecondary" size="small">APR</AprTag>
       </RewardCellRow>
     )
   }
