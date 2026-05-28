@@ -33,8 +33,8 @@ const Message = styled.span`
 const InlineFeedback = styled.a`
   display: none;
   color: ${tokens.color.white};
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: ${tokens.font.weight.medium};
+  text-decoration: none;
   margin-left: ${tokens.spacing.sm};
   transition: opacity ${tokens.transition.fast};
 
