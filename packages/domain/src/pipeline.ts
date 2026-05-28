@@ -33,6 +33,7 @@ export async function runDistributionPipeline(
   // ── Step 1: Resolve round boundaries ─────────────────────
   const monthStart = seconds(monthStartTimestamp(month));
   const monthEnd = seconds(monthEndTimestamp(month));
+  const prevMonthEnd = seconds((monthStart as bigint) - 1n);
   const startBlock = await dataSource.getBlockForTimestamp(monthStart);
   const endBlock = await dataSource.getBlockForTimestamp(monthEnd);
 
@@ -73,7 +74,7 @@ export async function runDistributionPipeline(
   // ── Step 4: Compute VP growth ────────────────────────────
   const vpStart = await dataSource.getAggregateVpAtTimestamp(
     [...activeVotersStart],
-    monthStart,
+    prevMonthEnd,
   );
   const vpEnd = await dataSource.getAggregateVpAtTimestamp(
     [...activeVotersEnd],
