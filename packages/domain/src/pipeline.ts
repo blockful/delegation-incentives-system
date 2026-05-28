@@ -33,7 +33,7 @@ export async function runDistributionPipeline(
   // ── Step 1: Resolve round boundaries ─────────────────────
   const monthStart = seconds(monthStartTimestamp(month));
   const monthEnd = seconds(monthEndTimestamp(month));
-  const prevMonthEnd = seconds((monthStart as bigint) - 1n);
+  const prevMonthEnd = seconds(monthStart - 1n);
   const startBlock = await dataSource.getBlockForTimestamp(monthStart);
   const endBlock = await dataSource.getBlockForTimestamp(monthEnd);
 
