@@ -5,7 +5,7 @@ import { tokens } from '@/styles/tokens'
 const LAUNCH_AT_MS = Date.UTC(2026, 6, 1, 0, 0, 0) // 2026-07-01 00:00 UTC
 const LAUNCH_LABEL = 'July 1, 2026'
 const FEEDBACK_URL =
-  'https://forms.clickup.com/90132341641/f/2ky4wrw9-30353/Z1Y0VQ9TC6SQ3AMUMX'
+  'https://forms.clickup.com/90132341641/f/2ky4wrw9-32173/V2SGIA6QAIMSV2KX2Z'
 
 const Bar = styled.div`
   background: ${tokens.color.blue};
