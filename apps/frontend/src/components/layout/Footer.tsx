@@ -216,7 +216,7 @@ export function Footer() {
               GitHub ↗
             </ExternalLink>
             <ExternalLink
-              href="https://forms.clickup.com/90132341641/f/2ky4wrw9-30353/Z1Y0VQ9TC6SQ3AMUMX"
+              href="https://forms.clickup.com/90132341641/f/2ky4wrw9-32173/V2SGIA6QAIMSV2KX2Z"
               target="_blank"
               rel="noopener noreferrer"
             >
