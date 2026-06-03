@@ -14,3 +14,4 @@ test-results/
 .env*.local
 .og-test/
 .claude/
+*.log

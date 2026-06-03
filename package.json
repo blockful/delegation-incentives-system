@@ -10,10 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://local_proxy@127.0.0.1:21340/git/blockful/delegation-incentives-system"
+    "url": "https://github.com/blockful/delegation-incentives-system"
   },
   "keywords": [],
-  "license": "ISC",
+  "license": "MIT",
   "engines": {
     "node": ">=18"
   },
