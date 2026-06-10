@@ -44,6 +44,38 @@ describe('VotersPage', () => {
     expect(screen.getByText(/Random/)).toBeInTheDocument()
   })
 
+  it('shuffles voters into a different order on each visit (random seed per mount)', async () => {
+    // The shuffle seed comes from Math.random via a lazy useState initializer.
+    // Pin Math.random to different values for two separate mounts and assert
+    // the rendered order changes while the set of voters stays the same.
+    const randSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1234)
+
+    const first = renderApp(<VotersPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('nick.eth').length).toBeGreaterThan(0)
+    })
+    const orderFirstVisit = screen
+      .getAllByLabelText(/^View profile for /)
+      .map((el) => el.getAttribute('aria-label'))
+    first.unmount()
+
+    randSpy.mockReturnValue(0.9876)
+
+    renderApp(<VotersPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('nick.eth').length).toBeGreaterThan(0)
+    })
+    const orderSecondVisit = screen
+      .getAllByLabelText(/^View profile for /)
+      .map((el) => el.getAttribute('aria-label'))
+
+    randSpy.mockRestore()
+
+    expect(orderFirstVisit.length).toBeGreaterThan(1)
+    expect(orderSecondVisit).not.toEqual(orderFirstVisit)
+    expect([...orderSecondVisit].sort()).toEqual([...orderFirstVisit].sort())
+  })
+
   it('filters by reverse-resolved ENS name even when ensName is null in the API response', async () => {
     renderApp(<VotersPage />)
 

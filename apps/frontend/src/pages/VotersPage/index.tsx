@@ -271,7 +271,9 @@ const ResetLink = styled.button`
 /**
  * Tiny seeded PRNG (Bret Mulberry's mulberry32). Deterministic for a given
  * seed — used so the random sort stays stable across re-renders and the
- * `useMemo` deps can be honest. Pressing "Shuffle" bumps the seed.
+ * `useMemo` deps can be honest. The seed itself is random per visit (see
+ * `randomSeed`), so each page load shows a fresh order; pressing "Shuffle"
+ * picks a new seed.
  */
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0
@@ -282,6 +284,15 @@ function mulberry32(seed: number): () => number {
     r ^= r + Math.imul(r ^ (r >>> 7), r | 61)
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296
   }
+}
+
+/**
+ * Fresh random seed for the shuffle. Called lazily on mount (so every visit
+ * gets a new order) and again whenever the user hits "Shuffle". Anything
+ * non-constant works here — the deterministic part lives in mulberry32.
+ */
+function randomSeed(): number {
+  return Math.floor(Math.random() * 0xffffffff)
 }
 
 function shuffled(voters: VoterDetail[], seed: number): VoterDetail[] {
@@ -299,10 +310,13 @@ export function VotersPage() {
   const { map: resolvedEnsNames, report: reportResolvedEns } = useVoterEnsNames(data)
   const { data: stats, loading: statsLoading } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
-  const [shuffleSeed, setShuffleSeed] = useState(0)
+  // Lazy initializer: a new random seed on every mount, so every visit to the
+  // page gets a different order. Was previously a constant 0, which made the
+  // "random" sort deterministic and identical across visits.
+  const [shuffleSeed, setShuffleSeed] = useState(randomSeed)
   const [search, setSearch] = useState('')
 
-  const handleShuffle = useCallback(() => setShuffleSeed((s) => s + 1), [])
+  const handleShuffle = useCallback(() => setShuffleSeed(randomSeed()), [])
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '#'
