@@ -6,7 +6,7 @@ export function statusLabel(status: RoundStatus | RewardStatus): string {
   if (status === 'live') return 'Ongoing'
   if (status === 'paid') return 'Complete'
   if (status === 'pending') return 'Pending'
-  if (status === 'not_eligible') return 'Not eligible'
+  if (status === 'not_eligible') return 'No reward'
   if (status === 'no_reward') return 'No payout'
   if (status === 'unavailable') return 'Unavailable'
   return 'Ended'

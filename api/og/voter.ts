@@ -337,7 +337,7 @@ function renderVoterCard({ displayName, initials, avatarUrl, satoshiLoaded }: Vo
           lineHeight: 1.1,
         },
       },
-      'Delegate for free and earn your reward',
+      'Delegate and start earning rewards',
     ),
     h(
       'svg',

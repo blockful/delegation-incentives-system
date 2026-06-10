@@ -1,12 +1,20 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from "wagmi";
-import { zeroAddress, type Address } from "viem";
+import { formatUnits, zeroAddress, type Address } from "viem";
 
 import { FRONTEND_CLIENT_SOURCE, RELAYER_BASE_URL } from "../relayerClient";
 
 const ENS_TOKEN_ADDRESS =
   "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72" as const;
+const ENS_TOKEN_DECIMALS = 18;
+
+/**
+ * Copy fallback for the gas-sponsorship minimum (in whole ENS) used when the
+ * relayer config hasn't loaded (or the relayer is unfunded). Keep in sync with
+ * the relayer's `minVotingPower` config.
+ */
+export const DEFAULT_GAS_SPONSORSHIP_MIN_ENS = "10";
 
 const ENS_TOKEN_ABI = [
   {
@@ -94,6 +102,24 @@ export const useRelayerConfig = (): UseRelayerConfigResult => {
     maxRelayPerAddressPerDay: data?.maxRelayPerAddressPerDay ?? null,
     isLoading: balanceLoading || (enabled && isLoading),
   };
+};
+
+/**
+ * Display string (whole ENS units) for the minimum ENS balance required to
+ * qualify for sponsored gas. Reads the relayer's dynamic `minVotingPower`
+ * config and falls back to {@link DEFAULT_GAS_SPONSORSHIP_MIN_ENS} while it
+ * loads or when the relayer is unavailable. Copy-only — the actual gas
+ * eligibility check lives in {@link useGaslessEligibility}.
+ */
+export const useGasSponsorshipMinEns = (): string => {
+  const { minVotingPower } = useRelayerConfig();
+
+  return useMemo(() => {
+    if (minVotingPower === null || minVotingPower <= 0n) {
+      return DEFAULT_GAS_SPONSORSHIP_MIN_ENS;
+    }
+    return formatUnits(minVotingPower, ENS_TOKEN_DECIMALS);
+  }, [minVotingPower]);
 };
 
 interface UseGaslessEligibilityResult {

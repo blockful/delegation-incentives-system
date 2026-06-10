@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 import { LiveDot } from '@/components/shared/LiveDot'
+import { useGasSponsorshipMinEns } from '@/features/delegate/hooks/useGaslessRelayer'
 
 const RouterLink = styled(Link)`
   text-decoration: none;
@@ -252,6 +253,7 @@ const PARTICLE_CONFIGS = [
 ]
 
 export function HeroSection({ currentAprPct }: HeroSectionProps) {
+  const gasMinEns = useGasSponsorshipMinEns()
   return (
     <Section>
       <ParticlesLayer aria-hidden>
@@ -279,7 +281,7 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
         <Subtitle>
           Help secure ENS governance by delegating to an active voter.
           <br />
-          Rewards are automatic, gas is sponsored.
+          Rewards are automatic, gas is sponsored for wallets holding {gasMinEns}+ ENS.
         </Subtitle>
         <Actions>
           <RouterLink to="/voters">

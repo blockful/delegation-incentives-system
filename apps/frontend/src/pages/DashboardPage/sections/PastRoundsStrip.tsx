@@ -157,7 +157,7 @@ function statusLabel(status: AddressDistributionRound['rewardStatus']): string {
   if (status === 'paid') return 'Paid'
   if (status === 'pending') return 'Pending'
   if (status === 'no_reward') return 'No payout'
-  if (status === 'not_eligible') return 'Not eligible'
+  if (status === 'not_eligible') return 'No reward'
   return 'Unavailable'
 }
 

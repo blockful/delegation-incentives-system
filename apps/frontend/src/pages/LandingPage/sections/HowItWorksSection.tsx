@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
+import { useGasSponsorshipMinEns } from '@/features/delegate/hooks/useGaslessRelayer'
 
 const Section = styled.section`
   background: ${tokens.color.surfaceAlt};
@@ -227,7 +228,7 @@ function formatStepApr(pct: string | null): string | null {
   return `${n.toFixed(n < 10 ? 2 : 1)}%`
 }
 
-function buildSteps(currentAprPct: string | null): Step[] {
+function buildSteps(currentAprPct: string | null, gasMinEns: string): Step[] {
   const formattedApr = formatStepApr(currentAprPct)
   const aprTag = formattedApr
     ? formattedApr.startsWith('>')
@@ -238,8 +239,8 @@ function buildSteps(currentAprPct: string | null): Step[] {
     {
       number: '1',
       title: 'Delegate to an active voter',
-      desc: 'Pick a delegate who consistently votes on ENS proposals. You keep your tokens, and gas is sponsored.',
-      tag: 'Gas sponsored. Free to delegate.',
+      desc: `Pick a delegate who consistently votes on ENS proposals. You keep your tokens, and gas is sponsored if you hold ${gasMinEns}+ ENS.`,
+      tag: `Gas sponsored with ${gasMinEns}+ ENS`,
       tagBg: tokens.color.tierHighlight,
       tagColor: tokens.color.positiveEmphasis,
     },
@@ -308,7 +309,8 @@ function RevealStep({
 }
 
 export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionProps = {}) {
-  const steps = buildSteps(currentAprPct)
+  const gasMinEns = useGasSponsorshipMinEns()
+  const steps = buildSteps(currentAprPct, gasMinEns)
 
   return (
     <Section id="how-it-works">
