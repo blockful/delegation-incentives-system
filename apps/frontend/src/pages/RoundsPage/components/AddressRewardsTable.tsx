@@ -143,8 +143,8 @@ const StatusPill = styled.span<{ $status: RewardStatus }>`
 function rewardStatusLabel(status: RewardStatus): string {
   if (status === 'paid') return 'Paid'
   if (status === 'pending') return 'Pending'
-  if (status === 'not_eligible') return 'Not eligible'
-  if (status === 'no_reward') return 'No reward'
+  if (status === 'not_eligible') return 'No reward'
+  if (status === 'no_reward') return 'No payout'
   return 'Unavailable'
 }
 

@@ -29,7 +29,7 @@ function defaultLabel(t: StatusPillProps['tone']): string {
   if (t === 'pending') return 'pending'
   if (t === 'ended') return 'ended'
   if (t === 'no_reward') return 'no payout'
-  if (t === 'not_eligible') return 'not eligible'
+  if (t === 'not_eligible') return 'no reward'
   if (t === 'unavailable') return 'unavailable'
   return String(t)
 }
