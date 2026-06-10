@@ -323,7 +323,7 @@ export function VoterCard({
             size="small"
             onClick={handleDelegate}
           >
-            Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
+            Delegate now{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
           </Button>
         </ActionsBlock>
       </StyledCard>

@@ -878,7 +878,7 @@ export function VoterProfilePage() {
           <CtaRow>
             {!isDelegated && (
               <Button colorStyle="bluePrimary" width="auto" onClick={handleDelegate}>
-                Delegate and earn{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
+                Delegate now{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
               </Button>
             )}
             <Button
