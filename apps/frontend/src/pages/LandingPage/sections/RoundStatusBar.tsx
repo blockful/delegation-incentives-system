@@ -5,6 +5,16 @@ import { tokens } from '@/styles/tokens'
 import { formatTimeLeft } from '@/utils/format'
 import { formatPool } from '@/utils/dashboard'
 import { LiveDot } from '@/components/shared/LiveDot'
+import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
+
+/**
+ * Canonical sponsored-gas explainer (DEV-761, wording variant B). The ⓘ is a
+ * lightweight explainer only — never an eligibility gate. The cases where gas
+ * is NOT free (monthly limit spent, relayer paused) are surfaced by the
+ * delegation modal, not by hiding/qualifying this chip.
+ */
+const GAS_SPONSORED_TOOLTIP =
+  'We cover the network fee when you delegate through this site, for up to 3 delegations a month. If sponsorship is ever paused, you will see a normal gas prompt first.'
 
 interface RoundStatusBarProps {
   currentGrowthPct: string
@@ -64,7 +74,9 @@ const TrustItem = styled.span`
   color: ${tokens.color.positiveEmphasis};
   line-height: 1.3;
 
-  svg {
+  /* Scope to the direct-child check icon so the ⓘ glyph inside
+     LabelWithTooltip keeps its own (smaller) sizing. */
+  > svg {
     width: 14px;
     height: 14px;
     flex-shrink: 0;
@@ -157,7 +169,12 @@ export function RoundStatusBar({
           </TrustItem>
           <TrustItem>
             <FontAwesomeIcon icon={faCircleCheck} />
-            Gas sponsored
+            <LabelWithTooltip
+              text={GAS_SPONSORED_TOOLTIP}
+              iconAriaLabel="About sponsored gas"
+            >
+              Gas sponsored
+            </LabelWithTooltip>
           </TrustItem>
           <TrustItem>
             <FontAwesomeIcon icon={faCircleCheck} />

@@ -51,7 +51,7 @@ describe('VoterCard', () => {
 
   it('renders delegate button when not delegated', () => {
     renderApp(<VoterCard voter={fullVoter} />)
-    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delegate now' })).toBeInTheDocument()
   })
 
   it('omits Active since when activeSince is null', () => {
