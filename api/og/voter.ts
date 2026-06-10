@@ -45,7 +45,7 @@ function initialsForName(name: string): string {
 }
 
 function stripEnsTld(name: string): string {
-  // Drop the trailing TLD (.eth, .xyz, .box, …) for visual density.
+  // Drop the trailing TLD (.eth, .xyz, .box, …) when deriving initials.
   return name.replace(/\.[a-z0-9-]{2,}$/i, '')
 }
 
@@ -382,11 +382,7 @@ export default async function handler(request: Request) {
     ? rawAddress
     : (rawName && isAddress(rawName) ? rawName : null)
 
-  const displayName = name
-    ? stripEnsTld(name)
-    : address
-      ? truncateAddress(address)
-      : 'ENS Delegate'
+  const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
   const initials = name
     ? initialsForName(name)
     : address
