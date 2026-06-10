@@ -49,13 +49,6 @@ function stripEnsTld(name: string): string {
   return name.replace(/\.[a-z0-9-]{2,}$/i, '')
 }
 
-function ensureEnsTld(name: string): string {
-  // The displayed name must keep its TLD (e.g. "nick.eth", not "nick").
-  // Names that already carry one (.eth, .xyz, .box, …) pass through
-  // untouched — never double-append. Bare labels get the canonical .eth.
-  return name.includes('.') ? name : `${name}.eth`
-}
-
 /* ─── Satoshi font loading ─── */
 // Satori (which @vercel/og uses) only accepts TTF/OTF/WOFF — NOT WOFF2.
 // Fontshare only serves WOFF2, so we pull Satoshi from a public GitHub mirror
@@ -389,11 +382,7 @@ export default async function handler(request: Request) {
     ? rawAddress
     : (rawName && isAddress(rawName) ? rawName : null)
 
-  const displayName = name
-    ? ensureEnsTld(name)
-    : address
-      ? truncateAddress(address)
-      : 'ENS Delegate'
+  const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
   const initials = name
     ? initialsForName(name)
     : address
