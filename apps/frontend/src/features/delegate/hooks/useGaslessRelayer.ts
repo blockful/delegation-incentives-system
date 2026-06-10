@@ -14,7 +14,7 @@ const ENS_TOKEN_DECIMALS = 18;
  * relayer config hasn't loaded (or the relayer is unfunded). Keep in sync with
  * the relayer's `minVotingPower` config.
  */
-export const DEFAULT_GAS_SPONSORSHIP_MIN_ENS = "10";
+export const DEFAULT_GAS_SPONSORSHIP_MIN_ENS = "100";
 
 const ENS_TOKEN_ABI = [
   {
