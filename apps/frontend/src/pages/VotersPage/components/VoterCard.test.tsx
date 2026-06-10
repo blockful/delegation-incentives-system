@@ -60,4 +60,22 @@ describe('VoterCard', () => {
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
     expect(screen.getByText('Delegators')).toBeInTheDocument()
   })
+
+  it('renders a visible View profile link to the voter profile', () => {
+    renderApp(<VoterCard voter={fullVoter} />)
+    const link = screen.getByRole('link', { name: 'View profile' })
+    expect(link).toHaveAttribute('href', '/voters/alice.eth')
+  })
+
+  it('falls back to the address in the profile link when no ENS name resolves', () => {
+    renderApp(<VoterCard voter={minimalVoter} />)
+    const link = screen.getByRole('link', { name: 'View profile' })
+    expect(link).toHaveAttribute('href', `/voters/${minimalVoter.address}`)
+  })
+
+  it('keeps the whole-card overlay link to the voter profile', () => {
+    renderApp(<VoterCard voter={fullVoter} />)
+    const overlay = screen.getByRole('link', { name: 'View profile for alice.eth' })
+    expect(overlay).toHaveAttribute('href', '/voters/alice.eth')
+  })
 })

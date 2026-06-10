@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -236,6 +238,42 @@ const CardLink = styled(Link)`
   }
 `
 
+/**
+ * Visible profile link. The whole card is already clickable via the CardLink
+ * overlay, but that affordance is invisible — this gives users an explicit
+ * way to reach the delegate profile. Lives inside ActionsBlock (z-index: 2)
+ * so it sits above the overlay.
+ */
+const ProfileLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  align-self: center;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
+  line-height: 20px;
+  text-decoration: none;
+  transition: gap ${tokens.transition.fast}, opacity ${tokens.transition.fast};
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    gap: 10px;
+    opacity: 0.85;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.accent};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+`
+
 export function VoterCard({
   voter,
   resolvedEnsName,
@@ -325,6 +363,9 @@ export function VoterCard({
           >
             Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
           </Button>
+          <ProfileLink to={profileUrl}>
+            View profile <FontAwesomeIcon icon={faArrowRight} aria-hidden />
+          </ProfileLink>
         </ActionsBlock>
       </StyledCard>
       {modalOpen && (
