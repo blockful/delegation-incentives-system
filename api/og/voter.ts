@@ -45,8 +45,15 @@ function initialsForName(name: string): string {
 }
 
 function stripEnsTld(name: string): string {
-  // Drop the trailing TLD (.eth, .xyz, .box, …) for visual density.
+  // Drop the trailing TLD (.eth, .xyz, .box, …) when deriving initials.
   return name.replace(/\.[a-z0-9-]{2,}$/i, '')
+}
+
+function ensureEnsTld(name: string): string {
+  // The displayed name must keep its TLD (e.g. "nick.eth", not "nick").
+  // Names that already carry one (.eth, .xyz, .box, …) pass through
+  // untouched — never double-append. Bare labels get the canonical .eth.
+  return name.includes('.') ? name : `${name}.eth`
 }
 
 /* ─── Satoshi font loading ─── */
@@ -383,7 +390,7 @@ export default async function handler(request: Request) {
     : (rawName && isAddress(rawName) ? rawName : null)
 
   const displayName = name
-    ? stripEnsTld(name)
+    ? ensureEnsTld(name)
     : address
       ? truncateAddress(address)
       : 'ENS Delegate'
