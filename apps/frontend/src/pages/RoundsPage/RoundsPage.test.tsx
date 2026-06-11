@@ -119,6 +119,19 @@ describe('RoundDetailPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders the merged Top earners table with a Delegates / Holders toggle', async () => {
+    renderDetail(`/rounds/2?address=${WALLET}`)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Top earners' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Delegates' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Holders' })).toBeInTheDocument()
+    // The two legacy stacked tables are gone.
+    expect(screen.queryByText('Top delegates this round')).not.toBeInTheDocument()
+    expect(screen.queryByText('Top holders this round')).not.toBeInTheDocument()
+  })
+
   it('renders a useful invalid round state', async () => {
     renderDetail('/rounds/abc')
 
