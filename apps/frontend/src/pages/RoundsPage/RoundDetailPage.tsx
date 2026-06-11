@@ -713,8 +713,10 @@ export function RoundDetailPage() {
 
   const fetchRound = useCallback(async () => {
     try {
+      // 'all' so the Top earners table shows every recipient, not a top-N
+      // slice (DEV-768). Only that table consumes the reward arrays.
       return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined, {
-        rewardLimit: '25',
+        rewardLimit: 'all',
       })
     } catch (error) {
       if (!isLegacyEndpointError(error)) throw error

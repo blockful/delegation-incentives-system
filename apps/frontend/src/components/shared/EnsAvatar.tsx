@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import styled from 'styled-components'
 import { Avatar } from '@ensdomains/thorin'
 import { useEnsName, useEnsAvatar } from 'wagmi'
@@ -10,6 +11,8 @@ interface EnsAvatarProps {
   avatarUrl?: string | null
   size?: number
   resolveName?: boolean
+  /** Native img loading hint — pass 'lazy' for avatars in long lists. */
+  loading?: 'lazy' | 'eager'
 }
 
 const Wrapper = styled.div<{ $size: number }>`
@@ -24,6 +27,7 @@ export function EnsAvatar({
   avatarUrl,
   size = 32,
   resolveName = true,
+  loading,
 }: EnsAvatarProps) {
   const canResolveAddress = isAddress(address)
   const { data: resolvedName } = useEnsName({
@@ -35,11 +39,22 @@ export function EnsAvatar({
     name: ensName,
     query: { enabled: !!ensName && !avatarUrl },
   })
-  const src = avatarUrl ?? resolvedAvatar ?? makeBlockie(address)
+  // Memoized: makeBlockie renders to a canvas, which adds up in long lists
+  // (~1,200 avatars on the round detail page) if regenerated per render.
+  const src = useMemo(
+    () => avatarUrl ?? resolvedAvatar ?? makeBlockie(address),
+    [avatarUrl, resolvedAvatar, address],
+  )
 
   return (
     <Wrapper $size={size}>
-      <Avatar label={ensName ?? address} src={src} shape="circle" noBorder />
+      <Avatar
+        label={ensName ?? address}
+        src={src}
+        shape="circle"
+        noBorder
+        loading={loading}
+      />
     </Wrapper>
   )
 }

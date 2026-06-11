@@ -24,7 +24,9 @@ function makeRow(
   }
 }
 
-const voterRows = Array.from({ length: 25 }, (_, i) => makeRow(i + 1, 'voter'))
+// Deliberately larger than the old top-25 fetch cap: proves the table renders
+// the full list it receives without truncation (DEV-768).
+const voterRows = Array.from({ length: 40 }, (_, i) => makeRow(i + 1, 'voter'))
 const holderRows = Array.from({ length: 12 }, (_, i) => makeRow(i + 1, 'token_holder'))
 
 function renderTable(
@@ -75,19 +77,22 @@ describe('TopEarnersTable', () => {
     expect(screen.getByRole('tab', { name: 'Delegates' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Holders' })).toBeInTheDocument()
 
-    // No paging: all 25 rows render inside the internal-scroll viewport.
+    // No paging and no top-25 truncation: every row passed in renders inside
+    // the internal-scroll viewport.
     const viewport = screen.getByTestId('top-earners-viewport')
-    expect(within(viewport).getAllByRole('link')).toHaveLength(25)
+    expect(within(viewport).getAllByRole('link')).toHaveLength(40)
     expect(screen.getByText('delegate-1.eth')).toBeInTheDocument()
-    expect(screen.getByText('delegate-25.eth')).toBeInTheDocument()
+    expect(screen.getByText('delegate-26.eth')).toBeInTheDocument()
+    expect(screen.getByText('delegate-40.eth')).toBeInTheDocument()
   })
 
-  it('shows the scroll footer instead of page controls for long lists', () => {
+  it('shows the total-results scroll footer instead of page controls for long lists', () => {
     renderTable()
 
-    expect(screen.getByText('Showing top 25')).toBeInTheDocument()
+    expect(screen.getByText('40 total results')).toBeInTheDocument()
     expect(screen.getByText('Scroll for more')).toBeInTheDocument()
 
+    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Previous page' }),
     ).not.toBeInTheDocument()
@@ -105,14 +110,14 @@ describe('TopEarnersTable', () => {
     fireEvent.scroll(screen.getByTestId('top-earners-viewport'))
 
     expect(screen.queryByText('Scroll for more')).not.toBeInTheDocument()
-    expect(screen.getByText('Showing top 25')).toBeInTheDocument()
+    expect(screen.getByText('40 total results')).toBeInTheDocument()
   })
 
   it('hides the scroll footer when every row fits the viewport', () => {
     renderTable({ voterRows: voterRows.slice(0, 5) })
 
     expect(screen.getByText('delegate-5.eth')).toBeInTheDocument()
-    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/total results/)).not.toBeInTheDocument()
     expect(screen.queryByText('Scroll for more')).not.toBeInTheDocument()
   })
 
@@ -126,7 +131,8 @@ describe('TopEarnersTable', () => {
     expect(screen.getByText('Holder')).toBeInTheDocument()
     // Head cell on desktop plus one hidden mobile label per row.
     expect(screen.getAllByText('Delegated amount').length).toBeGreaterThan(0)
-    expect(screen.getByText('Showing top 12')).toBeInTheDocument()
+    // Footer count tracks the active tab's full list length.
+    expect(screen.getByText('12 total results')).toBeInTheDocument()
     expect(screen.queryByText('delegate-1.eth')).not.toBeInTheDocument()
   })
 
@@ -173,7 +179,16 @@ describe('TopEarnersTable', () => {
     renderTable({ voterRows: [], holderRows: [] })
 
     expect(screen.getByText('No recipients in this round')).toBeInTheDocument()
-    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/total results/)).not.toBeInTheDocument()
+  })
+
+  it('formats the total-results count with a thousands separator', () => {
+    const longRows = Array.from({ length: 1204 }, (_, i) => makeRow(i + 1, 'voter'))
+    renderTable({ voterRows: longRows })
+
+    expect(screen.getByText('1,204 total results')).toBeInTheDocument()
+    const viewport = screen.getByTestId('top-earners-viewport')
+    expect(within(viewport).getAllByRole('link')).toHaveLength(1204)
   })
 
   it('previews five rows on mobile and expands with "Show all"', async () => {
@@ -184,11 +199,11 @@ describe('TopEarnersTable', () => {
     expect(screen.queryByText('delegate-6.eth')).not.toBeInTheDocument()
     // The desktop scroll footer never renders on mobile.
     expect(screen.queryByText('Scroll for more')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/total results/)).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: /Show all 25/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Show all 40/ }))
 
-    expect(screen.getByText('delegate-25.eth')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Show all 25/ })).not.toBeInTheDocument()
+    expect(screen.getByText('delegate-40.eth')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Show all 40/ })).not.toBeInTheDocument()
   })
 })

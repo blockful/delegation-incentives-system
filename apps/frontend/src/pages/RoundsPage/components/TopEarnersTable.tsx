@@ -1,4 +1,4 @@
-import { useRef, useState, type UIEvent } from 'react'
+import { memo, useRef, useState, type UIEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
@@ -19,12 +19,16 @@ import { formatEnsAmount, truncateAddress } from '@/utils/format'
  * Replaces the two stacked Top delegates / Top holders tables on the round
  * detail page with a single card carrying a Delegates / Holders tab toggle.
  *
+ * Receives the round's FULL recipient list (the page fetches with
+ * `rewardLimit: 'all'`), so row counts can reach ~1,200. Rows are memoized
+ * and avatars lazy-loaded to keep that cheap without a virtualization lib.
+ *
  * Desktop: every row renders inside a fixed-max-height internal-scroll
  * viewport (Figma scroll variant 5620:153); while more rows sit below the
- * fold a bottom fade plus a "Showing top N / Scroll for more" footer act as
- * the scroll affordances. Mobile: rows reflow to stacked cards, showing the
- * first MOBILE_PREVIEW_COUNT with a "Show all N" expander (per Figma mobile
- * node 5621:325).
+ * fold a bottom fade plus a "{count} total results / Scroll for more" footer
+ * act as the scroll affordances. Mobile: rows reflow to stacked cards,
+ * showing the first MOBILE_PREVIEW_COUNT with a "Show all N" expander (per
+ * Figma mobile node 5621:325).
  *
  * The active tab lives in the URL (`?tab=holders`) following the page's
  * existing search-params pattern, so table state is shareable.
@@ -645,7 +649,9 @@ export function TopEarnersTable({
       </TabPanel>
       {viewportOverflows && (
         <ScrollFooter>
-          <ScrollFooterSummary>Showing top {rows.length}</ScrollFooterSummary>
+          <ScrollFooterSummary>
+            {rows.length.toLocaleString('en-US')} total results
+          </ScrollFooterSummary>
           {!scrolledToEnd && (
             <ScrollFooterHint>
               Scroll for more
@@ -656,7 +662,7 @@ export function TopEarnersTable({
       )}
       {showMobileExpander && (
         <ShowAllButton type="button" onClick={() => setMobileExpanded(true)}>
-          Show all {rows.length}
+          Show all {rows.length.toLocaleString('en-US')}
           <FontAwesomeIcon icon={faArrowDown} />
         </ShowAllButton>
       )}
@@ -671,7 +677,10 @@ interface TopEarnersTableRowProps {
   amountValue: string | null
 }
 
-function TopEarnersTableRow({
+// Memoized: with `rewardLimit: 'all'` this list can hold ~1,200 rows, and the
+// shell re-renders on every scroll-state / tab-param change. Row props are
+// referentially stable between those renders, so memo skips them wholesale.
+const TopEarnersTableRow = memo(function TopEarnersTableRow({
   row,
   isHighlighted,
   amountLabel,
@@ -697,7 +706,12 @@ function TopEarnersTableRow({
         <RankPill>#{row.rank}</RankPill>
       </RankCell>
       <IdentityCell>
-        <EnsAvatar address={row.address} name={ensName ?? undefined} size={28} />
+        <EnsAvatar
+          address={row.address}
+          name={ensName ?? undefined}
+          size={28}
+          loading="lazy"
+        />
         <AddressText>{displayName}</AddressText>
       </IdentityCell>
       <ValueCell $weight={1.2} $first>
@@ -710,4 +724,4 @@ function TopEarnersTableRow({
       </ValueCell>
     </TableRow>
   )
-}
+})
