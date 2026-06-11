@@ -31,16 +31,8 @@ const lotteryFixture: LotteryDetail = {
       winnerEnsName: 'myname.eth',
       winnerProbability: '0.0620',
       entryCount: 2,
+      // Deliberately unsorted: the section orders participants by entry size.
       entries: [
-        {
-          bucketIndex: 0,
-          entryIndex: 1,
-          address: WINNER_ONE,
-          ensName: 'myname.eth',
-          amount: '620000000000000000',
-          amountEns: '0.620000000000000000',
-          probability: '0.0620',
-        },
         {
           bucketIndex: 0,
           entryIndex: 2,
@@ -49,6 +41,15 @@ const lotteryFixture: LotteryDetail = {
           amount: '490000000000000000',
           amountEns: '0.490000000000000000',
           probability: '0.0480',
+        },
+        {
+          bucketIndex: 0,
+          entryIndex: 1,
+          address: WINNER_ONE,
+          ensName: 'myname.eth',
+          amount: '620000000000000000',
+          amountEns: '0.620000000000000000',
+          probability: '0.0620',
         },
       ],
     },
@@ -105,9 +106,8 @@ describe('LotteryResultsSection', () => {
     expect(within(participants).getByText('4')).toBeInTheDocument()
     expect(within(participants).getByText('participants')).toBeInTheDocument()
 
-    const winners = screen.getByTestId('lottery-stat-winners')
-    expect(within(winners).getByText('2')).toBeInTheDocument()
-    expect(within(winners).getByText('winners')).toBeInTheDocument()
+    // The design has exactly two chips — no "winners" chip.
+    expect(screen.queryByTestId('lottery-stat-winners')).not.toBeInTheDocument()
   })
 
   it('explains the RANDAO draw and links Verify to the Etherscan block', () => {
@@ -149,10 +149,26 @@ describe('LotteryResultsSection', () => {
     expect(within(participantsTable).getByText('coltron.eth')).toBeInTheDocument()
     expect(within(participantsTable).getByText('6.2%')).toBeInTheDocument()
     expect(within(participantsTable).getByText('0.62 ENS')).toBeInTheDocument()
-    // Odds-not-prize nuance is spelled out in the expanded body
+  })
+
+  it('orders participants by entry size and shows only the table when expanded', () => {
+    renderApp(<LotteryResultsSection lottery={lotteryFixture} />)
+
+    // Fixture lists coltron (0.49 ENS) first; the bigger entry renders on top.
+    const participantsTable = screen.getByTestId('lottery-pool-participants-0')
+    const names = within(participantsTable)
+      .getAllByText(/(myname|coltron)\.eth/)
+      .map((el) => el.textContent)
+    expect(names).toEqual(['myname.eth', 'coltron.eth'])
+
+    // Per design the expanded body holds the participants table only —
+    // no slot grid, no odds explainer line.
     expect(
-      screen.getByText(/a bigger entry buys better odds, not a bigger prize/i),
-    ).toBeInTheDocument()
+      screen.queryByRole('img', { name: /entry distribution/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/a bigger entry buys better odds/i),
+    ).not.toBeInTheDocument()
   })
 
   it('expands a collapsed pool on click', async () => {

@@ -5,7 +5,6 @@ import { useEnsName } from 'wagmi'
 import { LockSVG } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
-import { BucketSlotGrid } from '@/components/shared/BucketSlotGrid'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import type { LotteryBucketDetail, LotteryDetail } from '@/api/types'
 import { tokens } from '@/styles'
@@ -47,6 +46,12 @@ const HeaderText = styled.div`
   gap: 6px;
   flex: 1;
   min-width: 0;
+`
+
+const HeaderTitleGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 `
 
 const HeaderEyebrow = styled.span`
@@ -130,7 +135,7 @@ const RandaoIcon = styled.span`
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  color: ${tokens.color.darkGray};
+  color: ${tokens.color.textSubtle};
 
   svg {
     width: 100%;
@@ -223,7 +228,7 @@ const PoolHeaderButton = styled.button<{ $expanded: boolean }>`
   }
 
   @media (min-width: 768px) {
-    grid-template-columns: 96px minmax(0, 1fr) 130px 100px 16px;
+    grid-template-columns: 96px minmax(0, 1fr) 120px 100px 16px;
     grid-template-areas: 'pill winner prize entries chevron';
   }
 `
@@ -302,7 +307,8 @@ const PoolChevron = styled.span<{ $expanded: boolean }>`
   justify-content: center;
   width: 16px;
   height: 16px;
-  color: ${tokens.color.darkGray};
+  color: ${({ $expanded }) =>
+    $expanded ? tokens.color.blue : tokens.color.textSubtle};
   transform: rotate(${({ $expanded }) => ($expanded ? '180deg' : '0deg')});
   transition: transform ${tokens.transition.fast};
 
@@ -317,23 +323,8 @@ const PoolChevron = styled.span<{ $expanded: boolean }>`
 const PoolBody = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
   padding: ${tokens.spacing.lg};
   background: ${tokens.color.surface};
-`
-
-const SlotGridBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.sm};
-`
-
-const SlotGridCaption = styled.p`
-  margin: 0;
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 16px;
 `
 
 const ParticipantTable = styled.div`
@@ -485,6 +476,10 @@ function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
   const winnerDisplayName = winnerName ?? truncateAddress(bucket.winner)
   const poolLabel = `Pool #${bucket.bucketIndex + 1}`
   const bodyId = `lottery-pool-${bucket.bucketIndex}-body`
+  // Design orders participants by entry size, biggest first (draw order as tie-break).
+  const sortedEntries = [...bucket.entries].sort(
+    (a, b) => Number(b.amountEns) - Number(a.amountEns) || a.entryIndex - b.entryIndex,
+  )
 
   return (
     <PoolItem>
@@ -514,21 +509,6 @@ function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
       </PoolHeaderButton>
       {expanded && (
         <PoolBody id={bodyId}>
-          {bucket.entries.length > 0 && (
-            <SlotGridBlock>
-              <SlotGridCaption>
-                Each slot is one entry, sized by its share of the pool — a bigger
-                entry buys better odds, not a bigger prize. The winner takes the
-                pool&apos;s full prize regardless of entry size.
-              </SlotGridCaption>
-              <BucketSlotGrid
-                entries={bucket.entries}
-                winnerAddress={bucket.winner}
-                highlightAddress={highlightAddress || undefined}
-                ariaLabel={`${poolLabel} entry distribution`}
-              />
-            </SlotGridBlock>
-          )}
           <ParticipantTable data-testid={`lottery-pool-participants-${bucket.bucketIndex}`}>
             <ParticipantHeadRow>
               <ParticipantHeadCell>Participants</ParticipantHeadCell>
@@ -539,7 +519,7 @@ function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
                 Entry
               </ParticipantHeadCell>
             </ParticipantHeadRow>
-            {bucket.entries.map((entry) => {
+            {sortedEntries.map((entry) => {
               const isWinner = sameAddress(entry.address, bucket.winner)
               return (
                 <ParticipantRowEl
@@ -603,8 +583,10 @@ export function LotteryResultsSection({
     <SectionCard aria-label="Lottery results">
       <HeaderRow>
         <HeaderText>
-          <HeaderEyebrow>Lottery results</HeaderEyebrow>
-          <HeaderTitle>Pool prizes for small rewards</HeaderTitle>
+          <HeaderTitleGroup>
+            <HeaderEyebrow>Lottery results</HeaderEyebrow>
+            <HeaderTitle>Pool prizes for small rewards</HeaderTitle>
+          </HeaderTitleGroup>
           <HeaderBody>
             Rewards under 1 ENS go into shared pools of about {poolTargetEns} ENS.
             Each pool draws one winner.
@@ -620,10 +602,6 @@ export function LotteryResultsSection({
               {lottery.participantCount.toLocaleString('en-US')}
             </StatChipValue>
             <StatChipLabel>participants</StatChipLabel>
-          </StatChip>
-          <StatChip data-testid="lottery-stat-winners">
-            <StatChipValue>{lottery.winnerCount.toLocaleString('en-US')}</StatChipValue>
-            <StatChipLabel>winners</StatChipLabel>
           </StatChip>
         </StatChips>
       </HeaderRow>
