@@ -1,15 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState, type UIEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
 import { useEnsName } from 'wagmi'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faArrowDown,
-  faChevronLeft,
-  faChevronRight,
-  faUserSlash,
-} from '@fortawesome/free-solid-svg-icons'
+import { faArrowDown, faUserSlash } from '@fortawesome/free-solid-svg-icons'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { Tabs, type TabDescriptor } from '@/components/shared/Tabs'
 import { getAnticaptureDelegateUrl } from '@/utils/delegation'
@@ -24,20 +19,26 @@ import { formatEnsAmount, truncateAddress } from '@/utils/format'
  * Replaces the two stacked Top delegates / Top holders tables on the round
  * detail page with a single card carrying a Delegates / Holders tab toggle.
  *
- * Desktop: client-side pagination over the already-fetched top rewards
- * (PAGE_SIZE rows per page). Mobile: rows reflow to stacked cards, showing
- * the first MOBILE_PREVIEW_COUNT with a "Show all N" expander (per Figma
- * mobile node 5621:325).
+ * Desktop: every row renders inside a fixed-max-height internal-scroll
+ * viewport (Figma scroll variant 5620:153); while more rows sit below the
+ * fold a bottom fade plus a "Showing top N / Scroll for more" footer act as
+ * the scroll affordances. Mobile: rows reflow to stacked cards, showing the
+ * first MOBILE_PREVIEW_COUNT with a "Show all N" expander (per Figma mobile
+ * node 5621:325).
  *
- * Tab + page live in the URL (`?tab=holders&page=2`) following the page's
+ * The active tab lives in the URL (`?tab=holders`) following the page's
  * existing search-params pattern, so table state is shareable.
  */
 
-const PAGE_SIZE = 10
+/** Scroll viewport height from Figma 5620:172 (`viewport`, 420px tall). */
+const DESKTOP_VIEWPORT_MAX_HEIGHT = 420
+// A desktop row is 57px tall (2 × 14px padding + 28px avatar + 1px border),
+// so anything past 7 rows is guaranteed to overflow the 420px viewport and
+// needs the scroll affordances (fade + footer).
+const DESKTOP_VISIBLE_ROWS = 7
 const MOBILE_PREVIEW_COUNT = 5
 
 const TAB_PARAM = 'tab'
-const PAGE_PARAM = 'page'
 
 type EarnerGroup = 'delegates' | 'holders'
 
@@ -133,10 +134,60 @@ const GroupTabs = styled(Tabs)`
 const TabPanel = styled.div`
   display: flex;
   flex-direction: column;
+`
+
+/* ─── Desktop scroll viewport (Figma 5620:153, scroll variant) ─── */
+
+// Positioning context so the bottom fade can float above the scrolling rows.
+const ScrollArea = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`
+
+const ScrollViewport = styled.div`
+  display: flex;
+  flex-direction: column;
+  max-height: ${DESKTOP_VIEWPORT_MAX_HEIGHT}px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: ${tokens.color.textFaint} transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${tokens.color.textFaint};
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
   @media (max-width: 767px) {
+    max-height: none;
+    overflow: visible;
     gap: 12px;
   }
+`
+
+// Bottom fade hinting that more rows sit below the fold; hidden once the
+// user reaches the end of the list.
+const ScrollFade = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    ${tokens.color.surface}
+  );
+  pointer-events: none;
 `
 
 /* ─── Desktop table head ─── */
@@ -370,75 +421,38 @@ const EmptyTableBodyText = styled.span`
   max-width: 320px;
 `
 
-/* ─── Desktop pagination footer ─── */
+/* ─── Desktop scroll footer (Figma 5620:287) ─── */
 
-const PaginationFooter = styled.div`
+// Only mounted when the desktop viewport overflows (JS-gated via
+// useMediaQuery + row count), so no display gating.
+const ScrollFooter = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
+  gap: ${tokens.spacing.sm};
+  padding: 14px ${tokens.spacing.xl};
   border-top: 1px solid ${tokens.color.borderLight};
-  background: ${tokens.color.surface};
-
-  @media (max-width: 767px) {
-    display: none;
-  }
+  background: ${tokens.color.bgSubtle};
 `
 
-const PaginationSummary = styled.span`
+const ScrollFooterSummary = styled.span`
   font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textSubtle};
   font-variant-numeric: tabular-nums;
 `
 
-const PaginationControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.xs};
-`
-
-const PageButton = styled.button<{ $active?: boolean }>`
+const ScrollFooterHint = styled.span`
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 ${tokens.spacing.sm};
-  border-radius: ${tokens.radius.pill};
-  border: 1px solid
-    ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.borderLight)};
-  background: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.surface)};
-  color: ${({ $active }) => ($active ? tokens.color.darkBlue : tokens.color.darkGray)};
-  font-family: inherit;
+  gap: 6px;
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  transition:
-    border-color ${tokens.transition.fast},
-    background ${tokens.transition.fast},
-    color ${tokens.transition.fast};
+  color: ${tokens.color.blue};
 
   svg {
     width: 10px;
     height: 10px;
-  }
-
-  &:hover:not(:disabled) {
-    border-color: ${tokens.color.blue};
-    color: ${tokens.color.darkBlue};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${tokens.color.blue};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    color: ${tokens.color.textSubtle};
-    cursor: not-allowed;
-    opacity: 0.6;
   }
 `
 
@@ -503,12 +517,6 @@ function formatRewardEns(value: string | null | undefined): string | null {
   })} ENS`
 }
 
-function clampPage(rawPage: string | null, totalPages: number): number {
-  const parsed = Number(rawPage)
-  if (!Number.isInteger(parsed) || parsed < 1) return 1
-  return Math.min(parsed, totalPages)
-}
-
 /* ─── Component ─── */
 
 interface TopEarnersTableProps {
@@ -526,21 +534,16 @@ export function TopEarnersTable({
   const [searchParams, setSearchParams] = useSearchParams()
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [mobileExpanded, setMobileExpanded] = useState(false)
+  const [scrolledToEnd, setScrolledToEnd] = useState(false)
+  const viewportRef = useRef<HTMLDivElement>(null)
 
   const activeGroup: EarnerGroup =
     searchParams.get(TAB_PARAM) === 'holders' ? 'holders' : 'delegates'
   const activeTabId = tabIdForGroup(activeGroup)
 
   const rows = activeGroup === 'holders' ? holderRows : voterRows
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
-  const currentPage = clampPage(searchParams.get(PAGE_PARAM), totalPages)
-
-  const pageStart = (currentPage - 1) * PAGE_SIZE
-  const visibleRows = isMobile
-    ? mobileExpanded
-      ? rows
-      : rows.slice(0, MOBILE_PREVIEW_COUNT)
-    : rows.slice(pageStart, pageStart + PAGE_SIZE)
+  const visibleRows =
+    isMobile && !mobileExpanded ? rows.slice(0, MOBILE_PREVIEW_COUNT) : rows
 
   const highlightLower = highlightAddress.toLowerCase()
   const identityLabel = activeGroup === 'holders' ? 'Holder' : 'Delegate'
@@ -549,6 +552,8 @@ export function TopEarnersTable({
   function handleTabChange(tabId: string) {
     const nextGroup = groupForTabId(tabId)
     setMobileExpanded(false)
+    setScrolledToEnd(false)
+    if (viewportRef.current) viewportRef.current.scrollTop = 0
     setSearchParams(
       (params) => {
         if (nextGroup === 'holders') {
@@ -556,30 +561,20 @@ export function TopEarnersTable({
         } else {
           params.delete(TAB_PARAM)
         }
-        params.delete(PAGE_PARAM)
         return params
       },
       { replace: true },
     )
   }
 
-  function handlePageChange(page: number) {
-    const next = Math.min(Math.max(page, 1), totalPages)
-    if (next === currentPage) return
-    setSearchParams(
-      (params) => {
-        if (next === 1) {
-          params.delete(PAGE_PARAM)
-        } else {
-          params.set(PAGE_PARAM, String(next))
-        }
-        return params
-      },
-      { replace: true },
-    )
+  function handleViewportScroll(event: UIEvent<HTMLDivElement>) {
+    const el = event.currentTarget
+    setScrolledToEnd(el.scrollHeight - el.scrollTop - el.clientHeight <= 1)
   }
 
-  const showPagination = !isMobile && rows.length > PAGE_SIZE
+  // Desktop-only: lists taller than the viewport scroll internally and carry
+  // the fade + "Scroll for more" affordances until the user reaches the end.
+  const viewportOverflows = !isMobile && rows.length > DESKTOP_VISIBLE_ROWS
   const showMobileExpander =
     isMobile && !mobileExpanded && rows.length > MOBILE_PREVIEW_COUNT
 
@@ -620,59 +615,44 @@ export function TopEarnersTable({
               </TableHeadCell>
               <TableHeadCell $weight={1.4} $align="end">Reward</TableHeadCell>
             </TableHeadRow>
-            {visibleRows.map((row) => (
-              <TopEarnersTableRow
-                key={`${row.role}-${row.rank}-${row.address}`}
-                row={row}
-                isHighlighted={
-                  highlightLower !== '' && row.address.toLowerCase() === highlightLower
-                }
-                amountLabel={amountLabel}
-                amountValue={
-                  activeGroup === 'holders' ? row.tokenHolderBalance : row.votingPower
-                }
-              />
-            ))}
+            <ScrollArea>
+              <ScrollViewport
+                ref={viewportRef}
+                onScroll={handleViewportScroll}
+                data-testid="top-earners-viewport"
+              >
+                {visibleRows.map((row) => (
+                  <TopEarnersTableRow
+                    key={`${row.role}-${row.rank}-${row.address}`}
+                    row={row}
+                    isHighlighted={
+                      highlightLower !== '' &&
+                      row.address.toLowerCase() === highlightLower
+                    }
+                    amountLabel={amountLabel}
+                    amountValue={
+                      activeGroup === 'holders'
+                        ? row.tokenHolderBalance
+                        : row.votingPower
+                    }
+                  />
+                ))}
+              </ScrollViewport>
+              {viewportOverflows && !scrolledToEnd && <ScrollFade aria-hidden />}
+            </ScrollArea>
           </>
         )}
       </TabPanel>
-      {showPagination && (
-        <PaginationFooter>
-          <PaginationSummary>
-            Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, rows.length)} of{' '}
-            {rows.length}
-          </PaginationSummary>
-          <PaginationControls>
-            <PageButton
-              type="button"
-              aria-label="Previous page"
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              <FontAwesomeIcon icon={faChevronLeft} />
-            </PageButton>
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-              <PageButton
-                key={page}
-                type="button"
-                aria-label={`Page ${page}`}
-                aria-current={page === currentPage ? 'page' : undefined}
-                $active={page === currentPage}
-                onClick={() => handlePageChange(page)}
-              >
-                {page}
-              </PageButton>
-            ))}
-            <PageButton
-              type="button"
-              aria-label="Next page"
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              <FontAwesomeIcon icon={faChevronRight} />
-            </PageButton>
-          </PaginationControls>
-        </PaginationFooter>
+      {viewportOverflows && (
+        <ScrollFooter>
+          <ScrollFooterSummary>Showing top {rows.length}</ScrollFooterSummary>
+          {!scrolledToEnd && (
+            <ScrollFooterHint>
+              Scroll for more
+              <FontAwesomeIcon icon={faArrowDown} />
+            </ScrollFooterHint>
+          )}
+        </ScrollFooter>
       )}
       {showMobileExpander && (
         <ShowAllButton type="button" onClick={() => setMobileExpanded(true)}>

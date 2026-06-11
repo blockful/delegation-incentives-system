@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { renderApp, userEvent } from '@/test/utils'
 import type { RewardRank } from '@/api/types'
 import { TopEarnersTable } from './TopEarnersTable'
@@ -68,66 +68,75 @@ afterEach(() => {
 })
 
 describe('TopEarnersTable', () => {
-  it('renders the merged card with group tabs and the first page of delegates', () => {
+  it('renders the merged card with group tabs and every delegate row in the scroll viewport', () => {
     renderTable()
 
     expect(screen.getByRole('heading', { name: 'Top earners' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Delegates' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Holders' })).toBeInTheDocument()
 
+    // No paging: all 25 rows render inside the internal-scroll viewport.
+    const viewport = screen.getByTestId('top-earners-viewport')
+    expect(within(viewport).getAllByRole('link')).toHaveLength(25)
     expect(screen.getByText('delegate-1.eth')).toBeInTheDocument()
-    expect(screen.getByText('delegate-10.eth')).toBeInTheDocument()
-    expect(screen.queryByText('delegate-11.eth')).not.toBeInTheDocument()
-    expect(screen.getByText('Showing 1–10 of 25')).toBeInTheDocument()
-  })
-
-  it('paginates with numbered page buttons', async () => {
-    renderTable()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Page 2' }))
-
-    expect(screen.getByText('delegate-11.eth')).toBeInTheDocument()
-    expect(screen.getByText('delegate-20.eth')).toBeInTheDocument()
-    expect(screen.queryByText('delegate-1.eth')).not.toBeInTheDocument()
-    expect(screen.getByText('Showing 11–20 of 25')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Page 2' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-  })
-
-  it('disables prev on the first page and next on the last page', async () => {
-    renderTable()
-
-    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Page 3' }))
-
     expect(screen.getByText('delegate-25.eth')).toBeInTheDocument()
-    expect(screen.getByText('Showing 21–25 of 25')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
   })
 
-  it('switches to holders and resets pagination', async () => {
+  it('shows the scroll footer instead of page controls for long lists', () => {
     renderTable()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    expect(screen.getByText('Showing top 25')).toBeInTheDocument()
+    expect(screen.getByText('Scroll for more')).toBeInTheDocument()
+
+    expect(
+      screen.queryByRole('button', { name: 'Previous page' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Page 2' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Showing 1–10/)).not.toBeInTheDocument()
+  })
+
+  it('hides the scroll hint and fade once the list is scrolled to the end', () => {
+    renderTable()
+
+    expect(screen.getByText('Scroll for more')).toBeInTheDocument()
+
+    // jsdom reports zero scroll dimensions, which reads as "at the end".
+    fireEvent.scroll(screen.getByTestId('top-earners-viewport'))
+
+    expect(screen.queryByText('Scroll for more')).not.toBeInTheDocument()
+    expect(screen.getByText('Showing top 25')).toBeInTheDocument()
+  })
+
+  it('hides the scroll footer when every row fits the viewport', () => {
+    renderTable({ voterRows: voterRows.slice(0, 5) })
+
+    expect(screen.getByText('delegate-5.eth')).toBeInTheDocument()
+    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Scroll for more')).not.toBeInTheDocument()
+  })
+
+  it('switches to holders with the full holder list', async () => {
+    renderTable()
+
     await userEvent.click(screen.getByRole('tab', { name: 'Holders' }))
 
     expect(screen.getByText('holder-1.eth')).toBeInTheDocument()
+    expect(screen.getByText('holder-12.eth')).toBeInTheDocument()
     expect(screen.getByText('Holder')).toBeInTheDocument()
     // Head cell on desktop plus one hidden mobile label per row.
     expect(screen.getAllByText('Delegated amount').length).toBeGreaterThan(0)
-    expect(screen.getByText('Showing 1–10 of 12')).toBeInTheDocument()
+    expect(screen.getByText('Showing top 12')).toBeInTheDocument()
     expect(screen.queryByText('delegate-1.eth')).not.toBeInTheDocument()
   })
 
-  it('reads tab and page from the URL', () => {
+  it('reads the tab from the URL and ignores legacy page params', () => {
     renderTable({}, '/rounds/2?tab=holders&page=2')
 
-    expect(screen.getByText('holder-11.eth')).toBeInTheDocument()
+    const viewport = screen.getByTestId('top-earners-viewport')
+    expect(within(viewport).getAllByRole('link')).toHaveLength(12)
+    expect(screen.getByText('holder-1.eth')).toBeInTheDocument()
     expect(screen.getByText('holder-12.eth')).toBeInTheDocument()
-    expect(screen.getByText('Showing 11–12 of 12')).toBeInTheDocument()
   })
 
   it('shows rewards with exactly two decimals and no payout-type tag', () => {
@@ -164,7 +173,7 @@ describe('TopEarnersTable', () => {
     renderTable({ voterRows: [], holderRows: [] })
 
     expect(screen.getByText('No recipients in this round')).toBeInTheDocument()
-    expect(screen.queryByText('Showing 1–10 of 25')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
   })
 
   it('previews five rows on mobile and expands with "Show all"', async () => {
@@ -173,9 +182,9 @@ describe('TopEarnersTable', () => {
 
     expect(screen.getByText('delegate-5.eth')).toBeInTheDocument()
     expect(screen.queryByText('delegate-6.eth')).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Previous page' }),
-    ).not.toBeInTheDocument()
+    // The desktop scroll footer never renders on mobile.
+    expect(screen.queryByText('Scroll for more')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Showing top/)).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /Show all 25/ }))
 
