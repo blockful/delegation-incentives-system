@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, type UIEvent } from 'react'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
 import { useEnsName } from 'wagmi'
 import { LockSVG } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { faArrowDown, faChevronDown } from '@fortawesome/free-solid-svg-icons'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import type { LotteryBucketDetail, LotteryDetail } from '@/api/types'
 import { tokens } from '@/styles'
@@ -196,15 +196,18 @@ const PoolItem = styled.div`
   }
 `
 
-const PoolHeaderButton = styled.button<{ $expanded: boolean }>`
+// The light-blue tint marks the viewer's pool (their address holds one of the
+// pool's entries) — membership, not expansion, drives it, so it shows even
+// while the pool is collapsed. Expanded pools only gain the neutral separator.
+const PoolHeaderButton = styled.button<{ $expanded: boolean; $mine: boolean }>`
   display: grid;
   align-items: center;
   gap: ${tokens.spacing.sm};
   width: 100%;
   padding: ${tokens.spacing.md};
   border: none;
-  background: ${({ $expanded }) =>
-    $expanded ? tokens.color.lightBlue : tokens.color.surface};
+  background: ${({ $mine }) =>
+    $mine ? tokens.color.lightBlue : tokens.color.surface};
   border-bottom: 1px solid
     ${({ $expanded }) => ($expanded ? tokens.color.borderLight : 'transparent')};
   font-family: inherit;
@@ -218,8 +221,8 @@ const PoolHeaderButton = styled.button<{ $expanded: boolean }>`
     'prize   prize   prize';
 
   &:hover {
-    background: ${({ $expanded }) =>
-      $expanded ? tokens.color.lightBlue : tokens.color.bgSubtle};
+    background: ${({ $mine }) =>
+      $mine ? tokens.color.lightBlue : tokens.color.bgSubtle};
   }
 
   &:focus-visible {
@@ -320,6 +323,13 @@ const PoolChevron = styled.span<{ $expanded: boolean }>`
 
 /* ─── Expanded pool body ─── */
 
+// Same internal-scroll idiom as the Top earners table: at most ~5 participant
+// rows are visible, the rest scroll inside a fixed-height viewport. A row is
+// 48px tall (2 × 11px padding + 26px avatar) plus its 1px separator, so five
+// rows fill 5 × 49 = 245px and entry #6 starts past the fold.
+const PARTICIPANT_VISIBLE_ROWS = 5
+const PARTICIPANT_VIEWPORT_MAX_HEIGHT = 245
+
 const PoolBody = styled.div`
   display: flex;
   flex-direction: column;
@@ -358,6 +368,84 @@ const ParticipantHeadCell = styled.span<{ $width?: number; $align?: 'start' | 'e
 
   @media (max-width: 479px) {
     flex-basis: ${({ $width }) => ($width ? '72px' : 'auto')};
+  }
+`
+
+// Positioning context so the bottom fade can float above the scrolling rows.
+const ParticipantsScrollArea = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`
+
+const ParticipantsViewport = styled.div`
+  display: flex;
+  flex-direction: column;
+  max-height: ${PARTICIPANT_VIEWPORT_MAX_HEIGHT}px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: ${tokens.color.textFaint} transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${tokens.color.textFaint};
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+`
+
+// Bottom fade hinting that more rows sit below the fold; hidden once the
+// user reaches the end of the list.
+const ParticipantsScrollFade = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    ${tokens.color.surface}
+  );
+  pointer-events: none;
+`
+
+// Only mounted when the pool has more entries than fit the viewport.
+const ParticipantsScrollFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.sm};
+  padding: 10px 14px;
+  border-top: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.bgSubtle};
+`
+
+const ScrollFooterSummary = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textSubtle};
+  font-variant-numeric: tabular-nums;
+`
+
+const ScrollFooterHint = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
+
+  svg {
+    width: 10px;
+    height: 10px;
   }
 `
 
@@ -463,11 +551,12 @@ function formatEntryCount(count: number): string {
 interface PoolRowProps {
   bucket: LotteryBucketDetail
   highlightAddress: string
-  defaultExpanded: boolean
 }
 
-function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
+function PoolRow({ bucket, highlightAddress }: PoolRowProps) {
+  // Every pool starts collapsed — the viewer opens the ones they care about.
+  const [expanded, setExpanded] = useState(false)
+  const [scrolledToEnd, setScrolledToEnd] = useState(false)
   const { data: resolvedWinnerName } = useEnsName({
     address: bucket.winner as `0x${string}`,
     query: { enabled: !bucket.winnerEnsName && isAddress(bucket.winner) },
@@ -476,19 +565,36 @@ function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
   const winnerDisplayName = winnerName ?? truncateAddress(bucket.winner)
   const poolLabel = `Pool #${bucket.bucketIndex + 1}`
   const bodyId = `lottery-pool-${bucket.bucketIndex}-body`
+  // The viewer's pool: their address holds one of this pool's entries.
+  const isMine = bucket.entries.some((entry) =>
+    sameAddress(entry.address, highlightAddress),
+  )
   // Design orders participants by entry size, biggest first (draw order as tie-break).
   const sortedEntries = [...bucket.entries].sort(
     (a, b) => Number(b.amountEns) - Number(a.amountEns) || a.entryIndex - b.entryIndex,
   )
+  const hasOverflow = sortedEntries.length > PARTICIPANT_VISIBLE_ROWS
+
+  function handleViewportScroll(event: UIEvent<HTMLDivElement>) {
+    const el = event.currentTarget
+    setScrolledToEnd(el.scrollHeight - el.scrollTop - el.clientHeight <= 1)
+  }
 
   return (
     <PoolItem>
       <PoolHeaderButton
         type="button"
         $expanded={expanded}
+        $mine={isMine}
         aria-expanded={expanded}
         aria-controls={bodyId}
-        onClick={() => setExpanded((prev) => !prev)}
+        aria-current={isMine ? 'true' : undefined}
+        onClick={() => {
+          setExpanded((prev) => !prev)
+          // The viewport unmounts on collapse and remounts scrolled to top,
+          // so the affordances must come back for the next expansion.
+          setScrolledToEnd(false)
+        }}
       >
         <PoolPillCell>
           <PoolPill $expanded={expanded}>{poolLabel}</PoolPill>
@@ -519,35 +625,56 @@ function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
                 Entry
               </ParticipantHeadCell>
             </ParticipantHeadRow>
-            {sortedEntries.map((entry) => {
-              const isWinner = sameAddress(entry.address, bucket.winner)
-              return (
-                <ParticipantRowEl
-                  key={`${entry.bucketIndex}-${entry.entryIndex}`}
-                  $winner={isWinner}
-                  $highlighted={sameAddress(entry.address, highlightAddress)}
-                >
-                  <ParticipantIdentity>
-                    <EnsAvatar
-                      address={entry.address}
-                      name={entry.ensName ?? undefined}
-                      size={26}
-                      resolveName={false}
-                    />
-                    <ParticipantName>
-                      {entry.ensName ?? truncateAddress(entry.address)}
-                    </ParticipantName>
-                    {isWinner && <WinnerPill>Winner</WinnerPill>}
-                  </ParticipantIdentity>
-                  <ParticipantValueCell $width={100} $muted>
-                    {formatOdds(entry.probability)}
-                  </ParticipantValueCell>
-                  <ParticipantValueCell $width={108}>
-                    {formatEnsFixed(entry.amountEns)} ENS
-                  </ParticipantValueCell>
-                </ParticipantRowEl>
-              )
-            })}
+            <ParticipantsScrollArea>
+              <ParticipantsViewport
+                onScroll={handleViewportScroll}
+                data-testid={`lottery-pool-viewport-${bucket.bucketIndex}`}
+              >
+                {sortedEntries.map((entry) => {
+                  const isWinner = sameAddress(entry.address, bucket.winner)
+                  return (
+                    <ParticipantRowEl
+                      key={`${entry.bucketIndex}-${entry.entryIndex}`}
+                      $winner={isWinner}
+                      $highlighted={sameAddress(entry.address, highlightAddress)}
+                    >
+                      <ParticipantIdentity>
+                        <EnsAvatar
+                          address={entry.address}
+                          name={entry.ensName ?? undefined}
+                          size={26}
+                          resolveName={false}
+                        />
+                        <ParticipantName>
+                          {entry.ensName ?? truncateAddress(entry.address)}
+                        </ParticipantName>
+                        {isWinner && <WinnerPill>Winner</WinnerPill>}
+                      </ParticipantIdentity>
+                      <ParticipantValueCell $width={100} $muted>
+                        {formatOdds(entry.probability)}
+                      </ParticipantValueCell>
+                      <ParticipantValueCell $width={108}>
+                        {formatEnsFixed(entry.amountEns)} ENS
+                      </ParticipantValueCell>
+                    </ParticipantRowEl>
+                  )
+                })}
+              </ParticipantsViewport>
+              {hasOverflow && !scrolledToEnd && <ParticipantsScrollFade aria-hidden />}
+            </ParticipantsScrollArea>
+            {hasOverflow && (
+              <ParticipantsScrollFooter>
+                <ScrollFooterSummary>
+                  {sortedEntries.length.toLocaleString('en-US')} total entries
+                </ScrollFooterSummary>
+                {!scrolledToEnd && (
+                  <ScrollFooterHint>
+                    Scroll for more
+                    <FontAwesomeIcon icon={faArrowDown} />
+                  </ScrollFooterHint>
+                )}
+              </ParticipantsScrollFooter>
+            )}
           </ParticipantTable>
         </PoolBody>
       )}
@@ -559,7 +686,10 @@ function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
 
 interface LotteryResultsSectionProps {
   lottery: LotteryDetail | null
-  /** Active wallet / searched address — highlights its entries inside pools. */
+  /**
+   * Active wallet / searched address — tints the pool holding one of its
+   * entries and highlights its participant rows inside expanded pools.
+   */
   highlightAddress?: string
 }
 
@@ -626,12 +756,11 @@ export function LotteryResultsSection({
       </RandaoNote>
 
       <PoolsList>
-        {lottery.buckets.map((bucket, index) => (
+        {lottery.buckets.map((bucket) => (
           <PoolRow
             key={bucket.bucketIndex}
             bucket={bucket}
             highlightAddress={highlightAddress}
-            defaultExpanded={index === 0}
           />
         ))}
       </PoolsList>
