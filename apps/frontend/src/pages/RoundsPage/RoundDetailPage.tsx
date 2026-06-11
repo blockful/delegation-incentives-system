@@ -35,6 +35,7 @@ import { looksLikeEnsName } from '@/utils/ens'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
+import { LotteryResultsSection } from './components/LotteryResultsSection'
 import { RewardSourceTag } from './components/RewardTags'
 import { formatPositiveReward, statusLabel } from './status'
 import {
@@ -1511,6 +1512,11 @@ export function RoundDetailPage() {
           showVotingPower={false}
         />
       </TableCard>
+
+      <LotteryResultsSection
+        lottery={roundData.lottery}
+        highlightAddress={hasActiveAddress ? activeAddress : ''}
+      />
     </Page>
   )
 }

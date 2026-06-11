@@ -1,0 +1,662 @@
+import { useState } from 'react'
+import styled from 'styled-components'
+import { isAddress } from 'viem'
+import { useEnsName } from 'wagmi'
+import { LockSVG } from '@ensdomains/thorin'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { BucketSlotGrid } from '@/components/shared/BucketSlotGrid'
+import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import type { LotteryBucketDetail, LotteryDetail } from '@/api/types'
+import { tokens } from '@/styles'
+import { formatEnsAmount, truncateAddress } from '@/utils/format'
+
+/* ─── Layout ─── */
+
+const SectionCard = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xl};
+  width: 100%;
+  padding: ${tokens.spacing['2xl']};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 16px;
+
+  @media (max-width: 767px) {
+    padding: ${tokens.spacing.lg};
+  }
+`
+
+const HeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.xl};
+  width: 100%;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: ${tokens.spacing.md};
+  }
+`
+
+const HeaderText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+`
+
+const HeaderEyebrow = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.textSubtle};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+`
+
+const HeaderTitle = styled.h2`
+  margin: 0;
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 26px;
+`
+
+const HeaderBody = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+/* ─── Overview stat chips ─── */
+
+const StatChips = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  flex-shrink: 0;
+  flex-wrap: wrap;
+`
+
+const StatChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  padding: 4px 8px;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 4px;
+  font-size: ${tokens.font.size.base};
+  line-height: 20px;
+  white-space: nowrap;
+`
+
+const StatChipValue = styled.span`
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  font-variant-numeric: tabular-nums;
+`
+
+const StatChipLabel = styled.span`
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+`
+
+/* ─── RANDAO note ─── */
+
+const RandaoNote = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.surfaceAlt};
+  border-radius: 12px;
+
+  @media (max-width: 767px) {
+    flex-wrap: wrap;
+  }
+`
+
+const RandaoIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: ${tokens.color.darkGray};
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+`
+
+const RandaoText = styled.p`
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const VerifyLink = styled.a`
+  flex-shrink: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
+  line-height: 20px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: opacity ${tokens.transition.fast};
+
+  &:hover {
+    text-decoration: none;
+    opacity: 0.8;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+`
+
+/* ─── Pools list ─── */
+
+const PoolsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 12px;
+  overflow: hidden;
+`
+
+const PoolItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  background: ${tokens.color.surface};
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+`
+
+const PoolHeaderButton = styled.button<{ $expanded: boolean }>`
+  display: grid;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  width: 100%;
+  padding: ${tokens.spacing.md};
+  border: none;
+  background: ${({ $expanded }) =>
+    $expanded ? tokens.color.lightBlue : tokens.color.surface};
+  border-bottom: 1px solid
+    ${({ $expanded }) => ($expanded ? tokens.color.borderLight : 'transparent')};
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'pill    entries chevron'
+    'winner  winner  winner'
+    'prize   prize   prize';
+
+  &:hover {
+    background: ${({ $expanded }) =>
+      $expanded ? tokens.color.lightBlue : tokens.color.bgSubtle};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: -2px;
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: 96px minmax(0, 1fr) 130px 100px 16px;
+    grid-template-areas: 'pill winner prize entries chevron';
+  }
+`
+
+const PoolPillCell = styled.span`
+  grid-area: pill;
+  display: flex;
+  align-items: center;
+`
+
+const PoolPill = styled.span<{ $expanded: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: ${tokens.radius.pill};
+  background: ${({ $expanded }) =>
+    $expanded ? 'rgba(56, 137, 255, 0.18)' : tokens.color.lightBlueOpacity};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  white-space: nowrap;
+`
+
+const PoolWinnerCell = styled.span`
+  grid-area: winner;
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  min-width: 0;
+`
+
+const PoolWinnerName = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const PoolPrizeCell = styled.span`
+  grid-area: prize;
+  display: flex;
+  align-items: center;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.positiveEmphasis};
+  line-height: 20px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  @media (min-width: 768px) {
+    justify-content: flex-end;
+  }
+`
+
+const PoolEntriesCell = styled.span`
+  grid-area: entries;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+`
+
+const PoolChevron = styled.span<{ $expanded: boolean }>`
+  grid-area: chevron;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: ${tokens.color.darkGray};
+  transform: rotate(${({ $expanded }) => ($expanded ? '180deg' : '0deg')});
+  transition: transform ${tokens.transition.fast};
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+`
+
+/* ─── Expanded pool body ─── */
+
+const PoolBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.surface};
+`
+
+const SlotGridBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+`
+
+const SlotGridCaption = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 16px;
+`
+
+const ParticipantTable = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 10px;
+  overflow: hidden;
+`
+
+const ParticipantHeadRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+  padding: 10px 14px;
+  background: ${tokens.color.surfaceAlt};
+  border-bottom: 1px solid ${tokens.color.borderLight};
+`
+
+const ParticipantHeadCell = styled.span<{ $width?: number; $align?: 'start' | 'end' }>`
+  flex: ${({ $width }) => ($width ? `0 0 ${$width}px` : 1)};
+  min-width: 0;
+  display: flex;
+  justify-content: ${({ $align }) => ($align === 'end' ? 'flex-end' : 'flex-start')};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 16px;
+  white-space: nowrap;
+
+  @media (max-width: 479px) {
+    flex-basis: ${({ $width }) => ($width ? '72px' : 'auto')};
+  }
+`
+
+const ParticipantRowEl = styled.div<{ $winner: boolean; $highlighted: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: ${({ $winner, $highlighted }) =>
+    $winner
+      ? tokens.color.status.success.bg
+      : $highlighted
+        ? tokens.color.lightBlueOpacity
+        : tokens.color.surface};
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${tokens.color.borderLight};
+  }
+`
+
+const ParticipantIdentity = styled.span`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.sm};
+`
+
+const ParticipantName = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const WinnerPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.lightGreen};
+  color: ${tokens.color.status.success.fg};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  white-space: nowrap;
+`
+
+const ParticipantValueCell = styled.span<{ $width?: number; $muted?: boolean }>`
+  flex: ${({ $width }) => ($width ? `0 0 ${$width}px` : 1)};
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${({ $muted }) => ($muted ? tokens.color.darkGray : tokens.color.darkBlue)};
+  line-height: 20px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  @media (max-width: 479px) {
+    flex-basis: ${({ $width }) => ($width ? '72px' : 'auto')};
+  }
+`
+
+/* ─── Helpers ─── */
+
+function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false
+  return a.toLowerCase() === b.toLowerCase()
+}
+
+/** "24996367" → "24,996,367". Falls back to the raw string for non-numeric input. */
+function formatBlockNumber(blockNumber: string): string {
+  const n = Number(blockNumber)
+  return Number.isFinite(n) ? n.toLocaleString('en-US') : blockNumber
+}
+
+/** 0-1 decimal string → "9.9%". */
+function formatOdds(probability: string | null): string {
+  if (!probability) return '—'
+  const n = Number(probability)
+  if (!Number.isFinite(n)) return '—'
+  return `${(n * 100).toFixed(1)}%`
+}
+
+/** Always two decimals — "10.00", "0.62" — matching the design. */
+function formatEnsFixed(value: string): string {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '0.00'
+  return n.toFixed(2)
+}
+
+function formatEntryCount(count: number): string {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'entry' : 'entries'}`
+}
+
+/* ─── Pool row ─── */
+
+interface PoolRowProps {
+  bucket: LotteryBucketDetail
+  highlightAddress: string
+  defaultExpanded: boolean
+}
+
+function PoolRow({ bucket, highlightAddress, defaultExpanded }: PoolRowProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  const { data: resolvedWinnerName } = useEnsName({
+    address: bucket.winner as `0x${string}`,
+    query: { enabled: !bucket.winnerEnsName && isAddress(bucket.winner) },
+  })
+  const winnerName = bucket.winnerEnsName ?? resolvedWinnerName ?? null
+  const winnerDisplayName = winnerName ?? truncateAddress(bucket.winner)
+  const poolLabel = `Pool #${bucket.bucketIndex + 1}`
+  const bodyId = `lottery-pool-${bucket.bucketIndex}-body`
+
+  return (
+    <PoolItem>
+      <PoolHeaderButton
+        type="button"
+        $expanded={expanded}
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <PoolPillCell>
+          <PoolPill $expanded={expanded}>{poolLabel}</PoolPill>
+        </PoolPillCell>
+        <PoolWinnerCell>
+          <EnsAvatar
+            address={bucket.winner}
+            name={winnerName ?? undefined}
+            size={26}
+          />
+          <PoolWinnerName>{winnerDisplayName}</PoolWinnerName>
+        </PoolWinnerCell>
+        <PoolPrizeCell>{formatEnsFixed(bucket.prizeEns)} ENS prize</PoolPrizeCell>
+        <PoolEntriesCell>{formatEntryCount(bucket.entryCount)}</PoolEntriesCell>
+        <PoolChevron $expanded={expanded} aria-hidden>
+          <FontAwesomeIcon icon={faChevronDown} />
+        </PoolChevron>
+      </PoolHeaderButton>
+      {expanded && (
+        <PoolBody id={bodyId}>
+          {bucket.entries.length > 0 && (
+            <SlotGridBlock>
+              <SlotGridCaption>
+                Each slot is one entry, sized by its share of the pool — a bigger
+                entry buys better odds, not a bigger prize. The winner takes the
+                pool&apos;s full prize regardless of entry size.
+              </SlotGridCaption>
+              <BucketSlotGrid
+                entries={bucket.entries}
+                winnerAddress={bucket.winner}
+                highlightAddress={highlightAddress || undefined}
+                ariaLabel={`${poolLabel} entry distribution`}
+              />
+            </SlotGridBlock>
+          )}
+          <ParticipantTable data-testid={`lottery-pool-participants-${bucket.bucketIndex}`}>
+            <ParticipantHeadRow>
+              <ParticipantHeadCell>Participants</ParticipantHeadCell>
+              <ParticipantHeadCell $width={100} $align="end">
+                Odds
+              </ParticipantHeadCell>
+              <ParticipantHeadCell $width={108} $align="end">
+                Entry
+              </ParticipantHeadCell>
+            </ParticipantHeadRow>
+            {bucket.entries.map((entry) => {
+              const isWinner = sameAddress(entry.address, bucket.winner)
+              return (
+                <ParticipantRowEl
+                  key={`${entry.bucketIndex}-${entry.entryIndex}`}
+                  $winner={isWinner}
+                  $highlighted={sameAddress(entry.address, highlightAddress)}
+                >
+                  <ParticipantIdentity>
+                    <EnsAvatar
+                      address={entry.address}
+                      name={entry.ensName ?? undefined}
+                      size={26}
+                      resolveName={false}
+                    />
+                    <ParticipantName>
+                      {entry.ensName ?? truncateAddress(entry.address)}
+                    </ParticipantName>
+                    {isWinner && <WinnerPill>Winner</WinnerPill>}
+                  </ParticipantIdentity>
+                  <ParticipantValueCell $width={100} $muted>
+                    {formatOdds(entry.probability)}
+                  </ParticipantValueCell>
+                  <ParticipantValueCell $width={108}>
+                    {formatEnsFixed(entry.amountEns)} ENS
+                  </ParticipantValueCell>
+                </ParticipantRowEl>
+              )
+            })}
+          </ParticipantTable>
+        </PoolBody>
+      )}
+    </PoolItem>
+  )
+}
+
+/* ─── Section ─── */
+
+interface LotteryResultsSectionProps {
+  lottery: LotteryDetail | null
+  /** Active wallet / searched address — highlights its entries inside pools. */
+  highlightAddress?: string
+}
+
+/**
+ * Lottery results for a closed round: overview stats, the RANDAO provability
+ * note, and one expandable row per prize pool. Renders nothing while a round
+ * has no lottery data yet (live / pending rounds).
+ */
+export function LotteryResultsSection({
+  lottery,
+  highlightAddress = '',
+}: LotteryResultsSectionProps) {
+  if (!lottery || lottery.buckets.length === 0) return null
+
+  const poolTargetEns = formatEnsAmount(lottery.bucketTargetEns, {
+    maximumFractionDigits: 0,
+  })
+  const blockNumber = lottery.seed.blockNumber
+
+  return (
+    <SectionCard aria-label="Lottery results">
+      <HeaderRow>
+        <HeaderText>
+          <HeaderEyebrow>Lottery results</HeaderEyebrow>
+          <HeaderTitle>Pool prizes for small rewards</HeaderTitle>
+          <HeaderBody>
+            Rewards under 1 ENS go into shared pools of about {poolTargetEns} ENS.
+            Each pool draws one winner.
+          </HeaderBody>
+        </HeaderText>
+        <StatChips>
+          <StatChip data-testid="lottery-stat-pools">
+            <StatChipValue>{lottery.bucketCount.toLocaleString('en-US')}</StatChipValue>
+            <StatChipLabel>Pools drawn</StatChipLabel>
+          </StatChip>
+          <StatChip data-testid="lottery-stat-participants">
+            <StatChipValue>
+              {lottery.participantCount.toLocaleString('en-US')}
+            </StatChipValue>
+            <StatChipLabel>participants</StatChipLabel>
+          </StatChip>
+          <StatChip data-testid="lottery-stat-winners">
+            <StatChipValue>{lottery.winnerCount.toLocaleString('en-US')}</StatChipValue>
+            <StatChipLabel>winners</StatChipLabel>
+          </StatChip>
+        </StatChips>
+      </HeaderRow>
+
+      <RandaoNote>
+        <RandaoIcon aria-hidden>
+          <LockSVG />
+        </RandaoIcon>
+        <RandaoText>
+          Winners were drawn from Ethereum block #{formatBlockNumber(blockNumber)}{' '}
+          using on-chain randomness (RANDAO). The result could not be predicted or
+          changed.
+        </RandaoText>
+        <VerifyLink
+          href={`https://etherscan.io/block/${blockNumber}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Verify draw block ${formatBlockNumber(blockNumber)} on Etherscan`}
+        >
+          Verify ↗
+        </VerifyLink>
+      </RandaoNote>
+
+      <PoolsList>
+        {lottery.buckets.map((bucket, index) => (
+          <PoolRow
+            key={bucket.bucketIndex}
+            bucket={bucket}
+            highlightAddress={highlightAddress}
+            defaultExpanded={index === 0}
+          />
+        ))}
+      </PoolsList>
+    </SectionCard>
+  )
+}
