@@ -37,17 +37,6 @@ export const TOKEN_HOLDER_CAP_BPS: BasisPoints = bps(500n);
 export const TWB_WINDOW_SECONDS: Seconds = seconds(15_552_000n);
 
 // ──────────────────────────────────────────────────────────
-// Provenance
-// ──────────────────────────────────────────────────────────
-
-/**
- * Version of the per-wallet reward provenance persisted in result_json.
- * Old blobs without `metadata.provenanceVersion` expose `provenance: null`
- * on the API — they are never recomputed.
- */
-export const PROVENANCE_VERSION = 1;
-
-// ──────────────────────────────────────────────────────────
 // Reward thresholds
 // ──────────────────────────────────────────────────────────
 

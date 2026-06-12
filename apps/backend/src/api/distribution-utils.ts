@@ -196,8 +196,6 @@ interface RawDistributionMetadata {
   tokenHolderCap: string;
   activeVoterCount: number;
   finalizedProposalIds: string[];
-  /** Absent on blobs persisted before provenance persistence. */
-  provenanceVersion?: number;
 }
 
 interface RawCombinedReward {
@@ -209,9 +207,9 @@ interface RawCombinedReward {
   tokenHolderBalance?: string;
   /** Wei, decimal string. */
   total: string;
-  /** Absent on blobs persisted before provenanceVersion 1. */
+  /** Absent on blobs persisted before provenance persistence. */
   voterProvenance?: RawVoterRewardProvenance;
-  /** Absent on blobs persisted before provenanceVersion 1. */
+  /** Absent on blobs persisted before provenance persistence. */
   tokenHolderProvenance?: RawTokenHolderRewardProvenance;
 }
 
@@ -310,13 +308,10 @@ export function reviveDistributionResult(
       tokenHolderCap: wei(BigInt(raw.metadata.tokenHolderCap)),
       activeVoterCount: raw.metadata.activeVoterCount,
       finalizedProposalIds: raw.metadata.finalizedProposalIds,
-      ...(raw.metadata.provenanceVersion != null && {
-        provenanceVersion: raw.metadata.provenanceVersion,
-      }),
     },
     rewards: raw.rewards.map((r) => {
-      // Provenance is absent on blobs persisted before provenanceVersion 1.
-      // Old rounds are never recomputed — the API exposes provenance: null.
+      // Provenance is absent on blobs persisted before provenance
+      // persistence — the API exposes provenance: null for those.
       // A malformed row is likewise treated as absent (see the helpers).
       const voterProvenance = r.voterProvenance
         ? reviveVoterProvenance(r.voterProvenance)
@@ -586,8 +581,7 @@ export function getAddressReward(
  * Build the provenance block for one wallet's direct rewards.
  *
  * Returns null when the persisted result_json predates provenance
- * persistence (no `metadata.provenanceVersion` — old rounds are never
- * recomputed) or when the wallet had no eligibility signal. Each role block
+ * persistence or when the wallet had no eligibility signal. Each role block
  * is present iff that role's final reward is positive; lottery winnings get
  * no provenance (seed/odds live in the lottery payload).
  */
@@ -596,7 +590,12 @@ function buildRewardProvenance(
   matched: CombinedReward | null,
   status: AddressRewardBreakdown["status"],
 ): RewardProvenance | null {
-  if (result.metadata.provenanceVersion == null) return null;
+  // Blobs computed before provenance persistence carry no provenance rows
+  // at all; every blob computed since has one on each paid reward row.
+  const hasProvenance = result.rewards.some(
+    (r) => r.voterProvenance || r.tokenHolderProvenance,
+  );
+  if (!hasProvenance) return null;
   if (status === "not_eligible") return null;
 
   const meta = result.metadata;

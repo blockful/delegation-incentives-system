@@ -13,7 +13,6 @@ import { wei, seconds } from "./types.js";
 import {
   TWB_WINDOW_SECONDS,
   PROPOSAL_WINDOW_SIZE,
-  PROVENANCE_VERSION,
 } from "./config.js";
 import { monthStartTimestamp, monthEndTimestamp } from "./util/time.js";
 import { identifyActiveVoters } from "./active-voters.js";
@@ -311,7 +310,6 @@ export async function runDistributionPipeline(
     tokenHolderCap: tier.tokenHolderCap,
     activeVoterCount: activeVotersEnd.size,
     finalizedProposalIds: proposalsAtEnd.map((p) => p.id),
-    provenanceVersion: PROVENANCE_VERSION,
   };
 
   // Build deduplication log
@@ -371,7 +369,6 @@ function emptyResult(
       tokenHolderCap: wei(0n),
       activeVoterCount: 0,
       finalizedProposalIds: [],
-      provenanceVersion: PROVENANCE_VERSION,
     },
     rewards: [],
     lottery: { buckets: [] },

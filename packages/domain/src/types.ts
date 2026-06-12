@@ -260,7 +260,7 @@ export interface CombinedReward {
   readonly total: Wei;
   /**
    * Allocation intermediates for the voter reward. Absent on result_json
-   * blobs computed before provenance persistence (provenanceVersion < 1).
+   * blobs computed before provenance persistence.
    */
   readonly voterProvenance?: VoterRewardProvenance;
   /** Allocation intermediates for the token-holder reward. Absent on old blobs. */
@@ -332,13 +332,6 @@ export interface DistributionMetadata {
   readonly tokenHolderCap: Wei;
   readonly activeVoterCount: number;
   readonly finalizedProposalIds: readonly string[];
-  /**
-   * Version marker for per-wallet reward provenance. Absent on result_json
-   * blobs persisted before provenance intermediates were threaded through
-   * the pipeline; 1 once `voterProvenance`/`tokenHolderProvenance` are
-   * persisted on every reward row.
-   */
-  readonly provenanceVersion?: number;
 }
 
 export interface DistributionResult {

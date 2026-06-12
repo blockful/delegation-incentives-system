@@ -662,8 +662,6 @@ describe("runDistributionPipeline", () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
 
-    expect(result.metadata.provenanceVersion).toBe(1);
-
     const rewardsByAddress = new Map(
       result.rewards.map((reward) => [reward.address, reward]),
     );

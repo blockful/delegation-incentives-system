@@ -82,14 +82,12 @@ function makeDistributionRow(month = "2026-03"): DistributionStorageRow {
 
 /**
  * Distribution row matching what the pipeline writes since provenance
- * persistence: metadata.provenanceVersion = 1 and per-role provenance on
- * every reward row.
+ * persistence: per-role provenance on the paid reward rows.
  */
 function makeProvenanceDistributionRow(month = "2026-03"): DistributionStorageRow {
   const row = makeDistributionRow(month);
   const result = JSON.parse(row.resultJson);
 
-  result.metadata.provenanceVersion = 1;
   result.rewards = result.rewards.map((r: any) => {
     if (r.address === ADDRESS_A) {
       return {
@@ -576,8 +574,8 @@ describe("round reward responses", () => {
   it("returns null provenance for distributions persisted before provenance tracking", async () => {
     process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
 
-    // makeDistributionRow's fixture has no provenanceVersion and no
-    // per-reward provenance — old rounds are never recomputed.
+    // makeDistributionRow's fixture carries no per-reward provenance
+    // rows — exactly what blobs computed before the feature look like.
     const res = await makeRoundsApp([makeDistributionRow()]).request(
       `/rounds/1?address=${ADDRESS_C}`,
     );
