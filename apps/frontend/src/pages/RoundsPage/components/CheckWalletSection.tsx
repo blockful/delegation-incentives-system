@@ -1,8 +1,11 @@
+import { useEffect, useId, useState } from 'react'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
 import { useEnsName } from 'wagmi'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+  faChevronRight,
+  faDollarSign,
   faMagnifyingGlass,
   faUser,
   faWallet,
@@ -14,6 +17,8 @@ import type {
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { tokens } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
+import { integerSharePct, readProvenance } from './provenance'
+import { ProvenanceMath, type ProvenanceLotteryOutcome } from './ProvenanceMath'
 
 /* ─── View model ───────────────────────────────────────────────────────────
  *
@@ -34,6 +39,8 @@ export interface EarnedRow {
   key: 'delegate' | 'holder' | 'lottery'
   label: string
   amountEns: string
+  /** Integer % of the wallet total ("17") — null when not displayable. */
+  sharePct: string | null
 }
 
 export interface LostLotteryEntry {
@@ -42,11 +49,28 @@ export interface LostLotteryEntry {
   entryAmountEns: string
 }
 
+export interface WonLotteryPool {
+  prizeEns: string
+  /** "6.0" — percentage with one decimal, no % sign. */
+  oddsPct: string
+  entryAmountEns: string
+  /** Bucket target size, for the "shared pool of about X ENS" narrative. */
+  poolTargetEns: string | null
+}
+
 export type CheckWalletView =
   | { kind: 'empty' }
   | { kind: 'pending' }
   | { kind: 'no-reward' }
-  | { kind: 'earned'; rows: EarnedRow[]; totalEns: string }
+  | {
+      kind: 'earned'
+      rows: EarnedRow[]
+      totalEns: string
+      /** Single-role explainer (DEV-764 boards) — null for dual-role wallets. */
+      note: string | null
+      /** Set when the total includes a lottery pool the wallet won. */
+      lotteryWin: WonLotteryPool | null
+    }
   | { kind: 'lottery-lost'; entry: LostLotteryEntry }
 
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -106,6 +130,56 @@ export function findLostLotteryEntry(
   return null
 }
 
+/**
+ * Find the lottery pool the inspected address won, for the lottery-win
+ * detail (DEV-764 board 5623:218). Odds follow the same fallback chain as
+ * the losing entry: bucket winner probability → entry amount / bucket total.
+ */
+export function findWonLotteryPool(
+  lottery: LotteryDetail | null,
+  address: string,
+): WonLotteryPool | null {
+  if (!lottery) return null
+
+  for (const bucket of lottery.buckets) {
+    if (!sameAddress(bucket.winner, address)) continue
+
+    // An address can hold several entries in the same bucket; sum them.
+    const ownEntries = bucket.entries.filter((candidate) =>
+      sameAddress(candidate.address, address),
+    )
+    const entryAmount = ownEntries.reduce(
+      (sum, candidate) => sum + Number(candidate.amountEns),
+      0,
+    )
+
+    const apiProbability = Number(bucket.winnerProbability)
+    let fraction: number
+    if (
+      bucket.winnerProbability &&
+      Number.isFinite(apiProbability) &&
+      apiProbability > 0
+    ) {
+      fraction = apiProbability
+    } else {
+      const bucketTotal = bucket.entries.reduce(
+        (sum, candidate) => sum + Number(candidate.amountEns),
+        0,
+      )
+      fraction = bucketTotal > 0 ? entryAmount / bucketTotal : 0
+    }
+
+    return {
+      prizeEns: bucket.prizeEns,
+      oddsPct: formatOddsPct(fraction),
+      entryAmountEns: String(entryAmount),
+      poolTargetEns: lottery.bucketTargetEns || null,
+    }
+  }
+
+  return null
+}
+
 export function deriveCheckWalletView(
   round: RoundDetailResponse,
   activeAddress: string,
@@ -116,19 +190,53 @@ export function deriveCheckWalletView(
   const reward = round.addressReward
   if (reward && Number(reward.totalRewardEns) > 0) {
     // Conditional role rows — only the roles that actually paid are listed.
-    // "Lottery prize" is not drawn on the boards (they have no lottery-won
-    // state) but is kept so "Total earned" always equals the rows above it.
+    // Role percentages come from the wei strings (BigInt) so they always
+    // describe the share of the recorded total.
     const rows: EarnedRow[] = []
     if (Number(reward.voterRewardEns) > 0) {
-      rows.push({ key: 'delegate', label: 'As delegate (voting)', amountEns: reward.voterRewardEns })
+      rows.push({
+        key: 'delegate',
+        label: 'As delegate (voting)',
+        amountEns: reward.voterRewardEns,
+        sharePct: integerSharePct(reward.voterReward, reward.totalReward),
+      })
     }
     if (Number(reward.tokenHolderRewardEns) > 0) {
-      rows.push({ key: 'holder', label: 'As token holder', amountEns: reward.tokenHolderRewardEns })
+      rows.push({
+        key: 'holder',
+        label: 'As token holder',
+        amountEns: reward.tokenHolderRewardEns,
+        sharePct: integerSharePct(reward.tokenHolderReward, reward.totalReward),
+      })
     }
-    if (Number(reward.lotteryRewardEns) > 0) {
-      rows.push({ key: 'lottery', label: 'Lottery prize', amountEns: reward.lotteryRewardEns })
+    const hasLottery = Number(reward.lotteryRewardEns) > 0
+    if (hasLottery) {
+      // The boards' lottery-won card shows no % column on entry rows.
+      rows.push({
+        key: 'lottery',
+        label: 'Lottery prize',
+        amountEns: reward.lotteryRewardEns,
+        sharePct: null,
+      })
     }
-    return { kind: 'earned', rows, totalEns: reward.totalRewardEns }
+
+    const lotteryWin = hasLottery
+      ? findWonLotteryPool(round.lottery, activeAddress)
+      : null
+
+    // Generic single-role copy from the DEV-764 boards. The API does not
+    // say WHY the other role paid nothing (no delegation vs. delegate that
+    // skipped voting), so the boards' generic phrasing is used as-is.
+    const hasDelegateRow = rows.some((row) => row.key === 'delegate')
+    const hasHolderRow = rows.some((row) => row.key === 'holder')
+    let note: string | null = null
+    if (!hasLottery && hasDelegateRow && !hasHolderRow) {
+      note = 'You earned only by voting this round. No tokens were delegated to you.'
+    } else if (!hasLottery && hasHolderRow && !hasDelegateRow) {
+      note = 'You earned only as a token holder. You did not vote as a delegate this round.'
+    }
+
+    return { kind: 'earned', rows, totalEns: reward.totalRewardEns, note, lotteryWin }
   }
 
   const lostEntry = findLostLotteryEntry(round.lottery, activeAddress)
@@ -155,17 +263,25 @@ const DOT_COLOR: Record<EarnedRow['key'], string> = {
  * One card: lookup column (title + search + identity panel) on the left,
  * result panel on the right (~58/42 like the board's 626/430 split). Mobile
  * stacks them; the empty state drops the result panel entirely on mobile.
+ * The "Show the math" expansion (DEV-764) renders full width below the row.
  */
 
 const SectionCard = styled.section`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.sm};
+  gap: ${tokens.spacing.xl};
   width: 100%;
   padding: ${tokens.spacing.xl};
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
   border-radius: 12px;
+`
+
+const CardRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  width: 100%;
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -570,6 +686,17 @@ const RoleValue = styled.span`
   font-variant-numeric: tabular-nums;
 `
 
+const RolePct = styled.span`
+  min-width: 36px;
+  text-align: right;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textSubtle};
+  line-height: 20px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+`
+
 const Divider = styled.div`
   width: 100%;
   height: 1px;
@@ -612,6 +739,107 @@ const ExplainerTop = styled.div`
   gap: ${tokens.spacing.lg};
 `
 
+/* ─── Provenance additions (DEV-764) ─── */
+
+// Bottom block of the result panel: explainer notes + the math affordance.
+const PanelFoot = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: ${tokens.spacing.sm};
+`
+
+// "Lottery win · 10.00 ENS · 6.0% odds" — green detail under the amount.
+const LotteryWinSub = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.green};
+  line-height: 20px;
+`
+
+const MathToggle = styled.button<{ $open: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${tokens.color.blue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  transition: opacity ${tokens.transition.fast};
+
+  svg {
+    width: 10px;
+    height: 10px;
+    transition: transform ${tokens.transition.fast};
+    transform: rotate(${({ $open }) => ($open ? '90deg' : '0deg')});
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+`
+
+// Upgraded no-reward small state (board 5625:167) — icon + title + reason.
+const NoRewardCard = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: ${tokens.spacing.lg};
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 14px;
+`
+
+const NoRewardIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: ${tokens.radius.pill};
+  flex-shrink: 0;
+  background: ${tokens.color.borderLight};
+  color: ${tokens.color.darkGray};
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`
+
+const NoRewardText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+`
+
+const NoRewardTitle = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const NoRewardSub = styled.span`
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 16px;
+`
+
 /* ─── Helpers ─── */
 
 // Same lazy-open idiom as the header: AppKit is only pulled in when the
@@ -648,6 +876,10 @@ interface CheckWalletSectionProps {
  * connected one pre-searched — and see what the round paid it. One card:
  * lookup + identity on the left, "This wallet reward" panel on the right.
  * Mobile stacks them and drops the explainer panel in the empty state.
+ *
+ * DEV-764 layers the provenance on top: % per role, single-role notes,
+ * lottery won/lost detail, and a "Show the math" expansion (per-role math,
+ * cap ledger, round inputs, reconciliation) fed by the `provenance` block.
  */
 export function CheckWalletSection({
   round,
@@ -668,6 +900,59 @@ export function CheckWalletSection({
   const displayName = resolvedName ?? null
   const isOwnWallet = sameAddress(activeAddress, connectedAddress)
 
+  // "Show the math" expansion (DEV-764). Collapses again whenever the
+  // inspected wallet or the viewed round changes.
+  const [showMath, setShowMath] = useState(false)
+  const mathRegionId = useId()
+  useEffect(() => {
+    setShowMath(false)
+  }, [activeAddress, round.roundNumber])
+
+  const provenance = readProvenance(round.addressReward)
+  const canShowMath =
+    provenance != null &&
+    round.addressReward != null &&
+    (view.kind === 'earned' || view.kind === 'lottery-lost')
+
+  const lotteryOutcome: ProvenanceLotteryOutcome | null =
+    view.kind === 'earned' && view.lotteryWin
+      ? {
+          kind: 'won',
+          oddsPct: view.lotteryWin.oddsPct,
+          entryAmountEns: view.lotteryWin.entryAmountEns,
+          prizeEns: view.lotteryWin.prizeEns,
+        }
+      : view.kind === 'lottery-lost'
+        ? {
+            kind: 'lost',
+            oddsPct: view.entry.oddsPct,
+            entryAmountEns: view.entry.entryAmountEns,
+            prizeEns: null,
+          }
+        : null
+
+  // Affordance (or the degraded note) on the states that have math to show.
+  const mathFoot =
+    view.kind === 'earned' || view.kind === 'lottery-lost' ? (
+      canShowMath ? (
+        <MathToggle
+          type="button"
+          $open={showMath}
+          aria-expanded={showMath}
+          aria-controls={mathRegionId}
+          data-testid="check-wallet-show-math"
+          onClick={() => setShowMath((open) => !open)}
+        >
+          <FontAwesomeIcon icon={faChevronRight} />
+          {showMath ? 'Hide the math' : 'Show the math'}
+        </MathToggle>
+      ) : (
+        <ExplainerFootnote data-testid="check-wallet-math-unavailable">
+          Math not available for this round.
+        </ExplainerFootnote>
+      )
+    ) : null
+
   function handleUseConnected() {
     if (connectedAddress) {
       onInputChange(connectedAddress)
@@ -679,6 +964,7 @@ export function CheckWalletSection({
 
   return (
     <SectionCard aria-label="Check a wallet" data-testid="check-wallet-section">
+      <CardRow>
       <LookupColumn>
         <HeaderBlock>
           <TitleGroup>
@@ -763,6 +1049,12 @@ export function CheckWalletSection({
             <PanelValue $earned data-testid="check-wallet-reward-value">
               {formatEnsFixed(view.totalEns)} ENS <span aria-hidden>🎉</span>
             </PanelValue>
+            {view.lotteryWin ? (
+              <LotteryWinSub data-testid="check-wallet-lottery-win">
+                Lottery win · {formatEnsFixed(view.lotteryWin.prizeEns)} ENS ·{' '}
+                {view.lotteryWin.oddsPct}% odds
+              </LotteryWinSub>
+            ) : null}
           </PanelHeadGroup>
           <PanelList>
             <PanelListTitle>Reward breakdown</PanelListTitle>
@@ -771,6 +1063,7 @@ export function CheckWalletSection({
                 <Dot $color={DOT_COLOR[row.key]} aria-hidden />
                 <RoleLabel>{row.label}</RoleLabel>
                 <RoleValue>{formatEnsFixed(row.amountEns)} ENS</RoleValue>
+                {row.sharePct != null ? <RolePct>{row.sharePct}%</RolePct> : null}
               </RoleRow>
             ))}
             <Divider aria-hidden />
@@ -781,6 +1074,28 @@ export function CheckWalletSection({
               </TotalValue>
             </TotalRow>
           </PanelList>
+          <PanelFoot>
+            {view.note ? (
+              <ExplainerFootnote>{view.note}</ExplainerFootnote>
+            ) : null}
+            {view.lotteryWin ? (
+              <ExplainerFootnote>
+                Your reward was under 1 ENS, so it entered a shared pool of
+                about{' '}
+                {formatEnsAmount(
+                  view.lotteryWin.poolTargetEns ?? view.lotteryWin.prizeEns,
+                  { maximumFractionDigits: 0 },
+                )}{' '}
+                ENS. Your pool drew you as the winner, so you took the whole{' '}
+                {formatEnsFixed(view.lotteryWin.prizeEns)} ENS.
+              </ExplainerFootnote>
+            ) : (
+              <ExplainerFootnote>
+                Paid directly in one transfer (1 ENS or more).
+              </ExplainerFootnote>
+            )}
+            {mathFoot}
+          </PanelFoot>
         </ResultPanel>
       ) : view.kind === 'lottery-lost' ? (
         <ResultPanel $earned={false} data-testid="check-wallet-lottery-entry">
@@ -807,6 +1122,13 @@ export function CheckWalletSection({
               <TotalValue>{formatEnsFixed(view.entry.entryAmountEns)} ENS</TotalValue>
             </TotalRow>
           </PanelList>
+          <PanelFoot>
+            <ExplainerFootnote>
+              Rewards under 1 ENS go into a pool draw instead of a direct
+              payout. Nothing landed this round.
+            </ExplainerFootnote>
+            {mathFoot}
+          </PanelFoot>
         </ResultPanel>
       ) : view.kind === 'no-reward' ? (
         <ResultPanel $earned={false} data-testid="check-wallet-no-reward">
@@ -816,7 +1138,17 @@ export function CheckWalletSection({
               0 ENS
             </PanelValue>
           </PanelHeadGroup>
-          <PanelListTitle>No reward this round</PanelListTitle>
+          <NoRewardCard>
+            <NoRewardIcon aria-hidden>
+              <FontAwesomeIcon icon={faDollarSign} />
+            </NoRewardIcon>
+            <NoRewardText>
+              <NoRewardTitle>No reward this round</NoRewardTitle>
+              <NoRewardSub>
+                This wallet didn&apos;t earn anything in this round.
+              </NoRewardSub>
+            </NoRewardText>
+          </NoRewardCard>
         </ResultPanel>
       ) : view.kind === 'pending' ? (
         <ResultPanel $earned={false} data-testid="check-wallet-pending">
@@ -856,6 +1188,23 @@ export function CheckWalletSection({
           <ExplainerFootnote>Search a wallet to see its split.</ExplainerFootnote>
         </ResultPanel>
       )}
+      </CardRow>
+
+      {showMath && canShowMath && provenance && round.addressReward ? (
+        <div
+          id={mathRegionId}
+          role="region"
+          aria-label="The math behind this reward"
+          data-testid="check-wallet-math"
+        >
+          <ProvenanceMath
+            round={round}
+            reward={round.addressReward}
+            provenance={provenance}
+            lotteryOutcome={lotteryOutcome}
+          />
+        </div>
+      ) : null}
     </SectionCard>
   )
 }
