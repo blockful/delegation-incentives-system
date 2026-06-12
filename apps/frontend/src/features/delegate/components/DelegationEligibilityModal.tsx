@@ -134,8 +134,10 @@ const Body = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
-  width: 100%;
-  max-width: ${tokens.maxWidth.xs};
+  /* Thorin's Dialog hugs its content, so width: 100% collapses to the
+     buttons' intrinsic width. The Figma card is 360px wide; the Dialog
+     adds ~24px padding per side, so the body owns the remaining 312px. */
+  width: min(312px, calc(100vw - 6rem));
 `
 
 const Paragraph = styled.p`
