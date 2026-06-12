@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDistributionsApp } from "../../../src/api/routes/distributions.js";
 import { createRoundsApp, parseRoundMonths } from "../../../src/api/routes/rounds.js";
 import type { DistributionStorageRow } from "../../../src/api/distribution-utils.js";
@@ -586,6 +586,55 @@ describe("round reward responses", () => {
     expect(res.status).toBe(200);
     expect(body.addressReward.rewardStatus).toBe("paid");
     expect(body.addressReward.provenance).toBeNull();
+  });
+
+  it("treats a malformed persisted provenance row as absent instead of failing", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const row = makeProvenanceDistributionRow();
+    const result = JSON.parse(row.resultJson);
+    const rewardC = result.rewards.find((r: any) => r.address === ADDRESS_C);
+    rewardC.voterProvenance.avgVotingPower = "not-a-bigint";
+    const corrupted = { ...row, resultJson: JSON.stringify(result) };
+
+    const res = await makeRoundsApp([corrupted]).request(
+      `/rounds/1?address=${ADDRESS_C}`,
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.rewardStatus).toBe("paid");
+    // The corrupted voter row degrades to null; the intact holder row survives.
+    expect(body.addressReward.provenance.voter).toBeNull();
+    expect(body.addressReward.provenance.tokenHolder).not.toBeNull();
+  });
+
+  it("returns a generic 500 without echoing internal error details", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const app = createRoundsApp({
+      getRows: async () => {
+        throw new Error("secret connection string in here");
+      },
+      getTierSnapshot: async () => ({
+        tierIndex: 0,
+        poolSizeEns: "5000.000000000000000000",
+        vpGrowthPct: "0.00",
+      }),
+      getVotingPowers: async () => new Map(),
+      now: () => new Date("2026-05-03T12:00:00.000Z"),
+    });
+    const res = await app.request("/rounds");
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(JSON.stringify(body)).not.toContain("secret connection string");
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });
 

@@ -9,7 +9,9 @@ import {
   type CapStatus,
   type CombinedReward,
   type DistributionResult,
+  type TokenHolderRewardProvenance,
   type TokenHolderSource,
+  type VoterRewardProvenance,
 } from "@ens-dis/domain";
 import { formatEns } from "./helpers.js";
 
@@ -234,6 +236,45 @@ interface RawTokenHolderRewardProvenance {
   sources: TokenHolderSource[];
 }
 
+/**
+ * Revives one persisted voter-provenance row. A malformed row (the pipeline
+ * never writes one — this means a hand-edited or corrupted blob) is treated
+ * as absent so the endpoint degrades to `provenance: null` for that wallet
+ * instead of failing the whole round revive with a 500.
+ */
+function reviveVoterProvenance(
+  raw: RawVoterRewardProvenance,
+): VoterRewardProvenance | undefined {
+  try {
+    return {
+      avgVotingPower: wei(BigInt(raw.avgVotingPower)),
+      poolSharePct: raw.poolSharePct,
+      rawReward: wei(BigInt(raw.rawReward)),
+      capStatus: raw.capStatus,
+      redistributionReceived: wei(BigInt(raw.redistributionReceived)),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** See {@link reviveVoterProvenance} — same malformed-row semantics. */
+function reviveTokenHolderProvenance(
+  raw: RawTokenHolderRewardProvenance,
+): TokenHolderRewardProvenance | undefined {
+  try {
+    return {
+      poolSharePct: raw.poolSharePct,
+      rawReward: wei(BigInt(raw.rawReward)),
+      capStatus: raw.capStatus,
+      redistributionReceived: wei(BigInt(raw.redistributionReceived)),
+      sources: raw.sources,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 interface RawLotteryBucket {
   bucketIndex: number;
   entries: RawLotteryEntry[];
@@ -273,39 +314,29 @@ export function reviveDistributionResult(
         provenanceVersion: raw.metadata.provenanceVersion,
       }),
     },
-    rewards: raw.rewards.map((r) => ({
-      address: r.address,
-      voterReward: wei(BigInt(r.voterReward)),
-      tokenHolderReward: wei(BigInt(r.tokenHolderReward)),
-      // Backfill missing field on pre-feature JSON blobs so historic rounds
-      // still load. Round detail UI shows "—" when this is 0.
-      tokenHolderBalance: wei(BigInt(r.tokenHolderBalance ?? "0")),
-      total: wei(BigInt(r.total)),
+    rewards: raw.rewards.map((r) => {
       // Provenance is absent on blobs persisted before provenanceVersion 1.
       // Old rounds are never recomputed — the API exposes provenance: null.
-      ...(r.voterProvenance && {
-        voterProvenance: {
-          avgVotingPower: wei(BigInt(r.voterProvenance.avgVotingPower)),
-          poolSharePct: r.voterProvenance.poolSharePct,
-          rawReward: wei(BigInt(r.voterProvenance.rawReward)),
-          capStatus: r.voterProvenance.capStatus,
-          redistributionReceived: wei(
-            BigInt(r.voterProvenance.redistributionReceived),
-          ),
-        },
-      }),
-      ...(r.tokenHolderProvenance && {
-        tokenHolderProvenance: {
-          poolSharePct: r.tokenHolderProvenance.poolSharePct,
-          rawReward: wei(BigInt(r.tokenHolderProvenance.rawReward)),
-          capStatus: r.tokenHolderProvenance.capStatus,
-          redistributionReceived: wei(
-            BigInt(r.tokenHolderProvenance.redistributionReceived),
-          ),
-          sources: r.tokenHolderProvenance.sources,
-        },
-      }),
-    })),
+      // A malformed row is likewise treated as absent (see the helpers).
+      const voterProvenance = r.voterProvenance
+        ? reviveVoterProvenance(r.voterProvenance)
+        : undefined;
+      const tokenHolderProvenance = r.tokenHolderProvenance
+        ? reviveTokenHolderProvenance(r.tokenHolderProvenance)
+        : undefined;
+
+      return {
+        address: r.address,
+        voterReward: wei(BigInt(r.voterReward)),
+        tokenHolderReward: wei(BigInt(r.tokenHolderReward)),
+        // Backfill missing field on pre-feature JSON blobs so historic rounds
+        // still load. Round detail UI shows "—" when this is 0.
+        tokenHolderBalance: wei(BigInt(r.tokenHolderBalance ?? "0")),
+        total: wei(BigInt(r.total)),
+        ...(voterProvenance && { voterProvenance }),
+        ...(tokenHolderProvenance && { tokenHolderProvenance }),
+      };
+    }),
     lottery: {
       buckets: raw.lottery.buckets.map((b) => ({
         bucketIndex: b.bucketIndex,

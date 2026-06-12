@@ -516,8 +516,10 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         200,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      // Don't echo internals to clients — the real error goes to the
+      // function logs, which are the only place to look once this is generic.
+      console.error("rounds API error:", err);
+      return c.json({ error: "Internal server error" }, 500);
     }
   });
 
@@ -544,8 +546,10 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         200,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      // Don't echo internals to clients — the real error goes to the
+      // function logs, which are the only place to look once this is generic.
+      console.error("rounds API error:", err);
+      return c.json({ error: "Internal server error" }, 500);
     }
   });
 
@@ -612,8 +616,10 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         200,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      // Don't echo internals to clients — the real error goes to the
+      // function logs, which are the only place to look once this is generic.
+      console.error("rounds API error:", err);
+      return c.json({ error: "Internal server error" }, 500);
     }
   };
 
