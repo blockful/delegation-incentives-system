@@ -30,6 +30,7 @@ import { looksLikeEnsName } from '@/utils/ens'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
+import { LotteryResultsSection } from './components/LotteryResultsSection'
 import { TopEarnersTable } from './components/TopEarnersTable'
 import { statusLabel } from './status'
 import {
@@ -1126,6 +1127,11 @@ export function RoundDetailPage() {
       <TopEarnersTable
         voterRows={roundData.topVoterRewards}
         holderRows={roundData.topTokenHolderRewards}
+        highlightAddress={hasActiveAddress ? activeAddress : walletAddress}
+      />
+
+      <LotteryResultsSection
+        lottery={roundData.lottery}
         highlightAddress={hasActiveAddress ? activeAddress : walletAddress}
       />
     </Page>
