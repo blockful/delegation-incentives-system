@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { computeVoterRewards } from "../../src/voter-rewards.js";
+import {
+  computeVoterRewards,
+  computeVoterRewardsDetailed,
+} from "../../src/voter-rewards.js";
 import type { Address, Wei } from "../../src/types.js";
 import { wei } from "../../src/types.js";
 import { applyBps } from "../../src/util/bigint-math.js";
@@ -189,5 +192,106 @@ describe("computeVoterRewards", () => {
       "0xbbbb",
       "0xcccc",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Detailed provenance variant
+// ---------------------------------------------------------------------------
+describe("computeVoterRewardsDetailed", () => {
+  it("reports AVP, pool share, raw reward, and cap status per voter", () => {
+    // Pool = 1_000_000 ENS -> voterSubPool = 100_000, cap = 10_000.
+    // 0xaaaa has 90% of AVP (raw 90_000, capped at 10_000),
+    // 0xbbbb has 10% (raw 10_000, then receives the excess and is capped too).
+    const poolSize = wei(1_000_000n * ENS);
+    const voterCap = applyBps(poolSize, VOTER_CAP_BPS); // 10_000 ENS
+
+    const avps = new Map<Address, Wei>([
+      ["0xaaaa", wei(9_000n * ENS)],
+      ["0xbbbb", wei(1_000n * ENS)],
+    ]);
+
+    const { allocations, provenance } = computeVoterRewardsDetailed(
+      avps,
+      poolSize,
+    );
+
+    expect(allocations).toHaveLength(2);
+    expect(provenance.size).toBe(2);
+
+    const whale = provenance.get("0xaaaa")!;
+    expect(whale.avgVotingPower).toBe(9_000n * ENS);
+    expect(whale.poolSharePct).toBe("90.00");
+    expect(whale.rawReward).toBe(90_000n * ENS);
+    expect(whale.capStatus).toBe("reached_cap");
+    expect(whale.redistributionReceived).toBe(0n);
+
+    const minnow = provenance.get("0xbbbb")!;
+    expect(minnow.avgVotingPower).toBe(1_000n * ENS);
+    expect(minnow.poolSharePct).toBe("10.00");
+    expect(minnow.rawReward).toBe(10_000n * ENS);
+    // 10_000 == cap exactly, then redistribution pushes it over -> capped.
+    expect(minnow.capStatus).toBe("reached_cap");
+
+    const byAddr = new Map(allocations.map((r) => [r.address, r.reward]));
+    expect(byAddr.get("0xaaaa")).toBe(voterCap);
+    expect(byAddr.get("0xbbbb")).toBe(voterCap);
+  });
+
+  it("reports not_affected when no voter exceeds the cap", () => {
+    const poolSize = wei(1_500_000n * ENS);
+    const avps = new Map<Address, Wei>();
+    for (let i = 0; i < 20; i++) {
+      const addr = `0x${i.toString(16).padStart(4, "0")}` as Address;
+      avps.set(addr, wei(100n * ENS));
+    }
+
+    const { provenance } = computeVoterRewardsDetailed(avps, poolSize);
+
+    for (const detail of provenance.values()) {
+      expect(detail.capStatus).toBe("not_affected");
+      expect(detail.poolSharePct).toBe("5.00");
+      expect(detail.rawReward).toBe(7_500n * ENS);
+      expect(detail.redistributionReceived).toBe(0n);
+    }
+  });
+
+  it("reports received_redistribution with the amount received", () => {
+    // Pool = 1_000_000 ENS -> voterSubPool = 100_000, cap = 10_000.
+    // 11 voters, total AVP 110_000: one whale (12_000) whose raw allocation
+    // 10_909.09 slightly exceeds the cap, ten receivers (9_800 each) whose
+    // raw 8_909.09 plus ~1/10 of the ~909 excess stays under the cap.
+    const poolSize = wei(1_000_000n * ENS);
+    const avps = new Map<Address, Wei>();
+    avps.set("0xffff", wei(12_000n * ENS));
+    for (let i = 0; i < 10; i++) {
+      const addr = `0x${i.toString(16).padStart(4, "0")}` as Address;
+      avps.set(addr, wei(9_800n * ENS));
+    }
+
+    const { allocations, provenance } = computeVoterRewardsDetailed(
+      avps,
+      poolSize,
+    );
+    const finalByAddr = new Map(
+      allocations.map((r) => [r.address, r.reward as bigint]),
+    );
+
+    const whale = provenance.get("0xffff")!;
+    expect(whale.capStatus).toBe("reached_cap");
+    expect(whale.redistributionReceived).toBe(0n);
+    expect(finalByAddr.get("0xffff")).toBe(10_000n * ENS);
+
+    for (let i = 0; i < 10; i++) {
+      const addr = `0x${i.toString(16).padStart(4, "0")}` as Address;
+      const receiver = provenance.get(addr)!;
+      expect(receiver.capStatus).toBe("received_redistribution");
+      expect(receiver.redistributionReceived).toBeGreaterThan(0n);
+      // final = raw + redistribution received (+ dust for one address).
+      expect(finalByAddr.get(addr)!).toBeGreaterThanOrEqual(
+        (receiver.rawReward as bigint) +
+          (receiver.redistributionReceived as bigint),
+      );
+    }
   });
 });

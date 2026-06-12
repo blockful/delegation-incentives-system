@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { computeTokenHolderRewards } from "../../src/token-holder-rewards.js";
-import type { Address, Wei } from "../../src/types.js";
+import {
+  computeTokenHolderRewards,
+  computeTokenHolderRewardsDetailed,
+} from "../../src/token-holder-rewards.js";
+import type { Address, TokenHolderSource, Wei } from "../../src/types.js";
 import { wei } from "../../src/types.js";
 import { applyBps } from "../../src/util/bigint-math.js";
 import { TOKEN_HOLDER_POOL_BPS, TOKEN_HOLDER_CAP_BPS } from "../../src/config.js";
@@ -179,5 +182,56 @@ describe("computeTokenHolderRewards", () => {
     expect(result[0].reward).toBe(tokenHolderCap);
     expect(totalRewards(result)).toBe(tokenHolderCap);
     expect(totalRewards(result)).toBeLessThan(tokenHolderSubPool as bigint);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Detailed provenance variant
+// ---------------------------------------------------------------------------
+describe("computeTokenHolderRewardsDetailed", () => {
+  it("reports pool share, raw reward, cap status, and sources per holder", () => {
+    // Pool = 1_000_000 ENS -> subPool = 900_000, cap = 50_000.
+    // 0xaaaa holds 25% (raw 225_000 -> capped), 0xbbbb and 0xcccc hold
+    // 37.5% each (raw 337_500 -> capped).
+    const poolSize = wei(1_000_000n * ENS);
+
+    const twbs = new Map<Address, Wei>([
+      ["0xaaaa", wei(1_000n * ENS)],
+      ["0xbbbb", wei(1_500n * ENS)],
+      ["0xcccc", wei(1_500n * ENS)],
+    ]);
+    const sources = new Map<Address, readonly TokenHolderSource[]>([
+      ["0xaaaa", ["direct"]],
+      ["0xbbbb", ["direct", "multidelegate"]],
+      ["0xcccc", ["hedgey"]],
+    ]);
+
+    const { provenance } = computeTokenHolderRewardsDetailed(
+      twbs,
+      poolSize,
+      sources,
+    );
+
+    const holderA = provenance.get("0xaaaa")!;
+    expect(holderA.poolSharePct).toBe("25.00");
+    expect(holderA.rawReward).toBe(225_000n * ENS);
+    expect(holderA.capStatus).toBe("reached_cap");
+    expect(holderA.sources).toEqual(["direct"]);
+
+    expect(provenance.get("0xbbbb")!.sources).toEqual([
+      "direct",
+      "multidelegate",
+    ]);
+    expect(provenance.get("0xbbbb")!.poolSharePct).toBe("37.50");
+    expect(provenance.get("0xcccc")!.sources).toEqual(["hedgey"]);
+  });
+
+  it("defaults sources to an empty list for untracked holders", () => {
+    const poolSize = wei(1_000_000n * ENS);
+    const twbs = new Map<Address, Wei>([["0xaaaa", wei(1_000n * ENS)]]);
+
+    const { provenance } = computeTokenHolderRewardsDetailed(twbs, poolSize);
+
+    expect(provenance.get("0xaaaa")!.sources).toEqual([]);
   });
 });

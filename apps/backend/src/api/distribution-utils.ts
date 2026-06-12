@@ -2,7 +2,10 @@ import {
   LOTTERY_BUCKET_TARGET,
   MIN_REWARD_THRESHOLD,
   POOL_TIERS,
+  type CapStatus,
+  type CombinedReward,
   type DistributionResult,
+  type TokenHolderSource,
 } from "@ens-dis/domain";
 import { formatEns } from "./helpers.js";
 
@@ -49,6 +52,42 @@ export interface RewardRank {
   delegationCount: number | null;
 }
 
+export interface VoterProvenanceDetail {
+  avgVotingPower: string;
+  avgVotingPowerEns: string;
+  poolSharePct: string;
+  rawReward: string;
+  rawRewardEns: string;
+  finalReward: string;
+  finalRewardEns: string;
+  cap: string;
+  capEns: string;
+  capStatus: CapStatus;
+  redistributionReceived: string;
+  redistributionReceivedEns: string;
+}
+
+export interface TokenHolderProvenanceDetail {
+  avgBalance: string;
+  avgBalanceEns: string;
+  poolSharePct: string;
+  rawReward: string;
+  rawRewardEns: string;
+  finalReward: string;
+  finalRewardEns: string;
+  cap: string;
+  capEns: string;
+  capStatus: CapStatus;
+  redistributionReceived: string;
+  redistributionReceivedEns: string;
+  sources: TokenHolderSource[] | null;
+}
+
+export interface RewardProvenance {
+  voter: VoterProvenanceDetail | null;
+  tokenHolder: TokenHolderProvenanceDetail | null;
+}
+
 export interface AddressRewardBreakdown {
   address: string;
   voterReward: string;
@@ -60,6 +99,13 @@ export interface AddressRewardBreakdown {
   totalReward: string;
   totalRewardEns: string;
   status: "paid" | "no_reward" | "not_eligible";
+  /**
+   * Allocation provenance for the round's direct rewards. Null for rounds
+   * whose result_json predates provenance persistence and for wallets with
+   * no eligibility signal. Lottery winnings carry no provenance — seed and
+   * odds are served by the lottery payload.
+   */
+  provenance: RewardProvenance | null;
 }
 
 export interface LotteryEntryDetail {
@@ -124,6 +170,27 @@ export function reviveDistributionResult(obj: any): DistributionResult {
       // still load. Round detail UI shows "—" when this is 0.
       tokenHolderBalance: BigInt(r.tokenHolderBalance ?? "0"),
       total: BigInt(r.total),
+      // Provenance is absent on blobs persisted before provenanceVersion 1.
+      // Old rounds are never recomputed — the API exposes provenance: null.
+      ...(r.voterProvenance && {
+        voterProvenance: {
+          ...r.voterProvenance,
+          avgVotingPower: BigInt(r.voterProvenance.avgVotingPower),
+          rawReward: BigInt(r.voterProvenance.rawReward),
+          redistributionReceived: BigInt(
+            r.voterProvenance.redistributionReceived,
+          ),
+        },
+      }),
+      ...(r.tokenHolderProvenance && {
+        tokenHolderProvenance: {
+          ...r.tokenHolderProvenance,
+          rawReward: BigInt(r.tokenHolderProvenance.rawReward),
+          redistributionReceived: BigInt(
+            r.tokenHolderProvenance.redistributionReceived,
+          ),
+        },
+      }),
     })),
     lottery: {
       buckets: obj.lottery.buckets.map((b: any) => ({
@@ -313,12 +380,14 @@ export function getAddressReward(
   let tokenHolderReward = 0n;
   let lotteryReward = 0n;
   let hadEligibilitySignal = false;
+  let matchedReward: CombinedReward | null = null;
 
   for (const reward of parsed.result.rewards) {
     if (reward.address.toLowerCase() !== address) continue;
     voterReward += reward.voterReward as bigint;
     tokenHolderReward += reward.tokenHolderReward as bigint;
     hadEligibilitySignal = true;
+    matchedReward ??= reward;
   }
 
   for (const bucket of parsed.result.lottery.buckets) {
@@ -353,7 +422,85 @@ export function getAddressReward(
     totalReward: totalReward.toString(),
     totalRewardEns: formatEns(totalReward),
     status,
+    provenance: buildRewardProvenance(parsed.result, matchedReward, status),
   };
+}
+
+/**
+ * Build the provenance block for one wallet's direct rewards.
+ *
+ * Returns null when the persisted result_json predates provenance
+ * persistence (no `metadata.provenanceVersion` — old rounds are never
+ * recomputed) or when the wallet had no eligibility signal. Each role block
+ * is present iff that role's final reward is positive; lottery winnings get
+ * no provenance (seed/odds live in the lottery payload).
+ */
+function buildRewardProvenance(
+  result: DistributionResult,
+  matched: CombinedReward | null,
+  status: AddressRewardBreakdown["status"],
+): RewardProvenance | null {
+  if (result.metadata.provenanceVersion == null) return null;
+  if (status === "not_eligible") return null;
+
+  const meta = result.metadata;
+
+  let voter: VoterProvenanceDetail | null = null;
+  if (
+    matched &&
+    (matched.voterReward as bigint) > 0n &&
+    matched.voterProvenance
+  ) {
+    const prov = matched.voterProvenance;
+    voter = {
+      avgVotingPower: (prov.avgVotingPower as bigint).toString(),
+      avgVotingPowerEns: formatEns(prov.avgVotingPower as bigint),
+      poolSharePct: prov.poolSharePct,
+      rawReward: (prov.rawReward as bigint).toString(),
+      rawRewardEns: formatEns(prov.rawReward as bigint),
+      finalReward: (matched.voterReward as bigint).toString(),
+      finalRewardEns: formatEns(matched.voterReward as bigint),
+      cap: (meta.voterCap as bigint).toString(),
+      capEns: formatEns(meta.voterCap as bigint),
+      capStatus: prov.capStatus,
+      redistributionReceived: (
+        prov.redistributionReceived as bigint
+      ).toString(),
+      redistributionReceivedEns: formatEns(
+        prov.redistributionReceived as bigint,
+      ),
+    };
+  }
+
+  let tokenHolder: TokenHolderProvenanceDetail | null = null;
+  if (
+    matched &&
+    (matched.tokenHolderReward as bigint) > 0n &&
+    matched.tokenHolderProvenance
+  ) {
+    const prov = matched.tokenHolderProvenance;
+    tokenHolder = {
+      avgBalance: (matched.tokenHolderBalance as bigint).toString(),
+      avgBalanceEns: formatEns(matched.tokenHolderBalance as bigint),
+      poolSharePct: prov.poolSharePct,
+      rawReward: (prov.rawReward as bigint).toString(),
+      rawRewardEns: formatEns(prov.rawReward as bigint),
+      finalReward: (matched.tokenHolderReward as bigint).toString(),
+      finalRewardEns: formatEns(matched.tokenHolderReward as bigint),
+      cap: (meta.tokenHolderCap as bigint).toString(),
+      capEns: formatEns(meta.tokenHolderCap as bigint),
+      capStatus: prov.capStatus,
+      redistributionReceived: (
+        prov.redistributionReceived as bigint
+      ).toString(),
+      redistributionReceivedEns: formatEns(
+        prov.redistributionReceived as bigint,
+      ),
+      sources: prov.sources ? [...prov.sources] : null,
+    };
+  }
+
+  return { voter, tokenHolder };
 }
 
 export function getTopVoterRewards(
