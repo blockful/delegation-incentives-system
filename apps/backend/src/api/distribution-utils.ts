@@ -1,7 +1,11 @@
 import {
+  blockNumber,
   LOTTERY_BUCKET_TARGET,
   MIN_REWARD_THRESHOLD,
   POOL_TIERS,
+  seconds,
+  wei,
+  type Address,
   type CapStatus,
   type CombinedReward,
   type DistributionResult,
@@ -148,68 +152,189 @@ export interface LotteryDetail {
   buckets: LotteryBucketDetail[];
 }
 
-export function reviveDistributionResult(obj: any): DistributionResult {
+/**
+ * Wire shape of a persisted `result_json` blob: a DistributionResult
+ * serialized by distributionToJson, i.e. every BigInt (Wei / Seconds /
+ * BlockNumber) written as a decimal string. Optional fields are absent on
+ * blobs persisted before the matching feature shipped — old rounds are
+ * never recomputed, so both generations stay readable.
+ */
+export interface RawDistributionResult {
+  metadata: RawDistributionMetadata;
+  rewards: RawCombinedReward[];
+  lottery: {
+    buckets: RawLotteryBucket[];
+  };
+  /**
+   * Deduplication log as persisted. The API layer never reads it and its
+   * wire shape has drifted across blob generations (early blobs name the
+   * multiDelegate voter column `delegate`), so it stays opaque here and is
+   * passed through unconverted by reviveDistributionResult.
+   */
+  deduplication: unknown;
+}
+
+interface RawDistributionMetadata {
+  month: string;
+  /** Seconds since epoch, decimal strings. */
+  monthStart: string;
+  monthEnd: string;
+  /** Block numbers, decimal strings. */
+  startBlock: string;
+  endBlock: string;
+  randaoValue: string;
+  /** Wei, decimal strings. */
+  vpStart: string;
+  vpEnd: string;
+  vpGrowthPct: string;
+  tier: number;
+  /** Wei, decimal strings. */
+  poolSize: string;
+  voterCap: string;
+  tokenHolderCap: string;
+  activeVoterCount: number;
+  finalizedProposalIds: string[];
+  /** Absent on blobs persisted before provenance persistence. */
+  provenanceVersion?: number;
+}
+
+interface RawCombinedReward {
+  address: Address;
+  /** Wei, decimal strings. */
+  voterReward: string;
+  tokenHolderReward: string;
+  /** Wei, decimal string. Absent on pre-feature blobs. */
+  tokenHolderBalance?: string;
+  /** Wei, decimal string. */
+  total: string;
+  /** Absent on blobs persisted before provenanceVersion 1. */
+  voterProvenance?: RawVoterRewardProvenance;
+  /** Absent on blobs persisted before provenanceVersion 1. */
+  tokenHolderProvenance?: RawTokenHolderRewardProvenance;
+}
+
+interface RawVoterRewardProvenance {
+  /** Wei, decimal string. */
+  avgVotingPower: string;
+  poolSharePct: string;
+  /** Wei, decimal string. */
+  rawReward: string;
+  capStatus: CapStatus;
+  /** Wei, decimal string. */
+  redistributionReceived: string;
+}
+
+interface RawTokenHolderRewardProvenance {
+  poolSharePct: string;
+  /** Wei, decimal string. */
+  rawReward: string;
+  capStatus: CapStatus;
+  /** Wei, decimal string. */
+  redistributionReceived: string;
+  sources: TokenHolderSource[];
+}
+
+interface RawLotteryBucket {
+  bucketIndex: number;
+  entries: RawLotteryEntry[];
+  /** Wei, decimal string. */
+  prize: string;
+  winner: Address;
+}
+
+interface RawLotteryEntry {
+  address: Address;
+  /** Wei, decimal string. */
+  amount: string;
+  probability: string;
+}
+
+export function reviveDistributionResult(
+  raw: RawDistributionResult,
+): DistributionResult {
   return {
     metadata: {
-      ...obj.metadata,
-      monthStart: BigInt(obj.metadata.monthStart),
-      monthEnd: BigInt(obj.metadata.monthEnd),
-      startBlock: BigInt(obj.metadata.startBlock),
-      endBlock: BigInt(obj.metadata.endBlock),
-      vpStart: BigInt(obj.metadata.vpStart),
-      vpEnd: BigInt(obj.metadata.vpEnd),
-      poolSize: BigInt(obj.metadata.poolSize),
-      voterCap: BigInt(obj.metadata.voterCap),
-      tokenHolderCap: BigInt(obj.metadata.tokenHolderCap),
+      month: raw.metadata.month,
+      monthStart: seconds(BigInt(raw.metadata.monthStart)),
+      monthEnd: seconds(BigInt(raw.metadata.monthEnd)),
+      startBlock: blockNumber(BigInt(raw.metadata.startBlock)),
+      endBlock: blockNumber(BigInt(raw.metadata.endBlock)),
+      randaoValue: raw.metadata.randaoValue,
+      vpStart: wei(BigInt(raw.metadata.vpStart)),
+      vpEnd: wei(BigInt(raw.metadata.vpEnd)),
+      vpGrowthPct: raw.metadata.vpGrowthPct,
+      tier: raw.metadata.tier,
+      poolSize: wei(BigInt(raw.metadata.poolSize)),
+      voterCap: wei(BigInt(raw.metadata.voterCap)),
+      tokenHolderCap: wei(BigInt(raw.metadata.tokenHolderCap)),
+      activeVoterCount: raw.metadata.activeVoterCount,
+      finalizedProposalIds: raw.metadata.finalizedProposalIds,
+      ...(raw.metadata.provenanceVersion != null && {
+        provenanceVersion: raw.metadata.provenanceVersion,
+      }),
     },
-    rewards: obj.rewards.map((r: any) => ({
-      ...r,
-      voterReward: BigInt(r.voterReward),
-      tokenHolderReward: BigInt(r.tokenHolderReward),
+    rewards: raw.rewards.map((r) => ({
+      address: r.address,
+      voterReward: wei(BigInt(r.voterReward)),
+      tokenHolderReward: wei(BigInt(r.tokenHolderReward)),
       // Backfill missing field on pre-feature JSON blobs so historic rounds
       // still load. Round detail UI shows "—" when this is 0.
-      tokenHolderBalance: BigInt(r.tokenHolderBalance ?? "0"),
-      total: BigInt(r.total),
+      tokenHolderBalance: wei(BigInt(r.tokenHolderBalance ?? "0")),
+      total: wei(BigInt(r.total)),
       // Provenance is absent on blobs persisted before provenanceVersion 1.
       // Old rounds are never recomputed — the API exposes provenance: null.
       ...(r.voterProvenance && {
         voterProvenance: {
-          ...r.voterProvenance,
-          avgVotingPower: BigInt(r.voterProvenance.avgVotingPower),
-          rawReward: BigInt(r.voterProvenance.rawReward),
-          redistributionReceived: BigInt(
-            r.voterProvenance.redistributionReceived,
+          avgVotingPower: wei(BigInt(r.voterProvenance.avgVotingPower)),
+          poolSharePct: r.voterProvenance.poolSharePct,
+          rawReward: wei(BigInt(r.voterProvenance.rawReward)),
+          capStatus: r.voterProvenance.capStatus,
+          redistributionReceived: wei(
+            BigInt(r.voterProvenance.redistributionReceived),
           ),
         },
       }),
       ...(r.tokenHolderProvenance && {
         tokenHolderProvenance: {
-          ...r.tokenHolderProvenance,
-          rawReward: BigInt(r.tokenHolderProvenance.rawReward),
-          redistributionReceived: BigInt(
-            r.tokenHolderProvenance.redistributionReceived,
+          poolSharePct: r.tokenHolderProvenance.poolSharePct,
+          rawReward: wei(BigInt(r.tokenHolderProvenance.rawReward)),
+          capStatus: r.tokenHolderProvenance.capStatus,
+          redistributionReceived: wei(
+            BigInt(r.tokenHolderProvenance.redistributionReceived),
           ),
+          sources: r.tokenHolderProvenance.sources,
         },
       }),
     })),
     lottery: {
-      buckets: obj.lottery.buckets.map((b: any) => ({
-        ...b,
-        prize: BigInt(b.prize),
-        entries: b.entries.map((e: any) => ({
-          ...e,
-          amount: BigInt(e.amount),
+      buckets: raw.lottery.buckets.map((b) => ({
+        bucketIndex: b.bucketIndex,
+        entries: b.entries.map((e) => ({
+          address: e.address,
+          amount: wei(BigInt(e.amount)),
+          probability: e.probability,
         })),
+        prize: wei(BigInt(b.prize)),
+        winner: b.winner,
       })),
     },
-    deduplication: obj.deduplication,
-  } as unknown as DistributionResult;
+    // Single remaining assertion in this file: the dedup log is passed
+    // through as persisted (Wei amounts stay decimal strings at runtime,
+    // legacy field names included) because nothing downstream reads it.
+    // Converting it here would change revived values for a subtree no code
+    // consumes — see the RawDistributionResult.deduplication doc comment.
+    deduplication: raw.deduplication as DistributionResult["deduplication"],
+  };
 }
 
 export function parseDistributionRow(row: DistributionStorageRow): ParsedDistribution {
+  // Trust boundary: result_json is only ever written by distributionToJson,
+  // so the parsed blob is taken to match RawDistributionResult.
+  const raw: RawDistributionResult = JSON.parse(row.resultJson);
+
   return {
     row,
-    result: reviveDistributionResult(JSON.parse(row.resultJson)),
+    result: reviveDistributionResult(raw),
   };
 }
 
@@ -230,38 +355,38 @@ export function distributionToApiResponse(parsed: ParsedDistribution) {
   const { result, row } = parsed;
   const meta = result.metadata;
   const tierConfig = POOL_TIERS[meta.tier] ?? POOL_TIERS[0];
-  const minReward = MIN_REWARD_THRESHOLD as bigint;
+  const minReward = MIN_REWARD_THRESHOLD;
 
   const directPayouts = result.rewards
-    .filter((r) => (r.total as bigint) >= minReward)
+    .filter((r) => r.total >= minReward)
     .map((r) => {
       const role: "voter" | "token_holder" =
-        (r.voterReward as bigint) > 0n ? "voter" : "token_holder";
+        r.voterReward > 0n ? "voter" : "token_holder";
       return {
         address: r.address,
-        ensName: null as string | null,
-        amount: (r.total as bigint).toString(),
-        amountEns: formatEns(r.total as bigint),
+        ensName: null,
+        amount: r.total.toString(),
+        amountEns: formatEns(r.total),
         role,
       };
     });
 
   const lotteryPools = result.lottery.buckets.map((bucket) => ({
-    totalPrize: (bucket.prize as bigint).toString(),
-    totalPrizeEns: formatEns(bucket.prize as bigint),
+    totalPrize: bucket.prize.toString(),
+    totalPrizeEns: formatEns(bucket.prize),
     winner: bucket.winner,
-    winnerEnsName: null as string | null,
+    winnerEnsName: null,
     entries: bucket.entries.map((e) => ({
       address: e.address,
-      ensName: null as string | null,
-      originalAmount: (e.amount as bigint).toString(),
+      ensName: null,
+      originalAmount: e.amount.toString(),
       role: "token_holder" as const,
     })),
   }));
 
   const totalDistributed = getTotalDistributed(result);
   const eligibleTokenHolderCount = result.rewards.filter(
-    (r) => (r.tokenHolderReward as bigint) > 0n,
+    (r) => r.tokenHolderReward > 0n,
   ).length;
   const growthPct = Number.parseFloat(meta.vpGrowthPct);
   const momGrowthBps = Number.isFinite(growthPct)
@@ -278,9 +403,9 @@ export function distributionToApiResponse(parsed: ParsedDistribution) {
         momGrowthMaxBps: tierConfig.maxGrowthPct === Infinity
           ? "Infinity"
           : (tierConfig.maxGrowthPct * 100).toString(),
-        poolSize: (tierConfig.poolSize as bigint).toString(),
-        voterCap: (tierConfig.voterCap as bigint).toString(),
-        tokenHolderCap: (tierConfig.tokenHolderCap as bigint).toString(),
+        poolSize: tierConfig.poolSize.toString(),
+        voterCap: tierConfig.voterCap.toString(),
+        tokenHolderCap: tierConfig.tokenHolderCap.toString(),
       },
       momGrowthBps,
       activeVoterCount: meta.activeVoterCount,
@@ -298,7 +423,7 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
   const meta = result.metadata;
   const totalDistributed = getTotalDistributed(result);
   const eligibleTokenHolderCount = result.rewards.filter(
-    (r) => (r.tokenHolderReward as bigint) > 0n,
+    (r) => r.tokenHolderReward > 0n,
   ).length;
   const lotteryStats = getLotteryStats(result);
 
@@ -306,8 +431,8 @@ export function getDistributionSnapshot(parsed: ParsedDistribution): Distributio
     month: meta.month,
     tierIndex: meta.tier,
     vpGrowthPct: meta.vpGrowthPct,
-    poolSize: (meta.poolSize as bigint).toString(),
-    poolSizeEns: formatEns(meta.poolSize as bigint),
+    poolSize: meta.poolSize.toString(),
+    poolSizeEns: formatEns(meta.poolSize),
     totalDistributed: totalDistributed.toString(),
     totalDistributedEns: formatEns(totalDistributed),
     activeVoterCount: meta.activeVoterCount,
@@ -332,11 +457,11 @@ export function getLotteryDetail(parsed: ParsedDistribution): LotteryDetail {
       source: "ethereum_prev_randao",
       label: "Ethereum prevRandao",
       value: meta.randaoValue,
-      blockNumber: (meta.endBlock as bigint).toString(),
+      blockNumber: meta.endBlock.toString(),
       algorithm: "keccak256(prevRandao, bucketIndex)",
     },
-    bucketTarget: (LOTTERY_BUCKET_TARGET as bigint).toString(),
-    bucketTargetEns: formatEns(LOTTERY_BUCKET_TARGET as bigint),
+    bucketTarget: LOTTERY_BUCKET_TARGET.toString(),
+    bucketTargetEns: formatEns(LOTTERY_BUCKET_TARGET),
     totalPrize: lotteryStats.totalPrize.toString(),
     totalPrizeEns: formatEns(lotteryStats.totalPrize),
     bucketCount: lotteryStats.bucketCount,
@@ -351,8 +476,8 @@ export function getLotteryDetail(parsed: ParsedDistribution): LotteryDetail {
 
       return {
         bucketIndex: bucket.bucketIndex,
-        prize: (bucket.prize as bigint).toString(),
-        prizeEns: formatEns(bucket.prize as bigint),
+        prize: bucket.prize.toString(),
+        prizeEns: formatEns(bucket.prize),
         winner: bucket.winner,
         winnerEnsName: null,
         winnerProbability: winnerEntry?.probability ?? null,
@@ -362,8 +487,8 @@ export function getLotteryDetail(parsed: ParsedDistribution): LotteryDetail {
           entryIndex: index + 1,
           address: entry.address,
           ensName: null,
-          amount: (entry.amount as bigint).toString(),
-          amountEns: formatEns(entry.amount as bigint),
+          amount: entry.amount.toString(),
+          amountEns: formatEns(entry.amount),
           probability: entry.probability,
         })),
       };
@@ -384,8 +509,8 @@ export function getAddressReward(
 
   for (const reward of parsed.result.rewards) {
     if (reward.address.toLowerCase() !== address) continue;
-    voterReward += reward.voterReward as bigint;
-    tokenHolderReward += reward.tokenHolderReward as bigint;
+    voterReward += reward.voterReward;
+    tokenHolderReward += reward.tokenHolderReward;
     hadEligibilitySignal = true;
     matchedReward ??= reward;
   }
@@ -393,7 +518,7 @@ export function getAddressReward(
   for (const bucket of parsed.result.lottery.buckets) {
     const winner = bucket.winner.toLowerCase();
     if (winner === address) {
-      lotteryReward += bucket.prize as bigint;
+      lotteryReward += bucket.prize;
       hadEligibilitySignal = true;
     }
 
@@ -446,56 +571,44 @@ function buildRewardProvenance(
   const meta = result.metadata;
 
   let voter: VoterProvenanceDetail | null = null;
-  if (
-    matched &&
-    (matched.voterReward as bigint) > 0n &&
-    matched.voterProvenance
-  ) {
+  if (matched && matched.voterReward > 0n && matched.voterProvenance) {
     const prov = matched.voterProvenance;
     voter = {
-      avgVotingPower: (prov.avgVotingPower as bigint).toString(),
-      avgVotingPowerEns: formatEns(prov.avgVotingPower as bigint),
+      avgVotingPower: prov.avgVotingPower.toString(),
+      avgVotingPowerEns: formatEns(prov.avgVotingPower),
       poolSharePct: prov.poolSharePct,
-      rawReward: (prov.rawReward as bigint).toString(),
-      rawRewardEns: formatEns(prov.rawReward as bigint),
-      finalReward: (matched.voterReward as bigint).toString(),
-      finalRewardEns: formatEns(matched.voterReward as bigint),
-      cap: (meta.voterCap as bigint).toString(),
-      capEns: formatEns(meta.voterCap as bigint),
+      rawReward: prov.rawReward.toString(),
+      rawRewardEns: formatEns(prov.rawReward),
+      finalReward: matched.voterReward.toString(),
+      finalRewardEns: formatEns(matched.voterReward),
+      cap: meta.voterCap.toString(),
+      capEns: formatEns(meta.voterCap),
       capStatus: prov.capStatus,
-      redistributionReceived: (
-        prov.redistributionReceived as bigint
-      ).toString(),
-      redistributionReceivedEns: formatEns(
-        prov.redistributionReceived as bigint,
-      ),
+      redistributionReceived: prov.redistributionReceived.toString(),
+      redistributionReceivedEns: formatEns(prov.redistributionReceived),
     };
   }
 
   let tokenHolder: TokenHolderProvenanceDetail | null = null;
   if (
     matched &&
-    (matched.tokenHolderReward as bigint) > 0n &&
+    matched.tokenHolderReward > 0n &&
     matched.tokenHolderProvenance
   ) {
     const prov = matched.tokenHolderProvenance;
     tokenHolder = {
-      avgBalance: (matched.tokenHolderBalance as bigint).toString(),
-      avgBalanceEns: formatEns(matched.tokenHolderBalance as bigint),
+      avgBalance: matched.tokenHolderBalance.toString(),
+      avgBalanceEns: formatEns(matched.tokenHolderBalance),
       poolSharePct: prov.poolSharePct,
-      rawReward: (prov.rawReward as bigint).toString(),
-      rawRewardEns: formatEns(prov.rawReward as bigint),
-      finalReward: (matched.tokenHolderReward as bigint).toString(),
-      finalRewardEns: formatEns(matched.tokenHolderReward as bigint),
-      cap: (meta.tokenHolderCap as bigint).toString(),
-      capEns: formatEns(meta.tokenHolderCap as bigint),
+      rawReward: prov.rawReward.toString(),
+      rawRewardEns: formatEns(prov.rawReward),
+      finalReward: matched.tokenHolderReward.toString(),
+      finalRewardEns: formatEns(matched.tokenHolderReward),
+      cap: meta.tokenHolderCap.toString(),
+      capEns: formatEns(meta.tokenHolderCap),
       capStatus: prov.capStatus,
-      redistributionReceived: (
-        prov.redistributionReceived as bigint
-      ).toString(),
-      redistributionReceivedEns: formatEns(
-        prov.redistributionReceived as bigint,
-      ),
+      redistributionReceived: prov.redistributionReceived.toString(),
+      redistributionReceivedEns: formatEns(prov.redistributionReceived),
       sources: prov.sources ? [...prov.sources] : null,
     };
   }
@@ -508,16 +621,16 @@ export function getTopVoterRewards(
   limit = 10,
 ): RewardRank[] {
   return parsed.result.rewards
-    .filter((reward) => (reward.voterReward as bigint) > 0n)
-    .sort((a, b) => compareBigIntDesc(a.voterReward as bigint, b.voterReward as bigint))
+    .filter((reward) => reward.voterReward > 0n)
+    .sort((a, b) => compareBigIntDesc(a.voterReward, b.voterReward))
     .slice(0, limit)
     .map((reward, index) => ({
       rank: index + 1,
       address: reward.address,
       ensName: null,
       role: "voter",
-      reward: (reward.voterReward as bigint).toString(),
-      rewardEns: formatEns(reward.voterReward as bigint),
+      reward: reward.voterReward.toString(),
+      rewardEns: formatEns(reward.voterReward),
       source: "direct",
       votingPower: null,
       tokenHolderBalance: null,
@@ -535,7 +648,7 @@ export function getTopTokenHolderRewards(
   >();
 
   for (const reward of parsed.result.rewards) {
-    const tokenHolderReward = reward.tokenHolderReward as bigint;
+    const tokenHolderReward = reward.tokenHolderReward;
     if (tokenHolderReward <= 0n) continue;
     const address = reward.address.toLowerCase();
     const existing = totals.get(address) ?? {
@@ -544,7 +657,7 @@ export function getTopTokenHolderRewards(
       balance: 0n,
     };
     existing.direct += tokenHolderReward;
-    existing.balance += reward.tokenHolderBalance as bigint;
+    existing.balance += reward.tokenHolderBalance;
     totals.set(address, existing);
   }
 
@@ -555,7 +668,7 @@ export function getTopTokenHolderRewards(
       lottery: 0n,
       balance: 0n,
     };
-    existing.lottery += bucket.prize as bigint;
+    existing.lottery += bucket.prize;
     totals.set(address, existing);
   }
 
@@ -594,16 +707,16 @@ export function getTopTokenHolderRewards(
 
 function getTotalDistributed(result: DistributionResult): bigint {
   let totalDistributed = 0n;
-  const minReward = MIN_REWARD_THRESHOLD as bigint;
+  const minReward = MIN_REWARD_THRESHOLD;
 
   for (const reward of result.rewards) {
-    if ((reward.total as bigint) >= minReward) {
-      totalDistributed += reward.total as bigint;
+    if (reward.total >= minReward) {
+      totalDistributed += reward.total;
     }
   }
 
   for (const bucket of result.lottery.buckets) {
-    totalDistributed += bucket.prize as bigint;
+    totalDistributed += bucket.prize;
   }
 
   return totalDistributed;
@@ -616,7 +729,7 @@ function getLotteryStats(result: DistributionResult) {
   let totalPrize = 0n;
 
   for (const bucket of result.lottery.buckets) {
-    totalPrize += bucket.prize as bigint;
+    totalPrize += bucket.prize;
     winners.add(bucket.winner.toLowerCase());
 
     for (const entry of bucket.entries) {
