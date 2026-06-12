@@ -7,12 +7,8 @@ import {
   faArrowLeft,
   faArrowRight,
   faArrowTrendUp,
-  faCircleCheck,
-  faCircleInfo,
   faCoins,
   faDownload,
-  faHourglassHalf,
-  faMagnifyingGlass,
   faRankingStar,
   faTrophy,
 } from '@fortawesome/free-solid-svg-icons'
@@ -29,7 +25,7 @@ import { useResolveEnsName } from '@/features/ens/useResolveEnsName'
 import { looksLikeEnsName } from '@/utils/ens'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount } from '@/utils/format'
-import { AddressLookupForm } from './components/AddressLookupForm'
+import { CheckWalletSection } from './components/CheckWalletSection'
 import { LotteryResultsSection } from './components/LotteryResultsSection'
 import { TopEarnersTable } from './components/TopEarnersTable'
 import { statusLabel } from './status'
@@ -515,121 +511,6 @@ const StatLabel = styled.span`
   line-height: 20px;
 `
 
-/* ─── Address inspector ─── */
-
-const Section = styled.section`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.lg};
-  width: 100%;
-  padding: ${tokens.spacing.xl};
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-`
-
-const SectionHeader = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  flex-wrap: wrap;
-`
-
-const SectionLabelGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`
-
-const SectionLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.darkGray};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-`
-
-const SectionTitle = styled.h2`
-  margin: 0;
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.25;
-`
-
-const AddressResultStrip = styled.div<{ $tone: 'success' | 'neutral' | 'pending' }>`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.lg};
-  border-radius: 12px;
-  background: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.status.success.bg
-      : $tone === 'pending'
-        ? tokens.color.lightBlueOpacity
-        : tokens.color.bgSubtle};
-  border: 1px solid
-    ${({ $tone }) =>
-      $tone === 'success'
-        ? tokens.color.status.success.border
-        : $tone === 'pending'
-          ? tokens.color.lightBlue
-          : tokens.color.borderLight};
-`
-
-const AddressResultIcon = styled.span<{ $tone: 'success' | 'neutral' | 'pending' }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
-  flex-shrink: 0;
-  background: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.status.success.border
-      : $tone === 'pending'
-        ? tokens.color.lightBlue
-        : tokens.color.borderLight};
-  color: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.white
-      : $tone === 'pending'
-        ? tokens.color.blue
-        : tokens.color.darkGray};
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`
-
-const AddressResultText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-`
-
-const AddressResultTitle = styled.span<{ $tone: 'success' | 'neutral' | 'pending' }>`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.status.success.fg
-      : $tone === 'pending'
-        ? tokens.color.blue
-        : tokens.color.darkBlue};
-`
-
-const AddressResultBody = styled.span`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.5;
-`
-
 /* ─── Helpers ─── */
 
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
@@ -639,11 +520,6 @@ function getWalletAddress(walletState: ReturnType<typeof useWalletState>): strin
 
 function isLegacyEndpointError(error: unknown): boolean {
   return error instanceof ApiClientError && error.status === 404
-}
-
-function formatEns(value: string | null, empty = '—', maximumFractionDigits = 4): string {
-  if (value == null) return empty
-  return `${formatEnsAmount(value, { maximumFractionDigits })} ENS`
 }
 
 /**
@@ -786,11 +662,6 @@ export function RoundDetailPage() {
     setInputError(null)
   }, [searchedAddress])
 
-  const sourceLabel = searchedAddress
-    ? 'Searched address'
-    : walletAddress
-      ? 'Connected wallet'
-      : 'No address selected'
   const addressError = inputError || (activeAddress && !activeAddressValid ? 'Invalid address' : null)
   const backTo = activeAddressValid
     ? `/rounds?address=${encodeURIComponent(activeAddress)}`
@@ -954,32 +825,6 @@ export function RoundDetailPage() {
       ? `${reachedTier.estimatedAprPct}% APR reached`
       : 'Tier reached'
 
-  // Address inspector result strip
-  const addressInsight: { tone: 'success' | 'neutral' | 'pending'; title: string; body: string } =
-    !hasActiveAddress
-      ? {
-          tone: 'neutral',
-          title: 'Check a wallet',
-          body: 'Paste an ENS name or 0x address above to see what it earned this round.',
-        }
-      : roundData.distributionDataStatus !== 'available'
-        ? {
-            tone: 'pending',
-            title: 'This round hasn’t finished yet',
-            body: `Round ${roundData.roundNumber} is still ${roundData.status}. Results show up the moment it closes.`,
-          }
-        : roundData.addressReward && Number(roundData.addressReward.totalRewardEns) > 0
-          ? {
-              tone: 'success',
-              title: `Earned ${formatEns(roundData.addressReward.totalRewardEns, '0 ENS')}`,
-              body: 'Your reward landed in a single transfer.',
-            }
-          : {
-              tone: 'neutral',
-              title: 'No reward this round',
-              body: 'This wallet didn’t earn anything in this round.',
-            }
-
   return (
     <Page key={roundNumber}>
       <HeaderCard>
@@ -1086,43 +931,16 @@ export function RoundDetailPage() {
         </StatCard>
       </StatsRow>
 
-      <Section>
-        <SectionHeader>
-          <SectionLabelGroup>
-            <SectionLabel>Check a wallet</SectionLabel>
-            <SectionTitle>See what this round paid an address</SectionTitle>
-          </SectionLabelGroup>
-        </SectionHeader>
-        <AddressLookupForm
-          value={addressInput}
-          activeAddress={activeAddress}
-          sourceLabel={sourceLabel}
-          error={addressError}
-          connectedAddress={walletAddress || undefined}
-          onChange={setAddressInput}
-          onSubmit={handleAddressSubmit}
-          onClear={handleAddressClear}
-        />
-        <AddressResultStrip $tone={addressInsight.tone}>
-          <AddressResultIcon $tone={addressInsight.tone} aria-hidden>
-            <FontAwesomeIcon
-              icon={
-                addressInsight.tone === 'success'
-                  ? faCircleCheck
-                  : addressInsight.tone === 'pending'
-                    ? faHourglassHalf
-                    : hasActiveAddress
-                      ? faCircleInfo
-                      : faMagnifyingGlass
-              }
-            />
-          </AddressResultIcon>
-          <AddressResultText>
-            <AddressResultTitle $tone={addressInsight.tone}>{addressInsight.title}</AddressResultTitle>
-            <AddressResultBody>{addressInsight.body}</AddressResultBody>
-          </AddressResultText>
-        </AddressResultStrip>
-      </Section>
+      <CheckWalletSection
+        round={roundData}
+        activeAddress={hasActiveAddress ? activeAddress : ''}
+        addressInput={addressInput}
+        error={addressError}
+        connectedAddress={walletAddress || undefined}
+        onInputChange={setAddressInput}
+        onSubmit={handleAddressSubmit}
+        onClear={handleAddressClear}
+      />
 
       <TopEarnersTable
         voterRows={roundData.topVoterRewards}
