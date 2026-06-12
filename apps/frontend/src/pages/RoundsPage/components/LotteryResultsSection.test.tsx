@@ -141,7 +141,7 @@ describe('LotteryResultsSection', () => {
     expect(screen.queryByTestId('lottery-stat-winners')).not.toBeInTheDocument()
   })
 
-  it('explains the RANDAO draw and links Verify to the Etherscan block', () => {
+  it('explains the RANDAO draw and links Verify to the GitHub repo', () => {
     renderApp(<LotteryResultsSection lottery={lotteryFixture} />)
 
     expect(
@@ -151,7 +151,7 @@ describe('LotteryResultsSection', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Verify/i })).toHaveAttribute(
       'href',
-      'https://etherscan.io/block/24996367',
+      'https://github.com/blockful/delegation-incentives-system',
     )
   })
 
