@@ -177,7 +177,7 @@ describe('deriveCheckWalletView', () => {
     )
     expect(view.kind).toBe('earned')
     if (view.kind !== 'earned') return
-    expect(view.rows.map((row) => row.label)).toEqual(['As delegate'])
+    expect(view.rows.map((row) => row.label)).toEqual(['As delegate (voting)'])
     expect(view.totalEns).toBe('25.000000000000000000')
   })
 
@@ -191,8 +191,6 @@ describe('deriveCheckWalletView', () => {
       entry: {
         oddsPct: '6.2',
         entryAmountEns: '0.620000000000000000',
-        poolNumber: 1,
-        poolPrizeEns: '10.000000000000000000',
       },
     })
   })
@@ -249,18 +247,34 @@ describe('findLostLotteryEntry', () => {
 })
 
 describe('CheckWalletSection', () => {
-  it('renders the two-card empty state for disconnected visitors', () => {
+  it('renders the empty state for disconnected visitors', () => {
     renderSection()
 
-    expect(screen.getByText('Check your own wallet')).toBeInTheDocument()
+    expect(
+      screen.getByText('See what this round paid an address'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Search an address or ENS name above to see what it earned this round',
+      ),
+    ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: /Use my connected wallet/i }),
     ).toBeInTheDocument()
-    // Right card keeps the desktop footprint; CSS hides it on mobile.
+    // Right panel keeps the desktop footprint; CSS hides it on mobile.
     const explainer = screen.getByTestId('check-wallet-explainer')
     expect(within(explainer).getByText('Two ways a wallet earns')).toBeInTheDocument()
-    expect(within(explainer).getByText('As a delegate')).toBeInTheDocument()
-    expect(within(explainer).getByText('As a token holder')).toBeInTheDocument()
+    expect(
+      within(explainer).getByText('As a delegate, for voting on proposals'),
+    ).toBeInTheDocument()
+    expect(
+      within(explainer).getByText(
+        'As a token holder, for delegating to an active voter',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(explainer).getByText('Search a wallet to see its split.'),
+    ).toBeInTheDocument()
   })
 
   it('submits the connected wallet from the empty-state action', async () => {
@@ -286,15 +300,20 @@ describe('CheckWalletSection', () => {
       },
     })
 
-    expect(screen.getByText('Earned 35.00 ENS this round')).toBeInTheDocument()
-
     const breakdown = screen.getByTestId('check-wallet-breakdown')
-    expect(within(breakdown).getByText('As delegate')).toBeInTheDocument()
+    expect(within(breakdown).getByText('This wallet reward')).toBeInTheDocument()
+    expect(
+      within(breakdown).getByTestId('check-wallet-reward-value'),
+    ).toHaveTextContent('35.00 ENS')
+    expect(within(breakdown).getByText('Reward breakdown')).toBeInTheDocument()
+    expect(within(breakdown).getByText('As delegate (voting)')).toBeInTheDocument()
     expect(within(breakdown).getByText('25.00 ENS')).toBeInTheDocument()
     expect(within(breakdown).getByText('As token holder')).toBeInTheDocument()
     expect(within(breakdown).getByText('10.00 ENS')).toBeInTheDocument()
-    expect(within(breakdown).getByText('Total')).toBeInTheDocument()
-    expect(within(breakdown).getByText('35.00 ENS')).toBeInTheDocument()
+    expect(within(breakdown).getByText('Total earned')).toBeInTheDocument()
+    expect(
+      within(breakdown).getByTestId('check-wallet-total-value'),
+    ).toHaveTextContent('35.00 ENS')
   })
 
   it('keeps a single role row for a single-role wallet', () => {
@@ -310,8 +329,10 @@ describe('CheckWalletSection', () => {
 
     const breakdown = screen.getByTestId('check-wallet-breakdown')
     expect(within(breakdown).getByText('As token holder')).toBeInTheDocument()
-    expect(within(breakdown).queryByText('As delegate')).not.toBeInTheDocument()
-    expect(within(breakdown).getByText('Total')).toBeInTheDocument()
+    expect(
+      within(breakdown).queryByText('As delegate (voting)'),
+    ).not.toBeInTheDocument()
+    expect(within(breakdown).getByText('Total earned')).toBeInTheDocument()
   })
 
   it('does not render a Direct/Lottery payout chip on earned cards', () => {
@@ -327,9 +348,6 @@ describe('CheckWalletSection', () => {
 
     expect(screen.queryByText(/^Direct$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/^Lottery$/)).not.toBeInTheDocument()
-    expect(
-      screen.getByText('Paid directly to this wallet in a single transfer.'),
-    ).toBeInTheDocument()
   })
 
   it('adds a lottery prize row when the wallet won a pool', () => {
@@ -355,23 +373,30 @@ describe('CheckWalletSection', () => {
 
     expect(
       screen.getByText(
-        "Entered the lottery with 6.2% odds, didn't win this round",
+        "Entered the lottery with 6.2% odds, didn't win this round.",
       ),
     ).toBeInTheDocument()
 
     const entryCard = screen.getByTestId('check-wallet-lottery-entry')
+    expect(
+      within(entryCard).getByTestId('check-wallet-reward-value'),
+    ).toHaveTextContent('0 ENS')
     expect(within(entryCard).getByText('Your lottery entry')).toBeInTheDocument()
-    expect(within(entryCard).getByText('0.62 ENS')).toBeInTheDocument()
-    expect(within(entryCard).getByText('Pool #1')).toBeInTheDocument()
-    expect(within(entryCard).getByText('6.2%')).toBeInTheDocument()
-    expect(within(entryCard).getByText('10.00 ENS')).toBeInTheDocument()
+    expect(within(entryCard).getByText('As token holder')).toBeInTheDocument()
+    expect(within(entryCard).getByText('Entry total')).toBeInTheDocument()
+    // Entry row and entry total both show the same losing entry amount.
+    expect(within(entryCard).getAllByText('0.62 ENS')).toHaveLength(2)
   })
 
-  it('renders the no-reward state with the explainer card', () => {
+  it('renders the no-reward state in the result panel', () => {
     renderSection({ activeAddress: WALLET })
 
-    expect(screen.getByText('No reward this round')).toBeInTheDocument()
-    expect(screen.getByTestId('check-wallet-explainer')).toBeInTheDocument()
+    const panel = screen.getByTestId('check-wallet-no-reward')
+    expect(
+      within(panel).getByTestId('check-wallet-reward-value'),
+    ).toHaveTextContent('0 ENS')
+    expect(within(panel).getByText('No reward this round')).toBeInTheDocument()
+    expect(screen.queryByTestId('check-wallet-explainer')).not.toBeInTheDocument()
     expect(screen.queryByTestId('check-wallet-breakdown')).not.toBeInTheDocument()
   })
 
@@ -381,7 +406,7 @@ describe('CheckWalletSection', () => {
       round: { distributionDataStatus: 'in_progress', status: 'live' },
     })
 
-    expect(screen.getByText('This round hasn’t finished yet')).toBeInTheDocument()
+    expect(screen.getByText('This round hasn’t finished yet.')).toBeInTheDocument()
     expect(
       screen.getByText(/Round 2 is still live\. Results show up the moment it closes\./),
     ).toBeInTheDocument()
@@ -395,8 +420,21 @@ describe('CheckWalletSection', () => {
     })
 
     const identity = screen.getByTestId('check-wallet-identity')
-    expect(within(identity).getByText('Your wallet')).toBeInTheDocument()
+    expect(within(identity).getByText('Inspecting your wallet')).toBeInTheDocument()
     expect(within(identity).getByText('0xd8da…6045')).toBeInTheDocument()
+  })
+
+  it('does not claim a foreign wallet as yours', () => {
+    renderSection({
+      activeAddress: WALLET,
+      connectedAddress: OTHER_WALLET,
+      round: { addressReward: reward({ totalRewardEns: '0' }) },
+    })
+
+    const identity = screen.getByTestId('check-wallet-identity')
+    expect(
+      within(identity).queryByText('Inspecting your wallet'),
+    ).not.toBeInTheDocument()
   })
 
   it('clears the lookup via the Clear button', async () => {

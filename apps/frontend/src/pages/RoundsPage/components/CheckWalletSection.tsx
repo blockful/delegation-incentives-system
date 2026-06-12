@@ -1,18 +1,11 @@
 import styled from 'styled-components'
 import { isAddress } from 'viem'
 import { useEnsName } from 'wagmi'
-import { Button } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faCheckToSlot,
-  faCircleCheck,
-  faCircleInfo,
-  faCoins,
-  faHourglassHalf,
   faMagnifyingGlass,
-  faTicket,
+  faUser,
   faWallet,
-  faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 import type {
   LotteryDetail,
@@ -24,14 +17,16 @@ import { formatEnsAmount, truncateAddress } from '@/utils/format'
 
 /* ─── View model ───────────────────────────────────────────────────────────
  *
- * Check-wallet card v2 (DEV-769). One derived view per render:
+ * Check-wallet card v2 (DEV-769), conformed to the Figma boards
+ * (9h3HrcD5YgkGe37Hw3vAmm · 5735:239 desktop / 5739:239 mobile).
+ * One derived view per render:
  *
  *  - empty        → no inspected address (only reachable when disconnected,
  *                   since a connected wallet is pre-searched by the page).
  *  - pending      → address inspected but the round hasn't closed yet.
  *  - earned       → the wallet was paid; conditional role rows + total.
  *  - lottery-lost → the wallet earned < 1 ENS, entered a lottery pool and
- *                   didn't win. Own state with odds + entry breakdown.
+ *                   didn't win. Odds line + entry breakdown.
  *  - no-reward    → the wallet earned nothing and had no lottery entry.
  */
 
@@ -45,8 +40,6 @@ export interface LostLotteryEntry {
   /** "6.2" — percentage with one decimal, no % sign. */
   oddsPct: string
   entryAmountEns: string
-  poolNumber: number
-  poolPrizeEns: string
 }
 
 export type CheckWalletView =
@@ -107,8 +100,6 @@ export function findLostLotteryEntry(
     return {
       oddsPct: formatOddsPct(fraction),
       entryAmountEns: entry.amountEns,
-      poolNumber: bucket.bucketIndex + 1,
-      poolPrizeEns: bucket.prizeEns,
     }
   }
 
@@ -125,9 +116,11 @@ export function deriveCheckWalletView(
   const reward = round.addressReward
   if (reward && Number(reward.totalRewardEns) > 0) {
     // Conditional role rows — only the roles that actually paid are listed.
+    // "Lottery prize" is not drawn on the boards (they have no lottery-won
+    // state) but is kept so "Total earned" always equals the rows above it.
     const rows: EarnedRow[] = []
     if (Number(reward.voterRewardEns) > 0) {
-      rows.push({ key: 'delegate', label: 'As delegate', amountEns: reward.voterRewardEns })
+      rows.push({ key: 'delegate', label: 'As delegate (voting)', amountEns: reward.voterRewardEns })
     }
     if (Number(reward.tokenHolderRewardEns) > 0) {
       rows.push({ key: 'holder', label: 'As token holder', amountEns: reward.tokenHolderRewardEns })
@@ -144,46 +137,61 @@ export function deriveCheckWalletView(
   return { kind: 'no-reward' }
 }
 
-/* ─── Layout ─── */
+/* ─── Palette (board values not yet in tokens.ts) ─── */
 
-// Two cards side by side on desktop; the empty state keeps both so the
-// section never shrinks. Mobile stacks them (and hides the explainer when
-// the state is empty — see ExplainerCard).
-const SectionGrid = styled.section`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: ${tokens.spacing.lg};
-  width: 100%;
-  align-items: stretch;
+// Figma "Light/Green/Bright" — the celebratory earned amount.
+const BRIGHT_GREEN = '#1eb789'
 
-  @media (min-width: 768px) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-`
+const DOT_COLOR: Record<EarnedRow['key'], string> = {
+  delegate: tokens.color.blue,
+  holder: tokens.color.green,
+  // Lottery is orange across the app (see RewardTags); the boards draw no
+  // lottery-won breakdown row, so this follows the existing convention.
+  lottery: tokens.color.orange,
+}
 
-const Card = styled.div`
+/* ─── Layout ───
+ *
+ * One card: lookup column (title + search + identity panel) on the left,
+ * result panel on the right (~58/42 like the board's 626/430 split). Mobile
+ * stacks them; the empty state drops the result panel entirely on mobile.
+ */
+
+const SectionCard = styled.section`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
-  padding: ${tokens.spacing['2xl']};
+  gap: ${tokens.spacing.sm};
+  width: 100%;
+  padding: ${tokens.spacing.xl};
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: 16px;
+  border-radius: 12px;
 
-  @media (max-width: 767px) {
-    padding: ${tokens.spacing.lg};
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: stretch;
+    gap: ${tokens.spacing['2xl']};
   }
 `
 
-// The right card of the empty state is desktop-only: on mobile the section
-// collapses to the single "Check your own wallet" card.
-const ExplainerCard = styled(Card)<{ $hideOnMobile: boolean }>`
-  @media (max-width: 767px) {
-    display: ${({ $hideOnMobile }) => ($hideOnMobile ? 'none' : 'flex')};
+const LookupColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing['2xl']};
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    flex: 1 1 58%;
   }
 `
 
-const CardHeader = styled.div`
+const HeaderBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+`
+
+const TitleGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -200,18 +208,10 @@ const Eyebrow = styled.span`
 
 const CardTitle = styled.h3`
   margin: 0;
-  font-size: ${tokens.font.size.xl};
+  font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  line-height: 1.25;
-`
-
-const CardBody = styled.p`
-  margin: ${tokens.spacing.xs} 0 0;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
+  line-height: 26px;
 `
 
 /* ─── Search form ─── */
@@ -219,36 +219,36 @@ const CardBody = styled.p`
 const SearchBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.sm};
-`
+  gap: ${tokens.spacing.md};
 
-const SearchRow = styled.div`
-  display: flex;
-  gap: ${tokens.spacing.sm};
-  align-items: center;
-
-  @media (max-width: 560px) {
-    flex-wrap: wrap;
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
   }
 `
 
 const SearchInputWrap = styled.div`
   position: relative;
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
+  min-width: 0;
+
+  @media (min-width: 768px) {
+    flex: 1;
+    width: auto;
+  }
 `
 
 const SearchIcon = styled.span`
   position: absolute;
-  left: 12px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   color: ${tokens.color.textSubtle};
   pointer-events: none;
 
   svg {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
   }
 `
 
@@ -256,11 +256,13 @@ const SearchInput = styled.input<{ $hasError: boolean }>`
   width: 100%;
   min-width: 0;
   border: 1px solid
-    ${({ $hasError }) => ($hasError ? tokens.color.negative : tokens.color.middleGray)};
+    ${({ $hasError }) => ($hasError ? tokens.color.negative : tokens.color.borderLight)};
   border-radius: ${tokens.radius.sm};
-  padding: 10px ${tokens.spacing.md} 10px 32px;
+  padding: 11px ${tokens.spacing.lg} 11px 42px;
   font-family: inherit;
   font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  line-height: 20px;
   color: ${tokens.color.darkBlue};
   background: ${tokens.color.white};
 
@@ -274,259 +276,340 @@ const SearchInput = styled.input<{ $hasError: boolean }>`
   }
 `
 
+const ButtonRow = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.sm};
+  width: 100%;
+
+  @media (min-width: 768px) {
+    width: auto;
+    flex-shrink: 0;
+  }
+`
+
+const SearchButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  padding: 10px ${tokens.spacing.lg};
+  border: none;
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.blue};
+  color: ${tokens.color.white};
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 1;
+  transition: opacity ${tokens.transition.fast};
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 768px) {
+    flex: 0 0 auto;
+  }
+`
+
+const ClearButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${tokens.spacing.sm};
+  padding: 10px ${tokens.spacing.lg};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.sm};
+  background: ${tokens.color.white};
+  color: ${tokens.color.darkGray};
+  font-family: inherit;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 1;
+  transition: border-color ${tokens.transition.fast}, color ${tokens.transition.fast};
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+    color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 768px) {
+    flex: 0 0 auto;
+  }
+`
+
 const InputError = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.negative};
 `
 
-/* ─── Empty-state action ─── */
+/* ─── Identity panel (grey, below the search) ─── */
 
-const EmptyAction = styled.div`
+const IdentityPanel = styled.div`
   display: flex;
   align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const OrDivider = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.textSubtle};
-`
-
-/* ─── Inspected wallet identity ─── */
-
-const IdentityRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.sm};
+  gap: ${tokens.spacing.lg};
+  flex: 1;
   min-width: 0;
+  padding: ${tokens.spacing.xl};
+  background: ${tokens.color.surfaceAlt};
+  border-radius: 12px;
+`
+
+const EmptyAvatarCircle = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: ${tokens.radius.pill};
+  flex-shrink: 0;
+  background: ${tokens.color.borderLight};
+  border: 1px solid ${tokens.color.borderLight};
+  color: ${tokens.color.darkGray};
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
 `
 
 const IdentityText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  align-items: flex-start;
+  gap: ${tokens.spacing.xs};
   min-width: 0;
 `
 
 const IdentityName = styled.span`
-  font-size: ${tokens.font.size.base};
+  font-size: 22px;
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
-  line-height: 20px;
+  line-height: 30px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `
 
-const IdentitySub = styled.span`
-  font-size: ${tokens.font.size.sm};
+const IdentityHint = styled.span`
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 16px;
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
 `
 
-const YourWalletPill = styled.span`
+const TagPill = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
-  padding: 3px 10px;
+  padding: 6px ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.lightBlueOpacity};
-  color: ${tokens.color.blue};
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.tierHighlight};
+  color: ${tokens.color.green};
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.bold};
   line-height: 16px;
   white-space: nowrap;
-  flex-shrink: 0;
 
   svg {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
   }
 `
 
-/* ─── Status strip ─── */
-
-type StatusTone = 'success' | 'neutral' | 'pending'
-
-const StatusStrip = styled.div<{ $tone: StatusTone }>`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-  margin-top: auto;
-  padding: ${tokens.spacing.lg};
-  border-radius: 12px;
-  background: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.status.success.bg
-      : $tone === 'pending'
-        ? tokens.color.lightBlueOpacity
-        : tokens.color.bgSubtle};
-  border: 1px solid
-    ${({ $tone }) =>
-      $tone === 'success'
-        ? tokens.color.status.success.border
-        : $tone === 'pending'
-          ? tokens.color.lightBlue
-          : tokens.color.borderLight};
-`
-
-const StatusIcon = styled.span<{ $tone: StatusTone }>`
+const ConnectedWalletTag = styled.button`
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
+  gap: 6px;
+  padding: 6px ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
-  flex-shrink: 0;
-  background: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.status.success.border
-      : $tone === 'pending'
-        ? tokens.color.lightBlue
-        : tokens.color.borderLight};
-  color: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.white
-      : $tone === 'pending'
-        ? tokens.color.blue
-        : tokens.color.darkGray};
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.lightBlue};
+  color: ${tokens.color.blue};
+  font-family: inherit;
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color ${tokens.transition.fast};
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    border-color: ${tokens.color.blue};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: 2px;
   }
 `
 
-const StatusText = styled.div`
+/* ─── Result panel (right column) ─── */
+
+const ResultPanel = styled.div<{ $earned: boolean; $hideOnMobile?: boolean }>`
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-`
-
-const StatusTitle = styled.span<{ $tone: StatusTone }>`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  color: ${({ $tone }) =>
-    $tone === 'success'
-      ? tokens.color.status.success.fg
-      : $tone === 'pending'
-        ? tokens.color.blue
-        : tokens.color.darkBlue};
-`
-
-const StatusBody = styled.span`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkBlue};
-  line-height: 1.5;
-`
-
-/* ─── Breakdown (right card, earned / lottery-lost) ─── */
-
-const BreakdownList = styled.div`
-  display: flex;
-  flex-direction: column;
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 10px;
-  overflow: hidden;
-`
-
-const BreakdownRow = styled.div`
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  padding: 11px 14px;
+  gap: ${tokens.spacing['2xl']};
+  min-width: 0;
+  padding: ${tokens.spacing.xl};
+  border-radius: 12px;
+  background: ${({ $earned }) =>
+    $earned ? tokens.color.tierHighlight : tokens.color.surfaceAlt};
 
-  &:not(:last-child) {
-    border-bottom: 1px solid ${tokens.color.borderLight};
+  @media (max-width: 767px) {
+    display: ${({ $hideOnMobile }) => ($hideOnMobile ? 'none' : 'flex')};
+  }
+
+  @media (min-width: 768px) {
+    flex: 1 1 42%;
   }
 `
 
-const RowLabel = styled.span`
+const PanelHeadGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
+`
+
+const PanelHeading = styled.span`
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const PanelValue = styled.span<{ $earned: boolean }>`
+  font-size: ${tokens.font.size['3xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${({ $earned }) => ($earned ? BRIGHT_GREEN : tokens.color.darkBlue)};
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+`
+
+const PanelSub = styled.span`
   font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
   line-height: 20px;
 `
 
-const RowValue = styled.span`
+const PanelList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+`
+
+const PanelListTitle = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkBlue};
+  line-height: 20px;
+`
+
+const RoleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  width: 100%;
+`
+
+const Dot = styled.span<{ $color: string }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  background: ${({ $color }) => $color};
+`
+
+const RoleLabel = styled.span`
+  flex: 1;
+  min-width: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.darkGray};
+  line-height: 20px;
+`
+
+const RoleValue = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkBlue};
   line-height: 20px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 `
 
-const TotalRow = styled(BreakdownRow)`
-  background: ${tokens.color.bgSubtle};
+const Divider = styled.div`
+  width: 100%;
+  height: 1px;
+  background: ${tokens.color.borderLight};
 `
 
-const TotalLabel = styled(RowLabel)`
+const TotalRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  width: 100%;
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
+  line-height: 20px;
 `
 
-const TotalValue = styled(RowValue)`
-  color: ${tokens.color.positiveEmphasis};
-`
-
-/* ─── Explainer (right card, empty / no-reward / pending) ─── */
-
-const ExplainerList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.lg};
-`
-
-const ExplainerItem = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: ${tokens.spacing.md};
-`
-
-const ExplainerIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: ${tokens.radius.pill};
-  flex-shrink: 0;
-  background: ${tokens.color.lightBlueOpacity};
-  color: ${tokens.color.blue};
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-`
-
-const ExplainerText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+const TotalLabel = styled.span`
+  flex: 1;
   min-width: 0;
 `
 
-const ExplainerTitle = styled.span`
+const TotalValue = styled.span`
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+`
+
+const ExplainerFootnote = styled.span`
   font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
+  font-weight: ${tokens.font.weight.medium};
+  color: ${tokens.color.textSubtle};
   line-height: 20px;
 `
 
-const ExplainerBody = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
+// Title + dot rows grouped at the top of the empty panel; the footnote is
+// pushed to the bottom by the panel's space-between.
+const ExplainerTop = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
 `
 
 /* ─── Helpers ─── */
@@ -536,84 +619,6 @@ const ExplainerBody = styled.span`
 async function openWalletModal() {
   const { appKit } = await import('@/app/providers/AppKitProvider')
   appKit.open()
-}
-
-interface StatusContent {
-  tone: StatusTone
-  icon: typeof faCircleCheck
-  title: string
-  body: string
-}
-
-function statusContent(view: CheckWalletView, round: RoundDetailResponse): StatusContent | null {
-  switch (view.kind) {
-    case 'earned':
-      return {
-        tone: 'success',
-        icon: faCircleCheck,
-        title: `Earned ${formatEnsFixed(view.totalEns)} ENS this round`,
-        body: 'Paid directly to this wallet in a single transfer.',
-      }
-    case 'lottery-lost':
-      return {
-        tone: 'neutral',
-        icon: faTicket,
-        title: `Entered the lottery with ${view.entry.oddsPct}% odds, didn't win this round`,
-        body: 'Rewards under 1 ENS become lottery entries instead of direct payouts.',
-      }
-    case 'no-reward':
-      return {
-        tone: 'neutral',
-        icon: faCircleInfo,
-        title: 'No reward this round',
-        body: 'This wallet didn’t earn as a delegate or token holder in this round.',
-      }
-    case 'pending':
-      return {
-        tone: 'pending',
-        icon: faHourglassHalf,
-        title: 'This round hasn’t finished yet',
-        body: `Round ${round.roundNumber} is still ${round.status}. Results show up the moment it closes.`,
-      }
-    default:
-      return null
-  }
-}
-
-function TwoWaysExplainer({ hideOnMobile }: { hideOnMobile: boolean }) {
-  return (
-    <ExplainerCard $hideOnMobile={hideOnMobile} data-testid="check-wallet-explainer">
-      <CardHeader>
-        <CardTitle>Two ways a wallet earns</CardTitle>
-      </CardHeader>
-      <ExplainerList>
-        <ExplainerItem>
-          <ExplainerIcon aria-hidden>
-            <FontAwesomeIcon icon={faCheckToSlot} />
-          </ExplainerIcon>
-          <ExplainerText>
-            <ExplainerTitle>As a delegate</ExplainerTitle>
-            <ExplainerBody>
-              Vote on at least 7 of the last 10 on-chain proposals to earn from
-              the delegate slice of the pool.
-            </ExplainerBody>
-          </ExplainerText>
-        </ExplainerItem>
-        <ExplainerItem>
-          <ExplainerIcon aria-hidden>
-            <FontAwesomeIcon icon={faCoins} />
-          </ExplainerIcon>
-          <ExplainerText>
-            <ExplainerTitle>As a token holder</ExplainerTitle>
-            <ExplainerBody>
-              Delegate ENS to an active delegate. Shares of 1 ENS or more pay
-              out directly; smaller shares enter the lottery.
-            </ExplainerBody>
-          </ExplainerText>
-        </ExplainerItem>
-      </ExplainerList>
-    </ExplainerCard>
-  )
 }
 
 /* ─── Component ─── */
@@ -640,9 +645,9 @@ interface CheckWalletSectionProps {
 
 /**
  * Check-wallet card v2 (DEV-769): search a wallet — or land with the
- * connected one pre-searched — and see what the round paid it. Desktop is
- * always two cards (lookup + result) so the layout footprint never changes;
- * mobile stacks them and drops the explainer card in the empty state.
+ * connected one pre-searched — and see what the round paid it. One card:
+ * lookup + identity on the left, "This wallet reward" panel on the right.
+ * Mobile stacks them and drops the explainer panel in the empty state.
  */
 export function CheckWalletSection({
   round,
@@ -672,28 +677,15 @@ export function CheckWalletSection({
     void openWalletModal()
   }
 
-  const status = statusContent(view, round)
-
   return (
-    <SectionGrid aria-label="Check a wallet" data-testid="check-wallet-section">
-      <Card>
-        <CardHeader>
-          <Eyebrow>Check a wallet</Eyebrow>
-          <CardTitle>
-            {view.kind === 'empty'
-              ? 'Check your own wallet'
-              : 'See what this round paid a wallet'}
-          </CardTitle>
-          {view.kind === 'empty' ? (
-            <CardBody>
-              Connect your wallet, or search any ENS name or 0x address, to see
-              what it earned this round.
-            </CardBody>
-          ) : null}
-        </CardHeader>
-
-        <SearchBlock>
-          <SearchRow>
+    <SectionCard aria-label="Check a wallet" data-testid="check-wallet-section">
+      <LookupColumn>
+        <HeaderBlock>
+          <TitleGroup>
+            <Eyebrow>Check a wallet</Eyebrow>
+            <CardTitle>See what this round paid an address</CardTitle>
+          </TitleGroup>
+          <SearchBlock>
             <SearchInputWrap>
               <SearchIcon aria-hidden>
                 <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -701,7 +693,7 @@ export function CheckWalletSection({
               <SearchInput
                 type="text"
                 aria-label="Search by ENS name or address"
-                placeholder="Search by ENS name or 0x address…"
+                placeholder="Search an address or ENS name"
                 value={addressInput}
                 $hasError={Boolean(error)}
                 onChange={(event) => onInputChange(event.target.value)}
@@ -710,131 +702,160 @@ export function CheckWalletSection({
                 }}
               />
             </SearchInputWrap>
-            <Button
-              size="small"
-              width="max"
-              colorStyle="bluePrimary"
-              onClick={() => onSubmit()}
-              prefix={<FontAwesomeIcon icon={faMagnifyingGlass} />}
-            >
-              Search
-            </Button>
-            {addressInput || activeAddress ? (
-              <Button
-                size="small"
-                width="max"
-                colorStyle="blueSecondary"
-                onClick={onClear}
-                prefix={<FontAwesomeIcon icon={faXmark} />}
-              >
+            <ButtonRow>
+              <SearchButton type="button" onClick={() => onSubmit()}>
+                <FontAwesomeIcon icon={faMagnifyingGlass} />
+                Search
+              </SearchButton>
+              <ClearButton type="button" onClick={onClear}>
                 Clear
-              </Button>
-            ) : null}
-          </SearchRow>
+              </ClearButton>
+            </ButtonRow>
+          </SearchBlock>
           {error ? <InputError role="alert">{error}</InputError> : null}
-        </SearchBlock>
+        </HeaderBlock>
 
-        {view.kind === 'empty' ? (
-          <EmptyAction>
-            <OrDivider>or</OrDivider>
-            <Button
-              size="small"
-              width="max"
-              colorStyle="blueSecondary"
-              onClick={handleUseConnected}
-              prefix={<FontAwesomeIcon icon={faWallet} />}
-            >
-              Use my connected wallet
-            </Button>
-          </EmptyAction>
-        ) : (
-          <>
-            <IdentityRow data-testid="check-wallet-identity">
+        <IdentityPanel data-testid="check-wallet-identity">
+          {view.kind === 'empty' ? (
+            <>
+              <EmptyAvatarCircle aria-hidden>
+                <FontAwesomeIcon icon={faUser} />
+              </EmptyAvatarCircle>
+              <IdentityText>
+                <IdentityHint>
+                  Search an address or ENS name above to see what it earned
+                  this round
+                </IdentityHint>
+                <ConnectedWalletTag type="button" onClick={handleUseConnected}>
+                  <FontAwesomeIcon icon={faWallet} />
+                  Use my connected wallet
+                </ConnectedWalletTag>
+              </IdentityText>
+            </>
+          ) : (
+            <>
               <EnsAvatar
                 address={activeAddress}
                 name={displayName ?? undefined}
-                size={32}
+                size={56}
                 resolveName={false}
               />
               <IdentityText>
                 <IdentityName>
                   {displayName ?? truncateAddress(activeAddress)}
                 </IdentityName>
-                {displayName ? (
-                  <IdentitySub>{truncateAddress(activeAddress)}</IdentitySub>
+                {isOwnWallet ? (
+                  <TagPill>
+                    <FontAwesomeIcon icon={faWallet} />
+                    Inspecting your wallet
+                  </TagPill>
                 ) : null}
               </IdentityText>
-              {isOwnWallet ? (
-                <YourWalletPill>
-                  <FontAwesomeIcon icon={faWallet} />
-                  Your wallet
-                </YourWalletPill>
-              ) : null}
-            </IdentityRow>
-            {status ? (
-              <StatusStrip
-                $tone={status.tone}
-                role="status"
-                data-testid="check-wallet-status"
-              >
-                <StatusIcon $tone={status.tone} aria-hidden>
-                  <FontAwesomeIcon icon={status.icon} />
-                </StatusIcon>
-                <StatusText>
-                  <StatusTitle $tone={status.tone}>{status.title}</StatusTitle>
-                  <StatusBody>{status.body}</StatusBody>
-                </StatusText>
-              </StatusStrip>
-            ) : null}
-          </>
-        )}
-      </Card>
+            </>
+          )}
+        </IdentityPanel>
+      </LookupColumn>
 
       {view.kind === 'earned' ? (
-        <Card data-testid="check-wallet-breakdown">
-          <CardHeader>
-            <CardTitle>Reward breakdown</CardTitle>
-          </CardHeader>
-          <BreakdownList>
+        <ResultPanel $earned data-testid="check-wallet-breakdown">
+          <PanelHeadGroup>
+            <PanelHeading>This wallet reward</PanelHeading>
+            <PanelValue $earned data-testid="check-wallet-reward-value">
+              {formatEnsFixed(view.totalEns)} ENS <span aria-hidden>🎉</span>
+            </PanelValue>
+          </PanelHeadGroup>
+          <PanelList>
+            <PanelListTitle>Reward breakdown</PanelListTitle>
             {view.rows.map((row) => (
-              <BreakdownRow key={row.key}>
-                <RowLabel>{row.label}</RowLabel>
-                <RowValue>{formatEnsFixed(row.amountEns)} ENS</RowValue>
-              </BreakdownRow>
+              <RoleRow key={row.key}>
+                <Dot $color={DOT_COLOR[row.key]} aria-hidden />
+                <RoleLabel>{row.label}</RoleLabel>
+                <RoleValue>{formatEnsFixed(row.amountEns)} ENS</RoleValue>
+              </RoleRow>
             ))}
+            <Divider aria-hidden />
             <TotalRow>
-              <TotalLabel>Total</TotalLabel>
-              <TotalValue>{formatEnsFixed(view.totalEns)} ENS</TotalValue>
+              <TotalLabel>Total earned</TotalLabel>
+              <TotalValue data-testid="check-wallet-total-value">
+                {formatEnsFixed(view.totalEns)} ENS
+              </TotalValue>
             </TotalRow>
-          </BreakdownList>
-        </Card>
+          </PanelList>
+        </ResultPanel>
       ) : view.kind === 'lottery-lost' ? (
-        <Card data-testid="check-wallet-lottery-entry">
-          <CardHeader>
-            <CardTitle>Your lottery entry</CardTitle>
-          </CardHeader>
-          <BreakdownList>
-            <BreakdownRow>
-              <RowLabel>Entry</RowLabel>
-              <RowValue>{formatEnsFixed(view.entry.entryAmountEns)} ENS</RowValue>
-            </BreakdownRow>
-            <BreakdownRow>
-              <RowLabel>Pool</RowLabel>
-              <RowValue>Pool #{view.entry.poolNumber}</RowValue>
-            </BreakdownRow>
-            <BreakdownRow>
-              <RowLabel>Winning odds</RowLabel>
-              <RowValue>{view.entry.oddsPct}%</RowValue>
-            </BreakdownRow>
-            <BreakdownRow>
-              <RowLabel>Pool prize</RowLabel>
-              <RowValue>{formatEnsFixed(view.entry.poolPrizeEns)} ENS</RowValue>
-            </BreakdownRow>
-          </BreakdownList>
-        </Card>
+        <ResultPanel $earned={false} data-testid="check-wallet-lottery-entry">
+          <PanelHeadGroup>
+            <PanelHeading>This wallet reward</PanelHeading>
+            <PanelValue $earned={false} data-testid="check-wallet-reward-value">
+              0 ENS
+            </PanelValue>
+            <PanelSub>
+              Entered the lottery with {view.entry.oddsPct}% odds, didn&apos;t
+              win this round.
+            </PanelSub>
+          </PanelHeadGroup>
+          <PanelList>
+            <PanelListTitle>Your lottery entry</PanelListTitle>
+            <RoleRow>
+              <Dot $color={tokens.color.green} aria-hidden />
+              <RoleLabel>As token holder</RoleLabel>
+              <RoleValue>{formatEnsFixed(view.entry.entryAmountEns)} ENS</RoleValue>
+            </RoleRow>
+            <Divider aria-hidden />
+            <TotalRow>
+              <TotalLabel>Entry total</TotalLabel>
+              <TotalValue>{formatEnsFixed(view.entry.entryAmountEns)} ENS</TotalValue>
+            </TotalRow>
+          </PanelList>
+        </ResultPanel>
+      ) : view.kind === 'no-reward' ? (
+        <ResultPanel $earned={false} data-testid="check-wallet-no-reward">
+          <PanelHeadGroup>
+            <PanelHeading>This wallet reward</PanelHeading>
+            <PanelValue $earned={false} data-testid="check-wallet-reward-value">
+              0 ENS
+            </PanelValue>
+          </PanelHeadGroup>
+          <PanelListTitle>No reward this round</PanelListTitle>
+        </ResultPanel>
+      ) : view.kind === 'pending' ? (
+        <ResultPanel $earned={false} data-testid="check-wallet-pending">
+          <PanelHeadGroup>
+            <PanelHeading>This wallet reward</PanelHeading>
+            <PanelValue $earned={false} data-testid="check-wallet-reward-value">
+              —
+            </PanelValue>
+            <PanelSub>This round hasn’t finished yet.</PanelSub>
+          </PanelHeadGroup>
+          <PanelListTitle>
+            Round {round.roundNumber} is still {round.status}. Results show up
+            the moment it closes.
+          </PanelListTitle>
+        </ResultPanel>
       ) : (
-        <TwoWaysExplainer hideOnMobile={view.kind === 'empty'} />
+        <ResultPanel
+          $earned={false}
+          $hideOnMobile
+          data-testid="check-wallet-explainer"
+        >
+          <ExplainerTop>
+            <PanelHeading>Two ways a wallet earns</PanelHeading>
+            <PanelList>
+              <RoleRow>
+                <Dot $color={tokens.color.blue} aria-hidden />
+                <RoleLabel>As a delegate, for voting on proposals</RoleLabel>
+              </RoleRow>
+              <RoleRow>
+                <Dot $color={tokens.color.green} aria-hidden />
+                <RoleLabel>
+                  As a token holder, for delegating to an active voter
+                </RoleLabel>
+              </RoleRow>
+            </PanelList>
+          </ExplainerTop>
+          <ExplainerFootnote>Search a wallet to see its split.</ExplainerFootnote>
+        </ResultPanel>
       )}
-    </SectionGrid>
+    </SectionCard>
   )
 }
