@@ -8,8 +8,13 @@ import { Button } from '@ensdomains/thorin'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
+import { DelegationEligibilityModal } from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
-import { useRelayerBalance } from '@/features/delegate/hooks/useGaslessRelayer'
+import {
+  useGasSponsorshipBalanceStatus,
+  useRelayerBalance,
+} from '@/features/delegate/hooks/useGaslessRelayer'
+import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { truncateAddress } from '@/utils/format'
 import { contracts } from '@/config/contracts'
@@ -281,6 +286,7 @@ export function VoterCard({
 }: VoterCardProps) {
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
+  const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false)
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
@@ -296,12 +302,26 @@ export function VoterCard({
   }, [voter.address, localResolved, onEnsResolved])
 
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
+  const connectedAddress =
+    walletState.status !== 'disconnected' ? walletState.address : undefined
+  const { status: sponsorshipStatus } =
+    useGasSponsorshipBalanceStatus(connectedAddress)
   const ensName = voter.ensName ?? resolvedEnsName ?? localResolved ?? null
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
 
   const handleDelegate = () => {
-    if (walletState.status === 'disconnected') return
+    if (walletState.status === 'disconnected') {
+      void openWalletModal()
+      return
+    }
+    if (
+      sponsorshipStatus === 'no-ens' ||
+      sponsorshipStatus === 'below-minimum'
+    ) {
+      setEligibilityModalOpen(true)
+      return
+    }
     setModalOpen(true)
   }
 
@@ -368,6 +388,17 @@ export function VoterCard({
           </ProfileLink>
         </ActionsBlock>
       </StyledCard>
+      {eligibilityModalOpen && (
+        <DelegationEligibilityModal
+          open
+          reason={sponsorshipStatus === 'no-ens' ? 'no-ens' : 'below-minimum'}
+          onClose={() => setEligibilityModalOpen(false)}
+          onDelegateAnyway={() => {
+            setEligibilityModalOpen(false)
+            setModalOpen(true)
+          }}
+        />
+      )}
       {modalOpen && (
         <DelegationModal
           open
