@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { applyCapRedistribution } from "../../src/cap-redistribution.js";
+import {
+  applyCapRedistribution,
+  applyCapRedistributionDetailed,
+} from "../../src/cap-redistribution.js";
 import type { Address, Wei, RewardAllocation } from "../../src/types.js";
 import { wei } from "../../src/types.js";
 
@@ -345,5 +348,142 @@ describe("applyCapRedistribution", () => {
     expect(byAddr.get("0xaaaa")).toBe(200n);
     expect(byAddr.get("0xbbbb")).toBe(0n);
     expect(totalRewards(result)).toBe(200n);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Detailed provenance variant
+// ---------------------------------------------------------------------------
+describe("applyCapRedistributionDetailed", () => {
+  it("reports reached_cap, received_redistribution, and not_affected", () => {
+    // 0xcccc (700) exceeds cap 400 -> capped, excess 300 redistributed by
+    // weight to 0xaaaa (+100) and 0xbbbb (+200). Neither exceeds the cap
+    // afterwards (200 and 400 == cap, not >).
+    const allocations = [
+      alloc("0xaaaa", 100n * ENS),
+      alloc("0xbbbb", 200n * ENS),
+      alloc("0xcccc", 700n * ENS),
+    ];
+    const weights = new Map<Address, Wei>([
+      ["0xaaaa", wei(100n * ENS)],
+      ["0xbbbb", wei(200n * ENS)],
+      ["0xcccc", wei(700n * ENS)],
+    ]);
+    const cap = wei(400n * ENS);
+    const totalPool = wei(1000n * ENS);
+
+    const { allocations: result, details } = applyCapRedistributionDetailed(
+      allocations,
+      weights,
+      cap,
+      totalPool,
+    );
+
+    expect(result).toHaveLength(3);
+    expect(totalRewards(result)).toBe(1000n * ENS);
+
+    const capped = details.get("0xcccc")!;
+    expect(capped.capStatus).toBe("reached_cap");
+    expect(capped.rawReward).toBe(700n * ENS);
+    expect(capped.finalReward).toBe(400n * ENS);
+    expect(capped.redistributionReceived).toBe(0n);
+
+    const receiverA = details.get("0xaaaa")!;
+    expect(receiverA.capStatus).toBe("received_redistribution");
+    expect(receiverA.rawReward).toBe(100n * ENS);
+    expect(receiverA.finalReward).toBe(200n * ENS);
+    expect(receiverA.redistributionReceived).toBe(100n * ENS);
+
+    const receiverB = details.get("0xbbbb")!;
+    expect(receiverB.capStatus).toBe("received_redistribution");
+    expect(receiverB.rawReward).toBe(200n * ENS);
+    expect(receiverB.finalReward).toBe(400n * ENS);
+    expect(receiverB.redistributionReceived).toBe(200n * ENS);
+  });
+
+  it("marks untouched allocations as not_affected with zero redistribution", () => {
+    const allocations = [
+      alloc("0xaaaa", 100n * ENS),
+      alloc("0xbbbb", 200n * ENS),
+    ];
+    const weights = new Map<Address, Wei>([
+      ["0xaaaa", wei(100n * ENS)],
+      ["0xbbbb", wei(200n * ENS)],
+    ]);
+    const cap = wei(500n * ENS);
+    const totalPool = wei(300n * ENS);
+
+    const { details } = applyCapRedistributionDetailed(
+      allocations,
+      weights,
+      cap,
+      totalPool,
+    );
+
+    for (const address of ["0xaaaa", "0xbbbb"] as Address[]) {
+      const detail = details.get(address)!;
+      expect(detail.capStatus).toBe("not_affected");
+      expect(detail.redistributionReceived).toBe(0n);
+      expect(detail.finalReward).toBe(detail.rawReward);
+    }
+  });
+
+  it("reports reached_cap for wallets capped after receiving redistribution", () => {
+    // 0xcccc (900) capped at 300 -> excess 600 split between 0xaaaa/0xbbbb,
+    // pushing 0xbbbb (100 + 400 = 500) over the cap -> capped too.
+    const allocations = [
+      alloc("0xaaaa", 50n * ENS),
+      alloc("0xbbbb", 100n * ENS),
+      alloc("0xcccc", 900n * ENS),
+    ];
+    const weights = new Map<Address, Wei>([
+      ["0xaaaa", wei(50n * ENS)],
+      ["0xbbbb", wei(100n * ENS)],
+      ["0xcccc", wei(900n * ENS)],
+    ]);
+    const cap = wei(300n * ENS);
+    const totalPool = wei(1050n * ENS);
+
+    const { details } = applyCapRedistributionDetailed(
+      allocations,
+      weights,
+      cap,
+      totalPool,
+    );
+
+    const cappedLate = details.get("0xbbbb")!;
+    expect(cappedLate.capStatus).toBe("reached_cap");
+    expect(cappedLate.finalReward).toBe(300n * ENS);
+    // Per contract, redistributionReceived is "0" unless the wallet's final
+    // status is received_redistribution.
+    expect(cappedLate.redistributionReceived).toBe(0n);
+  });
+
+  it("does not count rounding dust as redistribution", () => {
+    // No one hits the cap; dust from the pool goes to the largest
+    // allocation but must not flip its capStatus.
+    const allocations = [
+      alloc("0xaaaa", 333n),
+      alloc("0xbbbb", 666n),
+    ];
+    const weights = new Map<Address, Wei>([
+      ["0xaaaa", wei(333n)],
+      ["0xbbbb", wei(666n)],
+    ]);
+    const cap = wei(10_000n);
+    const totalPool = wei(1000n); // dust = 1
+
+    const { allocations: result, details } = applyCapRedistributionDetailed(
+      allocations,
+      weights,
+      cap,
+      totalPool,
+    );
+
+    expect(totalRewards(result)).toBe(1000n);
+    const dustRecipient = details.get("0xbbbb")!;
+    expect(dustRecipient.finalReward).toBe(667n);
+    expect(dustRecipient.capStatus).toBe("not_affected");
+    expect(dustRecipient.redistributionReceived).toBe(0n);
   });
 });

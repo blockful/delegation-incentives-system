@@ -1107,6 +1107,216 @@
                         },
                         "totalRewardEns": {
                           "type": "string"
+                        },
+                        "provenance": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "voter": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "avgVotingPower": {
+                                  "type": "string",
+                                  "description": "Time-weighted average voting power (TWAP) over the round month, in Wei.",
+                                  "example": "1234560000000000000000"
+                                },
+                                "avgVotingPowerEns": {
+                                  "type": "string",
+                                  "description": "avgVotingPower formatted in ENS (18 decimals).",
+                                  "example": "1234.560000000000000000"
+                                },
+                                "poolSharePct": {
+                                  "type": "string",
+                                  "description": "Share of the voter pool, percent string with 2 decimals (style: vpGrowthPct).",
+                                  "example": "3.21"
+                                },
+                                "rawReward": {
+                                  "type": "string",
+                                  "description": "Pre-cap pro-rata allocation, in Wei.",
+                                  "example": "15100000000000000000"
+                                },
+                                "rawRewardEns": {
+                                  "type": "string",
+                                  "description": "rawReward formatted in ENS (18 decimals).",
+                                  "example": "15.100000000000000000"
+                                },
+                                "finalReward": {
+                                  "type": "string",
+                                  "description": "Post-cap allocation, in Wei. Equals voterReward.",
+                                  "example": "12400000000000000000"
+                                },
+                                "finalRewardEns": {
+                                  "type": "string",
+                                  "description": "finalReward formatted in ENS (18 decimals).",
+                                  "example": "12.400000000000000000"
+                                },
+                                "cap": {
+                                  "type": "string",
+                                  "description": "Resolved per-voter cap for the round (1% of the pool), in Wei.",
+                                  "example": "250000000000000000000"
+                                },
+                                "capEns": {
+                                  "type": "string",
+                                  "description": "cap formatted in ENS (18 decimals).",
+                                  "example": "250.000000000000000000"
+                                },
+                                "capStatus": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_affected",
+                                    "received_redistribution",
+                                    "reached_cap"
+                                  ],
+                                  "description": "How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).",
+                                  "example": "not_affected"
+                                },
+                                "redistributionReceived": {
+                                  "type": "string",
+                                  "description": "Excess received from capped wallets, in Wei. \"0\" unless capStatus is received_redistribution.",
+                                  "example": "0"
+                                },
+                                "redistributionReceivedEns": {
+                                  "type": "string",
+                                  "description": "redistributionReceived formatted in ENS (18 decimals).",
+                                  "example": "0.000000000000000000"
+                                }
+                              },
+                              "required": [
+                                "avgVotingPower",
+                                "avgVotingPowerEns",
+                                "poolSharePct",
+                                "rawReward",
+                                "rawRewardEns",
+                                "finalReward",
+                                "finalRewardEns",
+                                "cap",
+                                "capEns",
+                                "capStatus",
+                                "redistributionReceived",
+                                "redistributionReceivedEns"
+                              ],
+                              "description": "Delegate (voter) reward provenance. Null when the wallet earned no voter reward."
+                            },
+                            "tokenHolder": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "avgBalance": {
+                                  "type": "string",
+                                  "description": "Time-weighted ENS balance (TWB) over the trailing 180-day window, in Wei.",
+                                  "example": "1234560000000000000000"
+                                },
+                                "avgBalanceEns": {
+                                  "type": "string",
+                                  "description": "avgBalance formatted in ENS (18 decimals).",
+                                  "example": "1234.560000000000000000"
+                                },
+                                "poolSharePct": {
+                                  "type": "string",
+                                  "description": "Share of the token-holder pool, percent string with 2 decimals (style: vpGrowthPct).",
+                                  "example": "3.21"
+                                },
+                                "rawReward": {
+                                  "type": "string",
+                                  "description": "Pre-cap pro-rata allocation, in Wei.",
+                                  "example": "15100000000000000000"
+                                },
+                                "rawRewardEns": {
+                                  "type": "string",
+                                  "description": "rawReward formatted in ENS (18 decimals).",
+                                  "example": "15.100000000000000000"
+                                },
+                                "finalReward": {
+                                  "type": "string",
+                                  "description": "Post-cap allocation, in Wei. Equals tokenHolderReward.",
+                                  "example": "12400000000000000000"
+                                },
+                                "finalRewardEns": {
+                                  "type": "string",
+                                  "description": "finalReward formatted in ENS (18 decimals).",
+                                  "example": "12.400000000000000000"
+                                },
+                                "cap": {
+                                  "type": "string",
+                                  "description": "Resolved per-token-holder cap for the round (5% of the pool), in Wei.",
+                                  "example": "250000000000000000000"
+                                },
+                                "capEns": {
+                                  "type": "string",
+                                  "description": "cap formatted in ENS (18 decimals).",
+                                  "example": "250.000000000000000000"
+                                },
+                                "capStatus": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_affected",
+                                    "received_redistribution",
+                                    "reached_cap"
+                                  ],
+                                  "description": "How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).",
+                                  "example": "not_affected"
+                                },
+                                "redistributionReceived": {
+                                  "type": "string",
+                                  "description": "Excess received from capped wallets, in Wei. \"0\" unless capStatus is received_redistribution.",
+                                  "example": "0"
+                                },
+                                "redistributionReceivedEns": {
+                                  "type": "string",
+                                  "description": "redistributionReceived formatted in ENS (18 decimals).",
+                                  "example": "0.000000000000000000"
+                                },
+                                "sources": {
+                                  "type": [
+                                    "array",
+                                    "null"
+                                  ],
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "direct",
+                                      "multidelegate",
+                                      "hedgey"
+                                    ]
+                                  },
+                                  "description": "Deduplicated holding kinds backing the consolidated balance. Null when the round's stored data does not track sources.",
+                                  "example": [
+                                    "direct",
+                                    "multidelegate",
+                                    "hedgey"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "avgBalance",
+                                "avgBalanceEns",
+                                "poolSharePct",
+                                "rawReward",
+                                "rawRewardEns",
+                                "finalReward",
+                                "finalRewardEns",
+                                "cap",
+                                "capEns",
+                                "capStatus",
+                                "redistributionReceived",
+                                "redistributionReceivedEns",
+                                "sources"
+                              ],
+                              "description": "Token-holder reward provenance. Null when the wallet earned no token-holder reward."
+                            }
+                          },
+                          "required": [
+                            "voter",
+                            "tokenHolder"
+                          ],
+                          "description": "Per-wallet allocation provenance (averages, pool share, pre-cap allocation, cap redistribution). Null for rounds whose persisted result predates provenance tracking (never recomputed) and for rewardStatus pending/unavailable/not_eligible. Lottery winnings carry no provenance — seed and odds live in the lottery payload."
                         }
                       },
                       "required": [
@@ -1119,7 +1329,8 @@
                         "lotteryReward",
                         "lotteryRewardEns",
                         "totalReward",
-                        "totalRewardEns"
+                        "totalRewardEns",
+                        "provenance"
                       ]
                     },
                     "topVoterRewards": {
@@ -1765,6 +1976,216 @@
                         },
                         "totalRewardEns": {
                           "type": "string"
+                        },
+                        "provenance": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "voter": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "avgVotingPower": {
+                                  "type": "string",
+                                  "description": "Time-weighted average voting power (TWAP) over the round month, in Wei.",
+                                  "example": "1234560000000000000000"
+                                },
+                                "avgVotingPowerEns": {
+                                  "type": "string",
+                                  "description": "avgVotingPower formatted in ENS (18 decimals).",
+                                  "example": "1234.560000000000000000"
+                                },
+                                "poolSharePct": {
+                                  "type": "string",
+                                  "description": "Share of the voter pool, percent string with 2 decimals (style: vpGrowthPct).",
+                                  "example": "3.21"
+                                },
+                                "rawReward": {
+                                  "type": "string",
+                                  "description": "Pre-cap pro-rata allocation, in Wei.",
+                                  "example": "15100000000000000000"
+                                },
+                                "rawRewardEns": {
+                                  "type": "string",
+                                  "description": "rawReward formatted in ENS (18 decimals).",
+                                  "example": "15.100000000000000000"
+                                },
+                                "finalReward": {
+                                  "type": "string",
+                                  "description": "Post-cap allocation, in Wei. Equals voterReward.",
+                                  "example": "12400000000000000000"
+                                },
+                                "finalRewardEns": {
+                                  "type": "string",
+                                  "description": "finalReward formatted in ENS (18 decimals).",
+                                  "example": "12.400000000000000000"
+                                },
+                                "cap": {
+                                  "type": "string",
+                                  "description": "Resolved per-voter cap for the round (1% of the pool), in Wei.",
+                                  "example": "250000000000000000000"
+                                },
+                                "capEns": {
+                                  "type": "string",
+                                  "description": "cap formatted in ENS (18 decimals).",
+                                  "example": "250.000000000000000000"
+                                },
+                                "capStatus": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_affected",
+                                    "received_redistribution",
+                                    "reached_cap"
+                                  ],
+                                  "description": "How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).",
+                                  "example": "not_affected"
+                                },
+                                "redistributionReceived": {
+                                  "type": "string",
+                                  "description": "Excess received from capped wallets, in Wei. \"0\" unless capStatus is received_redistribution.",
+                                  "example": "0"
+                                },
+                                "redistributionReceivedEns": {
+                                  "type": "string",
+                                  "description": "redistributionReceived formatted in ENS (18 decimals).",
+                                  "example": "0.000000000000000000"
+                                }
+                              },
+                              "required": [
+                                "avgVotingPower",
+                                "avgVotingPowerEns",
+                                "poolSharePct",
+                                "rawReward",
+                                "rawRewardEns",
+                                "finalReward",
+                                "finalRewardEns",
+                                "cap",
+                                "capEns",
+                                "capStatus",
+                                "redistributionReceived",
+                                "redistributionReceivedEns"
+                              ],
+                              "description": "Delegate (voter) reward provenance. Null when the wallet earned no voter reward."
+                            },
+                            "tokenHolder": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "avgBalance": {
+                                  "type": "string",
+                                  "description": "Time-weighted ENS balance (TWB) over the trailing 180-day window, in Wei.",
+                                  "example": "1234560000000000000000"
+                                },
+                                "avgBalanceEns": {
+                                  "type": "string",
+                                  "description": "avgBalance formatted in ENS (18 decimals).",
+                                  "example": "1234.560000000000000000"
+                                },
+                                "poolSharePct": {
+                                  "type": "string",
+                                  "description": "Share of the token-holder pool, percent string with 2 decimals (style: vpGrowthPct).",
+                                  "example": "3.21"
+                                },
+                                "rawReward": {
+                                  "type": "string",
+                                  "description": "Pre-cap pro-rata allocation, in Wei.",
+                                  "example": "15100000000000000000"
+                                },
+                                "rawRewardEns": {
+                                  "type": "string",
+                                  "description": "rawReward formatted in ENS (18 decimals).",
+                                  "example": "15.100000000000000000"
+                                },
+                                "finalReward": {
+                                  "type": "string",
+                                  "description": "Post-cap allocation, in Wei. Equals tokenHolderReward.",
+                                  "example": "12400000000000000000"
+                                },
+                                "finalRewardEns": {
+                                  "type": "string",
+                                  "description": "finalReward formatted in ENS (18 decimals).",
+                                  "example": "12.400000000000000000"
+                                },
+                                "cap": {
+                                  "type": "string",
+                                  "description": "Resolved per-token-holder cap for the round (5% of the pool), in Wei.",
+                                  "example": "250000000000000000000"
+                                },
+                                "capEns": {
+                                  "type": "string",
+                                  "description": "cap formatted in ENS (18 decimals).",
+                                  "example": "250.000000000000000000"
+                                },
+                                "capStatus": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_affected",
+                                    "received_redistribution",
+                                    "reached_cap"
+                                  ],
+                                  "description": "How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).",
+                                  "example": "not_affected"
+                                },
+                                "redistributionReceived": {
+                                  "type": "string",
+                                  "description": "Excess received from capped wallets, in Wei. \"0\" unless capStatus is received_redistribution.",
+                                  "example": "0"
+                                },
+                                "redistributionReceivedEns": {
+                                  "type": "string",
+                                  "description": "redistributionReceived formatted in ENS (18 decimals).",
+                                  "example": "0.000000000000000000"
+                                },
+                                "sources": {
+                                  "type": [
+                                    "array",
+                                    "null"
+                                  ],
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "direct",
+                                      "multidelegate",
+                                      "hedgey"
+                                    ]
+                                  },
+                                  "description": "Deduplicated holding kinds backing the consolidated balance. Null when the round's stored data does not track sources.",
+                                  "example": [
+                                    "direct",
+                                    "multidelegate",
+                                    "hedgey"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "avgBalance",
+                                "avgBalanceEns",
+                                "poolSharePct",
+                                "rawReward",
+                                "rawRewardEns",
+                                "finalReward",
+                                "finalRewardEns",
+                                "cap",
+                                "capEns",
+                                "capStatus",
+                                "redistributionReceived",
+                                "redistributionReceivedEns",
+                                "sources"
+                              ],
+                              "description": "Token-holder reward provenance. Null when the wallet earned no token-holder reward."
+                            }
+                          },
+                          "required": [
+                            "voter",
+                            "tokenHolder"
+                          ],
+                          "description": "Per-wallet allocation provenance (averages, pool share, pre-cap allocation, cap redistribution). Null for rounds whose persisted result predates provenance tracking (never recomputed) and for rewardStatus pending/unavailable/not_eligible. Lottery winnings carry no provenance — seed and odds live in the lottery payload."
                         }
                       },
                       "required": [
@@ -1777,7 +2198,8 @@
                         "lotteryReward",
                         "lotteryRewardEns",
                         "totalReward",
-                        "totalRewardEns"
+                        "totalRewardEns",
+                        "provenance"
                       ]
                     },
                     "topVoterRewards": {

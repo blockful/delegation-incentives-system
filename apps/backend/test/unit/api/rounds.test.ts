@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDistributionsApp } from "../../../src/api/routes/distributions.js";
 import { createRoundsApp, parseRoundMonths } from "../../../src/api/routes/rounds.js";
 import type { DistributionStorageRow } from "../../../src/api/distribution-utils.js";
@@ -78,6 +78,60 @@ function makeDistributionRow(month = "2026-03"): DistributionStorageRow {
       },
     }),
   };
+}
+
+/**
+ * Distribution row matching what the pipeline writes since provenance
+ * persistence: per-role provenance on the paid reward rows.
+ */
+function makeProvenanceDistributionRow(month = "2026-03"): DistributionStorageRow {
+  const row = makeDistributionRow(month);
+  const result = JSON.parse(row.resultJson);
+
+  result.rewards = result.rewards.map((r: any) => {
+    if (r.address === ADDRESS_A) {
+      return {
+        ...r,
+        voterProvenance: {
+          avgVotingPower: ens(9_000n),
+          poolSharePct: "90.00",
+          rawReward: ens(450n),
+          capStatus: "reached_cap",
+          redistributionReceived: "0",
+        },
+      };
+    }
+    if (r.address === ADDRESS_C) {
+      return {
+        ...r,
+        tokenHolderBalance: ens(150n),
+        voterProvenance: {
+          avgVotingPower: ens(500n),
+          poolSharePct: "5.00",
+          rawReward: ens(4n),
+          capStatus: "received_redistribution",
+          redistributionReceived: ens(1n),
+        },
+        tokenHolderProvenance: {
+          poolSharePct: "1.50",
+          rawReward: ens(15n),
+          capStatus: "not_affected",
+          redistributionReceived: "0",
+          sources: ["direct", "hedgey"],
+        },
+      };
+    }
+    return r;
+  });
+
+  // Lottery-entry-only participant used for the no_reward status.
+  result.lottery.buckets[0].entries.push({
+    address: "0xdddddddddddddddddddddddddddddddddddddddd",
+    amount: ens(1n),
+    probability: "0.5",
+  });
+
+  return { ...row, resultJson: JSON.stringify(result) };
 }
 
 function makeManyRewardsDistributionRow(
@@ -417,9 +471,168 @@ describe("round reward responses", () => {
     expect(body.status).toBe("ended");
     expect(body.distributionDataStatus).toBe("missing");
     expect(body.addressReward.rewardStatus).toBe("unavailable");
+    expect(body.addressReward.provenance).toBeNull();
     expect(body.topVoterRewards).toEqual([]);
     expect(body.topTokenHolderRewards).toEqual([]);
     expect(body.lottery).toBeNull();
+  });
+
+  it("exposes persisted reward provenance on the address round reward", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const res = await makeRoundsApp([makeProvenanceDistributionRow()]).request(
+      `/rounds/1?address=${ADDRESS_C}`,
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.rewardStatus).toBe("paid");
+    expect(body.addressReward.provenance).toEqual({
+      voter: {
+        avgVotingPower: ens(500n),
+        avgVotingPowerEns: "500.000000000000000000",
+        poolSharePct: "5.00",
+        rawReward: ens(4n),
+        rawRewardEns: "4.000000000000000000",
+        finalReward: ens(5n),
+        finalRewardEns: "5.000000000000000000",
+        cap: ens(80n),
+        capEns: "80.000000000000000000",
+        capStatus: "received_redistribution",
+        redistributionReceived: ens(1n),
+        redistributionReceivedEns: "1.000000000000000000",
+      },
+      tokenHolder: {
+        avgBalance: ens(150n),
+        avgBalanceEns: "150.000000000000000000",
+        poolSharePct: "1.50",
+        rawReward: ens(15n),
+        rawRewardEns: "15.000000000000000000",
+        finalReward: ens(15n),
+        finalRewardEns: "15.000000000000000000",
+        cap: ens(400n),
+        capEns: "400.000000000000000000",
+        capStatus: "not_affected",
+        redistributionReceived: "0",
+        redistributionReceivedEns: "0.000000000000000000",
+        sources: ["direct", "hedgey"],
+      },
+    });
+  });
+
+  it("nulls the role provenance blocks a wallet did not earn", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    // ADDRESS_A only earned a voter reward.
+    const res = await makeRoundsApp([makeProvenanceDistributionRow()]).request(
+      `/rounds/1?address=${ADDRESS_A}`,
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.provenance.tokenHolder).toBeNull();
+    expect(body.addressReward.provenance.voter).toMatchObject({
+      avgVotingPower: ens(9_000n),
+      poolSharePct: "90.00",
+      capStatus: "reached_cap",
+      finalReward: ens(100n),
+      cap: ens(80n),
+    });
+  });
+
+  it("returns empty role blocks for lottery-entry-only wallets", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    // 0xdddd... participates in the lottery without winning: status
+    // no_reward, math available, but no direct reward to explain.
+    const res = await makeRoundsApp([makeProvenanceDistributionRow()]).request(
+      "/rounds/1?address=0xdddddddddddddddddddddddddddddddddddddddd",
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.rewardStatus).toBe("no_reward");
+    expect(body.addressReward.provenance).toEqual({
+      voter: null,
+      tokenHolder: null,
+    });
+  });
+
+  it("returns null provenance for unknown wallets", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const res = await makeRoundsApp([makeProvenanceDistributionRow()]).request(
+      "/rounds/1?address=0x9999999999999999999999999999999999999999",
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.rewardStatus).toBe("not_eligible");
+    expect(body.addressReward.provenance).toBeNull();
+  });
+
+  it("returns null provenance for distributions persisted before provenance tracking", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    // makeDistributionRow's fixture carries no per-reward provenance
+    // rows — exactly what blobs computed before the feature look like.
+    const res = await makeRoundsApp([makeDistributionRow()]).request(
+      `/rounds/1?address=${ADDRESS_C}`,
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.rewardStatus).toBe("paid");
+    expect(body.addressReward.provenance).toBeNull();
+  });
+
+  it("treats a malformed persisted provenance row as absent instead of failing", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const row = makeProvenanceDistributionRow();
+    const result = JSON.parse(row.resultJson);
+    const rewardC = result.rewards.find((r: any) => r.address === ADDRESS_C);
+    rewardC.voterProvenance.avgVotingPower = "not-a-bigint";
+    const corrupted = { ...row, resultJson: JSON.stringify(result) };
+
+    const res = await makeRoundsApp([corrupted]).request(
+      `/rounds/1?address=${ADDRESS_C}`,
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.addressReward.rewardStatus).toBe("paid");
+    // The corrupted voter row degrades to null; the intact holder row survives.
+    expect(body.addressReward.provenance.voter).toBeNull();
+    expect(body.addressReward.provenance.tokenHolder).not.toBeNull();
+  });
+
+  it("returns a generic 500 without echoing internal error details", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    const app = createRoundsApp({
+      getRows: async () => {
+        throw new Error("secret connection string in here");
+      },
+      getTierSnapshot: async () => ({
+        tierIndex: 0,
+        poolSizeEns: "5000.000000000000000000",
+        vpGrowthPct: "0.00",
+      }),
+      getVotingPowers: async () => new Map(),
+      now: () => new Date("2026-05-03T12:00:00.000Z"),
+    });
+    const res = await app.request("/rounds");
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(JSON.stringify(body)).not.toContain("secret connection string");
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });
 

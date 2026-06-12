@@ -39,6 +39,19 @@ export function percentageGrowthBps(before: bigint, after: bigint): bigint {
   return ((after - before) * 10_000n) / before;
 }
 
+/**
+ * Format `part / total` as a percent string with 2 decimals (e.g. "3.21"),
+ * truncating toward zero — same style as `vpGrowthPct`.
+ * Returns "0.00" when total is 0n.
+ */
+export function formatShareAsPct(part: bigint, total: bigint): string {
+  if (total === 0n) return "0.00";
+  const bps = (part * 10_000n) / total;
+  const whole = bps / 100n;
+  const frac = abs(bps % 100n);
+  return `${whole}.${frac.toString().padStart(2, "0")}`;
+}
+
 /** Absolute value of a bigint. */
 export function abs(n: bigint): bigint {
   return n < 0n ? -n : n;

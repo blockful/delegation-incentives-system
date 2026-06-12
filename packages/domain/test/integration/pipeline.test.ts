@@ -658,6 +658,58 @@ describe("runDistributionPipeline", () => {
     );
   });
 
+  it("persists per-wallet reward provenance with sources", async () => {
+    const ds = createMockDataSource();
+    const result = await runDistributionPipeline(MONTH, ds);
+
+    const rewardsByAddress = new Map(
+      result.rewards.map((reward) => [reward.address, reward]),
+    );
+
+    // Voter provenance: 3 equal voters (AVP 1000 ENS, 33.33% each). With a
+    // 500 ENS voter sub-pool and a 50 ENS cap, raw 166.66 exceeds the cap
+    // for everyone.
+    for (const voter of [voter1, voter2, voter3]) {
+      const reward = rewardsByAddress.get(voter);
+      expect(reward).toBeDefined();
+      expect((reward!.voterReward as bigint) > 0n).toBe(true);
+      const prov = reward!.voterProvenance;
+      expect(prov).toBeDefined();
+      expect(prov!.avgVotingPower).toBe(wei(1000n * ENS));
+      expect(prov!.poolSharePct).toBe("33.33");
+      expect(prov!.capStatus).toBe("reached_cap");
+      expect(reward!.voterReward).toBe(result.metadata.voterCap);
+      expect((prov!.rawReward as bigint) > (reward!.voterReward as bigint)).toBe(
+        true,
+      );
+    }
+
+    // Token-holder provenance: sources reflect where the balance came from.
+    expect(
+      rewardsByAddress.get(hedgeyBeneficiary)?.tokenHolderProvenance?.sources,
+    ).toEqual(["hedgey"]);
+    expect(
+      rewardsByAddress.get(multiHolder1)?.tokenHolderProvenance?.sources,
+    ).toEqual(["multidelegate"]);
+    // Alias primary consolidates two direct entries -> deduped to one kind.
+    expect(
+      rewardsByAddress.get(aliasPrimary)?.tokenHolderProvenance?.sources,
+    ).toEqual(["direct"]);
+
+    // Every direct payout row carries provenance for each positive role.
+    for (const reward of result.rewards) {
+      if ((reward.voterReward as bigint) > 0n) {
+        expect(reward.voterProvenance).toBeDefined();
+      }
+      if ((reward.tokenHolderReward as bigint) > 0n) {
+        expect(reward.tokenHolderProvenance).toBeDefined();
+        expect(
+          reward.tokenHolderProvenance!.sources.length,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it("multiDelegate holders appear in rewards or lottery", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);

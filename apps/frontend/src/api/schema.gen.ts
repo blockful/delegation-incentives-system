@@ -617,6 +617,146 @@ export interface paths {
                                 lotteryRewardEns: string;
                                 totalReward: string;
                                 totalRewardEns: string;
+                                /** @description Per-wallet allocation provenance (averages, pool share, pre-cap allocation, cap redistribution). Null for rounds whose persisted result predates provenance tracking (never recomputed) and for rewardStatus pending/unavailable/not_eligible. Lottery winnings carry no provenance — seed and odds live in the lottery payload. */
+                                provenance: {
+                                    /** @description Delegate (voter) reward provenance. Null when the wallet earned no voter reward. */
+                                    voter: {
+                                        /**
+                                         * @description Time-weighted average voting power (TWAP) over the round month, in Wei.
+                                         * @example 1234560000000000000000
+                                         */
+                                        avgVotingPower: string;
+                                        /**
+                                         * @description avgVotingPower formatted in ENS (18 decimals).
+                                         * @example 1234.560000000000000000
+                                         */
+                                        avgVotingPowerEns: string;
+                                        /**
+                                         * @description Share of the voter pool, percent string with 2 decimals (style: vpGrowthPct).
+                                         * @example 3.21
+                                         */
+                                        poolSharePct: string;
+                                        /**
+                                         * @description Pre-cap pro-rata allocation, in Wei.
+                                         * @example 15100000000000000000
+                                         */
+                                        rawReward: string;
+                                        /**
+                                         * @description rawReward formatted in ENS (18 decimals).
+                                         * @example 15.100000000000000000
+                                         */
+                                        rawRewardEns: string;
+                                        /**
+                                         * @description Post-cap allocation, in Wei. Equals voterReward.
+                                         * @example 12400000000000000000
+                                         */
+                                        finalReward: string;
+                                        /**
+                                         * @description finalReward formatted in ENS (18 decimals).
+                                         * @example 12.400000000000000000
+                                         */
+                                        finalRewardEns: string;
+                                        /**
+                                         * @description Resolved per-voter cap for the round (1% of the pool), in Wei.
+                                         * @example 250000000000000000000
+                                         */
+                                        cap: string;
+                                        /**
+                                         * @description cap formatted in ENS (18 decimals).
+                                         * @example 250.000000000000000000
+                                         */
+                                        capEns: string;
+                                        /**
+                                         * @description How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).
+                                         * @example not_affected
+                                         * @enum {string}
+                                         */
+                                        capStatus: "not_affected" | "received_redistribution" | "reached_cap";
+                                        /**
+                                         * @description Excess received from capped wallets, in Wei. "0" unless capStatus is received_redistribution.
+                                         * @example 0
+                                         */
+                                        redistributionReceived: string;
+                                        /**
+                                         * @description redistributionReceived formatted in ENS (18 decimals).
+                                         * @example 0.000000000000000000
+                                         */
+                                        redistributionReceivedEns: string;
+                                    } | null;
+                                    /** @description Token-holder reward provenance. Null when the wallet earned no token-holder reward. */
+                                    tokenHolder: {
+                                        /**
+                                         * @description Time-weighted ENS balance (TWB) over the trailing 180-day window, in Wei.
+                                         * @example 1234560000000000000000
+                                         */
+                                        avgBalance: string;
+                                        /**
+                                         * @description avgBalance formatted in ENS (18 decimals).
+                                         * @example 1234.560000000000000000
+                                         */
+                                        avgBalanceEns: string;
+                                        /**
+                                         * @description Share of the token-holder pool, percent string with 2 decimals (style: vpGrowthPct).
+                                         * @example 3.21
+                                         */
+                                        poolSharePct: string;
+                                        /**
+                                         * @description Pre-cap pro-rata allocation, in Wei.
+                                         * @example 15100000000000000000
+                                         */
+                                        rawReward: string;
+                                        /**
+                                         * @description rawReward formatted in ENS (18 decimals).
+                                         * @example 15.100000000000000000
+                                         */
+                                        rawRewardEns: string;
+                                        /**
+                                         * @description Post-cap allocation, in Wei. Equals tokenHolderReward.
+                                         * @example 12400000000000000000
+                                         */
+                                        finalReward: string;
+                                        /**
+                                         * @description finalReward formatted in ENS (18 decimals).
+                                         * @example 12.400000000000000000
+                                         */
+                                        finalRewardEns: string;
+                                        /**
+                                         * @description Resolved per-token-holder cap for the round (5% of the pool), in Wei.
+                                         * @example 250000000000000000000
+                                         */
+                                        cap: string;
+                                        /**
+                                         * @description cap formatted in ENS (18 decimals).
+                                         * @example 250.000000000000000000
+                                         */
+                                        capEns: string;
+                                        /**
+                                         * @description How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).
+                                         * @example not_affected
+                                         * @enum {string}
+                                         */
+                                        capStatus: "not_affected" | "received_redistribution" | "reached_cap";
+                                        /**
+                                         * @description Excess received from capped wallets, in Wei. "0" unless capStatus is received_redistribution.
+                                         * @example 0
+                                         */
+                                        redistributionReceived: string;
+                                        /**
+                                         * @description redistributionReceived formatted in ENS (18 decimals).
+                                         * @example 0.000000000000000000
+                                         */
+                                        redistributionReceivedEns: string;
+                                        /**
+                                         * @description Deduplicated holding kinds backing the consolidated balance. Null when the round's stored data does not track sources.
+                                         * @example [
+                                         *       "direct",
+                                         *       "multidelegate",
+                                         *       "hedgey"
+                                         *     ]
+                                         */
+                                        sources: ("direct" | "multidelegate" | "hedgey")[] | null;
+                                    } | null;
+                                } | null;
                             } | null;
                             topVoterRewards: {
                                 rank: number;
@@ -833,6 +973,146 @@ export interface paths {
                                 lotteryRewardEns: string;
                                 totalReward: string;
                                 totalRewardEns: string;
+                                /** @description Per-wallet allocation provenance (averages, pool share, pre-cap allocation, cap redistribution). Null for rounds whose persisted result predates provenance tracking (never recomputed) and for rewardStatus pending/unavailable/not_eligible. Lottery winnings carry no provenance — seed and odds live in the lottery payload. */
+                                provenance: {
+                                    /** @description Delegate (voter) reward provenance. Null when the wallet earned no voter reward. */
+                                    voter: {
+                                        /**
+                                         * @description Time-weighted average voting power (TWAP) over the round month, in Wei.
+                                         * @example 1234560000000000000000
+                                         */
+                                        avgVotingPower: string;
+                                        /**
+                                         * @description avgVotingPower formatted in ENS (18 decimals).
+                                         * @example 1234.560000000000000000
+                                         */
+                                        avgVotingPowerEns: string;
+                                        /**
+                                         * @description Share of the voter pool, percent string with 2 decimals (style: vpGrowthPct).
+                                         * @example 3.21
+                                         */
+                                        poolSharePct: string;
+                                        /**
+                                         * @description Pre-cap pro-rata allocation, in Wei.
+                                         * @example 15100000000000000000
+                                         */
+                                        rawReward: string;
+                                        /**
+                                         * @description rawReward formatted in ENS (18 decimals).
+                                         * @example 15.100000000000000000
+                                         */
+                                        rawRewardEns: string;
+                                        /**
+                                         * @description Post-cap allocation, in Wei. Equals voterReward.
+                                         * @example 12400000000000000000
+                                         */
+                                        finalReward: string;
+                                        /**
+                                         * @description finalReward formatted in ENS (18 decimals).
+                                         * @example 12.400000000000000000
+                                         */
+                                        finalRewardEns: string;
+                                        /**
+                                         * @description Resolved per-voter cap for the round (1% of the pool), in Wei.
+                                         * @example 250000000000000000000
+                                         */
+                                        cap: string;
+                                        /**
+                                         * @description cap formatted in ENS (18 decimals).
+                                         * @example 250.000000000000000000
+                                         */
+                                        capEns: string;
+                                        /**
+                                         * @description How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).
+                                         * @example not_affected
+                                         * @enum {string}
+                                         */
+                                        capStatus: "not_affected" | "received_redistribution" | "reached_cap";
+                                        /**
+                                         * @description Excess received from capped wallets, in Wei. "0" unless capStatus is received_redistribution.
+                                         * @example 0
+                                         */
+                                        redistributionReceived: string;
+                                        /**
+                                         * @description redistributionReceived formatted in ENS (18 decimals).
+                                         * @example 0.000000000000000000
+                                         */
+                                        redistributionReceivedEns: string;
+                                    } | null;
+                                    /** @description Token-holder reward provenance. Null when the wallet earned no token-holder reward. */
+                                    tokenHolder: {
+                                        /**
+                                         * @description Time-weighted ENS balance (TWB) over the trailing 180-day window, in Wei.
+                                         * @example 1234560000000000000000
+                                         */
+                                        avgBalance: string;
+                                        /**
+                                         * @description avgBalance formatted in ENS (18 decimals).
+                                         * @example 1234.560000000000000000
+                                         */
+                                        avgBalanceEns: string;
+                                        /**
+                                         * @description Share of the token-holder pool, percent string with 2 decimals (style: vpGrowthPct).
+                                         * @example 3.21
+                                         */
+                                        poolSharePct: string;
+                                        /**
+                                         * @description Pre-cap pro-rata allocation, in Wei.
+                                         * @example 15100000000000000000
+                                         */
+                                        rawReward: string;
+                                        /**
+                                         * @description rawReward formatted in ENS (18 decimals).
+                                         * @example 15.100000000000000000
+                                         */
+                                        rawRewardEns: string;
+                                        /**
+                                         * @description Post-cap allocation, in Wei. Equals tokenHolderReward.
+                                         * @example 12400000000000000000
+                                         */
+                                        finalReward: string;
+                                        /**
+                                         * @description finalReward formatted in ENS (18 decimals).
+                                         * @example 12.400000000000000000
+                                         */
+                                        finalRewardEns: string;
+                                        /**
+                                         * @description Resolved per-token-holder cap for the round (5% of the pool), in Wei.
+                                         * @example 250000000000000000000
+                                         */
+                                        cap: string;
+                                        /**
+                                         * @description cap formatted in ENS (18 decimals).
+                                         * @example 250.000000000000000000
+                                         */
+                                        capEns: string;
+                                        /**
+                                         * @description How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).
+                                         * @example not_affected
+                                         * @enum {string}
+                                         */
+                                        capStatus: "not_affected" | "received_redistribution" | "reached_cap";
+                                        /**
+                                         * @description Excess received from capped wallets, in Wei. "0" unless capStatus is received_redistribution.
+                                         * @example 0
+                                         */
+                                        redistributionReceived: string;
+                                        /**
+                                         * @description redistributionReceived formatted in ENS (18 decimals).
+                                         * @example 0.000000000000000000
+                                         */
+                                        redistributionReceivedEns: string;
+                                        /**
+                                         * @description Deduplicated holding kinds backing the consolidated balance. Null when the round's stored data does not track sources.
+                                         * @example [
+                                         *       "direct",
+                                         *       "multidelegate",
+                                         *       "hedgey"
+                                         *     ]
+                                         */
+                                        sources: ("direct" | "multidelegate" | "hedgey")[] | null;
+                                    } | null;
+                                } | null;
                             } | null;
                             topVoterRewards: {
                                 rank: number;

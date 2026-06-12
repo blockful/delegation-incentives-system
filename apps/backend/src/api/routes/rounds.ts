@@ -111,6 +111,127 @@ const RewardRankSchema = z.object({
   delegationCount: z.number().nullable(),
 });
 
+const CapStatusSchema = z
+  .enum(["not_affected", "received_redistribution", "reached_cap"])
+  .openapi({
+    description:
+      "How cap redistribution affected the allocation: not_affected (final equals raw pro-rata), received_redistribution (received excess from capped wallets), reached_cap (clamped at the per-wallet cap).",
+    example: "not_affected",
+  });
+
+const VoterProvenanceSchema = z.object({
+  avgVotingPower: z.string().openapi({
+    description: "Time-weighted average voting power (TWAP) over the round month, in Wei.",
+    example: "1234560000000000000000",
+  }),
+  avgVotingPowerEns: z.string().openapi({
+    description: "avgVotingPower formatted in ENS (18 decimals).",
+    example: "1234.560000000000000000",
+  }),
+  poolSharePct: z.string().openapi({
+    description: "Share of the voter pool, percent string with 2 decimals (style: vpGrowthPct).",
+    example: "3.21",
+  }),
+  rawReward: z.string().openapi({
+    description: "Pre-cap pro-rata allocation, in Wei.",
+    example: "15100000000000000000",
+  }),
+  rawRewardEns: z.string().openapi({
+    description: "rawReward formatted in ENS (18 decimals).",
+    example: "15.100000000000000000",
+  }),
+  finalReward: z.string().openapi({
+    description: "Post-cap allocation, in Wei. Equals voterReward.",
+    example: "12400000000000000000",
+  }),
+  finalRewardEns: z.string().openapi({
+    description: "finalReward formatted in ENS (18 decimals).",
+    example: "12.400000000000000000",
+  }),
+  cap: z.string().openapi({
+    description: "Resolved per-voter cap for the round (1% of the pool), in Wei.",
+    example: "250000000000000000000",
+  }),
+  capEns: z.string().openapi({
+    description: "cap formatted in ENS (18 decimals).",
+    example: "250.000000000000000000",
+  }),
+  capStatus: CapStatusSchema,
+  redistributionReceived: z.string().openapi({
+    description: 'Excess received from capped wallets, in Wei. "0" unless capStatus is received_redistribution.',
+    example: "0",
+  }),
+  redistributionReceivedEns: z.string().openapi({
+    description: "redistributionReceived formatted in ENS (18 decimals).",
+    example: "0.000000000000000000",
+  }),
+});
+
+const TokenHolderProvenanceSchema = z.object({
+  avgBalance: z.string().openapi({
+    description: "Time-weighted ENS balance (TWB) over the trailing 180-day window, in Wei.",
+    example: "1234560000000000000000",
+  }),
+  avgBalanceEns: z.string().openapi({
+    description: "avgBalance formatted in ENS (18 decimals).",
+    example: "1234.560000000000000000",
+  }),
+  poolSharePct: z.string().openapi({
+    description: "Share of the token-holder pool, percent string with 2 decimals (style: vpGrowthPct).",
+    example: "3.21",
+  }),
+  rawReward: z.string().openapi({
+    description: "Pre-cap pro-rata allocation, in Wei.",
+    example: "15100000000000000000",
+  }),
+  rawRewardEns: z.string().openapi({
+    description: "rawReward formatted in ENS (18 decimals).",
+    example: "15.100000000000000000",
+  }),
+  finalReward: z.string().openapi({
+    description: "Post-cap allocation, in Wei. Equals tokenHolderReward.",
+    example: "12400000000000000000",
+  }),
+  finalRewardEns: z.string().openapi({
+    description: "finalReward formatted in ENS (18 decimals).",
+    example: "12.400000000000000000",
+  }),
+  cap: z.string().openapi({
+    description: "Resolved per-token-holder cap for the round (5% of the pool), in Wei.",
+    example: "250000000000000000000",
+  }),
+  capEns: z.string().openapi({
+    description: "cap formatted in ENS (18 decimals).",
+    example: "250.000000000000000000",
+  }),
+  capStatus: CapStatusSchema,
+  redistributionReceived: z.string().openapi({
+    description: 'Excess received from capped wallets, in Wei. "0" unless capStatus is received_redistribution.',
+    example: "0",
+  }),
+  redistributionReceivedEns: z.string().openapi({
+    description: "redistributionReceived formatted in ENS (18 decimals).",
+    example: "0.000000000000000000",
+  }),
+  sources: z
+    .array(z.enum(["direct", "multidelegate", "hedgey"]))
+    .nullable()
+    .openapi({
+      description:
+        "Deduplicated holding kinds backing the consolidated balance. Null when the round's stored data does not track sources.",
+      example: ["direct", "multidelegate", "hedgey"],
+    }),
+});
+
+const RewardProvenanceSchema = z.object({
+  voter: VoterProvenanceSchema.nullable().openapi({
+    description: "Delegate (voter) reward provenance. Null when the wallet earned no voter reward.",
+  }),
+  tokenHolder: TokenHolderProvenanceSchema.nullable().openapi({
+    description: "Token-holder reward provenance. Null when the wallet earned no token-holder reward.",
+  }),
+});
+
 const AddressRoundRewardSchema = z.object({
   address: z.string(),
   rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
@@ -122,6 +243,10 @@ const AddressRoundRewardSchema = z.object({
   lotteryRewardEns: z.string(),
   totalReward: z.string(),
   totalRewardEns: z.string(),
+  provenance: RewardProvenanceSchema.nullable().openapi({
+    description:
+      "Per-wallet allocation provenance (averages, pool share, pre-cap allocation, cap redistribution). Null for rounds whose persisted result predates provenance tracking (never recomputed) and for rewardStatus pending/unavailable/not_eligible. Lottery winnings carry no provenance — seed and odds live in the lottery payload.",
+  }),
 });
 
 const LotteryEntrySchema = z.object({
@@ -391,8 +516,10 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         200,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      // Don't echo internals to clients — the real error goes to the
+      // function logs, which are the only place to look once this is generic.
+      console.error("rounds API error:", err);
+      return c.json({ error: "Internal server error" }, 500);
     }
   });
 
@@ -419,8 +546,10 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         200,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      // Don't echo internals to clients — the real error goes to the
+      // function logs, which are the only place to look once this is generic.
+      console.error("rounds API error:", err);
+      return c.json({ error: "Internal server error" }, 500);
     }
   });
 
@@ -487,8 +616,10 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         200,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return c.json({ error: message }, 500);
+      // Don't echo internals to clients — the real error goes to the
+      // function logs, which are the only place to look once this is generic.
+      console.error("rounds API error:", err);
+      return c.json({ error: "Internal server error" }, 500);
     }
   };
 
@@ -625,6 +756,7 @@ function buildAddressRoundReward(
       lotteryRewardEns: "0.000000000000000000",
       totalReward: "0",
       totalRewardEns: "0.000000000000000000",
+      provenance: null,
     };
   }
 
@@ -640,6 +772,7 @@ function buildAddressRoundReward(
     lotteryRewardEns: reward.lotteryRewardEns,
     totalReward: reward.totalReward,
     totalRewardEns: reward.totalRewardEns,
+    provenance: reward.provenance,
   };
 }
 

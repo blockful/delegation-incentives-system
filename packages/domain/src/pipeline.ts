@@ -7,16 +7,20 @@ import type {
   Wei,
   Seconds,
   CombinedReward,
+  TokenHolderSource,
 } from "./types.js";
 import { wei, seconds } from "./types.js";
-import { TWB_WINDOW_SECONDS, PROPOSAL_WINDOW_SIZE } from "./config.js";
+import {
+  TWB_WINDOW_SECONDS,
+  PROPOSAL_WINDOW_SIZE,
+} from "./config.js";
 import { monthStartTimestamp, monthEndTimestamp } from "./util/time.js";
 import { identifyActiveVoters } from "./active-voters.js";
 import { computeVpGrowthPct, selectPoolTier } from "./pool-sizing.js";
 import { computeTimeWeightedBalance } from "./time-weighted-balance.js";
 import { computeTWAP } from "./twap-voting-power.js";
-import { computeVoterRewards } from "./voter-rewards.js";
-import { computeTokenHolderRewards } from "./token-holder-rewards.js";
+import { computeVoterRewardsDetailed } from "./voter-rewards.js";
+import { computeTokenHolderRewardsDetailed } from "./token-holder-rewards.js";
 import {
   resolveEligibleTokenHolders,
   consolidateTokenHolders,
@@ -99,7 +103,8 @@ export async function runDistributionPipeline(
   }
 
   // ── Step 7: Allocate voter rewards ───────────────────────
-  const voterRewards = computeVoterRewards(voterAVPs, tier.poolSize);
+  const { allocations: voterRewards, provenance: voterProvenance } =
+    computeVoterRewardsDetailed(voterAVPs, tier.poolSize);
 
   // ── Step 8: Identify eligible token holders ──────────────
   const activeVotersList = [...activeVotersEnd];
@@ -162,6 +167,9 @@ export async function runDistributionPipeline(
     (monthEnd as bigint) - (TWB_WINDOW_SECONDS as bigint),
   );
   const tokenHolderTWBs = new Map<Address, Wei>();
+  // Deduplicated holding kinds per consolidated address, persisted as
+  // token-holder reward provenance ("where did this balance come from").
+  const tokenHolderSources = new Map<Address, TokenHolderSource[]>();
 
   for (const group of consolidated) {
     let totalTwb = 0n;
@@ -252,13 +260,21 @@ export async function runDistributionPipeline(
 
     if (totalTwb > 0n) {
       tokenHolderTWBs.set(group.resolvedAddress, wei(totalTwb));
+      tokenHolderSources.set(
+        group.resolvedAddress,
+        [...new Set(group.entries.map((entry) => entry.source))],
+      );
     }
   }
 
   // ── Step 11: Allocate token-holder rewards ───────────────
-  const tokenHolderRewards = computeTokenHolderRewards(
+  const {
+    allocations: tokenHolderRewards,
+    provenance: tokenHolderProvenance,
+  } = computeTokenHolderRewardsDetailed(
     tokenHolderTWBs,
     tier.poolSize,
+    tokenHolderSources,
   );
 
   // ── Step 12: Combine rewards ─────────────────────────────
@@ -266,6 +282,8 @@ export async function runDistributionPipeline(
     voterRewards,
     tokenHolderRewards,
     tokenHolderTWBs,
+    voterProvenance,
+    tokenHolderProvenance,
   );
 
   // ── Step 13: Apply threshold ─────────────────────────────

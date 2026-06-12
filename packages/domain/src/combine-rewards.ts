@@ -1,4 +1,11 @@
-import type { Address, Wei, CombinedReward, RewardAllocation } from "./types.js";
+import type {
+  Address,
+  Wei,
+  CombinedReward,
+  RewardAllocation,
+  TokenHolderRewardProvenance,
+  VoterRewardProvenance,
+} from "./types.js";
 import { wei } from "./types.js";
 import { MIN_REWARD_THRESHOLD } from "./config.js";
 
@@ -14,11 +21,20 @@ import { MIN_REWARD_THRESHOLD } from "./config.js";
  * during token-holder reward allocation. It is persisted on the output so the
  * frontend can show the *actual* tokens delegated during the round, not a
  * current-state VP snapshot.
+ *
+ * `voterProvenance` / `tokenHolderProvenance` carry per-role allocation
+ * intermediates (raw reward, pool share, cap status); when provided they are
+ * attached per address so result_json can explain each final reward.
  */
 export function combineRewards(
   voterRewards: readonly RewardAllocation[],
   tokenHolderRewards: readonly RewardAllocation[],
   tokenHolderBalances: ReadonlyMap<Address, Wei> = new Map(),
+  voterProvenance: ReadonlyMap<Address, VoterRewardProvenance> = new Map(),
+  tokenHolderProvenance: ReadonlyMap<
+    Address,
+    TokenHolderRewardProvenance
+  > = new Map(),
 ): CombinedReward[] {
   const map = new Map<
     Address,
@@ -52,12 +68,18 @@ export function combineRewards(
   const results: CombinedReward[] = [];
   for (const [address, { voterReward, tokenHolderReward }] of map) {
     const balance = tokenHolderBalances.get(address) ?? wei(0n);
+    const voterProv = voterProvenance.get(address);
+    const tokenHolderProv = tokenHolderProvenance.get(address);
     results.push({
       address,
       voterReward: wei(voterReward),
       tokenHolderReward: wei(tokenHolderReward),
       tokenHolderBalance: balance,
       total: wei(voterReward + tokenHolderReward),
+      ...(voterProv !== undefined && { voterProvenance: voterProv }),
+      ...(tokenHolderProv !== undefined && {
+        tokenHolderProvenance: tokenHolderProv,
+      }),
     });
   }
 

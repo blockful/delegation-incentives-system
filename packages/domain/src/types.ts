@@ -197,6 +197,56 @@ export interface RewardAllocation {
   readonly reward: Wei;
 }
 
+// ──────────────────────────────────────────────────────────
+// Reward provenance (per-wallet allocation intermediates)
+// ──────────────────────────────────────────────────────────
+
+/**
+ * How cap redistribution affected an allocation:
+ * - "not_affected": final reward equals the raw pro-rata allocation.
+ * - "received_redistribution": uncapped and received excess redistributed
+ *   from capped wallets.
+ * - "reached_cap": allocation hit the per-wallet cap and was clamped.
+ */
+export type CapStatus =
+  | "not_affected"
+  | "received_redistribution"
+  | "reached_cap";
+
+/**
+ * Allocation intermediates for the voter (delegate) reward of one wallet.
+ * Persisted in result_json so the API can explain how the final reward was
+ * derived without recomputing the pipeline.
+ */
+export interface VoterRewardProvenance {
+  /** Time-weighted average voting power (TWAP) over the round month, Wei. */
+  readonly avgVotingPower: Wei;
+  /** Share of the voter pool, percent string with 2 decimals (e.g. "3.21"). */
+  readonly poolSharePct: string;
+  /** Pre-cap pro-rata allocation, Wei. */
+  readonly rawReward: Wei;
+  readonly capStatus: CapStatus;
+  /** Excess received from capped wallets, Wei ("0" unless received_redistribution). */
+  readonly redistributionReceived: Wei;
+}
+
+/**
+ * Allocation intermediates for the token-holder reward of one wallet.
+ * The average balance (TWB) is already persisted as
+ * `CombinedReward.tokenHolderBalance` and is not duplicated here.
+ */
+export interface TokenHolderRewardProvenance {
+  /** Share of the token-holder pool, percent string with 2 decimals. */
+  readonly poolSharePct: string;
+  /** Pre-cap pro-rata allocation, Wei. */
+  readonly rawReward: Wei;
+  readonly capStatus: CapStatus;
+  /** Excess received from capped wallets, Wei ("0" unless received_redistribution). */
+  readonly redistributionReceived: Wei;
+  /** Deduplicated holding kinds backing the consolidated TWB. */
+  readonly sources: readonly TokenHolderSource[];
+}
+
 export interface CombinedReward {
   readonly address: Address;
   readonly voterReward: Wei;
@@ -208,6 +258,13 @@ export interface CombinedReward {
    */
   readonly tokenHolderBalance: Wei;
   readonly total: Wei;
+  /**
+   * Allocation intermediates for the voter reward. Absent on result_json
+   * blobs computed before provenance persistence.
+   */
+  readonly voterProvenance?: VoterRewardProvenance;
+  /** Allocation intermediates for the token-holder reward. Absent on old blobs. */
+  readonly tokenHolderProvenance?: TokenHolderRewardProvenance;
 }
 
 // ──────────────────────────────────────────────────────────
