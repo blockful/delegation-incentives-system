@@ -13,6 +13,7 @@ export function formatEnsWhole(value: string | number | bigint): string {
 }
 
 interface FormatEnsAmountOptions {
+  minimumFractionDigits?: number
   maximumFractionDigits?: number
   signDisplay?: 'never' | 'exceptZero'
 }
@@ -21,12 +22,13 @@ export function formatEnsAmount(
   value: string | number,
   options: FormatEnsAmountOptions = {},
 ): string {
-  const { maximumFractionDigits = 4, signDisplay = 'never' } = options
+  const { minimumFractionDigits, maximumFractionDigits = 4, signDisplay = 'never' } = options
   const numericValue = typeof value === 'number' ? value : Number(value)
 
   if (!Number.isFinite(numericValue)) return '0'
 
   const rounded = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits,
     maximumFractionDigits,
   }).format(Math.abs(numericValue))
 

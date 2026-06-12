@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { isAddress } from 'viem'
-import { useEnsName } from 'wagmi'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft,
@@ -10,7 +9,6 @@ import {
   faArrowTrendUp,
   faCircleCheck,
   faCircleInfo,
-  faUserSlash,
   faCoins,
   faDownload,
   faHourglassHalf,
@@ -18,11 +16,8 @@ import {
   faRankingStar,
   faTrophy,
 } from '@fortawesome/free-solid-svg-icons'
-import { EnsAvatar } from '@/components/shared/EnsAvatar'
-import { getAnticaptureDelegateUrl } from '@/utils/delegation'
 import { api, ApiClientError } from '@/api'
 import type {
-  RewardRank,
   RewardStatus,
   RoundDetailResponse,
   RoundStatus,
@@ -33,11 +28,11 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { useResolveEnsName } from '@/features/ens/useResolveEnsName'
 import { looksLikeEnsName } from '@/utils/ens'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
-import { formatEnsAmount, truncateAddress } from '@/utils/format'
+import { formatEnsAmount } from '@/utils/format'
 import { AddressLookupForm } from './components/AddressLookupForm'
 import { LotteryResultsSection } from './components/LotteryResultsSection'
-import { RewardSourceTag } from './components/RewardTags'
-import { formatPositiveReward, statusLabel } from './status'
+import { TopEarnersTable } from './components/TopEarnersTable'
+import { statusLabel } from './status'
 import {
   buildRoundDetailFallback,
   buildRoundListFromCurrentRound,
@@ -635,244 +630,6 @@ const AddressResultBody = styled.span`
   line-height: 1.5;
 `
 
-/* ─── Rewards table (Voter Profile pattern) ─── */
-
-const TableCard = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  border: 1px solid ${tokens.color.borderLight};
-  border-radius: 12px;
-  overflow: hidden;
-  background: ${tokens.color.surface};
-
-  @media (max-width: 767px) {
-    border: none;
-    background: transparent;
-    border-radius: 0;
-    overflow: visible;
-    gap: 12px;
-  }
-`
-
-const TableCardHeader = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.lg};
-  background: ${tokens.color.surface};
-  border-bottom: 1px solid ${tokens.color.borderLight};
-  flex-wrap: wrap;
-
-  @media (max-width: 767px) {
-    padding: 0 4px 8px;
-    background: transparent;
-    border-bottom: none;
-  }
-`
-
-const TableHeadRow = styled.div`
-  display: flex;
-  background: ${tokens.color.bgSubtle};
-  border-bottom: 1px solid ${tokens.color.borderLight};
-
-  @media (max-width: 767px) {
-    display: none;
-  }
-`
-
-const TableHeadCell = styled.div<{ $weight?: number; $align?: 'start' | 'end' }>`
-  flex: ${({ $weight }) => $weight ?? 1};
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: ${({ $align }) => ($align === 'end' ? 'flex-end' : 'flex-start')};
-  padding: 12px;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
-`
-
-const TableRow = styled.a<{ $highlighted?: boolean }>`
-  display: flex;
-  width: 100%;
-  background: ${({ $highlighted }) =>
-    $highlighted ? tokens.color.lightBlueOpacity : tokens.color.surface};
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
-
-  &:not(:last-child) {
-    border-bottom: 1px solid ${tokens.color.borderLight};
-  }
-
-  &:hover {
-    text-decoration: none;
-    background: ${tokens.color.bgSubtle};
-  }
-
-  @media (max-width: 767px) {
-    flex-direction: column;
-    padding: 16px;
-    gap: 4px;
-    border: 1px solid
-      ${({ $highlighted }) =>
-        $highlighted ? tokens.color.blue : tokens.color.borderLight};
-    border-radius: 12px;
-    background: ${({ $highlighted }) =>
-      $highlighted ? tokens.color.lightBlueOpacity : tokens.color.surface};
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-
-    &:not(:last-child) {
-      border-bottom: 1px solid
-        ${({ $highlighted }) =>
-          $highlighted ? tokens.color.blue : tokens.color.borderLight};
-    }
-  }
-`
-
-const TableCell = styled.div<{ $weight?: number; $align?: 'start' | 'end'; $primary?: boolean }>`
-  flex: ${({ $weight }) => $weight ?? 1};
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: ${({ $align }) => ($align === 'end' ? 'flex-end' : 'flex-start')};
-  gap: ${tokens.spacing.sm};
-  padding: 14px 12px;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkBlue};
-  line-height: 20px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  @media (max-width: 767px) {
-    width: 100%;
-    flex: none;
-    justify-content: space-between;
-    padding: 6px 0;
-    white-space: normal;
-    ${({ $primary }) =>
-      $primary
-        ? `
-          justify-content: flex-start;
-          font-weight: ${tokens.font.weight.bold};
-          color: ${tokens.color.darkBlue};
-          font-size: ${tokens.font.size.lg};
-          padding: 2px 0 10px;
-          margin-bottom: 4px;
-          border-bottom: 1px solid ${tokens.color.borderLight};
-        `
-        : ''}
-  }
-`
-
-const MobileLabel = styled.span`
-  display: none;
-
-  @media (max-width: 767px) {
-    display: inline-block;
-    color: ${tokens.color.darkGray};
-    font-weight: ${tokens.font.weight.medium};
-  }
-`
-
-const RankPill = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 9999px;
-  background: ${tokens.color.bgSubtle};
-  color: ${tokens.color.darkBlue};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.bold};
-  font-variant-numeric: tabular-nums;
-`
-
-const AddressText = styled.span`
-  font-variant-numeric: tabular-nums;
-  color: ${tokens.color.darkBlue};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`
-
-const VotingPowerText = styled.span`
-  color: ${tokens.color.darkBlue};
-  font-variant-numeric: tabular-nums;
-`
-
-const RewardCellRow = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  width: 100%;
-`
-
-const RewardValueText = styled.span`
-  color: ${tokens.color.positiveEmphasis};
-  font-weight: ${tokens.font.weight.bold};
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-`
-
-const EmptyTableBody = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: ${tokens.spacing['3xl']} ${tokens.spacing.xl};
-  text-align: center;
-  background: ${tokens.color.bgSubtle};
-  border-radius: 12px;
-`
-
-const EmptyTableTextStack = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-`
-
-const EmptyTableIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
-  background: ${tokens.color.borderLight};
-  color: ${tokens.color.darkGray};
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`
-
-const EmptyTableTitle = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-  line-height: 20px;
-`
-
-const EmptyTableBodyText = styled.span`
-  font-size: ${tokens.font.size.base};
-  color: ${tokens.color.darkGray};
-  line-height: 1.5;
-  max-width: 320px;
-`
-
 /* ─── Helpers ─── */
 
 function getWalletAddress(walletState: ReturnType<typeof useWalletState>): string {
@@ -920,23 +677,6 @@ function computeRoundProgress(startDate: string, endDate: string): number {
   return ((now - start) / (end - start)) * 100
 }
 
-function formatVotingPower(vpWei: string | null): string {
-  if (!vpWei) return '—'
-  const ens = Number(vpWei) / 1e18
-  if (!Number.isFinite(ens)) return '—'
-  if (ens >= 1_000_000) {
-    const m = ens / 1_000_000
-    const rounded = Math.round(m * 10) / 10
-    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}M ENS`
-  }
-  if (ens >= 1_000) {
-    const k = ens / 1_000
-    const rounded = Math.round(k * 10) / 10
-    return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}K ENS`
-  }
-  return `${formatEnsAmount(ens.toString())} ENS`
-}
-
 function formatVpGrowth(value: string | null): string {
   if (value == null) return '—'
   const n = Number(value)
@@ -950,109 +690,6 @@ function buildRoundPath(roundNumber: number, activeAddress: string, activeAddres
     ? `?address=${encodeURIComponent(activeAddress)}`
     : ''
   return `/rounds/${roundNumber}${addressQuery}`
-}
-
-/* ─── Rewards table ─── */
-
-interface RewardsTableProps {
-  rows: RewardRank[]
-  highlightAddress: string
-  showVotingPower: boolean
-}
-
-function RewardsTable({ rows, highlightAddress, showVotingPower }: RewardsTableProps) {
-  const highlightLower = highlightAddress.toLowerCase()
-
-  if (rows.length === 0) {
-    return (
-      <EmptyTableBody>
-        <EmptyTableIcon aria-hidden>
-          <FontAwesomeIcon icon={faUserSlash} />
-        </EmptyTableIcon>
-        <EmptyTableTextStack>
-          <EmptyTableTitle>No recipients in this round</EmptyTableTitle>
-          <EmptyTableBodyText>
-            Nothing got paid out here yet.<br />Check back once the round closes.
-          </EmptyTableBodyText>
-        </EmptyTableTextStack>
-      </EmptyTableBody>
-    )
-  }
-
-  return (
-    <>
-      <TableHeadRow>
-        <TableHeadCell $weight={0.6}>Rank</TableHeadCell>
-        <TableHeadCell $weight={2}>Delegate</TableHeadCell>
-        <TableHeadCell $weight={1.2} $align="end">
-          {showVotingPower ? 'Voting power' : 'Delegated amount'}
-        </TableHeadCell>
-        <TableHeadCell $weight={1.4} $align="end">Reward</TableHeadCell>
-      </TableHeadRow>
-      {rows.map((row) => (
-        <RewardsTableRow
-          key={`${row.role}-${row.rank}-${row.address}`}
-          row={row}
-          isHighlighted={
-            highlightLower !== '' && row.address.toLowerCase() === highlightLower
-          }
-          showVotingPower={showVotingPower}
-        />
-      ))}
-    </>
-  )
-}
-
-interface RewardsTableRowProps {
-  row: RewardRank
-  isHighlighted: boolean
-  showVotingPower: boolean
-}
-
-function RewardsTableRow({ row, isHighlighted, showVotingPower }: RewardsTableRowProps) {
-  const { data: resolvedName } = useEnsName({
-    address: row.address as `0x${string}`,
-    query: { enabled: !row.ensName && isAddress(row.address) },
-  })
-  const ensName = row.ensName ?? resolvedName ?? null
-  const displayName = ensName ?? truncateAddress(row.address)
-
-  return (
-    <TableRow
-      href={getAnticaptureDelegateUrl(row.address)}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`View ${displayName} on Anticapture`}
-      $highlighted={isHighlighted}
-      aria-current={isHighlighted ? 'true' : undefined}
-    >
-      <TableCell $weight={0.6}>
-        <MobileLabel>Rank</MobileLabel>
-        <RankPill>#{row.rank}</RankPill>
-      </TableCell>
-      <TableCell $weight={2} $primary>
-        <EnsAvatar
-          address={row.address}
-          name={ensName ?? undefined}
-          size={28}
-        />
-        <AddressText>{displayName}</AddressText>
-      </TableCell>
-      <TableCell $weight={1.2} $align="end">
-        <MobileLabel>{showVotingPower ? 'Voting power' : 'Delegated amount'}</MobileLabel>
-        <VotingPowerText>
-          {formatVotingPower(showVotingPower ? row.votingPower : row.tokenHolderBalance)}
-        </VotingPowerText>
-      </TableCell>
-      <TableCell $weight={1.4} $align="end">
-        <MobileLabel>Reward</MobileLabel>
-        <RewardCellRow>
-          <RewardValueText>{formatPositiveReward(row.rewardEns) ?? '—'}</RewardValueText>
-          <RewardSourceTag source={row.source} />
-        </RewardCellRow>
-      </TableCell>
-    </TableRow>
-  )
 }
 
 /* ─── Component ─── */
@@ -1077,8 +714,10 @@ export function RoundDetailPage() {
 
   const fetchRound = useCallback(async () => {
     try {
+      // 'all' so the Top earners table shows every recipient, not a top-N
+      // slice (DEV-768). Only that table consumes the reward arrays.
       return await api.round(roundNumber, activeAddressValid ? activeAddress : undefined, {
-        rewardLimit: '25',
+        rewardLimit: 'all',
       })
     } catch (error) {
       if (!isLegacyEndpointError(error)) throw error
@@ -1485,37 +1124,15 @@ export function RoundDetailPage() {
         </AddressResultStrip>
       </Section>
 
-      <TableCard>
-        <TableCardHeader>
-          <SectionLabelGroup>
-            <SectionLabel>Top voter rewards</SectionLabel>
-            <SectionTitle>Top delegates this round</SectionTitle>
-          </SectionLabelGroup>
-        </TableCardHeader>
-        <RewardsTable
-          rows={roundData.topVoterRewards}
-          highlightAddress={hasActiveAddress ? activeAddress : ''}
-          showVotingPower
-        />
-      </TableCard>
-
-      <TableCard>
-        <TableCardHeader>
-          <SectionLabelGroup>
-            <SectionLabel>Top token holder rewards</SectionLabel>
-            <SectionTitle>Top holders this round</SectionTitle>
-          </SectionLabelGroup>
-        </TableCardHeader>
-        <RewardsTable
-          rows={roundData.topTokenHolderRewards}
-          highlightAddress={hasActiveAddress ? activeAddress : ''}
-          showVotingPower={false}
-        />
-      </TableCard>
+      <TopEarnersTable
+        voterRows={roundData.topVoterRewards}
+        holderRows={roundData.topTokenHolderRewards}
+        highlightAddress={hasActiveAddress ? activeAddress : walletAddress}
+      />
 
       <LotteryResultsSection
         lottery={roundData.lottery}
-        highlightAddress={hasActiveAddress ? activeAddress : ''}
+        highlightAddress={hasActiveAddress ? activeAddress : walletAddress}
       />
     </Page>
   )

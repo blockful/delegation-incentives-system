@@ -3,6 +3,7 @@ import { HeroSection } from '../sections/HeroSection'
 import { RoundStatusBar } from '../sections/RoundStatusBar'
 import { TierTableSection } from '../sections/TierTableSection'
 import { HowItWorksSection } from '../sections/HowItWorksSection'
+import { FaqSection } from '../sections/FaqSection'
 import { CtaSection } from '../sections/CtaSection'
 
 interface ConnectedLandingProps {
@@ -25,6 +26,7 @@ export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps)
       />
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection currentAprPct={currentAprPct} />
+      <FaqSection />
       <CtaSection />
     </>
   )
