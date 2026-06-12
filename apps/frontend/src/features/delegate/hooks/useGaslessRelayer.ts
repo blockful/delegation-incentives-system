@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from "wagmi";
-import { formatUnits, zeroAddress, type Address } from "viem";
+import { formatUnits, parseUnits, zeroAddress, type Address } from "viem";
 
 import { FRONTEND_CLIENT_SOURCE, RELAYER_BASE_URL } from "../relayerClient";
 
@@ -120,6 +120,54 @@ export const useGasSponsorshipMinEns = (): string => {
     }
     return formatUnits(minVotingPower, ENS_TOKEN_DECIMALS);
   }, [minVotingPower]);
+};
+
+export type GasSponsorshipBalanceStatus =
+  | "unknown"
+  | "no-ens"
+  | "below-minimum"
+  | "meets-minimum";
+
+interface UseGasSponsorshipBalanceStatusResult {
+  status: GasSponsorshipBalanceStatus;
+  isLoading: boolean;
+}
+
+/**
+ * Where the wallet's ENS balance stands relative to the gas-sponsorship
+ * minimum. Drives the eligibility modal shown before delegating: wallets
+ * below the minimum get no sponsored gas (gas only — rewards eligibility is
+ * NOT affected) but can still delegate paying their own network fee.
+ *
+ * Unlike {@link useGaslessEligibility} this deliberately ignores relayer
+ * funding and rate limits: the balance read works even when the relayer is
+ * down, falling back to {@link DEFAULT_GAS_SPONSORSHIP_MIN_ENS} for the
+ * threshold so the modal copy stays correct.
+ */
+export const useGasSponsorshipBalanceStatus = (
+  address: Address | undefined,
+): UseGasSponsorshipBalanceStatusResult => {
+  const { minVotingPower } = useRelayerConfig();
+
+  const { data: balance, isLoading } = useReadContract({
+    address: ENS_TOKEN_ADDRESS,
+    abi: ENS_TOKEN_ABI,
+    functionName: "balanceOf",
+    args: [address ?? zeroAddress],
+    query: { enabled: !!address },
+  });
+
+  const status = useMemo<GasSponsorshipBalanceStatus>(() => {
+    if (!address || balance === undefined) return "unknown";
+    if (balance === 0n) return "no-ens";
+    const threshold =
+      minVotingPower !== null && minVotingPower > 0n
+        ? minVotingPower
+        : parseUnits(DEFAULT_GAS_SPONSORSHIP_MIN_ENS, ENS_TOKEN_DECIMALS);
+    return balance < threshold ? "below-minimum" : "meets-minimum";
+  }, [address, balance, minVotingPower]);
+
+  return { status, isLoading: !!address && isLoading };
 };
 
 interface UseGaslessEligibilityResult {

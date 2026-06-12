@@ -196,3 +196,103 @@ describe("useGaslessRelayer", () => {
     );
   });
 });
+
+describe("useGasSponsorshipBalanceStatus", () => {
+  let state: HandlerState;
+
+  beforeEach(() => {
+    vi.resetModules();
+    state = freshState();
+    installRelayerHandlers(state);
+    useReadContractMock.mockReset();
+    useReadContractMock.mockReturnValue(readContractResult());
+  });
+
+  it("no connected address: unknown, balance read disabled", async () => {
+    const { useGasSponsorshipBalanceStatus } = await import(
+      "./useGaslessRelayer"
+    );
+
+    const { result } = renderHook(
+      () => useGasSponsorshipBalanceStatus(undefined),
+      { wrapper: TestQueryProvider },
+    );
+
+    await waitFor(() =>
+      expect(result.current).toEqual({ status: "unknown", isLoading: false }),
+    );
+    expect(useReadContractMock).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { enabled: false } }),
+    );
+  });
+
+  it("zero balance: no-ens", async () => {
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }));
+
+    const { useGasSponsorshipBalanceStatus } = await import(
+      "./useGaslessRelayer"
+    );
+
+    const { result } = renderHook(
+      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
+      { wrapper: TestQueryProvider },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("no-ens"));
+  });
+
+  it("balance below the relayer minimum: below-minimum", async () => {
+    useReadContractMock.mockReturnValue(
+      readContractResult({ data: 50n * 10n ** 18n }),
+    );
+
+    const { useGasSponsorshipBalanceStatus } = await import(
+      "./useGaslessRelayer"
+    );
+
+    const { result } = renderHook(
+      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
+      { wrapper: TestQueryProvider },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("below-minimum"));
+  });
+
+  it("balance at or above the relayer minimum: meets-minimum", async () => {
+    useReadContractMock.mockReturnValue(
+      readContractResult({ data: 200n * 10n ** 18n }),
+    );
+
+    const { useGasSponsorshipBalanceStatus } = await import(
+      "./useGaslessRelayer"
+    );
+
+    const { result } = renderHook(
+      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
+      { wrapper: TestQueryProvider },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("meets-minimum"));
+  });
+
+  it("relayer unfunded: still classifies against the 100 ENS fallback", async () => {
+    state.balance = { hasEnoughBalance: false };
+    useReadContractMock.mockReturnValue(
+      readContractResult({ data: 99n * 10n ** 18n }),
+    );
+
+    const { useGasSponsorshipBalanceStatus } = await import(
+      "./useGaslessRelayer"
+    );
+
+    const { result } = renderHook(
+      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
+      { wrapper: TestQueryProvider },
+    );
+
+    // Config never loads (gated on relayer funding), so the threshold falls
+    // back to DEFAULT_GAS_SPONSORSHIP_MIN_ENS: 99 < 100.
+    await waitFor(() => expect(result.current.status).toBe("below-minimum"));
+    expect(state.configCalls).toBe(0);
+  });
+});

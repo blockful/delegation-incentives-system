@@ -27,8 +27,16 @@ import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
+import {
+  DelegationEligibilityModal,
+  type DelegationEligibilityReason,
+} from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
-import { useRelayerBalance } from '@/features/delegate/hooks/useGaslessRelayer'
+import {
+  useGasSponsorshipBalanceStatus,
+  useRelayerBalance,
+} from '@/features/delegate/hooks/useGaslessRelayer'
+import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { contracts } from '@/config/contracts'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
 import { formatEnsAmount, truncateAddress } from '@/utils/format'
@@ -730,6 +738,22 @@ export function VoterProfilePage() {
   const walletState = useWalletState()
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const [modalOpen, setModalOpen] = useState(false)
+  const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false)
+  const connectedAddress =
+    walletState.status !== 'disconnected' ? walletState.address : undefined
+  const { status: sponsorshipStatus } =
+    useGasSponsorshipBalanceStatus(connectedAddress)
+
+  // Relayer paused is global — it beats the balance-gated states because a
+  // bigger balance wouldn't unlock sponsored gas while the relayer is down.
+  const eligibilityReason: DelegationEligibilityReason | null =
+    relayerHasGas === false
+      ? 'relayer-paused'
+      : sponsorshipStatus === 'no-ens'
+        ? 'no-ens'
+        : sponsorshipStatus === 'below-minimum'
+          ? 'below-minimum'
+          : null
 
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
@@ -798,7 +822,14 @@ export function VoterProfilePage() {
   const isFullParticipation = participationPct >= 100
 
   const handleDelegate = () => {
-    if (walletState.status === 'disconnected') return
+    if (walletState.status === 'disconnected') {
+      void openWalletModal()
+      return
+    }
+    if (eligibilityReason) {
+      setEligibilityModalOpen(true)
+      return
+    }
     setModalOpen(true)
   }
 
@@ -982,6 +1013,17 @@ export function VoterProfilePage() {
         </TableCard>
       </VotingRecordSection>
     </Page>
+    {eligibilityModalOpen && eligibilityReason && (
+      <DelegationEligibilityModal
+        open
+        reason={eligibilityReason}
+        onClose={() => setEligibilityModalOpen(false)}
+        onDelegateAnyway={() => {
+          setEligibilityModalOpen(false)
+          setModalOpen(true)
+        }}
+      />
+    )}
     {modalOpen && (
       <DelegationModal
         open

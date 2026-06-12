@@ -5,13 +5,9 @@ import { Button, EnsSVG, Profile, WalletSVG } from '@ensdomains/thorin'
 import { useEnsAvatar, useEnsName } from 'wagmi'
 import { mainnet } from 'viem/chains'
 import makeBlockie from 'ethereum-blockies-base64'
+import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles/tokens'
-
-async function openWalletModal() {
-  const { appKit } = await import('@/app/providers/AppKitProvider')
-  appKit.open()
-}
 
 const StyledHeader = styled.header`
   display: flex;
