@@ -98,8 +98,22 @@ describe('VoterCard delegate trigger', () => {
   const useReadContractMock = vi.mocked(useReadContract)
   const openWalletModalMock = vi.mocked(openWalletModal)
 
-  const ELIGIBILITY_TITLE = "Delegation isn't gas-free for this wallet"
+  // Per-state titles from the Figma frames ("Delegation modal — not free").
+  const NO_ENS_TITLE = 'You need some ENS first'
+  const BELOW_MINIMUM_TITLE = 'You need more ENS for free gas'
+  const RELAYER_PAUSED_TITLE = 'Sponsored gas is paused'
+  const ELIGIBILITY_TITLES = [
+    NO_ENS_TITLE,
+    BELOW_MINIMUM_TITLE,
+    RELAYER_PAUSED_TITLE,
+  ]
   const DELEGATION_TITLE = 'Delegate voting power'
+
+  const expectNoEligibilityModal = () => {
+    for (const title of ELIGIBILITY_TITLES) {
+      expect(screen.queryByText(title)).not.toBeInTheDocument()
+    }
+  }
 
   // Thorin's Modal restores the page scroll position on unmount; jsdom does
   // not implement window.scroll and logs a noisy "Not implemented" error.
@@ -127,7 +141,7 @@ describe('VoterCard delegate trigger', () => {
     await user.click(screen.getByRole('button', { name: /Delegate now/ }))
 
     expect(openWalletModalMock).toHaveBeenCalledTimes(1)
-    expect(screen.queryByText(ELIGIBILITY_TITLE)).not.toBeInTheDocument()
+    expectNoEligibilityModal()
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
   })
 
@@ -141,7 +155,7 @@ describe('VoterCard delegate trigger', () => {
 
     await user.click(screen.getByRole('button', { name: /Delegate now/ }))
 
-    expect(screen.getByText(ELIGIBILITY_TITLE)).toBeInTheDocument()
+    expect(screen.getByText(NO_ENS_TITLE)).toBeInTheDocument()
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
     expect(openWalletModalMock).not.toHaveBeenCalled()
   })
@@ -167,13 +181,41 @@ describe('VoterCard delegate trigger', () => {
     })
 
     await user.click(screen.getByRole('button', { name: /Delegate now/ }))
-    expect(screen.getByText(ELIGIBILITY_TITLE)).toBeInTheDocument()
+    expect(screen.getByText(BELOW_MINIMUM_TITLE)).toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', { name: 'Delegate and pay gas' }),
     )
 
-    expect(screen.queryByText(ELIGIBILITY_TITLE)).not.toBeInTheDocument()
+    expect(screen.queryByText(BELOW_MINIMUM_TITLE)).not.toBeInTheDocument()
+    expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()
+  })
+
+  it('relayer paused: the global pause wins over the balance-gated states', async () => {
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', () =>
+        HttpResponse.json({ hasEnoughBalance: false }),
+      ),
+    )
+    // 0-ENS wallet — the eligibility modal opens on click no matter when the
+    // relayer balance query resolves, then settles on the paused state once
+    // it does (paused is global, so it beats no-ens).
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }))
+    const user = userEvent.setup()
+
+    renderApp(<VoterCard voter={fullVoter} />, {
+      walletState: { status: 'connected', address: CONNECTED_WALLET },
+    })
+
+    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await screen.findByText(RELAYER_PAUSED_TITLE)
+    expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Delegate and pay gas' }),
+    )
+
+    expect(screen.queryByText(RELAYER_PAUSED_TITLE)).not.toBeInTheDocument()
     expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()
   })
 
@@ -189,7 +231,7 @@ describe('VoterCard delegate trigger', () => {
 
     await user.click(screen.getByRole('button', { name: /Delegate now/ }))
 
-    expect(screen.queryByText(ELIGIBILITY_TITLE)).not.toBeInTheDocument()
+    expectNoEligibilityModal()
     expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()
   })
 })

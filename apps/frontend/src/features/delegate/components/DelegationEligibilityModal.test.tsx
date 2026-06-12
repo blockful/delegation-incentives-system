@@ -42,20 +42,22 @@ describe('DelegationEligibilityModal', () => {
     )
 
     expect(
-      screen.getByText("Delegation isn't gas-free for this wallet"),
+      screen.getByText('You need more ENS for free gas'),
     ).toBeInTheDocument()
     await waitFor(() => {
       expect(
-        screen.getByText(/holding at least\s*50 ENS/),
+        screen.getByText(/holding at least 50 ENS/),
       ).toBeInTheDocument()
     })
     // Gas-sponsorship only — copy must not tie rewards to the threshold.
     expect(
-      screen.getByText(/this only affects gas, not your reward eligibility/i),
+      screen.getByText(
+        /Gas is the only difference and your rewards stay the same/i,
+      ),
     ).toBeInTheDocument()
   })
 
-  it('no-ens: explains the wallet holds no ENS and that the choice persists on-chain', () => {
+  it('no-ens: uses the Figma copy for the 0-ENS state', () => {
     renderApp(
       <DelegationEligibilityModal
         open
@@ -65,14 +67,45 @@ describe('DelegationEligibilityModal', () => {
       />,
     )
 
+    expect(screen.getByText('You need some ENS first')).toBeInTheDocument()
     expect(
-      screen.getByText(/doesn't hold any ENS/i),
+      screen.getByText(/Your wallet holds 0 ENS, so gas is not sponsored/),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(
-        /applies automatically to any ENS this wallet receives later/i,
-      ),
+      screen.getByText(/Your choice sticks and applies once you hold ENS/),
     ).toBeInTheDocument()
+  })
+
+  it('relayer-paused: explains the global pause and offers Maybe later / pay gas', async () => {
+    const onClose = vi.fn()
+    const onDelegateAnyway = vi.fn()
+    const user = userEvent.setup()
+
+    renderApp(
+      <DelegationEligibilityModal
+        open
+        reason="relayer-paused"
+        onClose={onClose}
+        onDelegateAnyway={onDelegateAnyway}
+      />,
+    )
+
+    expect(screen.getByText('Sponsored gas is paused')).toBeInTheDocument()
+    expect(
+      screen.getByText(/your rewards are unaffected/i),
+    ).toBeInTheDocument()
+    // No Buy ENS action in the paused state — pause isn't balance-gated.
+    expect(
+      screen.queryByRole('link', { name: 'Buy ENS' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Maybe later' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Delegate and pay gas' }),
+    )
+    expect(onDelegateAnyway).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to the default 100 ENS threshold when the relayer is unavailable', () => {
@@ -91,7 +124,7 @@ describe('DelegationEligibilityModal', () => {
       />,
     )
 
-    expect(screen.getByText(/holding at least\s*100 ENS/)).toBeInTheDocument()
+    expect(screen.getByText(/holding at least 100 ENS/)).toBeInTheDocument()
   })
 
   it('Buy ENS opens the Uniswap ENS swap in a new tab', () => {
@@ -108,6 +141,26 @@ describe('DelegationEligibilityModal', () => {
     expect(buyLink).toHaveAttribute('href', UNISWAP_BUY_ENS_URL)
     expect(buyLink).toHaveAttribute('target', '_blank')
     expect(buyLink).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('stacks the secondary action above the primary, per the Figma frames', () => {
+    renderApp(
+      <DelegationEligibilityModal
+        open
+        reason="no-ens"
+        onClose={() => {}}
+        onDelegateAnyway={() => {}}
+      />,
+    )
+
+    const secondary = screen.getByRole('button', {
+      name: 'Delegate and pay gas',
+    })
+    const primary = screen.getByRole('link', { name: 'Buy ENS' })
+    expect(
+      secondary.compareDocumentPosition(primary) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('"Delegate and pay gas" hands off to the regular delegation flow', async () => {
@@ -157,7 +210,7 @@ describe('DelegationEligibilityModal', () => {
     )
 
     expect(
-      screen.queryByText("Delegation isn't gas-free for this wallet"),
+      screen.queryByText('You need more ENS for free gas'),
     ).not.toBeInTheDocument()
   })
 })

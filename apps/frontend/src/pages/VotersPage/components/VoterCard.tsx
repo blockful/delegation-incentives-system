@@ -8,7 +8,10 @@ import { Button } from '@ensdomains/thorin'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
-import { DelegationEligibilityModal } from '@/features/delegate/components/DelegationEligibilityModal'
+import {
+  DelegationEligibilityModal,
+  type DelegationEligibilityReason,
+} from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
 import {
   useGasSponsorshipBalanceStatus,
@@ -310,15 +313,23 @@ export function VoterCard({
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
 
+  // Relayer paused is global — it beats the balance-gated states because a
+  // bigger balance wouldn't unlock sponsored gas while the relayer is down.
+  const eligibilityReason: DelegationEligibilityReason | null =
+    relayerHasGas === false
+      ? 'relayer-paused'
+      : sponsorshipStatus === 'no-ens'
+        ? 'no-ens'
+        : sponsorshipStatus === 'below-minimum'
+          ? 'below-minimum'
+          : null
+
   const handleDelegate = () => {
     if (walletState.status === 'disconnected') {
       void openWalletModal()
       return
     }
-    if (
-      sponsorshipStatus === 'no-ens' ||
-      sponsorshipStatus === 'below-minimum'
-    ) {
+    if (eligibilityReason) {
       setEligibilityModalOpen(true)
       return
     }
@@ -388,10 +399,10 @@ export function VoterCard({
           </ProfileLink>
         </ActionsBlock>
       </StyledCard>
-      {eligibilityModalOpen && (
+      {eligibilityModalOpen && eligibilityReason && (
         <DelegationEligibilityModal
           open
-          reason={sponsorshipStatus === 'no-ens' ? 'no-ens' : 'below-minimum'}
+          reason={eligibilityReason}
           onClose={() => setEligibilityModalOpen(false)}
           onDelegateAnyway={() => {
             setEligibilityModalOpen(false)
