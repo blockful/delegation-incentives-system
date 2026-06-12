@@ -746,10 +746,10 @@ export function LotteryResultsSection({
           changed.
         </RandaoText>
         <VerifyLink
-          href={`https://etherscan.io/block/${blockNumber}`}
+          href="https://github.com/blockful/delegation-incentives-system"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Verify draw block ${formatBlockNumber(blockNumber)} on Etherscan`}
+          aria-label="Verify the draw algorithm on GitHub"
         >
           Verify ↗
         </VerifyLink>
