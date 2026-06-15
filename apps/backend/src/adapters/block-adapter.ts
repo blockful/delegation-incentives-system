@@ -1,7 +1,7 @@
 import type { PublicClient } from "viem";
 import type { BlockRepository } from "@ens-dis/domain";
 import type { Seconds, BlockNumber } from "@ens-dis/domain";
-import { blockNumber as bn } from "@ens-dis/domain";
+import { blockNumber as bn, BlockNotFinalizedError } from "@ens-dis/domain";
 
 export function createBlockAdapter(client: PublicClient): BlockRepository {
   return {
@@ -13,9 +13,18 @@ export function createBlockAdapter(client: PublicClient): BlockRepository {
       let lo = 1n;
       let hi = latestBlock.number;
 
-      // Edge case: target is at or after the latest block
+      // Finality guard (DEV-897): if the finalized head has not yet reached the
+      // target timestamp, the true block for `timestamp` is not finalized (it may
+      // not even exist yet). Refuse to clamp to the finalized head — that would
+      // silently return a pre-target block and seed the lottery from the wrong
+      // RANDAO. Signal "not ready" so the caller can defer and retry once
+      // finality advances past the target.
       if (latestBlock.timestamp <= targetTs) {
-        return bn(latestBlock.number);
+        throw new BlockNotFinalizedError(
+          targetTs,
+          latestBlock.timestamp,
+          latestBlock.number,
+        );
       }
 
       while (lo < hi) {
