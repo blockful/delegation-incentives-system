@@ -9,9 +9,9 @@ export function createBlockAdapter(client: PublicClient): BlockRepository {
       // Binary search for the block closest to (but not after) the timestamp.
       const targetTs = BigInt(timestamp);
 
-      const latestBlock = await client.getBlock({ blockTag: "finalized" });
+      const finalizedHead = await client.getBlock({ blockTag: "finalized" });
       let lo = 1n;
-      let hi = latestBlock.number;
+      let hi = finalizedHead.number;
 
       // Finality guard (DEV-897): if the finalized head has not yet reached the
       // target timestamp, the true block for `timestamp` is not finalized (it may
@@ -19,11 +19,11 @@ export function createBlockAdapter(client: PublicClient): BlockRepository {
       // silently return a pre-target block and seed the lottery from the wrong
       // RANDAO. Signal "not ready" so the caller can defer and retry once
       // finality advances past the target.
-      if (latestBlock.timestamp <= targetTs) {
+      if (finalizedHead.timestamp <= targetTs) {
         throw new BlockNotFinalizedError(
           targetTs,
-          latestBlock.timestamp,
-          latestBlock.number,
+          finalizedHead.timestamp,
+          finalizedHead.number,
         );
       }
 
