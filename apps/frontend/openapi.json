@@ -125,6 +125,23 @@
                             ],
                             "description": "ISO 8601 timestamp of the voter's earliest vote",
                             "example": "2024-01-15T00:00:00.000Z"
+                          },
+                          "words": {
+                            "type": [
+                              "array",
+                              "null"
+                            ],
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.",
+                            "example": [
+                              "security",
+                              "decentralization",
+                              "public_goods_funding",
+                              "transparency",
+                              "open_source"
+                            ]
                           }
                         },
                         "required": [
@@ -136,7 +153,8 @@
                           "last10ProposalsVoted",
                           "last10Proposals",
                           "tokenHolderCount",
-                          "activeSince"
+                          "activeSince",
+                          "words"
                         ]
                       }
                     }
@@ -3460,6 +3478,90 @@
           },
           "404": {
             "description": "No selection for this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/selections/{address}/match-count": {
+      "get": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Count strong matches for an address (public)",
+        "description": "Returns how many other stored selections strongly match (>=80% overlap) the given address's selection, and how many of those are active voters. 400 on invalid address; zeros when the address has no selection.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Match counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "matchCount": {
+                      "type": "number",
+                      "description": "Other selections (excluding this address) that strongly match (>=80% overlap).",
+                      "example": 7
+                    },
+                    "matchingActiveVoters": {
+                      "type": "number",
+                      "description": "Of matchCount, how many are active voters. matchCount minus this = matching holders.",
+                      "example": 3
+                    }
+                  },
+                  "required": [
+                    "matchCount",
+                    "matchingActiveVoters"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
             "content": {
               "application/json": {
                 "schema": {

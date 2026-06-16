@@ -83,6 +83,17 @@ export interface paths {
                                  * @example 2024-01-15T00:00:00.000Z
                                  */
                                 activeSince: string | null;
+                                /**
+                                 * @description The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.
+                                 * @example [
+                                 *       "security",
+                                 *       "decentralization",
+                                 *       "public_goods_funding",
+                                 *       "transparency",
+                                 *       "open_source"
+                                 *     ]
+                                 */
+                                words: string[] | null;
                             }[];
                         };
                     };
@@ -1872,6 +1883,80 @@ export interface paths {
                 };
                 /** @description No selection for this address */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/selections/{address}/match-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count strong matches for an address (public)
+         * @description Returns how many other stored selections strongly match (>=80% overlap) the given address's selection, and how many of those are active voters. 400 on invalid address; zeros when the address has no selection.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Match counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /**
+                             * @description Other selections (excluding this address) that strongly match (>=80% overlap).
+                             * @example 7
+                             */
+                            matchCount: number;
+                            /**
+                             * @description Of matchCount, how many are active voters. matchCount minus this = matching holders.
+                             * @example 3
+                             */
+                            matchingActiveVoters: number;
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
                     headers: {
                         [name: string]: unknown;
                     };

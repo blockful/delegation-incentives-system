@@ -25,6 +25,7 @@ const fullVoter: VoterDetail = {
   activeSince: '2024-01-15T00:00:00Z',
   last10ProposalsVoted: [true, true, true, true, true, true, true, true, true, false],
   last10Proposals: [],
+  words: null,
 }
 
 const minimalVoter: VoterDetail = {
@@ -37,6 +38,7 @@ const minimalVoter: VoterDetail = {
   activeSince: null,
   last10ProposalsVoted: [true, true, true, true, true, true, true, false, false, false],
   last10Proposals: [],
+  words: null,
 }
 
 describe('VoterCard', () => {

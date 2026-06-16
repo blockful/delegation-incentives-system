@@ -40,3 +40,43 @@ export function buildSelectionMessage(address: string, words: string[]): string 
     `Values: ${sorted.join(", ")}`,
   ].join("\n");
 }
+
+/** A match is "strong" at or above this overlap percentage. */
+export const STRONG_MATCH_THRESHOLD = 80;
+
+export interface MatchScore {
+  /** Overlap as a percentage of SELECTION_COUNT (e.g. 4 of 5 shared = 80). */
+  percent: number;
+  /** percent >= STRONG_MATCH_THRESHOLD. */
+  strongMatch: boolean;
+  /** Words both selected. */
+  sharedWords: string[];
+  /** Words only `a` selected. */
+  aUnique: string[];
+  /** Words only `b` selected. */
+  bUnique: string[];
+}
+
+/**
+ * Score two selections by set overlap. Symmetric in the score; `sharedWords` is
+ * ordered by `a`. Used client-side for per-card / profile match and server-side
+ * for the aggregate match-count. Coarse formula (Q#5 default): shared ÷ 5.
+ *
+ * Both selections are expected to hold SELECTION_COUNT words; the denominator is
+ * fixed at SELECTION_COUNT so an unselected (empty) side scores 0.
+ */
+export function scoreSelection(a: string[], b: string[]): MatchScore {
+  const setA = new Set(a);
+  const setB = new Set(b);
+  const sharedWords = a.filter((w) => setB.has(w));
+  const aUnique = a.filter((w) => !setB.has(w));
+  const bUnique = b.filter((w) => !setA.has(w));
+  const percent = Math.round((sharedWords.length / SELECTION_COUNT) * 100);
+  return {
+    percent,
+    strongMatch: percent >= STRONG_MATCH_THRESHOLD,
+    sharedWords,
+    aUnique,
+    bUnique,
+  };
+}

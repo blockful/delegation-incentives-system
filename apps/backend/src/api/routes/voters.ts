@@ -11,6 +11,7 @@ import { eq, asc, desc, sql, and, inArray } from "drizzle-orm";
 import type { Address } from "@ens-dis/domain";
 import { fetchActiveVoters } from "../helpers.js";
 import { parseProposalTitle } from "../proposal-title.js";
+import { getAppDb, wordSelections } from "../../db/app-tables.js";
 
 const ProposalVoteSchema = z.object({
   proposalId: z.string().openapi({ example: "39893466662181856279242827854933926689925858494049650894234231038376231891860" }),
@@ -48,6 +49,13 @@ const VoterSchema = z.object({
     .string()
     .nullable()
     .openapi({ description: "ISO 8601 timestamp of the voter's earliest vote", example: "2024-01-15T00:00:00.000Z" }),
+  words: z
+    .array(z.string())
+    .nullable()
+    .openapi({
+      description: "The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.",
+      example: ["security", "decentralization", "public_goods_funding", "transparency", "open_source"],
+    }),
 });
 
 const route = createRoute({
@@ -128,6 +136,21 @@ app.openapi(route, async (c) => {
       supportByVoterProposal.set(`${row.voter}-${row.proposalId}`, row.support);
     }
 
+    // Fetch each active voter's matchmaking selection from the app-owned table
+    // so the client can compute match overlap with no extra round-trips.
+    const { db: appDb, ready: appReady } = getAppDb();
+    await appReady;
+    const lowerVoterAddrs = activeVoterList.map((a) => a.toLowerCase());
+    const selectionRows = lowerVoterAddrs.length > 0
+      ? await appDb
+          .select({ address: wordSelections.address, words: wordSelections.words })
+          .from(wordSelections)
+          .where(inArray(wordSelections.address, lowerVoterAddrs))
+      : [];
+    const selectionByAddress = new Map<string, string[]>(
+      selectionRows.map((r) => [r.address, r.words]),
+    );
+
     const voters: z.infer<typeof VoterSchema>[] = [];
 
     for (const addr of activeVoters) {
@@ -188,6 +211,7 @@ app.openapi(route, async (c) => {
         last10Proposals,
         tokenHolderCount: Number(countRows[0]?.count ?? 0),
         activeSince,
+        words: selectionByAddress.get(addr.toLowerCase()) ?? null,
       });
     }
 
