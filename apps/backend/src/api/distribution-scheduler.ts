@@ -173,10 +173,16 @@ export async function runAutomaticDistributionScan(
     const headTs = await resolveFinalizedTs();
     if (headTs === null || headTs <= monthEndSec) {
       result.deferredMonths.push(month);
-      logger.info(
-        `[distribution-scheduler] Month ${month} end block not yet finalized ` +
-          `(finalized head ${headTs ?? "unavailable"} <= month end ${monthEndSec}); deferring`,
-      );
+      if (headTs === null) {
+        logger.info(
+          `[distribution-scheduler] Month ${month} deferred; finalized head unavailable this scan`,
+        );
+      } else {
+        logger.info(
+          `[distribution-scheduler] Month ${month} end block not yet finalized ` +
+            `(finalized head ${headTs} <= month end ${monthEndSec}); deferring`,
+        );
+      }
       continue;
     }
 
@@ -195,8 +201,10 @@ export async function runAutomaticDistributionScan(
       }
     } catch (error) {
       if (error instanceof BlockNotFinalizedError) {
-        // Race safety net: finality regressed between the gate check above and
-        // the pipeline's own finalized-head fetch. Treat as a clean deferral.
+        // Race safety net: this month passed the gate and reached compute, but
+        // finality regressed before the pipeline's own finalized-head fetch.
+        // Reclassify it as a clean deferral, not a check.
+        result.checkedMonths = result.checkedMonths.filter((m) => m !== month);
         result.deferredMonths.push(month);
         logger.info(
           `[distribution-scheduler] Month ${month} not finalized at compute time; deferring`,

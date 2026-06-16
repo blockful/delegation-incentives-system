@@ -225,4 +225,27 @@ describe("automatic distribution scheduler", () => {
     expect(result.failedMonths).toEqual([]);
     expect(logger.error).not.toHaveBeenCalled();
   });
+
+  it("queries the finalized head at most once per scan across multiple eligible months", async () => {
+    const getFinalizedTimestamp = vi.fn(
+      async () => monthEndTimestamp("2026-04") + 3600n,
+    );
+    const computeDistribution = vi.fn(async (month: string) =>
+      makeResponse(month, "computed"),
+    );
+
+    const result = await runAutomaticDistributionScan({
+      now: () => new Date("2026-05-01T01:00:00.000Z"),
+      getRoundMonths: () => ["2026-03", "2026-04"],
+      graceMs: 0,
+      isReady: async () => true,
+      getFinalizedTimestamp,
+      computeDistribution,
+      logger: makeLogger(),
+    });
+
+    expect(getFinalizedTimestamp).toHaveBeenCalledTimes(1);
+    expect(result.computedMonths).toEqual(["2026-03", "2026-04"]);
+    expect(result.deferredMonths).toEqual([]);
+  });
 });
