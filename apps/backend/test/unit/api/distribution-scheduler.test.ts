@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { BlockNotFinalizedError, monthEndTimestamp } from "@ens-dis/domain";
 import {
   runAutomaticDistributionScan,
   shouldAttemptMonth,
@@ -44,6 +45,7 @@ describe("automatic distribution scheduler", () => {
       getRoundMonths: () => ["2026-03", "2026-04", "2026-05"],
       graceMs: 60 * 60 * 1000,
       isReady: async () => true,
+      getFinalizedTimestamp: async () => monthEndTimestamp("2026-04") + 3600n,
       computeDistribution,
       logger: makeLogger(),
     });
@@ -96,6 +98,7 @@ describe("automatic distribution scheduler", () => {
       getRoundMonths: () => ["2026-03", "2026-04"],
       graceMs: 0,
       isReady: async () => true,
+      getFinalizedTimestamp: async () => monthEndTimestamp("2026-04") + 3600n,
       computeDistribution,
       logger: makeLogger(),
     });
@@ -123,5 +126,126 @@ describe("automatic distribution scheduler", () => {
         60 * 60 * 1000,
       ),
     ).toBe(true);
+  });
+
+  it("defers a month whose end block falls inside the finality lag window", async () => {
+    const monthEnd = monthEndTimestamp("2026-04");
+    const computeDistribution = vi.fn(async (month: string) =>
+      makeResponse(month, "computed"),
+    );
+
+    const result = await runAutomaticDistributionScan({
+      now: () => new Date("2026-05-01T01:00:00.000Z"),
+      getRoundMonths: () => ["2026-04"],
+      graceMs: 0,
+      isReady: async () => true,
+      getFinalizedTimestamp: async () => monthEnd - 60n, // head still behind month end
+      computeDistribution,
+      logger: makeLogger(),
+    });
+
+    expect(computeDistribution).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      ready: true,
+      checkedMonths: [],
+      computedMonths: [],
+      deferredMonths: ["2026-04"],
+      failedMonths: [],
+    });
+  });
+
+  it("computes a month once its end block is finalized", async () => {
+    const monthEnd = monthEndTimestamp("2026-04");
+    const computeDistribution = vi.fn(async (month: string) =>
+      makeResponse(month, "computed"),
+    );
+
+    const result = await runAutomaticDistributionScan({
+      now: () => new Date("2026-05-01T01:00:00.000Z"),
+      getRoundMonths: () => ["2026-04"],
+      graceMs: 0,
+      isReady: async () => true,
+      getFinalizedTimestamp: async () => monthEnd + 60n, // head past month end
+      computeDistribution,
+      logger: makeLogger(),
+    });
+
+    expect(computeDistribution).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      ready: true,
+      checkedMonths: ["2026-04"],
+      computedMonths: ["2026-04"],
+      deferredMonths: [],
+      failedMonths: [],
+    });
+  });
+
+  it("defers (does not fail) when the finalized head cannot be fetched", async () => {
+    const computeDistribution = vi.fn(async (month: string) =>
+      makeResponse(month, "computed"),
+    );
+    const logger = makeLogger();
+
+    const result = await runAutomaticDistributionScan({
+      now: () => new Date("2026-05-01T01:00:00.000Z"),
+      getRoundMonths: () => ["2026-04"],
+      graceMs: 0,
+      isReady: async () => true,
+      getFinalizedTimestamp: async () => {
+        throw new Error("rpc down");
+      },
+      computeDistribution,
+      logger,
+    });
+
+    expect(computeDistribution).not.toHaveBeenCalled();
+    expect(result.deferredMonths).toEqual(["2026-04"]);
+    expect(result.failedMonths).toEqual([]);
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it("treats a BlockNotFinalizedError from compute as a deferral, not a failure", async () => {
+    const monthEnd = monthEndTimestamp("2026-04");
+    const computeDistribution = vi.fn(async () => {
+      throw new BlockNotFinalizedError(monthEnd, monthEnd - 1n, 100n);
+    });
+    const logger = makeLogger();
+
+    const result = await runAutomaticDistributionScan({
+      now: () => new Date("2026-05-01T01:00:00.000Z"),
+      getRoundMonths: () => ["2026-04"],
+      graceMs: 0,
+      isReady: async () => true,
+      getFinalizedTimestamp: async () => monthEnd + 60n, // gate passes...
+      computeDistribution, // ...but compute still throws (simulated finality race)
+      logger,
+    });
+
+    expect(result.deferredMonths).toEqual(["2026-04"]);
+    expect(result.failedMonths).toEqual([]);
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("queries the finalized head at most once per scan across multiple eligible months", async () => {
+    const getFinalizedTimestamp = vi.fn(
+      async () => monthEndTimestamp("2026-04") + 3600n,
+    );
+    const computeDistribution = vi.fn(async (month: string) =>
+      makeResponse(month, "computed"),
+    );
+
+    const result = await runAutomaticDistributionScan({
+      now: () => new Date("2026-05-01T01:00:00.000Z"),
+      getRoundMonths: () => ["2026-03", "2026-04"],
+      graceMs: 0,
+      isReady: async () => true,
+      getFinalizedTimestamp,
+      computeDistribution,
+      logger: makeLogger(),
+    });
+
+    expect(getFinalizedTimestamp).toHaveBeenCalledTimes(1);
+    expect(result.computedMonths).toEqual(["2026-03", "2026-04"]);
+    expect(result.deferredMonths).toEqual([]);
   });
 });

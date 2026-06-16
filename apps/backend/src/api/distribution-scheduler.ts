@@ -4,6 +4,8 @@ import {
   type ComputeDistributionResponse,
 } from "./distribution-compute.js";
 import { getConfiguredRoundMonths, getRoundDateRange } from "./round-config.js";
+import { publicClients } from "ponder:api";
+import { BlockNotFinalizedError, monthEndTimestamp } from "@ens-dis/domain";
 
 const SCAN_INTERVAL_MS = 60 * 1000;
 const STARTUP_DELAY_MS = 0;
@@ -19,6 +21,7 @@ export interface AutomaticDistributionScanResult {
   computedMonths: string[];
   cachedMonths: string[];
   skippedMonths: string[];
+  deferredMonths: string[];
   failedMonths: Array<{ month: string; error: string }>;
 }
 
@@ -29,6 +32,7 @@ export interface AutomaticDistributionSchedulerOptions {
   now?: () => Date;
   getRoundMonths?: () => string[];
   isReady?: () => Promise<boolean>;
+  getFinalizedTimestamp?: () => Promise<bigint>;
   computeDistribution?: (
     month: string,
     options?: ComputeDistributionOptions,
@@ -118,6 +122,7 @@ export async function runAutomaticDistributionScan(
   const graceMs = options.graceMs ?? MONTH_END_GRACE_MS;
   const isReady = options.isReady ?? isLocalPonderReady;
   const computeDistribution = options.computeDistribution ?? computeAndStoreDistribution;
+  const getFinalizedTimestamp = options.getFinalizedTimestamp ?? fetchFinalizedTimestamp;
 
   if (months.length === 0) {
     return emptyScanResult(true);
@@ -134,11 +139,52 @@ export async function runAutomaticDistributionScan(
     computedMonths: [],
     cachedMonths: [],
     skippedMonths: [],
+    deferredMonths: [],
     failedMonths: [],
+  };
+
+  // The finalized-head timestamp is identical for every month in a single scan,
+  // so fetch it lazily at most once and only when a month is otherwise eligible.
+  let finalizedTs: bigint | null = null;
+  let finalizedFetchFailed = false;
+  const resolveFinalizedTs = async (): Promise<bigint | null> => {
+    if (finalizedTs !== null || finalizedFetchFailed) return finalizedTs;
+    try {
+      finalizedTs = await getFinalizedTimestamp();
+      return finalizedTs;
+    } catch (error) {
+      finalizedFetchFailed = true;
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(
+        `[distribution-scheduler] Could not read finalized head; deferring finality-sensitive months: ${message}`,
+      );
+      return null;
+    }
   };
 
   for (const month of months) {
     if (!shouldAttemptMonth(month, now, graceMs)) continue;
+
+    // Finality gate (DEV-897): the month-end block must be finalized before we
+    // compute, otherwise getBlockForTimestamp clamps to a pre-month-end block and
+    // the lottery is seeded from the wrong RANDAO. Defer (not fail) until the
+    // finalized head passes the month boundary, then compute exactly once.
+    const monthEndSec = monthEndTimestamp(month);
+    const headTs = await resolveFinalizedTs();
+    if (headTs === null || headTs <= monthEndSec) {
+      result.deferredMonths.push(month);
+      if (headTs === null) {
+        logger.info(
+          `[distribution-scheduler] Month ${month} deferred; finalized head unavailable this scan`,
+        );
+      } else {
+        logger.info(
+          `[distribution-scheduler] Month ${month} end block not yet finalized ` +
+            `(finalized head ${headTs} <= month end ${monthEndSec}); deferring`,
+        );
+      }
+      continue;
+    }
 
     result.checkedMonths.push(month);
 
@@ -154,6 +200,17 @@ export async function runAutomaticDistributionScan(
         result.skippedMonths.push(month);
       }
     } catch (error) {
+      if (error instanceof BlockNotFinalizedError) {
+        // Race safety net: this month passed the gate and reached compute, but
+        // finality regressed before the pipeline's own finalized-head fetch.
+        // Reclassify it as a clean deferral, not a check.
+        result.checkedMonths = result.checkedMonths.filter((m) => m !== month);
+        result.deferredMonths.push(month);
+        logger.info(
+          `[distribution-scheduler] Month ${month} not finalized at compute time; deferring`,
+        );
+        continue;
+      }
       const message = error instanceof Error ? error.message : String(error);
       result.failedMonths.push({ month, error: message });
       logger.error(`[distribution-scheduler] Failed to compute distribution for ${month}: ${message}`);
@@ -179,6 +236,15 @@ async function isLocalPonderReady(): Promise<boolean> {
   }
 }
 
+async function fetchFinalizedTimestamp(): Promise<bigint> {
+  const client = publicClients.mainnet;
+  if (!client) {
+    throw new Error("Mainnet public client is unavailable");
+  }
+  const block = await client.getBlock({ blockTag: "finalized" });
+  return block.timestamp;
+}
+
 function emptyScanResult(ready: boolean): AutomaticDistributionScanResult {
   return {
     ready,
@@ -186,6 +252,7 @@ function emptyScanResult(ready: boolean): AutomaticDistributionScanResult {
     computedMonths: [],
     cachedMonths: [],
     skippedMonths: [],
+    deferredMonths: [],
     failedMonths: [],
   };
 }
