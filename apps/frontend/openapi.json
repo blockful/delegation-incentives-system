@@ -3181,6 +3181,257 @@
           }
         }
       }
+    },
+    "/selections/me": {
+      "put": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Upsert the caller's word selection",
+        "description": "Stores (or replaces) the signer's matchmaking word selection. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal `address`. Idempotent upsert keyed by address.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                  },
+                  "words": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exactly 5 word ids from the pool (unordered set)"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "personal_sign signature over buildSelectionMessage(address, words)",
+                    "example": "0x..."
+                  }
+                },
+                "required": [
+                  "address",
+                  "words",
+                  "signature"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                    },
+                    "words": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "security",
+                        "decentralization",
+                        "public_goods_funding",
+                        "transparency",
+                        "open_source"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "number",
+                      "description": "Last-write Unix time in ms",
+                      "example": 1781619462005
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "words",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address or selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signature missing, malformed, or not from the claimed address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/selections/{address}": {
+      "get": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Get an address's word selection (public)",
+        "description": "Returns the stored word selection for any address. Public — selections are not private. 404 when the address has no selection.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The address's selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                    },
+                    "words": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "security",
+                        "decentralization",
+                        "public_goods_funding",
+                        "transparency",
+                        "open_source"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "number",
+                      "description": "Last-write Unix time in ms",
+                      "example": 1781619462005
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "words",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No selection for this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {}

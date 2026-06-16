@@ -63,7 +63,7 @@ describe("app-tables / getAppDb", () => {
     expect(unsafe).toHaveBeenCalledTimes(2);
   });
 
-  it("runs CREATE TABLE IF NOT EXISTS for both app-owned tables in public", async () => {
+  it("runs CREATE TABLE IF NOT EXISTS for all app-owned tables in public", async () => {
     const { ready } = getAppDb();
     await ready;
 
@@ -74,6 +74,9 @@ describe("app-tables / getAppDb", () => {
     );
     expect(createSql).toMatch(
       /create\s+table\s+if\s+not\s+exists\s+public\.distribution_result/i,
+    );
+    expect(createSql).toMatch(
+      /create\s+table\s+if\s+not\s+exists\s+public\.word_selections/i,
     );
   });
 

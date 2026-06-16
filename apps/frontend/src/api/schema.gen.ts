@@ -1649,6 +1649,202 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/selections/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upsert the caller's word selection
+         * @description Stores (or replaces) the signer's matchmaking word selection. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal `address`. Idempotent upsert keyed by address.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
+                        address: string;
+                        /** @description Exactly 5 word ids from the pool (unordered set) */
+                        words: string[];
+                        /**
+                         * @description personal_sign signature over buildSelectionMessage(address, words)
+                         * @example 0x...
+                         */
+                        signature: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Stored selection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
+                            address: string;
+                            /**
+                             * @example [
+                             *       "security",
+                             *       "decentralization",
+                             *       "public_goods_funding",
+                             *       "transparency",
+                             *       "open_source"
+                             *     ]
+                             */
+                            words: string[];
+                            /**
+                             * @description Last-write Unix time in ms
+                             * @example 1781619462005
+                             */
+                            updatedAt: number;
+                        };
+                    };
+                };
+                /** @description Invalid address or selection */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Signature missing, malformed, or not from the claimed address */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/selections/{address}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an address's word selection (public)
+         * @description Returns the stored word selection for any address. Public — selections are not private. 404 when the address has no selection.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The address's selection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
+                            address: string;
+                            /**
+                             * @example [
+                             *       "security",
+                             *       "decentralization",
+                             *       "public_goods_funding",
+                             *       "transparency",
+                             *       "open_source"
+                             *     ]
+                             */
+                            words: string[];
+                            /**
+                             * @description Last-write Unix time in ms
+                             * @example 1781619462005
+                             */
+                            updatedAt: number;
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description No selection for this address */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
