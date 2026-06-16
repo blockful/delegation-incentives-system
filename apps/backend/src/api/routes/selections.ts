@@ -4,7 +4,7 @@ import { recoverMessageAddress } from "viem";
 import { buildSelectionMessage } from "@ens-dis/domain";
 import { getAppDb, wordSelections } from "../../db/app-tables.js";
 import { normalizeAddress } from "../helpers.js";
-import { validateSelection } from "../matchmaking/word-pool.js";
+import { WORD_POOL, validateSelection } from "../matchmaking/word-pool.js";
 
 const ErrorSchema = z.object({ error: z.string() });
 
@@ -21,6 +21,37 @@ const SelectionResponse = z.object({
     .array(z.string())
     .openapi({ example: ["security", "decentralization", "public_goods_funding", "transparency", "open_source"] }),
   updatedAt: z.number().openapi({ description: "Last-write Unix time in ms", example: 1781619462005 }),
+});
+
+const PoolWordSchema = z.object({
+  id: z.string().openapi({ example: "decentralization" }),
+  label: z.string().openapi({ example: "Decentralization" }),
+});
+
+const WordPoolResponse = z.object({
+  pool: z.array(PoolWordSchema),
+});
+
+// GET /selections/word-pool — PUBLIC. The pool of value words the Selection
+// modal renders. Static path, so it must out-rank /selections/{address}; Hono's
+// router prioritizes static over param, and it's also registered first below.
+const getWordPoolRoute = createRoute({
+  method: "get",
+  path: "/selections/word-pool",
+  tags: ["Selections"],
+  summary: "Get the matchmaking word pool",
+  description:
+    "Returns the canonical pool of value words (id + label) the Selection modal renders. Public.",
+  responses: {
+    200: {
+      description: "The word pool",
+      content: { "application/json": { schema: WordPoolResponse } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+  },
 });
 
 const PutSelectionBody = z.object({
@@ -147,6 +178,13 @@ app.openapi(putRoute, async (c) => {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);
   }
+});
+
+app.openapi(getWordPoolRoute, (c) => {
+  return c.json(
+    { pool: WORD_POOL.map((w) => ({ id: w.id, label: w.label })) },
+    200,
+  );
 });
 
 app.openapi(getRoute, async (c) => {

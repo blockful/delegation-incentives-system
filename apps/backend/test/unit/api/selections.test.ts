@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { privateKeyToAccount } from "viem/accounts";
 import { buildSelectionMessage } from "@ens-dis/domain";
-import { validateSelection } from "../../../src/api/matchmaking/word-pool.js";
+import { WORD_POOL, validateSelection } from "../../../src/api/matchmaking/word-pool.js";
 
 // In-memory stand-in for the app-owned DB. The fake intentionally ignores the
 // WHERE predicate: each test scopes `store` to the address under test (one row
@@ -187,5 +187,24 @@ describe("GET /selections/{address}", () => {
   it("400s an invalid address", async () => {
     const res = await makeApp().request("/selections/not-an-address");
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /selections/word-pool", () => {
+  it("returns the pool as {id, label} entries (public, no auth)", async () => {
+    const res = await makeApp().request("/selections/word-pool");
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { pool: { id: string; label: string }[] };
+    expect(json.pool).toHaveLength(WORD_POOL.length);
+    expect(
+      json.pool.every((w) => typeof w.id === "string" && typeof w.label === "string"),
+    ).toBe(true);
+    expect(json.pool.map((w) => w.id)).toContain("decentralization");
+  });
+
+  it("does not collide with GET /selections/{address}", async () => {
+    // 'word-pool' is a static path and must out-rank the {address} param route.
+    const res = await makeApp().request("/selections/word-pool");
+    expect(res.status).toBe(200);
   });
 });

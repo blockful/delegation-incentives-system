@@ -1753,6 +1753,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/selections/word-pool": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the matchmaking word pool
+         * @description Returns the canonical pool of value words (id + label) the Selection modal renders. Public.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The word pool */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            pool: {
+                                /** @example decentralization */
+                                id: string;
+                                /** @example Decentralization */
+                                label: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/selections/{address}": {
         parameters: {
             query?: never;

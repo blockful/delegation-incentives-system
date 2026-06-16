@@ -3318,6 +3318,70 @@
         }
       }
     },
+    "/selections/word-pool": {
+      "get": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Get the matchmaking word pool",
+        "description": "Returns the canonical pool of value words (id + label) the Selection modal renders. Public.",
+        "responses": {
+          "200": {
+            "description": "The word pool",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pool": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "decentralization"
+                          },
+                          "label": {
+                            "type": "string",
+                            "example": "Decentralization"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "pool"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/selections/{address}": {
       "get": {
         "tags": [
