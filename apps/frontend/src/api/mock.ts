@@ -11,7 +11,14 @@ import type {
   RoundDetailResponse,
   AddressDistributionHistoryResponse,
   AddressRoundReward,
+  WordPoolResponse,
+  SelectionResponse,
+  MatchCountResponse,
+  PutSelectionBody,
+  PutSelectionResponse,
 } from './types'
+
+import { ApiClientError } from './client'
 
 function delay<T>(value: T, ms = 400): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms))
@@ -354,6 +361,40 @@ const MOCK_VOTERS: ActiveVotersResponse = {
     words: MOCK_VOTER_SELECTIONS[i] ?? null,
   })),
 }
+
+// Mirror of the backend placeholder pool (ids must match for selections to validate).
+const MOCK_WORD_POOL: WordPoolResponse = {
+  pool: [
+    { id: 'security', label: 'Security' },
+    { id: 'cost_efficiency', label: 'Cost efficiency' },
+    { id: 'growth_investment', label: 'Growth investment' },
+    { id: 'decentralization', label: 'Decentralization' },
+    { id: 'public_goods_funding', label: 'Public goods funding' },
+    { id: 'transparency', label: 'Transparency' },
+    { id: 'credible_neutrality', label: 'Credible neutrality' },
+    { id: 'censorship_resistance', label: 'Censorship resistance' },
+    { id: 'user_privacy', label: 'User privacy' },
+    { id: 'developer_experience', label: 'Developer experience' },
+    { id: 'treasury_growth', label: 'Treasury growth' },
+    { id: 'community_governance', label: 'Community governance' },
+    { id: 'protocol_simplicity', label: 'Protocol simplicity' },
+    { id: 'long_term_vision', label: 'Long-term vision' },
+    { id: 'ecosystem_funding', label: 'Ecosystem funding' },
+    { id: 'self_custody', label: 'Self custody' },
+    { id: 'open_source', label: 'Open source' },
+    { id: 'accessibility', label: 'Accessibility' },
+    { id: 'sustainability', label: 'Sustainability' },
+    { id: 'interoperability', label: 'Interoperability' },
+  ],
+}
+
+// In-memory selection store so PUT persists within a mock session. Seeded from
+// the sample voter selections so profiles/cards show match data in mock mode.
+const mockSelectionStore = new Map<string, string[]>()
+MOCK_VOTERS_BASE.forEach((v, i) => {
+  const sel = MOCK_VOTER_SELECTIONS[i]
+  if (sel) mockSelectionStore.set(v.address.toLowerCase(), sel)
+})
 
 /**
  * Mock ENS text records for the seeded voters above.
@@ -875,6 +916,32 @@ export const mockApi = {
       ...MOCK_ROUND_DETAIL,
       ...summary,
       addressReward,
+    })
+  },
+
+  wordPool: () => delay<WordPoolResponse>(MOCK_WORD_POOL),
+
+  selection: (address: string) => {
+    const words = mockSelectionStore.get(address.toLowerCase())
+    if (!words) {
+      return Promise.reject(new ApiClientError(404, 'No selection for this address'))
+    }
+    return delay<SelectionResponse>({
+      address: address.toLowerCase(),
+      words,
+      updatedAt: 1781619462005,
+    })
+  },
+
+  matchCount: (_address: string) =>
+    delay<MatchCountResponse>({ matchCount: 2, matchingActiveVoters: 1 }),
+
+  putSelection: (body: PutSelectionBody) => {
+    mockSelectionStore.set(body.address.toLowerCase(), body.words)
+    return delay<PutSelectionResponse>({
+      address: body.address.toLowerCase(),
+      words: body.words,
+      updatedAt: 1781619462005,
     })
   },
 
