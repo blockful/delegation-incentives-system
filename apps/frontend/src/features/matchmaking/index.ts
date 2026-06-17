@@ -14,3 +14,7 @@ export {
   UnlockMatchmakingBanner,
   type UnlockMatchmakingBannerProps,
 } from './components/UnlockMatchmakingBanner'
+export {
+  DelegateValuesCard,
+  type DelegateValuesCardProps,
+} from './components/DelegateValuesCard'
