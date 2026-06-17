@@ -87,10 +87,11 @@ export const handlers = [
     })
   }),
 
-  http.put('/api/selections/me', async ({ request }) => {
-    const body = (await request.json()) as { address: string; words: string[] }
+  http.put('/api/selections/:address', async ({ request, params }) => {
+    const body = (await request.json()) as { words: string[] }
+    const address = String(params.address)
     return HttpResponse.json({
-      address: body.address.toLowerCase(),
+      address: address.toLowerCase(),
       words: body.words,
       updatedAt: 1781619462005,
     })

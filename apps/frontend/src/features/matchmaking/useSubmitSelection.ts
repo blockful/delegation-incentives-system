@@ -23,7 +23,7 @@ export function useSubmitSelection() {
       if (!address) throw new Error('Connect your wallet to save your values')
       const message = buildSelectionMessage(address, words)
       const signature = await signMessageAsync({ message })
-      return api.putSelection({ address, words, signature })
+      return api.putSelection(address, { words, signature })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: matchmakingKeys.all })
