@@ -5,6 +5,7 @@ export { useDelegateSelection } from './useDelegateSelection'
 export { useVotersWithMatch, type VoterWithMatch } from './useVotersWithMatch'
 export { useSubmitSelection } from './useSubmitSelection'
 export { useSelectionState, type MatchmakingSelectionState } from './useSelectionState'
+export { useNudgeGating } from './useNudgeGating'
 export { useMatchCount } from './useMatchCount'
 export { useViewerRole, type ViewerRole } from './useViewerRole'
 export { SelectionFlow, type SelectionFlowProps } from './components/SelectionFlow'
@@ -18,3 +19,4 @@ export {
   DelegateValuesCard,
   type DelegateValuesCardProps,
 } from './components/DelegateValuesCard'
+export { DashboardValuesCard } from './components/DashboardValuesCard'
