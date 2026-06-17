@@ -3,7 +3,13 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlass, faShareNodes, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
-import { useVotersWithMatch } from '@/features/matchmaking'
+import {
+  useVotersWithMatch,
+  useSelectionState,
+  useViewerRole,
+  SelectionFlow,
+  UnlockMatchmakingBanner,
+} from '@/features/matchmaking'
 import { useVoterEnsNames } from '@/features/ens/useVoterEnsNames'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
@@ -304,6 +310,73 @@ function shuffled<T>(voters: T[], seed: number): T[] {
   return copy
 }
 
+const GridWrap = styled.div`
+  position: relative;
+  width: 100%;
+`
+
+const Blurred = styled.div<{ $blur: boolean }>`
+  ${({ $blur }) =>
+    $blur ? 'filter: blur(6px); pointer-events: none; user-select: none;' : ''}
+`
+
+const Overlay = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: ${tokens.spacing['4xl']};
+  z-index: 2;
+`
+
+const OverlayCard = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.lg};
+  box-shadow: ${tokens.shadow.lg};
+  padding: ${tokens.spacing['2xl']};
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+  text-align: center;
+`
+
+const OverlayTitle = styled.h2`
+  margin: 0;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+`
+
+const OverlayBody = styled.p`
+  margin: 0;
+  color: ${tokens.color.darkGray};
+  line-height: 1.5;
+`
+
+const OverlayActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  align-items: center;
+`
+
+const NotNowButton = styled.button`
+  background: none;
+  border: none;
+  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  cursor: pointer;
+
+  &:hover {
+    color: ${tokens.color.darkBlue};
+  }
+`
+
 export function VotersPage() {
   const { voters: data, loading, error, viewerHasSelected } = useVotersWithMatch()
   const { map: resolvedEnsNames, report: reportResolvedEns } = useVoterEnsNames(data)
@@ -315,6 +388,15 @@ export function VotersPage() {
   // "random" sort deterministic and identical across visits.
   const [shuffleSeed, setShuffleSeed] = useState(randomSeed)
   const [search, setSearch] = useState('')
+
+  // Matchmaking unselected-viewer states (the page always renders — no hard gate).
+  const { state: selectionState } = useSelectionState()
+  const { role } = useViewerRole()
+  const [dismissed, setDismissed] = useState(false)
+  const [flowOpen, setFlowOpen] = useState(false)
+  const isUnselected = selectionState === 'connected-not-selected'
+  const showOverlay = isUnselected && !dismissed // blurred list + pitch teaser
+  const showBanner = isUnselected && dismissed // legible + inline banner + "?" cards
 
   // Resolved state defaults to Match-sorted — until the user picks a sort.
   useEffect(() => {
@@ -480,21 +562,51 @@ export function VotersPage() {
             </EmptyState>
           )}
 
+          {showBanner && <UnlockMatchmakingBanner onSelect={() => setFlowOpen(true)} />}
+
           {voters && voters.length > 0 && (
-            <Grid>
-              {voters.map((v) => (
-                <VoterCard
-                  key={v.address}
-                  voter={v}
-                  resolvedEnsName={resolvedEnsNames.get(v.address.toLowerCase()) ?? null}
-                  onEnsResolved={reportResolvedEns}
-                  match={v.match}
-                  viewerHasSelected={viewerHasSelected}
-                />
-              ))}
-            </Grid>
+            <GridWrap>
+              <Blurred $blur={showOverlay}>
+                <Grid>
+                  {voters.map((v) => (
+                    <VoterCard
+                      key={v.address}
+                      voter={v}
+                      resolvedEnsName={resolvedEnsNames.get(v.address.toLowerCase()) ?? null}
+                      onEnsResolved={reportResolvedEns}
+                      match={v.match}
+                      viewerHasSelected={viewerHasSelected}
+                      degraded={showBanner}
+                    />
+                  ))}
+                </Grid>
+              </Blurred>
+              {showOverlay && (
+                <Overlay>
+                  <OverlayCard>
+                    <OverlayTitle>Discover your matches</OverlayTitle>
+                    <OverlayBody>
+                      Pick the values that matter to you and we&apos;ll sort delegates by how well
+                      they match.
+                    </OverlayBody>
+                    <OverlayActions>
+                      <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
+                        Discover your matches
+                      </Button>
+                      <NotNowButton type="button" onClick={() => setDismissed(true)}>
+                        Not now
+                      </NotNowButton>
+                    </OverlayActions>
+                  </OverlayCard>
+                </Overlay>
+              )}
+            </GridWrap>
           )}
         </CardsAndFilters>
+
+        {flowOpen && role && (
+          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
+        )}
     </Page>
   )
 }

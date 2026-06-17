@@ -34,6 +34,8 @@ interface VoterCardProps {
   match?: MatchScore | null
   /** Whether the connected viewer has selected. Gates the match line; the unselected viewer state is FE-4's. */
   viewerHasSelected?: boolean
+  /** Degraded /voters: viewer connected, dismissed the prompt, not selected — show a "?" placeholder. */
+  degraded?: boolean
 }
 
 function formatVotingPower(vpWei: string): string {
@@ -293,6 +295,7 @@ export function VoterCard({
   onEnsResolved,
   match,
   viewerHasSelected = false,
+  degraded = false,
 }: VoterCardProps) {
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
@@ -368,6 +371,9 @@ export function VoterCard({
           </IdentityRow>
 
           {viewerHasSelected && <MatchStatus match={match} />}
+          {!viewerHasSelected && degraded && (
+            <DegradedMatchStatus delegateHasSelected={voter.words != null} />
+          )}
 
           <ProposalSection>
             <ProposalHeader>
@@ -463,6 +469,22 @@ function MatchStatus({ match }: { match: MatchScore | null | undefined }) {
         {match.sharedWords.length === 1 ? '' : 's'}
       </MatchText>
       <MatchValue>{match.percent}% Match</MatchValue>
+    </MatchRow>
+  )
+}
+
+/**
+ * Degraded /voters placeholder: the viewer is connected but hasn't selected (and
+ * dismissed the prompt). Shows "?" with a nudge, or the delegate's own
+ * unselected state. ⚠️ Copy is placeholder.
+ */
+function DegradedMatchStatus({ delegateHasSelected }: { delegateHasSelected: boolean }) {
+  return (
+    <MatchRow $variant="none">
+      <MatchText>
+        {delegateHasSelected ? 'Select to see your match' : "Delegate didn't pick priorities"}
+      </MatchText>
+      <MatchValue>?</MatchValue>
     </MatchRow>
   )
 }
