@@ -1649,110 +1649,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/selections/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Upsert the caller's word selection
-         * @description Stores (or replaces) the signer's matchmaking word selection. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal `address`. Idempotent upsert keyed by address.
-         */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
-                        address: string;
-                        /** @description Exactly 5 word ids from the pool (unordered set) */
-                        words: string[];
-                        /**
-                         * @description personal_sign signature over buildSelectionMessage(address, words)
-                         * @example 0x...
-                         */
-                        signature: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Stored selection */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
-                            address: string;
-                            /**
-                             * @example [
-                             *       "security",
-                             *       "decentralization",
-                             *       "public_goods_funding",
-                             *       "transparency",
-                             *       "open_source"
-                             *     ]
-                             */
-                            words: string[];
-                            /**
-                             * @description Last-write Unix time in ms
-                             * @example 1781619462005
-                             */
-                            updatedAt: number;
-                        };
-                    };
-                };
-                /** @description Invalid address or selection */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Signature missing, malformed, or not from the claimed address */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/selections/{address}": {
         parameters: {
             query?: never;
@@ -1837,7 +1733,95 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        /**
+         * Upsert an address's word selection
+         * @description Stores (or replaces) the word selection for the path `address`. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal the path `address`. Idempotent upsert keyed by address.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Exactly 5 word ids from the pool (unordered set) */
+                        words: string[];
+                        /**
+                         * @description personal_sign signature over buildSelectionMessage(address, words)
+                         * @example 0x...
+                         */
+                        signature: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Stored selection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
+                            address: string;
+                            /**
+                             * @example [
+                             *       "security",
+                             *       "decentralization",
+                             *       "public_goods_funding",
+                             *       "transparency",
+                             *       "open_source"
+                             *     ]
+                             */
+                            words: string[];
+                            /**
+                             * @description Last-write Unix time in ms
+                             * @example 1781619462005
+                             */
+                            updatedAt: number;
+                        };
+                    };
+                };
+                /** @description Invalid address or selection */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Signature missing, malformed, or not from the path address */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;

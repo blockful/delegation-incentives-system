@@ -24,7 +24,6 @@ const SelectionResponse = z.object({
 });
 
 const PutSelectionBody = z.object({
-  address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
   words: z
     .array(z.string())
     .openapi({ description: "Exactly 5 word ids from the pool (unordered set)" }),
@@ -34,16 +33,19 @@ const PutSelectionBody = z.object({
   }),
 });
 
-// PUT /selections/me — the only write path. Authenticated by a wallet signature
-// over a deterministic message binding the address to the exact word set.
+// PUT /selections/{address} — the only write path, mirroring the public GET.
+// Authenticated by a wallet signature over a deterministic message binding the
+// address to the exact word set; the recovered signer must equal the path
+// {address}, so a wallet can only ever write its own selection.
 const putRoute = createRoute({
   method: "put",
-  path: "/selections/me",
+  path: "/selections/{address}",
   tags: ["Selections"],
-  summary: "Upsert the caller's word selection",
+  summary: "Upsert an address's word selection",
   description:
-    "Stores (or replaces) the signer's matchmaking word selection. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal `address`. Idempotent upsert keyed by address.",
+    "Stores (or replaces) the word selection for the path `address`. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal the path `address`. Idempotent upsert keyed by address.",
   request: {
+    params: AddressParam,
     body: {
       content: { "application/json": { schema: PutSelectionBody } },
     },
@@ -58,7 +60,7 @@ const putRoute = createRoute({
       content: { "application/json": { schema: ErrorSchema } },
     },
     401: {
-      description: "Signature missing, malformed, or not from the claimed address",
+      description: "Signature missing, malformed, or not from the path address",
       content: { "application/json": { schema: ErrorSchema } },
     },
     500: {
@@ -103,7 +105,8 @@ const app = new OpenAPIHono();
 
 app.openapi(putRoute, async (c) => {
   try {
-    const { address: rawAddress, words, signature } = c.req.valid("json");
+    const { address: rawAddress } = c.req.valid("param");
+    const { words, signature } = c.req.valid("json");
 
     const address = normalizeAddress(rawAddress);
     if (!address) {
