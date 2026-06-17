@@ -1,12 +1,5 @@
 /**
  * Canonical matchmaking word pool + selection validation.
- *
- * ⚠️ WORKING DRAFT (~20 deliberately-contrasting value words). The final list is
- * still pending Zeugh sign-off — that validation is a human step, not code. The
- * ids/labels below are committed so the feature is fully shippable meanwhile;
- * swapping in the validated words is a one-file edit with no schema or API
- * change (selection writes validate against whatever this file exports).
- *
  * Served to the frontend (Selection modal) via `GET /selections/word-pool`;
  * nothing imports the list across the wire.
  */
