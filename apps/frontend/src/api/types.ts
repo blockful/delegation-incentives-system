@@ -32,11 +32,11 @@ export type PoolWord = WordPoolResponse["pool"][number];
 // `requestBody` optional, so a conditional `extends { requestBody: ... }` would
 // resolve to `never`. NonNullable strips the `| undefined`.
 export type PutSelectionBody = NonNullable<
-  paths["/selections/me"]["put"]["requestBody"]
+  paths["/selections/{address}"]["put"]["requestBody"]
 >["content"]["application/json"];
 
 export type PutSelectionResponse =
-  paths["/selections/me"]["put"]["responses"][200]["content"]["application/json"];
+  paths["/selections/{address}"]["put"]["responses"][200]["content"]["application/json"];
 
 export type VoterDetail = ActiveVotersResponse["voters"][number];
 export type TierEntry = TierProgressionResponse["tiers"][number];
