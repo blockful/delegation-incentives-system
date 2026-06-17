@@ -1,13 +1,5 @@
 /**
  * Canonical matchmaking word pool + selection validation.
- *
- * ⚠️ v1 PLACEHOLDER SEEDS. The final ~20 AI-generated + Zeugh-validated,
- * deliberately-contrasting words are authored in BE-2 (DEV-899). Selection
- * writes validate against whatever this file exports, so finalizing the list is
- * a one-file edit with no schema or API change.
- *
- * The pool is served to the frontend (Selection modal) by BE-2's
- * `GET /selections/word-pool`; nothing imports the list across the wire.
  */
 import { SELECTION_COUNT } from "@ens-dis/domain";
 
