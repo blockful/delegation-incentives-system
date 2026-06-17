@@ -936,10 +936,10 @@ export const mockApi = {
   matchCount: (_address: string) =>
     delay<MatchCountResponse>({ matchCount: 2, matchingActiveVoters: 1 }),
 
-  putSelection: (body: PutSelectionBody) => {
-    mockSelectionStore.set(body.address.toLowerCase(), body.words)
+  putSelection: (address: string, body: PutSelectionBody) => {
+    mockSelectionStore.set(address.toLowerCase(), body.words)
     return delay<PutSelectionResponse>({
-      address: body.address.toLowerCase(),
+      address: address.toLowerCase(),
       words: body.words,
       updatedAt: 1781619462005,
     })
