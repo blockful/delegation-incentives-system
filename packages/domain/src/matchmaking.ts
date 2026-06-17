@@ -13,7 +13,6 @@
 
 /**
  * Number of words a participant selects from the pool.
- * Decided 2026-06-16: exactly 5 (not "up to 5").
  */
 export const SELECTION_COUNT = 5;
 

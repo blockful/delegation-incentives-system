@@ -109,8 +109,8 @@ export const api = {
   matchCount: (address: string) =>
     request<MatchCountResponse>(`/selections/${address}/match-count`),
 
-  putSelection: (body: PutSelectionBody) =>
-    request<PutSelectionResponse>("/selections/me", {
+  putSelection: (address: string, body: PutSelectionBody) =>
+    request<PutSelectionResponse>(`/selections/${address}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
