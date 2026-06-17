@@ -66,8 +66,8 @@ function makeApp() {
   return app;
 }
 
-function put(body: unknown) {
-  return makeApp().request("/selections/me", {
+function put(address: string, body: unknown) {
+  return makeApp().request(`/selections/${address}`, {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -109,13 +109,13 @@ describe("validateSelection", () => {
   });
 });
 
-describe("PUT /selections/me", () => {
+describe("PUT /selections/{address}", () => {
   it("stores a selection with a valid signature from the same address", async () => {
     const signature = await account.signMessage({
       message: buildSelectionMessage(account.address, VALID_WORDS),
     });
 
-    const res = await put({ address: account.address, words: VALID_WORDS, signature });
+    const res = await put(account.address, { words: VALID_WORDS, signature });
     expect(res.status).toBe(200);
 
     const json = (await res.json()) as { address: string; words: string[] };
@@ -131,7 +131,7 @@ describe("PUT /selections/me", () => {
       message: buildSelectionMessage(account.address, VALID_WORDS),
     });
 
-    const res = await put({ address: account.address, words: VALID_WORDS, signature });
+    const res = await put(account.address, { words: VALID_WORDS, signature });
     expect(res.status).toBe(401);
     expect(store.size).toBe(0);
   });
@@ -142,19 +142,18 @@ describe("PUT /selections/me", () => {
     });
     const tampered = ["security", "decentralization", "public_goods_funding", "transparency", "accessibility"];
 
-    const res = await put({ address: account.address, words: tampered, signature });
+    const res = await put(account.address, { words: tampered, signature });
     expect(res.status).toBe(401);
     expect(store.size).toBe(0);
   });
 
   it("rejects a malformed signature (401)", async () => {
-    const res = await put({ address: account.address, words: VALID_WORDS, signature: "0xdeadbeef" });
+    const res = await put(account.address, { words: VALID_WORDS, signature: "0xdeadbeef" });
     expect(res.status).toBe(401);
   });
 
   it("rejects an invalid selection before checking the signature (400)", async () => {
-    const res = await put({
-      address: account.address,
+    const res = await put(account.address, {
       words: VALID_WORDS.slice(0, 4),
       signature: "0xdeadbeef",
     });
@@ -162,7 +161,7 @@ describe("PUT /selections/me", () => {
   });
 
   it("rejects an invalid address (400)", async () => {
-    const res = await put({ address: "not-an-address", words: VALID_WORDS, signature: "0xdeadbeef" });
+    const res = await put("not-an-address", { words: VALID_WORDS, signature: "0xdeadbeef" });
     expect(res.status).toBe(400);
   });
 });
