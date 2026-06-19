@@ -9,7 +9,12 @@ import {
   useViewerRole,
   SelectionFlow,
   UnlockMatchmakingBanner,
+  MatchmakingPitch,
+  pitchCopy,
+  pitchDisconnectedCopy,
 } from '@/features/matchmaking'
+import { useWalletState } from '@/features/wallet/useWalletState'
+import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { useVoterEnsNames } from '@/features/ens/useVoterEnsNames'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
@@ -333,47 +338,14 @@ const Overlay = styled.div`
 const OverlayCard = styled.div`
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.lg};
+  border-radius: 20px;
   box-shadow: ${tokens.shadow.lg};
-  padding: ${tokens.spacing['2xl']};
-  max-width: 420px;
+  padding: ${tokens.spacing['4xl']};
+  max-width: ${tokens.maxWidth.md};
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
-  text-align: center;
-`
 
-const OverlayTitle = styled.h2`
-  margin: 0;
-  font-size: ${tokens.font.size.xl};
-  font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
-`
-
-const OverlayBody = styled.p`
-  margin: 0;
-  color: ${tokens.color.darkGray};
-  line-height: 1.5;
-`
-
-const OverlayActions = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.sm};
-  align-items: center;
-`
-
-const NotNowButton = styled.button`
-  background: none;
-  border: none;
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  cursor: pointer;
-
-  &:hover {
-    color: ${tokens.color.darkBlue};
+  @media (max-width: 640px) {
+    padding: ${tokens.spacing['2xl']};
   }
 `
 
@@ -390,12 +362,23 @@ export function VotersPage() {
   const [search, setSearch] = useState('')
 
   // Matchmaking unselected-viewer states (the page always renders — no hard gate).
-  // Nudge gating is centralized in useNudgeGating (session-scoped dismissal).
-  const { shouldAutoOpenPitch, shouldShowNudge, dismiss } = useNudgeGating()
+  const wallet = useWalletState()
+  const disconnected = wallet.status === 'disconnected'
+  const { connectedNotSelected, dismissed, dismiss } = useNudgeGating()
   const { role } = useViewerRole()
   const [flowOpen, setFlowOpen] = useState(false)
-  const showOverlay = shouldAutoOpenPitch // blurred list + pitch teaser
-  const showBanner = shouldShowNudge // legible + inline banner + "?" cards
+  // Blocked hero shows for anyone who hasn't matched yet — disconnected OR
+  // connected-not-selected — until dismissed. Dismissal is ephemeral (per visit),
+  // so the hero re-opens on every entry/reload until they select. The hero IS the
+  // pitch (flag design); its CTA connects (disconnected) or jumps to Select.
+  // "Not now" → the quieter inline banner for the rest of this visit.
+  const notSelected = disconnected || connectedNotSelected
+  const showOverlay = notSelected && !dismissed
+  const showBanner = notSelected && dismissed
+  const heroCopy = disconnected ? pitchDisconnectedCopy : pitchCopy[role ?? 'holder']
+  const onHeroPrimary = disconnected
+    ? () => void openWalletModal()
+    : () => setFlowOpen(true)
 
   // Resolved state defaults to Match-sorted — until the user picks a sort.
   useEffect(() => {
@@ -561,7 +544,12 @@ export function VotersPage() {
             </EmptyState>
           )}
 
-          {showBanner && <UnlockMatchmakingBanner onSelect={() => setFlowOpen(true)} />}
+          {showBanner && (
+            <UnlockMatchmakingBanner
+              onSelect={onHeroPrimary}
+              ctaLabel={disconnected ? 'Connect wallet' : undefined}
+            />
+          )}
 
           {voters && voters.length > 0 && (
             <GridWrap>
@@ -583,19 +571,13 @@ export function VotersPage() {
               {showOverlay && (
                 <Overlay>
                   <OverlayCard>
-                    <OverlayTitle>Discover your matches</OverlayTitle>
-                    <OverlayBody>
-                      Pick the values that matter to you and we&apos;ll sort delegates by how well
-                      they match.
-                    </OverlayBody>
-                    <OverlayActions>
-                      <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
-                        Discover your matches
-                      </Button>
-                      <NotNowButton type="button" onClick={dismiss}>
-                        Not now
-                      </NotNowButton>
-                    </OverlayActions>
+                    <MatchmakingPitch
+                      title={heroCopy.title}
+                      body={heroCopy.body}
+                      primaryLabel={heroCopy.cta}
+                      onPrimary={onHeroPrimary}
+                      onSecondary={dismiss}
+                    />
                   </OverlayCard>
                 </Overlay>
               )}
@@ -604,7 +586,12 @@ export function VotersPage() {
         </CardsAndFilters>
 
         {flowOpen && role && (
-          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
+          <SelectionFlow
+            open
+            role={role}
+            initialStep="select"
+            onClose={() => setFlowOpen(false)}
+          />
         )}
     </Page>
   )

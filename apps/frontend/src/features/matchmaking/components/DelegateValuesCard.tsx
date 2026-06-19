@@ -19,8 +19,16 @@ export interface DelegateValuesCardProps {
 
 /**
  * The delegate-profile "Values" card across all 7 viewer × delegate states.
- * Comparison is computed client-side; word labels come from the pool. ⚠️ Copy +
- * exact comparison viz are placeholder (Design will redraw).
+ * Comparison is computed client-side; word labels come from the pool.
+ *
+ * The Figma "dumbbell" comparison (5 fixed categories on a 1–5 scale, two dots
+ * per row joined by a line) assumes ORDERED, RANKED values. We use a word POOL:
+ * an unordered set of 5 picks with no per-value magnitude. So we keep the
+ * design's SHELL — secondary header strip, legend (delegate dot / you dot), and
+ * the prominent blue "% match" pill — but swap the dumbbell rows for a
+ * "shared-in-the-middle / unique-on-the-ends" word layout that carries the same
+ * spirit (the two ends of the dumbbell = each side's unique words; the joint in
+ * the middle = the words you agree on).
  */
 export function DelegateValuesCard({ delegateAddress }: DelegateValuesCardProps) {
   const wallet = useWalletState()
@@ -119,31 +127,45 @@ export function DelegateValuesCard({ delegateAddress }: DelegateValuesCardProps)
   // Both selected → shared / unique comparison + match pill.
   const score = scoreSelection(viewerWords ?? [], delegateWords)
   return (
-    <Card>
-      <Header>
+    <ComparisonCard>
+      <HeaderStrip>
         <CardTitle>Values comparison</CardTitle>
-        <MatchPill>⭐ {score.percent}% match with your priorities</MatchPill>
-      </Header>
+        <MatchPill $strong={score.strongMatch}>
+          <span aria-hidden="true">⭐</span> {score.percent}% match with your priorities
+        </MatchPill>
+      </HeaderStrip>
 
-      <Group>
-        <GroupLabel>Shared</GroupLabel>
-        {score.sharedWords.length > 0 ? (
-          <Chips words={score.sharedWords} labelOf={labelOf} highlight />
-        ) : (
-          <Muted>No words in common.</Muted>
-        )}
-      </Group>
+      <Divider />
 
-      <Group>
-        <GroupLabel>Only this delegate</GroupLabel>
-        <Chips words={score.bUnique} labelOf={labelOf} />
-      </Group>
+      <CompareGrid>
+        <Column>
+          <ColumnHead>
+            <LegendDot $variant="you" aria-hidden="true" />
+            <ColumnLabel>Only you</ColumnLabel>
+          </ColumnHead>
+          <Chips words={score.aUnique} labelOf={labelOf} />
+        </Column>
 
-      <Group>
-        <GroupLabel>Only you</GroupLabel>
-        <Chips words={score.aUnique} labelOf={labelOf} />
-      </Group>
-    </Card>
+        <SharedColumn>
+          <ColumnHead>
+            <ColumnLabel>Shared</ColumnLabel>
+          </ColumnHead>
+          {score.sharedWords.length > 0 ? (
+            <Chips words={score.sharedWords} labelOf={labelOf} highlight center />
+          ) : (
+            <Muted>No words in common.</Muted>
+          )}
+        </SharedColumn>
+
+        <Column $alignEnd>
+          <ColumnHead $alignEnd>
+            <ColumnLabel>Only this delegate</ColumnLabel>
+            <LegendDot $variant="delegate" aria-hidden="true" />
+          </ColumnHead>
+          <Chips words={score.bUnique} labelOf={labelOf} alignEnd />
+        </Column>
+      </CompareGrid>
+    </ComparisonCard>
   )
 }
 
@@ -151,14 +173,18 @@ function Chips({
   words,
   labelOf,
   highlight = false,
+  center = false,
+  alignEnd = false,
 }: {
   words: string[]
   labelOf: (id: string) => string
   highlight?: boolean
+  center?: boolean
+  alignEnd?: boolean
 }) {
   if (words.length === 0) return <Muted>—</Muted>
   return (
-    <ChipRow>
+    <ChipRow $center={center} $alignEnd={alignEnd}>
       {words.map((id) => (
         <Chip key={id} $highlight={highlight}>
           {labelOf(id)}
@@ -179,11 +205,33 @@ const Card = styled.div`
   border-radius: ${tokens.radius.md};
 `
 
+// Comparison variant: framed shell with a secondary header strip + divider,
+// mirroring the Figma "Values card" chrome.
+const ComparisonCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: ${tokens.radius.md};
+`
+
 const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: ${tokens.spacing.sm};
+`
+
+const HeaderStrip = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.surfaceAlt};
 `
 
 const CardTitle = styled.h3`
@@ -193,6 +241,18 @@ const CardTitle = styled.h3`
   color: ${tokens.color.darkBlue};
 `
 
+// Solid dot = delegate, hollow ring = you — used in the per-column heads.
+const LegendDot = styled.span<{ $variant: 'delegate' | 'you' }>`
+  width: 10px;
+  height: 10px;
+  border-radius: ${tokens.radius.pill};
+  flex-shrink: 0;
+  ${({ $variant }) =>
+    $variant === 'delegate'
+      ? `background: ${tokens.color.blue};`
+      : `background: ${tokens.color.surface}; border: 2px solid ${tokens.color.blue};`}
+`
+
 const Muted = styled.p`
   margin: 0;
   color: ${tokens.color.darkGray};
@@ -200,32 +260,99 @@ const Muted = styled.p`
   line-height: 1.5;
 `
 
-const MatchPill = styled.span`
-  background: ${tokens.color.tierHighlight};
-  color: ${tokens.color.positiveEmphasis};
+const MatchPill = styled.span<{ $strong: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  background: ${({ $strong }) =>
+    $strong ? tokens.color.status.success.bg : tokens.color.lightBlue};
+  color: ${({ $strong }) =>
+    $strong ? tokens.color.positiveEmphasis : tokens.color.blue};
+  border: 1px solid
+    ${({ $strong }) => ($strong ? tokens.color.status.success.border : tokens.color.lightBlue)};
   padding: ${tokens.spacing.xs} ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
   white-space: nowrap;
 `
 
-const Group = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xs};
+const Divider = styled.div`
+  height: 1px;
+  width: 100%;
+  background: ${tokens.color.borderLight};
 `
 
-const GroupLabel = styled.span`
+// The "dumbbell" reimagined: unique ends on the sides, shared joint centered.
+// Collapses to a single column on narrow viewports.
+const CompareGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: ${tokens.spacing.lg};
+  padding: ${tokens.spacing.lg};
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+    gap: ${tokens.spacing.md};
+  }
+`
+
+const Column = styled.div<{ $alignEnd?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  min-width: 0;
+  align-items: ${({ $alignEnd }) => ($alignEnd ? 'flex-end' : 'flex-start')};
+
+  @media (max-width: 720px) {
+    align-items: flex-start;
+  }
+`
+
+// Centered "joint" of the dumbbell — the words both sides picked.
+const SharedColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.sm};
+  align-items: center;
+  min-width: 0;
+  padding: 0 ${tokens.spacing.md};
+  border-left: 1px solid ${tokens.color.borderLight};
+  border-right: 1px solid ${tokens.color.borderLight};
+
+  @media (max-width: 720px) {
+    align-items: flex-start;
+    padding: ${tokens.spacing.md} 0 0;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid ${tokens.color.borderLight};
+  }
+`
+
+const ColumnHead = styled.div<{ $alignEnd?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.xs};
+  ${({ $alignEnd }) => $alignEnd && 'flex-direction: row;'}
+`
+
+const ColumnLabel = styled.span`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.textSecondary};
 `
 
-const ChipRow = styled.div`
+const ChipRow = styled.div<{ $center?: boolean; $alignEnd?: boolean }>`
   display: flex;
   flex-wrap: wrap;
   gap: ${tokens.spacing.sm};
+  justify-content: ${({ $center, $alignEnd }) =>
+    $center ? 'center' : $alignEnd ? 'flex-end' : 'flex-start'};
+
+  @media (max-width: 720px) {
+    justify-content: flex-start;
+  }
 `
 
 const Chip = styled.span<{ $highlight: boolean }>`

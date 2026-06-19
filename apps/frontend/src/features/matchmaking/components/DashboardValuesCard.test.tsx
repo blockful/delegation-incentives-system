@@ -16,7 +16,9 @@ describe('DashboardValuesCard', () => {
     renderApp(<DashboardValuesCard />, {
       walletState: { status: 'connected', address: ACTIVE_VOTER },
     })
-    await waitFor(() => expect(screen.getByText(/your values/i)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /^values$/i })).toBeInTheDocument(),
+    )
     expect(screen.getByRole('button', { name: /edit values/i })).toBeInTheDocument()
     expect(screen.getByText('Security')).toBeInTheDocument()
   })
@@ -42,7 +44,7 @@ describe('DashboardValuesCard', () => {
       walletState: { status: 'connected', address: HOLDER },
     })
     await waitFor(() => {
-      expect(screen.queryByText(/your values/i)).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: /^values$/i })).not.toBeInTheDocument()
       expect(screen.queryByText(/missing values/i)).not.toBeInTheDocument()
     })
   })

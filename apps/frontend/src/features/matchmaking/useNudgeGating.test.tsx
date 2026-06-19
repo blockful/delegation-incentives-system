@@ -17,16 +17,14 @@ function makeWrapper(walletState: AppWalletState) {
   }
 }
 
-beforeEach(() => window.sessionStorage.clear())
+const UNSELECTED = {
+  status: 'connected',
+  address: '0x0000000000000000000000000000000000000000',
+} as const
 
 describe('useNudgeGating', () => {
   it('auto-opens the pitch for a connected unselected wallet, then nudges after dismiss', async () => {
-    const { result } = renderHook(() => useNudgeGating(), {
-      wrapper: makeWrapper({
-        status: 'connected',
-        address: '0x0000000000000000000000000000000000000000',
-      }),
-    })
+    const { result } = renderHook(() => useNudgeGating(), { wrapper: makeWrapper(UNSELECTED) })
 
     await waitFor(() => expect(result.current.connectedNotSelected).toBe(true))
     expect(result.current.shouldAutoOpenPitch).toBe(true)
@@ -36,7 +34,17 @@ describe('useNudgeGating', () => {
 
     expect(result.current.shouldAutoOpenPitch).toBe(false)
     expect(result.current.shouldShowNudge).toBe(true)
-    expect(window.sessionStorage.getItem('matchmaking:pitch-dismissed')).toBe('1')
+  })
+
+  it('dismissal is ephemeral — a fresh mount re-opens the pitch (no session persistence)', async () => {
+    const first = renderHook(() => useNudgeGating(), { wrapper: makeWrapper(UNSELECTED) })
+    await waitFor(() => expect(first.result.current.shouldAutoOpenPitch).toBe(true))
+    act(() => first.result.current.dismiss())
+    expect(first.result.current.shouldAutoOpenPitch).toBe(false)
+
+    // A brand-new mount (≈ navigating away and back, or a reload) starts undismissed.
+    const second = renderHook(() => useNudgeGating(), { wrapper: makeWrapper(UNSELECTED) })
+    await waitFor(() => expect(second.result.current.shouldAutoOpenPitch).toBe(true))
   })
 
   it('stays quiet when disconnected', () => {
