@@ -8,9 +8,10 @@ import {
   ensBalance,
 } from "ponder:schema";
 import { eq, asc, desc, sql, and, inArray } from "drizzle-orm";
-import type { Address } from "@ens-dis/domain";
-import { fetchActiveVoters } from "../helpers.js";
+import { type Address, scoreSelection } from "@ens-dis/domain";
+import { fetchActiveVoters, normalizeAddress } from "../helpers.js";
 import { parseProposalTitle } from "../proposal-title.js";
+import { getAppDb, wordSelections } from "../../db/app-tables.js";
 
 const ProposalVoteSchema = z.object({
   proposalId: z.string().openapi({ example: "39893466662181856279242827854933926689925858494049650894234231038376231891860" }),
@@ -26,6 +27,14 @@ const ProposalVoteSchema = z.object({
       description: "Voter's vote: 0=Against, 1=For, 2=Abstain, null=did not vote",
       example: 1,
     }),
+});
+
+const MatchSchema = z.object({
+  percent: z.number().openapi({ description: "Overlap as a % of the 5-word selection", example: 80 }),
+  strongMatch: z.boolean().openapi({ description: ">= 80% overlap", example: true }),
+  sharedWords: z.array(z.string()).openapi({ example: ["security", "decentralization"] }),
+  aUnique: z.array(z.string()).openapi({ description: "Words only the viewer selected" }),
+  bUnique: z.array(z.string()).openapi({ description: "Words only this voter selected" }),
 });
 
 const VoterSchema = z.object({
@@ -48,6 +57,26 @@ const VoterSchema = z.object({
     .string()
     .nullable()
     .openapi({ description: "ISO 8601 timestamp of the voter's earliest vote", example: "2024-01-15T00:00:00.000Z" }),
+  words: z
+    .array(z.string())
+    .nullable()
+    .openapi({
+      description: "The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.",
+      example: ["security", "decentralization", "public_goods_funding", "transparency", "open_source"],
+    }),
+  match: MatchSchema.nullable().openapi({
+    description:
+      "Overlap with the ?viewer address's selection (server-computed). null when no viewer is given, the viewer hasn't selected, or this voter hasn't selected.",
+  }),
+});
+
+const QuerySchema = z.object({
+  viewer: z.string().optional().openapi({
+    param: { name: "viewer", in: "query", required: false },
+    description:
+      "Optional connected address. When given, each voter carries a `match` against this address's selection.",
+    example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+  }),
 });
 
 const route = createRoute({
@@ -56,7 +85,8 @@ const route = createRoute({
   tags: ["Voters"],
   summary: "List active voters",
   description:
-    "Returns voters who meet the voting activity threshold, sorted by voting power descending.",
+    "Returns voters who meet the voting activity threshold, sorted by voting power descending. Pass `?viewer=0x..` to get each voter's match against that address's selection.",
+  request: { query: QuerySchema },
   responses: {
     200: {
       description: "Active voters list",
@@ -83,6 +113,11 @@ app.openapi(route, async (c) => {
   try {
     const { activeVoters, proposalIds, voteCounts, voterProposals } =
       await fetchActiveVoters(db);
+
+    // Optional viewer: when present, each voter is scored against the viewer's
+    // own selection. An invalid/absent viewer simply yields null matches.
+    const rawViewer = c.req.valid("query").viewer;
+    const viewer = rawViewer ? normalizeAddress(rawViewer) : null;
 
     // Fetch description + status for each window proposal so we can render
     // titles and outcomes on the frontend.
@@ -127,6 +162,29 @@ app.openapi(route, async (c) => {
     for (const row of voteSupportRows) {
       supportByVoterProposal.set(`${row.voter}-${row.proposalId}`, row.support);
     }
+
+    // Fetch each active voter's matchmaking selection from the app-owned table
+    // so the client can compute match overlap with no extra round-trips.
+    const { db: appDb, ready: appReady } = getAppDb();
+    await appReady;
+    const lowerVoterAddrs = activeVoterList.map((a) => a.toLowerCase());
+    // Include the viewer in the lookup so each voter can be scored against the
+    // viewer's own selection in a single round-trip (the viewer need not be an
+    // active voter).
+    const selectionLookupAddrs =
+      viewer && !lowerVoterAddrs.includes(viewer)
+        ? [...lowerVoterAddrs, viewer]
+        : lowerVoterAddrs;
+    const selectionRows = selectionLookupAddrs.length > 0
+      ? await appDb
+          .select({ address: wordSelections.address, words: wordSelections.words })
+          .from(wordSelections)
+          .where(inArray(wordSelections.address, selectionLookupAddrs))
+      : [];
+    const selectionByAddress = new Map<string, string[]>(
+      selectionRows.map((r) => [r.address, r.words]),
+    );
+    const viewerWords = viewer ? selectionByAddress.get(viewer) ?? null : null;
 
     const voters: z.infer<typeof VoterSchema>[] = [];
 
@@ -178,6 +236,7 @@ app.openapi(route, async (c) => {
           ? new Date(Number(earliestVoteRows[0].timestamp) * 1000).toISOString()
           : null;
 
+      const voterWords = selectionByAddress.get(addr.toLowerCase()) ?? null;
       voters.push({
         address: addr,
         ensName: null,    // ENS resolution handled client-side
@@ -188,6 +247,9 @@ app.openapi(route, async (c) => {
         last10Proposals,
         tokenHolderCount: Number(countRows[0]?.count ?? 0),
         activeSince,
+        words: voterWords,
+        match:
+          viewerWords && voterWords ? scoreSelection(viewerWords, voterWords) : null,
       });
     }
 

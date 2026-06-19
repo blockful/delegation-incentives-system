@@ -1,5 +1,7 @@
 /**
  * Canonical matchmaking word pool + selection validation.
+ * Served to the frontend (Selection modal) via `GET /selections/word-pool`;
+ * nothing imports the list across the wire.
  */
 import { SELECTION_COUNT } from "@ens-dis/domain";
 

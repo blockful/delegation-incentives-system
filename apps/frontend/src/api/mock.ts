@@ -337,11 +337,22 @@ const MOCK_VOTERS_BASE = [
     },
   ]
 
+// Sample matchmaking selections for the first few mock voters (word ids match
+// the backend pool). The rest are left unselected (null) to exercise the
+// "delegate hasn't picked" state. Used only in mock mode.
+const MOCK_VOTER_SELECTIONS: (string[] | null)[] = [
+  ["security", "decentralization", "public_goods_funding", "transparency", "open_source"],
+  ["security", "decentralization", "public_goods_funding", "transparency", "credible_neutrality"],
+  ["growth_investment", "treasury_growth", "ecosystem_funding", "cost_efficiency", "interoperability"],
+]
+
 const MOCK_VOTERS: ActiveVotersResponse = {
   count: MOCK_VOTERS_BASE.length,
-  voters: MOCK_VOTERS_BASE.map((v) => ({
+  voters: MOCK_VOTERS_BASE.map((v, i) => ({
     ...v,
     last10Proposals: buildMockProposals(v.last10ProposalsVoted),
+    words: MOCK_VOTER_SELECTIONS[i] ?? null,
+    match: null,
   })),
 }
 
