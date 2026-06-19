@@ -56,6 +56,47 @@ export const handlers = [
       : emptyRoundDetailFixture),
   ),
 
+  // --- Matchmaking selections (static + match-count must precede :address) ---
+  http.get('/api/selections/word-pool', () =>
+    HttpResponse.json({
+      pool: [
+        { id: 'security', label: 'Security' },
+        { id: 'decentralization', label: 'Decentralization' },
+        { id: 'public_goods_funding', label: 'Public goods funding' },
+        { id: 'transparency', label: 'Transparency' },
+        { id: 'open_source', label: 'Open source' },
+        { id: 'credible_neutrality', label: 'Credible neutrality' },
+      ],
+    }),
+  ),
+
+  http.get('/api/selections/:address/match-count', () =>
+    HttpResponse.json({ matchCount: 2, matchingActiveVoters: 1 }),
+  ),
+
+  http.get('/api/selections/:address', ({ params }) => {
+    const address = String(params.address).toLowerCase()
+    // The zero address has no selection — exercises the 404 → null path.
+    if (address === '0x0000000000000000000000000000000000000000') {
+      return HttpResponse.json({ error: 'No selection for this address' }, { status: 404 })
+    }
+    return HttpResponse.json({
+      address,
+      words: ['security', 'decentralization', 'public_goods_funding', 'transparency', 'open_source'],
+      updatedAt: 1781619462005,
+    })
+  }),
+
+  http.put('/api/selections/:address', async ({ request, params }) => {
+    const body = (await request.json()) as { words: string[] }
+    const address = String(params.address)
+    return HttpResponse.json({
+      address: address.toLowerCase(),
+      words: body.words,
+      updatedAt: 1781619462005,
+    })
+  }),
+
   http.get('/api/gateful/ens/relay/balance', () =>
     HttpResponse.json({ hasEnoughBalance: true }),
   ),

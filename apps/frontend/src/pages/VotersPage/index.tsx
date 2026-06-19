@@ -1,9 +1,20 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlass, faShareNodes, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
-import { useVoters } from '@/features/voters/useVoters'
+import {
+  useVotersWithMatch,
+  useNudgeGating,
+  useViewerRole,
+  SelectionFlow,
+  UnlockMatchmakingBanner,
+  MatchmakingPitch,
+  pitchCopy,
+  pitchDisconnectedCopy,
+} from '@/features/matchmaking'
+import { useWalletState } from '@/features/wallet/useWalletState'
+import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { useVoterEnsNames } from '@/features/ens/useVoterEnsNames'
 import { useStats } from '@/features/stats/useStats'
 import { tokens, fadeInUp, ErrorMessage } from '@/styles'
@@ -11,7 +22,6 @@ import { VoterCardsSkeleton, StatsBarSkeleton } from '@/components/shared/PageSk
 import { VoterCard } from './components/VoterCard'
 import { SortControls, type SortState } from './components/SortControls'
 import { StatsBar } from './components/StatsBar'
-import type { VoterDetail } from '@/api/types'
 
 const Page = styled.div`
   width: 100%;
@@ -295,7 +305,7 @@ function randomSeed(): number {
   return Math.floor(Math.random() * 0xffffffff)
 }
 
-function shuffled(voters: VoterDetail[], seed: number): VoterDetail[] {
+function shuffled<T>(voters: T[], seed: number): T[] {
   const copy = [...voters]
   const rand = mulberry32(seed + 1) // avoid seed 0 (mulberry32 still works, but +1 keeps things less degenerate)
   for (let i = copy.length - 1; i > 0; i--) {
@@ -305,18 +315,86 @@ function shuffled(voters: VoterDetail[], seed: number): VoterDetail[] {
   return copy
 }
 
+const GridWrap = styled.div`
+  position: relative;
+  width: 100%;
+`
+
+const Blurred = styled.div<{ $blur: boolean }>`
+  ${({ $blur }) =>
+    $blur ? 'filter: blur(6px); pointer-events: none; user-select: none;' : ''}
+`
+
+const Overlay = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: ${tokens.spacing['4xl']};
+  z-index: 2;
+`
+
+const OverlayCard = styled.div`
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.borderLight};
+  border-radius: 20px;
+  box-shadow: ${tokens.shadow.lg};
+  padding: ${tokens.spacing['4xl']};
+  max-width: ${tokens.maxWidth.md};
+  width: 100%;
+
+  @media (max-width: 640px) {
+    padding: ${tokens.spacing['2xl']};
+  }
+`
+
 export function VotersPage() {
-  const { data, loading, error } = useVoters()
+  const { voters: data, loading, error, viewerHasSelected } = useVotersWithMatch()
   const { map: resolvedEnsNames, report: reportResolvedEns } = useVoterEnsNames(data)
   const { data: stats, loading: statsLoading } = useStats()
   const [sort, setSort] = useState<SortState>({ field: 'random', direction: 'desc' })
+  const [sortTouched, setSortTouched] = useState(false)
   // Lazy initializer: a new random seed on every mount, so every visit to the
   // page gets a different order. Was previously a constant 0, which made the
   // "random" sort deterministic and identical across visits.
   const [shuffleSeed, setShuffleSeed] = useState(randomSeed)
   const [search, setSearch] = useState('')
 
-  const handleShuffle = useCallback(() => setShuffleSeed(randomSeed()), [])
+  // Matchmaking unselected-viewer states (the page always renders — no hard gate).
+  const wallet = useWalletState()
+  const disconnected = wallet.status === 'disconnected'
+  const { connectedNotSelected, dismissed, dismiss } = useNudgeGating()
+  const { role } = useViewerRole()
+  const [flowOpen, setFlowOpen] = useState(false)
+  // Blocked hero shows for anyone who hasn't matched yet — disconnected OR
+  // connected-not-selected — until dismissed. Dismissal is ephemeral (per visit),
+  // so the hero re-opens on every entry/reload until they select. The hero IS the
+  // pitch (flag design); its CTA connects (disconnected) or jumps to Select.
+  // "Not now" → the quieter inline banner for the rest of this visit.
+  const notSelected = disconnected || connectedNotSelected
+  const showOverlay = notSelected && !dismissed
+  const showBanner = notSelected && dismissed
+  const heroCopy = disconnected ? pitchDisconnectedCopy : pitchCopy[role ?? 'holder']
+  const onHeroPrimary = disconnected
+    ? () => void openWalletModal()
+    : () => setFlowOpen(true)
+
+  // Resolved state defaults to Match-sorted — until the user picks a sort.
+  useEffect(() => {
+    if (viewerHasSelected && !sortTouched) {
+      setSort({ field: 'match', direction: 'desc' })
+    }
+  }, [viewerHasSelected, sortTouched])
+
+  const handleSortChange = useCallback((v: SortState) => {
+    setSortTouched(true)
+    setSort(v)
+  }, [])
+  const handleShuffle = useCallback(() => {
+    setSortTouched(true)
+    setShuffleSeed(randomSeed())
+  }, [])
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '#'
@@ -361,6 +439,13 @@ export function VotersPage() {
           const aT = a.activeSince ? new Date(a.activeSince).getTime() : 0
           const bT = b.activeSince ? new Date(b.activeSince).getTime() : 0
           return (aT - bT) * dir
+        })
+      } else if (sort.field === 'match') {
+        // Unselected delegates (no match) sort last regardless of direction.
+        filtered.sort((a, b) => {
+          const aM = a.match?.percent ?? -1
+          const bM = b.match?.percent ?? -1
+          return (aM - bM) * dir
         })
       }
     }
@@ -439,7 +524,12 @@ export function VotersPage() {
               )}
             </SearchRow>
 
-            <SortControls value={sort} onChange={setSort} onShuffle={handleShuffle} />
+            <SortControls
+              value={sort}
+              onChange={handleSortChange}
+              onShuffle={handleShuffle}
+              showMatch={viewerHasSelected}
+            />
           </FilterRow>
 
           {loading && <VoterCardsSkeleton />}
@@ -454,19 +544,55 @@ export function VotersPage() {
             </EmptyState>
           )}
 
+          {showBanner && (
+            <UnlockMatchmakingBanner
+              onSelect={onHeroPrimary}
+              ctaLabel={disconnected ? 'Connect wallet' : undefined}
+            />
+          )}
+
           {voters && voters.length > 0 && (
-            <Grid>
-              {voters.map((v) => (
-                <VoterCard
-                  key={v.address}
-                  voter={v}
-                  resolvedEnsName={resolvedEnsNames.get(v.address.toLowerCase()) ?? null}
-                  onEnsResolved={reportResolvedEns}
-                />
-              ))}
-            </Grid>
+            <GridWrap>
+              <Blurred $blur={showOverlay}>
+                <Grid>
+                  {voters.map((v) => (
+                    <VoterCard
+                      key={v.address}
+                      voter={v}
+                      resolvedEnsName={resolvedEnsNames.get(v.address.toLowerCase()) ?? null}
+                      onEnsResolved={reportResolvedEns}
+                      match={v.match}
+                      viewerHasSelected={viewerHasSelected}
+                      degraded={showBanner}
+                    />
+                  ))}
+                </Grid>
+              </Blurred>
+              {showOverlay && (
+                <Overlay>
+                  <OverlayCard>
+                    <MatchmakingPitch
+                      title={heroCopy.title}
+                      body={heroCopy.body}
+                      primaryLabel={heroCopy.cta}
+                      onPrimary={onHeroPrimary}
+                      onSecondary={dismiss}
+                    />
+                  </OverlayCard>
+                </Overlay>
+              )}
+            </GridWrap>
           )}
         </CardsAndFilters>
+
+        {flowOpen && role && (
+          <SelectionFlow
+            open
+            role={role}
+            initialStep="select"
+            onClose={() => setFlowOpen(false)}
+          />
+        )}
     </Page>
   )
 }

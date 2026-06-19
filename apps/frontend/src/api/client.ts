@@ -11,6 +11,11 @@ import type {
   RoundListResponse,
   RoundDetailResponse,
   AddressDistributionHistoryResponse,
+  WordPoolResponse,
+  SelectionResponse,
+  MatchCountResponse,
+  PutSelectionBody,
+  PutSelectionResponse,
 } from "./types";
 
 const BASE = env.apiBaseUrl;
@@ -65,7 +70,10 @@ export const api = {
 
   status: () => request<StatusResponse>("/stats"),
 
-  activeVoters: () => request<ActiveVotersResponse>("/voters/active"),
+  activeVoters: (viewer?: string) =>
+    request<ActiveVotersResponse>(
+      viewer ? `/voters/active?viewer=${viewer}` : "/voters/active",
+    ),
 
   eligibility: (address: string) =>
     request<EligibilityResponse>(`/eligibility/${address}`),
@@ -95,6 +103,21 @@ export const api = {
       address,
       rewardLimit: options?.rewardLimit,
     })),
+
+  wordPool: () => request<WordPoolResponse>("/selections/word-pool"),
+
+  selection: (address: string) =>
+    request<SelectionResponse>(`/selections/${address}`),
+
+  matchCount: (address: string) =>
+    request<MatchCountResponse>(`/selections/${address}/match-count`),
+
+  putSelection: (address: string, body: PutSelectionBody) =>
+    request<PutSelectionResponse>(`/selections/${address}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
 
   downloadDistributionCsv: (month: string): void => {
     const href = `${BASE}/distributions/${encodeURIComponent(month)}/csv`;

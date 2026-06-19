@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 import { tokens } from '@/styles'
 
-export type SortField = 'random' | 'votingPower' | 'activity' | 'activeSince'
+export type SortField = 'random' | 'votingPower' | 'activity' | 'activeSince' | 'match'
 export type SortDirection = 'desc' | 'asc'
 export interface SortState {
   field: SortField
@@ -12,14 +12,18 @@ interface SortControlsProps {
   value: SortState
   onChange: (v: SortState) => void
   onShuffle: () => void
+  /** Show the Match tab — only meaningful once the viewer has selected (FE-3). */
+  showMatch?: boolean
 }
 
-const fields: { value: SortField; label: string }[] = [
+const baseFields: { value: SortField; label: string }[] = [
   { value: 'votingPower', label: 'Voting Power' },
   { value: 'activity', label: 'Activity' },
   { value: 'activeSince', label: 'First Active' },
   { value: 'random', label: 'Random' },
 ]
+
+const matchField: { value: SortField; label: string } = { value: 'match', label: 'Match' }
 
 const Wrapper = styled.div`
   display: flex;
@@ -64,7 +68,9 @@ function directionIndicator(field: SortField, dir: SortDirection): string {
   return dir === 'desc' ? ' ↓' : ' ↑'
 }
 
-export function SortControls({ value, onChange, onShuffle }: SortControlsProps) {
+export function SortControls({ value, onChange, onShuffle, showMatch = false }: SortControlsProps) {
+  const fields = showMatch ? [matchField, ...baseFields] : baseFields
+
   function handleClick(field: SortField) {
     if (field === 'random') {
       if (value.field === 'random') {

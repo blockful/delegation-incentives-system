@@ -22,6 +22,22 @@ export type TierProgressionResponse = GetJson<"/tiers/progression">;
 export type AprEstimateResponse = GetJson<"/apr/{address}">;
 export type RoundInfoResponse = GetJson<"/rounds/current">;
 
+// --- Matchmaking (selections) ---
+export type WordPoolResponse = GetJson<"/selections/word-pool">;
+export type SelectionResponse = GetJson<"/selections/{address}">;
+export type MatchCountResponse = GetJson<"/selections/{address}/match-count">;
+export type PoolWord = WordPoolResponse["pool"][number];
+
+// Direct indexed access (not conditional infer): openapi-typescript marks
+// `requestBody` optional, so a conditional `extends { requestBody: ... }` would
+// resolve to `never`. NonNullable strips the `| undefined`.
+export type PutSelectionBody = NonNullable<
+  paths["/selections/{address}"]["put"]["requestBody"]
+>["content"]["application/json"];
+
+export type PutSelectionResponse =
+  paths["/selections/{address}"]["put"]["responses"][200]["content"]["application/json"];
+
 export type VoterDetail = ActiveVotersResponse["voters"][number];
 export type TierEntry = TierProgressionResponse["tiers"][number];
 

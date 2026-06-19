@@ -37,6 +37,10 @@ vi.mock('wagmi', async () => {
     useDisconnect: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
     useReadContract: vi.fn().mockReturnValue(readContractResult()),
     useWalletClient: vi.fn().mockReturnValue(walletClientResult()),
+    useSignMessage: vi.fn().mockReturnValue({
+      signMessageAsync: vi.fn().mockResolvedValue('0xsignature'),
+      isPending: false,
+    }),
     usePublicClient: vi.fn().mockReturnValue({
       getEnsAddress: vi.fn().mockResolvedValue(null),
     }),
