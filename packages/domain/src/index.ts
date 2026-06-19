@@ -14,5 +14,6 @@ export * from "./active-voters.js";
 export * from "./pool-sizing.js";
 export * from "./apr.js";
 export * from "./pipeline.js";
+export * from "./matchmaking.js";
 export * from "./util/time.js";
 export * from "./util/bigint-math.js";

@@ -13,11 +13,14 @@ export interface paths {
         };
         /**
          * List active voters
-         * @description Returns voters who meet the voting activity threshold, sorted by voting power descending.
+         * @description Returns voters who meet the voting activity threshold, sorted by voting power descending. Pass `?viewer=0x..` to get each voter's match against that address's selection.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Optional connected address. When given, each voter carries a `match` against this address's selection. */
+                    viewer?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -83,6 +86,41 @@ export interface paths {
                                  * @example 2024-01-15T00:00:00.000Z
                                  */
                                 activeSince: string | null;
+                                /**
+                                 * @description The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.
+                                 * @example [
+                                 *       "security",
+                                 *       "decentralization",
+                                 *       "public_goods_funding",
+                                 *       "transparency",
+                                 *       "open_source"
+                                 *     ]
+                                 */
+                                words: string[] | null;
+                                /** @description Overlap with the ?viewer address's selection (server-computed). null when no viewer is given, the viewer hasn't selected, or this voter hasn't selected. */
+                                match: {
+                                    /**
+                                     * @description Overlap as a % of the 5-word selection
+                                     * @example 80
+                                     */
+                                    percent: number;
+                                    /**
+                                     * @description >= 80% overlap
+                                     * @example true
+                                     */
+                                    strongMatch: boolean;
+                                    /**
+                                     * @example [
+                                     *       "security",
+                                     *       "decentralization"
+                                     *     ]
+                                     */
+                                    sharedWords: string[];
+                                    /** @description Words only the viewer selected */
+                                    aUnique: string[];
+                                    /** @description Words only this voter selected */
+                                    bUnique: string[];
+                                } | null;
                             }[];
                         };
                     };
@@ -1625,6 +1663,317 @@ export interface paths {
                              * @example 412
                              */
                             holdersEarning: number;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/selections/{address}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an address's word selection (public)
+         * @description Returns the stored word selection for any address. Public — selections are not private. 404 when the address has no selection.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The address's selection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
+                            address: string;
+                            /**
+                             * @example [
+                             *       "security",
+                             *       "decentralization",
+                             *       "public_goods_funding",
+                             *       "transparency",
+                             *       "open_source"
+                             *     ]
+                             */
+                            words: string[];
+                            /**
+                             * @description Last-write Unix time in ms
+                             * @example 1781619462005
+                             */
+                            updatedAt: number;
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description No selection for this address */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        /**
+         * Upsert an address's word selection
+         * @description Stores (or replaces) the word selection for the path `address`. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal the path `address`. Idempotent upsert keyed by address.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Exactly 5 word ids from the pool (unordered set) */
+                        words: string[];
+                        /**
+                         * @description personal_sign signature over buildSelectionMessage(address, words)
+                         * @example 0x...
+                         */
+                        signature: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Stored selection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example 0xd8da6bf26964af9d7eed9e03e53415d37aa96045 */
+                            address: string;
+                            /**
+                             * @example [
+                             *       "security",
+                             *       "decentralization",
+                             *       "public_goods_funding",
+                             *       "transparency",
+                             *       "open_source"
+                             *     ]
+                             */
+                            words: string[];
+                            /**
+                             * @description Last-write Unix time in ms
+                             * @example 1781619462005
+                             */
+                            updatedAt: number;
+                        };
+                    };
+                };
+                /** @description Invalid address or selection */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Signature missing, malformed, or not from the path address */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/selections/word-pool": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the matchmaking word pool
+         * @description Returns the canonical pool of value words (id + label) the Selection modal renders. Public.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The word pool */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            pool: {
+                                /** @example decentralization */
+                                id: string;
+                                /** @example Decentralization */
+                                label: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/selections/{address}/match-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count strong matches for an address (public)
+         * @description Returns how many other stored selections strongly match (>=80% overlap) the given address's selection, and how many of those are active voters. 400 on invalid address; zeros when the address has no selection.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    address: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Match counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /**
+                             * @description Other selections (excluding this address) that strongly match (>=80% overlap).
+                             * @example 7
+                             */
+                            matchCount: number;
+                            /**
+                             * @description Of matchCount, how many are active voters. matchCount minus this = matching holders.
+                             * @example 3
+                             */
+                            matchingActiveVoters: number;
+                        };
+                    };
+                };
+                /** @description Invalid address */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
                         };
                     };
                 };

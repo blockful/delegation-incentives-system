@@ -16,7 +16,20 @@
           "Voters"
         ],
         "summary": "List active voters",
-        "description": "Returns voters who meet the voting activity threshold, sorted by voting power descending.",
+        "description": "Returns voters who meet the voting activity threshold, sorted by voting power descending. Pass `?viewer=0x..` to get each voter's match against that address's selection.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional connected address. When given, each voter carries a `match` against this address's selection.",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": false,
+            "description": "Optional connected address. When given, each voter carries a `match` against this address's selection.",
+            "name": "viewer",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Active voters list",
@@ -125,6 +138,73 @@
                             ],
                             "description": "ISO 8601 timestamp of the voter's earliest vote",
                             "example": "2024-01-15T00:00:00.000Z"
+                          },
+                          "words": {
+                            "type": [
+                              "array",
+                              "null"
+                            ],
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.",
+                            "example": [
+                              "security",
+                              "decentralization",
+                              "public_goods_funding",
+                              "transparency",
+                              "open_source"
+                            ]
+                          },
+                          "match": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "percent": {
+                                "type": "number",
+                                "description": "Overlap as a % of the 5-word selection",
+                                "example": 80
+                              },
+                              "strongMatch": {
+                                "type": "boolean",
+                                "description": ">= 80% overlap",
+                                "example": true
+                              },
+                              "sharedWords": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "example": [
+                                  "security",
+                                  "decentralization"
+                                ]
+                              },
+                              "aUnique": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Words only the viewer selected"
+                              },
+                              "bUnique": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Words only this voter selected"
+                              }
+                            },
+                            "required": [
+                              "percent",
+                              "strongMatch",
+                              "sharedWords",
+                              "aUnique",
+                              "bUnique"
+                            ],
+                            "description": "Overlap with the ?viewer address's selection (server-computed). null when no viewer is given, the viewer hasn't selected, or this voter hasn't selected."
                           }
                         },
                         "required": [
@@ -136,7 +216,9 @@
                           "last10ProposalsVoted",
                           "last10Proposals",
                           "tokenHolderCount",
-                          "activeSince"
+                          "activeSince",
+                          "words",
+                          "match"
                         ]
                       }
                     }
@@ -3156,6 +3238,409 @@
                     "cachedDistributions",
                     "totalDelegatedEns",
                     "holdersEarning"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/selections/{address}": {
+      "put": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Upsert an address's word selection",
+        "description": "Stores (or replaces) the word selection for the path `address`. The body must include a `personal_sign` signature over `buildSelectionMessage(address, words)`; the recovered signer must equal the path `address`. Idempotent upsert keyed by address.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "words": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exactly 5 word ids from the pool (unordered set)"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "personal_sign signature over buildSelectionMessage(address, words)",
+                    "example": "0x..."
+                  }
+                },
+                "required": [
+                  "words",
+                  "signature"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                    },
+                    "words": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "security",
+                        "decentralization",
+                        "public_goods_funding",
+                        "transparency",
+                        "open_source"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "number",
+                      "description": "Last-write Unix time in ms",
+                      "example": 1781619462005
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "words",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address or selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signature missing, malformed, or not from the path address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Get an address's word selection (public)",
+        "description": "Returns the stored word selection for any address. Public — selections are not private. 404 when the address has no selection.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The address's selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+                    },
+                    "words": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "security",
+                        "decentralization",
+                        "public_goods_funding",
+                        "transparency",
+                        "open_source"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "number",
+                      "description": "Last-write Unix time in ms",
+                      "example": 1781619462005
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "words",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No selection for this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/selections/word-pool": {
+      "get": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Get the matchmaking word pool",
+        "description": "Returns the canonical pool of value words (id + label) the Selection modal renders. Public.",
+        "responses": {
+          "200": {
+            "description": "The word pool",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pool": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "decentralization"
+                          },
+                          "label": {
+                            "type": "string",
+                            "example": "Decentralization"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "pool"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/selections/{address}/match-count": {
+      "get": {
+        "tags": [
+          "Selections"
+        ],
+        "summary": "Count strong matches for an address (public)",
+        "description": "Returns how many other stored selections strongly match (>=80% overlap) the given address's selection, and how many of those are active voters. 400 on invalid address; zeros when the address has no selection.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": true,
+            "name": "address",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Match counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "matchCount": {
+                      "type": "number",
+                      "description": "Other selections (excluding this address) that strongly match (>=80% overlap).",
+                      "example": 7
+                    },
+                    "matchingActiveVoters": {
+                      "type": "number",
+                      "description": "Of matchCount, how many are active voters. matchCount minus this = matching holders.",
+                      "example": 3
+                    }
+                  },
+                  "required": [
+                    "matchCount",
+                    "matchingActiveVoters"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
                   ]
                 }
               }

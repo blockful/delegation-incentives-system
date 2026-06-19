@@ -8,6 +8,10 @@
  * - `distribution_result` is the API-computed payout cache. Surviving deploys
  *   means a blue/green cutover doesn't blank the rounds page for ~60s while
  *   the scheduler refills it.
+ * - `word_selections` is user-written matchmaking data (each wallet's set of
+ *   chosen value words). It is NOT derivable from on-chain logs, so it must
+ *   survive Ponder schema rotations — losing it would erase user input. Reads
+ *   are public; writes are signature-verified (see `routes/selections.ts`).
  *
  * Ponder owns indexer state and assumes `onchainTable` rows are reproducible
  * from on-chain logs; it drops & recreates that schema on any `buildId` change
@@ -25,7 +29,7 @@
  * to evolve beyond add-only columns, graduate to real migrations.
  */
 import { drizzle } from "drizzle-orm/postgres-js";
-import { bigint, pgTable, text } from "drizzle-orm/pg-core";
+import { bigint, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import postgres from "postgres";
 
 // Tables live in the default Postgres schema (`public`). Drizzle's `pgTable`
@@ -42,6 +46,15 @@ export const distributionResult = pgTable("distribution_result", {
   month: text("month").primaryKey(),
   resultJson: text("result_json").notNull(),
   computedAt: bigint("computed_at", { mode: "bigint" }).notNull(),
+});
+
+export const wordSelections = pgTable("word_selections", {
+  // Lowercased 0x address — one selection per wallet.
+  address: text("address").primaryKey(),
+  // Unordered set of word ids (a JSON array). Ordering is not meaningful.
+  words: jsonb("words").$type<string[]>().notNull(),
+  createdAt: bigint("created_at", { mode: "bigint" }).notNull(),
+  updatedAt: bigint("updated_at", { mode: "bigint" }).notNull(),
 });
 
 export interface AppDbHandle {
@@ -91,6 +104,7 @@ async function ensureSchema(sql: ReturnType<typeof postgres>): Promise<void> {
     select (
       to_regclass('public.wallet_alias') is not null
       and to_regclass('public.distribution_result') is not null
+      and to_regclass('public.word_selections') is not null
     ) as ready
   `)) as Array<{ ready: boolean }>;
   if (rows[0]?.ready) return;
@@ -105,6 +119,12 @@ async function ensureSchema(sql: ReturnType<typeof postgres>): Promise<void> {
       month        text primary key,
       result_json  text not null,
       computed_at  bigint not null
+    );
+    create table if not exists public.word_selections (
+      address    text primary key,
+      words      jsonb not null,
+      created_at bigint not null,
+      updated_at bigint not null
     );
   `);
 }
