@@ -5,6 +5,7 @@
   },
   "deploy": {
     "startCommand": "pnpm --filter @ens-dis/backend start",
+    "preDeployCommand": "pnpm --filter @ens-dis/backend db:prune",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
