@@ -9,6 +9,8 @@ export { useNudgeGating } from './useNudgeGating'
 export { useMatchCount } from './useMatchCount'
 export { useViewerRole, type ViewerRole } from './useViewerRole'
 export { SelectionFlow, type SelectionFlowProps } from './components/SelectionFlow'
+export { MatchmakingPitch, type MatchmakingPitchProps } from './components/MatchmakingPitch'
+export { pitchCopy, pitchDisconnectedCopy } from './copy'
 export { WordChipGrid } from './components/WordChipGrid'
 export { EditSelectionModal, type EditSelectionModalProps } from './components/EditSelectionModal'
 export {

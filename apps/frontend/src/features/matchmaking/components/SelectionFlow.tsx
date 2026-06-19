@@ -12,6 +12,7 @@ import type { ViewerRole } from '../useViewerRole'
 import { pitchCopy, confirmCopy, matchPillText } from '../copy'
 import { WordChipGrid } from './WordChipGrid'
 import { StepDots } from './StepDots'
+import { MatchmakingPitch } from './MatchmakingPitch'
 
 type Step = 'pitch' | 'select' | 'confirm'
 
@@ -82,19 +83,13 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
         <StepDots count={3} active={STEP_INDEX[step]} />
 
         {step === 'pitch' && (
-          <Centered>
-            <Illustration src="/pitch-illustration.svg" alt="" />
-            <Title>{pitchCopy[role].title}</Title>
-            <Body>{pitchCopy[role].body}</Body>
-            <Actions>
-              <Primary type="button" onClick={() => setStep('select')}>
-                {pitchCopy[role].cta}
-              </Primary>
-              <Secondary type="button" onClick={onClose}>
-                Not now
-              </Secondary>
-            </Actions>
-          </Centered>
+          <MatchmakingPitch
+            title={pitchCopy[role].title}
+            body={pitchCopy[role].body}
+            primaryLabel={pitchCopy[role].cta}
+            onPrimary={() => setStep('select')}
+            onSecondary={onClose}
+          />
         )}
 
         {step === 'select' && (
@@ -111,9 +106,11 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
             </Counter>
             {submit.isError && <ErrorText>Couldn&apos;t save your values. Please try again.</ErrorText>}
             <Row>
-              <Secondary type="button" onClick={() => setStep('pitch')}>
-                Back
-              </Secondary>
+              {initialStep !== 'select' && (
+                <Secondary type="button" onClick={() => setStep('pitch')}>
+                  Back
+                </Secondary>
+              )}
               <Primary type="button" disabled={!canSubmit} onClick={handleSubmit}>
                 {submit.isPending ? 'Saving…' : 'Submit'}
               </Primary>
@@ -170,14 +167,6 @@ const Stack = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
-`
-
-const Illustration = styled.img`
-  display: block;
-  width: 100%;
-  max-width: 440px;
-  height: auto;
-  margin: 0 auto;
 `
 
 const Title = styled.h2<{ $small?: boolean }>`

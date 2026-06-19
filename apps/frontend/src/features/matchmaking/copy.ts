@@ -18,6 +18,16 @@ export const pitchCopy: Record<ViewerRole, { title: string; body: string; cta: s
   },
 }
 
+/**
+ * Blocked-state hero copy for a disconnected /voters visitor — no role is known
+ * yet, so the CTA connects the wallet first. ⚠️ Placeholder pending the copy pass.
+ */
+export const pitchDisconnectedCopy = {
+  title: 'Find delegates who share your priorities',
+  body: "Connect your wallet, pick the values that matter to you, and we'll sort delegates by how well they match.",
+  cta: 'Connect wallet',
+}
+
 export const confirmCopy: Record<ViewerRole, { title: string; body: string; cta: string }> = {
   holder: {
     title: 'Your values are set',
