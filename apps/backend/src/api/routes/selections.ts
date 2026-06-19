@@ -1,9 +1,10 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { db as ponderDb } from "ponder:api";
 import { eq } from "drizzle-orm";
 import { recoverMessageAddress } from "viem";
-import { buildSelectionMessage } from "@ens-dis/domain";
+import { buildSelectionMessage, scoreSelection } from "@ens-dis/domain";
 import { getAppDb, wordSelections } from "../../db/app-tables.js";
-import { normalizeAddress } from "../helpers.js";
+import { fetchActiveVoters, normalizeAddress } from "../helpers.js";
 import { WORD_POOL, validateSelection } from "../matchmaking/word-pool.js";
 
 const ErrorSchema = z.object({ error: z.string() });
@@ -30,6 +31,17 @@ const PoolWordSchema = z.object({
 
 const WordPoolResponse = z.object({
   pool: z.array(PoolWordSchema),
+});
+
+const MatchCountResponse = z.object({
+  matchCount: z.number().openapi({
+    description: "Other selections (excluding this address) that strongly match (>=80% overlap).",
+    example: 7,
+  }),
+  matchingActiveVoters: z.number().openapi({
+    description: "Of matchCount, how many are active voters. matchCount minus this = matching holders.",
+    example: 3,
+  }),
 });
 
 // GET /selections/word-pool — PUBLIC. The pool of value words the Selection
@@ -132,6 +144,34 @@ const getRoute = createRoute({
   },
 });
 
+// GET /selections/{address}/match-count — PUBLIC aggregate. Powers the Confirm
+// pills. The client can count matching *voters* itself (it has their words from
+// /voters), but not matching *holders* (no holder list), so the server scans all
+// selections once and returns counts only — never other people's words.
+const matchCountRoute = createRoute({
+  method: "get",
+  path: "/selections/{address}/match-count",
+  tags: ["Selections"],
+  summary: "Count strong matches for an address (public)",
+  description:
+    "Returns how many other stored selections strongly match (>=80% overlap) the given address's selection, and how many of those are active voters. 400 on invalid address; zeros when the address has no selection.",
+  request: { params: AddressParam },
+  responses: {
+    200: {
+      description: "Match counts",
+      content: { "application/json": { schema: MatchCountResponse } },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+    500: {
+      description: "Internal server error",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+  },
+});
+
 const app = new OpenAPIHono();
 
 app.openapi(putRoute, async (c) => {
@@ -216,6 +256,53 @@ app.openapi(getRoute, async (c) => {
       { address: row.address, words: row.words, updatedAt: Number(row.updatedAt) },
       200,
     );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return c.json({ error: message }, 500);
+  }
+});
+
+app.openapi(matchCountRoute, async (c) => {
+  try {
+    const { address: rawAddress } = c.req.valid("param");
+    const address = normalizeAddress(rawAddress);
+    if (!address) {
+      return c.json({ error: "Invalid Ethereum address" }, 400);
+    }
+
+    const { db, ready } = getAppDb();
+    await ready;
+
+    const ownRows = await db
+      .select()
+      .from(wordSelections)
+      .where(eq(wordSelections.address, address))
+      .limit(1);
+
+    // No selection → nothing to match against yet.
+    if (ownRows.length === 0) {
+      return c.json({ matchCount: 0, matchingActiveVoters: 0 }, 200);
+    }
+    const ownWords = ownRows[0].words;
+
+    const allRows = await db
+      .select({ address: wordSelections.address, words: wordSelections.words })
+      .from(wordSelections);
+
+    const { activeVoters } = await fetchActiveVoters(ponderDb);
+
+    let matchCount = 0;
+    let matchingActiveVoters = 0;
+    for (const row of allRows) {
+      if (row.address === address) continue; // skip self
+      if (!scoreSelection(ownWords, row.words).strongMatch) continue;
+      matchCount += 1;
+      if (activeVoters.has(row.address as `0x${string}`)) {
+        matchingActiveVoters += 1;
+      }
+    }
+
+    return c.json({ matchCount, matchingActiveVoters }, 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 500);
