@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import { SELECTION_COUNT } from '@ens-dis/domain'
 import { tokens } from '@/styles'
-import { SideDrawer } from '@/components/shared/SideDrawer'
+import { Modal } from '@/components/shared/Modal'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { useWordPool } from '../useWordPool'
 import { useSubmitSelection } from '../useSubmitSelection'
@@ -11,8 +11,11 @@ import { useMatchCount } from '../useMatchCount'
 import type { ViewerRole } from '../useViewerRole'
 import { pitchCopy, confirmCopy, matchPillText } from '../copy'
 import { WordChipGrid } from './WordChipGrid'
+import { StepDots } from './StepDots'
 
 type Step = 'pitch' | 'select' | 'confirm'
+
+const STEP_INDEX: Record<Step, number> = { pitch: 0, select: 1, confirm: 2 }
 
 export interface SelectionFlowProps {
   open: boolean
@@ -24,9 +27,9 @@ export interface SelectionFlowProps {
 }
 
 /**
- * The shared selection action: Pitch → Select → Confirm in a single drawer.
- * Parents own *when* it opens (e.g. FE-4's overlay, FE-6's nudge gating); this
- * component owns the steps. "Not now" just calls onClose (dismiss).
+ * The shared selection action: Pitch → Select → Confirm in a single centered
+ * modal. Parents own *when* it opens (e.g. FE-4's overlay, FE-6's nudge gating);
+ * this component owns the steps. "Not now" just calls onClose (dismiss).
  */
 export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: SelectionFlowProps) {
   const [step, setStep] = useState<Step>(initialStep)
@@ -74,58 +77,94 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
         : confirmCopy[role].title
 
   return (
-    <SideDrawer open={open} onClose={onClose} title={title}>
-      {step === 'pitch' && (
-        <Stack>
-          <Body>{pitchCopy[role].body}</Body>
-          <Actions>
-            <Primary type="button" onClick={() => setStep('select')}>
-              {pitchCopy[role].cta}
-            </Primary>
-            <Secondary type="button" onClick={onClose}>
-              Not now
-            </Secondary>
-          </Actions>
-        </Stack>
-      )}
+    <Modal open={open} onClose={onClose} label={title}>
+      <Flow>
+        <StepDots count={3} active={STEP_INDEX[step]} />
 
-      {step === 'select' && (
-        <Stack>
-          <Body>Pick {SELECTION_COUNT} words that reflect your priorities.</Body>
-          {poolLoading || !pool ? (
-            <Body>Loading…</Body>
-          ) : (
-            <WordChipGrid pool={pool} selected={selected} onToggle={toggle} max={SELECTION_COUNT} />
-          )}
-          <Counter aria-live="polite">
-            {selected.length}/{SELECTION_COUNT}
-          </Counter>
-          {submit.isError && <ErrorText>Couldn&apos;t save your values. Please try again.</ErrorText>}
-          <Actions>
-            <Primary type="button" disabled={!canSubmit} onClick={handleSubmit}>
-              {submit.isPending ? 'Saving…' : 'Submit'}
-            </Primary>
-            <Secondary type="button" onClick={() => setStep('pitch')}>
-              Back
-            </Secondary>
-          </Actions>
-        </Stack>
-      )}
+        {step === 'pitch' && (
+          <Centered>
+            <Illustration src="/pitch-illustration.svg" alt="" />
+            <Title>{pitchCopy[role].title}</Title>
+            <Body>{pitchCopy[role].body}</Body>
+            <Actions>
+              <Primary type="button" onClick={() => setStep('select')}>
+                {pitchCopy[role].cta}
+              </Primary>
+              <Secondary type="button" onClick={onClose}>
+                Not now
+              </Secondary>
+            </Actions>
+          </Centered>
+        )}
 
-      {step === 'confirm' && (
-        <Stack>
-          <Body>{confirmCopy[role].body}</Body>
-          {pillN > 0 && <Pill>⭐ {matchPillText(role, pillN)}</Pill>}
-          <Actions>
-            <Primary type="button" onClick={handleViewMatches}>
-              {confirmCopy[role].cta}
-            </Primary>
-          </Actions>
-        </Stack>
-      )}
-    </SideDrawer>
+        {step === 'select' && (
+          <Stack>
+            <Title $small>Select your values</Title>
+            <Body>Pick {SELECTION_COUNT} words that reflect your priorities.</Body>
+            {poolLoading || !pool ? (
+              <Body>Loading…</Body>
+            ) : (
+              <WordChipGrid pool={pool} selected={selected} onToggle={toggle} max={SELECTION_COUNT} />
+            )}
+            <Counter aria-live="polite">
+              {selected.length}/{SELECTION_COUNT}
+            </Counter>
+            {submit.isError && <ErrorText>Couldn&apos;t save your values. Please try again.</ErrorText>}
+            <Row>
+              <Secondary type="button" onClick={() => setStep('pitch')}>
+                Back
+              </Secondary>
+              <Primary type="button" disabled={!canSubmit} onClick={handleSubmit}>
+                {submit.isPending ? 'Saving…' : 'Submit'}
+              </Primary>
+            </Row>
+          </Stack>
+        )}
+
+        {step === 'confirm' && (
+          <Centered>
+            <CheckCircle aria-hidden="true">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </CheckCircle>
+            <Title>{confirmCopy[role].title}</Title>
+            <Body>{confirmCopy[role].body}</Body>
+            {pillN > 0 && <Pill>⭐ {matchPillText(role, pillN)}</Pill>}
+            <Actions>
+              <Primary type="button" onClick={handleViewMatches}>
+                {confirmCopy[role].cta}
+              </Primary>
+            </Actions>
+          </Centered>
+        )}
+      </Flow>
+    </Modal>
   )
 }
+
+const Flow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xl};
+`
+
+const Centered = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: ${tokens.spacing.lg};
+`
 
 const Stack = styled.div`
   display: flex;
@@ -133,11 +172,38 @@ const Stack = styled.div`
   gap: ${tokens.spacing.lg};
 `
 
+const Illustration = styled.img`
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+  margin: 0 auto;
+`
+
+const Title = styled.h2<{ $small?: boolean }>`
+  margin: 0;
+  font-size: ${({ $small }) => ($small ? tokens.font.size['2xl'] : tokens.font.size['3xl'])};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
+  line-height: 1.15;
+`
+
 const Body = styled.p`
   margin: 0;
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.base};
-  line-height: 1.5;
+  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.lg};
+  line-height: 1.56;
+`
+
+const CheckCircle = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.tierHighlight};
+  color: ${tokens.color.green};
 `
 
 const Counter = styled.div`
@@ -147,9 +213,9 @@ const Counter = styled.div`
 `
 
 const Pill = styled.div`
-  align-self: flex-start;
-  background: ${tokens.color.tierHighlight};
-  color: ${tokens.color.positiveEmphasis};
+  align-self: center;
+  background: ${tokens.color.lightBlue};
+  color: ${tokens.color.blue};
   padding: ${tokens.spacing.sm} ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
   font-size: ${tokens.font.size.sm};
@@ -164,22 +230,42 @@ const ErrorText = styled.p`
 
 const Actions = styled.div`
   display: flex;
-  gap: ${tokens.spacing.sm};
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+  width: 100%;
+`
+
+const Row = styled.div`
+  display: flex;
+  gap: ${tokens.spacing.md};
+  width: 100%;
+
+  & > * {
+    flex: 1;
+  }
+`
+
+const buttonBase = css`
+  width: 100%;
+  border-radius: ${tokens.radius.lg};
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  padding: 14px ${tokens.spacing.lg};
+  cursor: pointer;
+  transition:
+    background ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
 `
 
 const Primary = styled.button`
+  ${buttonBase}
   background: ${tokens.color.blue};
   color: ${tokens.color.white};
-  border: none;
-  border-radius: ${tokens.radius.md};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
+  border: 1px solid ${tokens.color.blue};
 
   &:hover:not(:disabled) {
     background: ${tokens.color.accent};
+    border-color: ${tokens.color.accent};
   }
 
   &:disabled {
@@ -189,15 +275,10 @@ const Primary = styled.button`
 `
 
 const Secondary = styled.button`
-  background: transparent;
-  color: ${tokens.color.darkBlue};
+  ${buttonBase}
+  background: ${tokens.color.white};
+  color: ${tokens.color.textSecondary};
   border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.md};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
 
   &:hover {
     background: ${tokens.color.bgSubtle};
