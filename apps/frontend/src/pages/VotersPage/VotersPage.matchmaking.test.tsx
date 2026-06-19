@@ -9,6 +9,10 @@ const UNSELECTED = {
   address: '0x0000000000000000000000000000000000000000',
 } as const
 
+// Dismissal is now session-scoped (useNudgeGating → sessionStorage); reset it so
+// each test starts on the first-view overlay.
+beforeEach(() => window.sessionStorage.clear())
+
 describe('VotersPage — unselected viewer', () => {
   it('shows the pitch overlay first, then the banner after "Not now"', async () => {
     const user = userEvent.setup()

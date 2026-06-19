@@ -5,7 +5,7 @@ import { faMagnifyingGlass, faShareNodes, faXmark } from '@fortawesome/free-soli
 import { Button } from '@ensdomains/thorin'
 import {
   useVotersWithMatch,
-  useSelectionState,
+  useNudgeGating,
   useViewerRole,
   SelectionFlow,
   UnlockMatchmakingBanner,
@@ -390,13 +390,12 @@ export function VotersPage() {
   const [search, setSearch] = useState('')
 
   // Matchmaking unselected-viewer states (the page always renders — no hard gate).
-  const { state: selectionState } = useSelectionState()
+  // Nudge gating is centralized in useNudgeGating (session-scoped dismissal).
+  const { shouldAutoOpenPitch, shouldShowNudge, dismiss } = useNudgeGating()
   const { role } = useViewerRole()
-  const [dismissed, setDismissed] = useState(false)
   const [flowOpen, setFlowOpen] = useState(false)
-  const isUnselected = selectionState === 'connected-not-selected'
-  const showOverlay = isUnselected && !dismissed // blurred list + pitch teaser
-  const showBanner = isUnselected && dismissed // legible + inline banner + "?" cards
+  const showOverlay = shouldAutoOpenPitch // blurred list + pitch teaser
+  const showBanner = shouldShowNudge // legible + inline banner + "?" cards
 
   // Resolved state defaults to Match-sorted — until the user picks a sort.
   useEffect(() => {
@@ -593,7 +592,7 @@ export function VotersPage() {
                       <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
                         Discover your matches
                       </Button>
-                      <NotNowButton type="button" onClick={() => setDismissed(true)}>
+                      <NotNowButton type="button" onClick={dismiss}>
                         Not now
                       </NotNowButton>
                     </OverlayActions>
