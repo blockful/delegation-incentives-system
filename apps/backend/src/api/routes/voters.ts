@@ -263,8 +263,8 @@ app.openapi(route, async (c) => {
 
     return c.json({ count: voters.length, voters }, 200);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
+    console.error("voters API error:", err);
+    return c.json({ error: "Internal server error" }, 500);
   }
 });
 
