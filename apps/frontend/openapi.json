@@ -16,7 +16,20 @@
           "Voters"
         ],
         "summary": "List active voters",
-        "description": "Returns voters who meet the voting activity threshold, sorted by voting power descending.",
+        "description": "Returns voters who meet the voting activity threshold, sorted by voting power descending. Pass `?viewer=0x..` to get each voter's match against that address's selection.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional connected address. When given, each voter carries a `match` against this address's selection.",
+              "example": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            },
+            "required": false,
+            "description": "Optional connected address. When given, each voter carries a `match` against this address's selection.",
+            "name": "viewer",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Active voters list",
@@ -142,6 +155,56 @@
                               "transparency",
                               "open_source"
                             ]
+                          },
+                          "match": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "percent": {
+                                "type": "number",
+                                "description": "Overlap as a % of the 5-word selection",
+                                "example": 80
+                              },
+                              "strongMatch": {
+                                "type": "boolean",
+                                "description": ">= 80% overlap",
+                                "example": true
+                              },
+                              "sharedWords": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "example": [
+                                  "security",
+                                  "decentralization"
+                                ]
+                              },
+                              "aUnique": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Words only the viewer selected"
+                              },
+                              "bUnique": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Words only this voter selected"
+                              }
+                            },
+                            "required": [
+                              "percent",
+                              "strongMatch",
+                              "sharedWords",
+                              "aUnique",
+                              "bUnique"
+                            ],
+                            "description": "Overlap with the ?viewer address's selection (server-computed). null when no viewer is given, the viewer hasn't selected, or this voter hasn't selected."
                           }
                         },
                         "required": [
@@ -154,7 +217,8 @@
                           "last10Proposals",
                           "tokenHolderCount",
                           "activeSince",
-                          "words"
+                          "words",
+                          "match"
                         ]
                       }
                     }
