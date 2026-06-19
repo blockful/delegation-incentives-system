@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import { SELECTION_COUNT } from '@ens-dis/domain'
 import { tokens } from '@/styles'
-import { SideDrawer } from '@/components/shared/SideDrawer'
+import { Modal } from '@/components/shared/Modal'
 import { useWordPool } from '../useWordPool'
 import { useMySelection } from '../useMySelection'
 import { useSubmitSelection } from '../useSubmitSelection'
@@ -16,9 +16,9 @@ export interface EditSelectionModalProps {
 
 /**
  * Prefilled edit of the current selection — the same WordChipGrid as FE-1's
- * Select step, seeded with the wallet's stored words, with Cancel / Save.
- * Reachable from the Dashboard "Values" card and own-profile (FE-5/FE-6 own
- * those buttons + the open state).
+ * Select step, seeded with the wallet's stored words, with Cancel / Save, in the
+ * shared centered Modal. Reachable from the Dashboard "Values" card and
+ * own-profile (FE-5/FE-6 own those buttons + the open state).
  *
  * Save behavior (Q#6): on success we close and let the cache invalidation in
  * useSubmitSelection refresh every surface. There's no app-wide toast system, so
@@ -46,19 +46,21 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
 
   const canSave = selected.length === SELECTION_COUNT && !submit.isPending
 
-  const handleSave = async () => {
-    try {
-      await submit.mutateAsync(selected)
-      onSaved?.()
-      onClose()
-    } catch {
-      // surfaced inline via submit.isError
-    }
+  const handleSave = () => {
+    // mutate (not mutateAsync) doesn't reject — no empty catch needed. Advance
+    // only on success; the error surfaces inline via submit.isError.
+    submit.mutate(selected, {
+      onSuccess: () => {
+        onSaved?.()
+        onClose()
+      },
+    })
   }
 
   return (
-    <SideDrawer open={open} onClose={onClose} title="Edit your values">
+    <Modal open={open} onClose={onClose} label="Edit your values">
       <Stack>
+        <Title>Edit your values</Title>
         <Body>Update the {SELECTION_COUNT} words that reflect your priorities.</Body>
         {poolLoading || !pool ? (
           <Body>Loading…</Body>
@@ -69,16 +71,16 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
           {selected.length}/{SELECTION_COUNT}
         </Counter>
         {submit.isError && <ErrorText>Couldn&apos;t save your values. Please try again.</ErrorText>}
-        <Actions>
-          <Primary type="button" disabled={!canSave} onClick={handleSave}>
-            {submit.isPending ? 'Saving…' : 'Save'}
-          </Primary>
+        <Row>
           <Secondary type="button" onClick={onClose}>
             Cancel
           </Secondary>
-        </Actions>
+          <Primary type="button" disabled={!canSave} onClick={handleSave}>
+            {submit.isPending ? 'Saving…' : 'Save'}
+          </Primary>
+        </Row>
       </Stack>
-    </SideDrawer>
+    </Modal>
   )
 }
 
@@ -88,11 +90,19 @@ const Stack = styled.div`
   gap: ${tokens.spacing.lg};
 `
 
+const Title = styled.h2`
+  margin: 0;
+  font-size: ${tokens.font.size['2xl']};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.text};
+  line-height: 1.2;
+`
+
 const Body = styled.p`
   margin: 0;
-  color: ${tokens.color.darkGray};
-  font-size: ${tokens.font.size.base};
-  line-height: 1.5;
+  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.lg};
+  line-height: 1.56;
 `
 
 const Counter = styled.div`
@@ -107,24 +117,37 @@ const ErrorText = styled.p`
   font-size: ${tokens.font.size.sm};
 `
 
-const Actions = styled.div`
+const Row = styled.div`
   display: flex;
-  gap: ${tokens.spacing.sm};
+  gap: ${tokens.spacing.md};
+  width: 100%;
+
+  & > * {
+    flex: 1;
+  }
+`
+
+const buttonBase = css`
+  width: 100%;
+  border-radius: ${tokens.radius.lg};
+  font-size: ${tokens.font.size.lg};
+  font-weight: ${tokens.font.weight.bold};
+  padding: 14px ${tokens.spacing.lg};
+  cursor: pointer;
+  transition:
+    background ${tokens.transition.fast},
+    border-color ${tokens.transition.fast};
 `
 
 const Primary = styled.button`
+  ${buttonBase}
   background: ${tokens.color.blue};
   color: ${tokens.color.white};
-  border: none;
-  border-radius: ${tokens.radius.md};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
+  border: 1px solid ${tokens.color.blue};
 
   &:hover:not(:disabled) {
     background: ${tokens.color.accent};
+    border-color: ${tokens.color.accent};
   }
 
   &:disabled {
@@ -134,15 +157,10 @@ const Primary = styled.button`
 `
 
 const Secondary = styled.button`
-  background: transparent;
-  color: ${tokens.color.darkBlue};
+  ${buttonBase}
+  background: ${tokens.color.white};
+  color: ${tokens.color.textSecondary};
   border: 1px solid ${tokens.color.border};
-  border-radius: ${tokens.radius.md};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
-  padding: ${tokens.spacing.sm} ${tokens.spacing.lg};
-  cursor: pointer;
-  transition: background ${tokens.transition.fast};
 
   &:hover {
     background: ${tokens.color.bgSubtle};
