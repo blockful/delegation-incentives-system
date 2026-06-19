@@ -11,9 +11,8 @@ const UNSELECTED = {
 
 const DISCONNECTED = { status: 'disconnected' } as const
 
-// Dismissal is session-scoped (useNudgeGating → sessionStorage); reset it so each
-// test starts on the first-view blocked hero.
-beforeEach(() => window.sessionStorage.clear())
+// Dismissal is ephemeral (in-memory, per mount) — each renderApp starts fresh on
+// the blocked hero, no sessionStorage to reset.
 
 describe('VotersPage — unselected viewer', () => {
   it('shows the flag pitch hero first, then the banner after "Not now"', async () => {
@@ -28,7 +27,7 @@ describe('VotersPage — unselected viewer', () => {
     )
     expect(screen.getByRole('button', { name: 'Select values' })).toBeInTheDocument()
 
-    // Dismiss → legible page + inline unlock banner.
+    // "Not now" → quieter inline unlock banner for the rest of this visit.
     await user.click(screen.getByRole('button', { name: /not now/i }))
     await waitFor(() =>
       expect(screen.getByText(/want to see how delegates match you/i)).toBeInTheDocument(),
@@ -55,6 +54,17 @@ describe('VotersPage — disconnected viewer', () => {
       expect(
         screen.getByText(/find delegates who share your priorities/i),
       ).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument()
+  })
+
+  it('after "Not now" shows the inline banner with a Connect wallet CTA', async () => {
+    const user = userEvent.setup()
+    renderApp(<VotersPage />, { walletState: DISCONNECTED })
+
+    await user.click(await screen.findByRole('button', { name: /not now/i }))
+    await waitFor(() =>
+      expect(screen.getByText(/want to see how delegates match you/i)).toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument()
   })

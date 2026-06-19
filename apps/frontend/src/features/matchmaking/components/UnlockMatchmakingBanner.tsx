@@ -3,10 +3,12 @@ import { InfoCircleSVG, RightArrowSVG } from '@ensdomains/thorin'
 import { tokens } from '@/styles'
 
 export interface UnlockMatchmakingBannerProps {
-  /** Open the selection flow (e.g. the Pitch step). */
+  /** Primary action — open the selection flow, or connect when logged out. */
   onSelect: () => void
   /** Context-specific copy override. */
   message?: string
+  /** CTA label override (defaults to "Select your values"; e.g. "Connect wallet"). */
+  ctaLabel?: string
 }
 
 /**
@@ -18,7 +20,11 @@ export interface UnlockMatchmakingBannerProps {
  * inline link (text + right arrow) acting as the CTA. The CTA is a text link,
  * not a filled button, so it sits inline with the copy at any width.
  */
-export function UnlockMatchmakingBanner({ onSelect, message }: UnlockMatchmakingBannerProps) {
+export function UnlockMatchmakingBanner({
+  onSelect,
+  message,
+  ctaLabel,
+}: UnlockMatchmakingBannerProps) {
   return (
     <Banner role="region" aria-label="Matchmaking">
       <IconWrap aria-hidden="true">
@@ -26,7 +32,7 @@ export function UnlockMatchmakingBanner({ onSelect, message }: UnlockMatchmaking
       </IconWrap>
       <Text>{message ?? 'Want to see how delegates match you?'}</Text>
       <CtaLink type="button" onClick={onSelect}>
-        Select your values
+        {ctaLabel ?? 'Select your values'}
         <ArrowWrap aria-hidden="true">
           <RightArrowSVG />
         </ArrowWrap>

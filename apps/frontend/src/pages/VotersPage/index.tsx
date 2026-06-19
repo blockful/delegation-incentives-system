@@ -362,17 +362,19 @@ export function VotersPage() {
   const [search, setSearch] = useState('')
 
   // Matchmaking unselected-viewer states (the page always renders — no hard gate).
-  // Nudge gating is centralized in useNudgeGating (session-scoped dismissal).
   const wallet = useWalletState()
   const disconnected = wallet.status === 'disconnected'
-  const { shouldAutoOpenPitch, shouldShowNudge, dismissed, dismiss } = useNudgeGating()
+  const { connectedNotSelected, dismissed, dismiss } = useNudgeGating()
   const { role } = useViewerRole()
   const [flowOpen, setFlowOpen] = useState(false)
   // Blocked hero shows for anyone who hasn't matched yet — disconnected OR
-  // connected-not-selected — until dismissed this session. The hero IS the pitch
-  // (flag design); its CTA connects (disconnected) or jumps straight to Select.
-  const showOverlay = shouldAutoOpenPitch || (disconnected && !dismissed)
-  const showBanner = shouldShowNudge // legible + inline banner + "?" cards
+  // connected-not-selected — until dismissed. Dismissal is ephemeral (per visit),
+  // so the hero re-opens on every entry/reload until they select. The hero IS the
+  // pitch (flag design); its CTA connects (disconnected) or jumps to Select.
+  // "Not now" → the quieter inline banner for the rest of this visit.
+  const notSelected = disconnected || connectedNotSelected
+  const showOverlay = notSelected && !dismissed
+  const showBanner = notSelected && dismissed
   const heroCopy = disconnected ? pitchDisconnectedCopy : pitchCopy[role ?? 'holder']
   const onHeroPrimary = disconnected
     ? () => void openWalletModal()
@@ -542,7 +544,12 @@ export function VotersPage() {
             </EmptyState>
           )}
 
-          {showBanner && <UnlockMatchmakingBanner onSelect={() => setFlowOpen(true)} />}
+          {showBanner && (
+            <UnlockMatchmakingBanner
+              onSelect={onHeroPrimary}
+              ctaLabel={disconnected ? 'Connect wallet' : undefined}
+            />
+          )}
 
           {voters && voters.length > 0 && (
             <GridWrap>
