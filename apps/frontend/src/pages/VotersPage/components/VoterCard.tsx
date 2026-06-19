@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
+import type { MatchScore } from '@ens-dis/domain'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
@@ -29,6 +30,12 @@ interface VoterCardProps {
   resolvedEnsName?: string | null
   /** Called when this card's own useEnsName settles, so the page can use it in filters. */
   onEnsResolved?: (lowercasedAddress: string, name: string | null) => void
+  /** Match vs the viewer's selection (null when either side hasn't selected). Computed client-side. */
+  match?: MatchScore | null
+  /** Whether the connected viewer has selected. Gates the match line; the unselected viewer state is FE-4's. */
+  viewerHasSelected?: boolean
+  /** Degraded /voters: viewer connected, dismissed the prompt, not selected — show a "?" placeholder. */
+  degraded?: boolean
 }
 
 function formatVotingPower(vpWei: string): string {
@@ -286,6 +293,9 @@ export function VoterCard({
   voter,
   resolvedEnsName,
   onEnsResolved,
+  match,
+  viewerHasSelected = false,
+  degraded = false,
 }: VoterCardProps) {
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
@@ -360,6 +370,11 @@ export function VoterCard({
             </NameStack>
           </IdentityRow>
 
+          {viewerHasSelected && <MatchStatus match={match} />}
+          {!viewerHasSelected && degraded && (
+            <DegradedMatchStatus delegateHasSelected={voter.words != null} />
+          )}
+
           <ProposalSection>
             <ProposalHeader>
               <ProposalLabel>Last 10 proposals</ProposalLabel>
@@ -423,3 +438,82 @@ export function VoterCard({
     </>
   )
 }
+
+/**
+ * Match status line, shown only once the viewer has selected. With both sides
+ * selected it shows the strong/partial variant + percent; if the delegate
+ * hasn't selected (`match` null), the neutral "didn't pick" state. The
+ * unselected-viewer state is owned by FE-4. ⚠️ Copy is placeholder (copy-pass).
+ */
+function MatchStatus({ match }: { match: MatchScore | null | undefined }) {
+  if (!match) {
+    return (
+      <MatchRow $variant="none">
+        <MatchText>Delegate didn&apos;t pick priorities</MatchText>
+        <MatchValue>– Match</MatchValue>
+      </MatchRow>
+    )
+  }
+  if (match.strongMatch) {
+    return (
+      <MatchRow $variant="strong">
+        <MatchText>⭐ Strong match with your values</MatchText>
+        <MatchValue>{match.percent}% Match</MatchValue>
+      </MatchRow>
+    )
+  }
+  return (
+    <MatchRow $variant="partial">
+      <MatchText>
+        Shares {match.sharedWords.length} of your word
+        {match.sharedWords.length === 1 ? '' : 's'}
+      </MatchText>
+      <MatchValue>{match.percent}% Match</MatchValue>
+    </MatchRow>
+  )
+}
+
+/**
+ * Degraded /voters placeholder: the viewer is connected but hasn't selected (and
+ * dismissed the prompt). Shows "?" with a nudge, or the delegate's own
+ * unselected state. ⚠️ Copy is placeholder.
+ */
+function DegradedMatchStatus({ delegateHasSelected }: { delegateHasSelected: boolean }) {
+  return (
+    <MatchRow $variant="none">
+      <MatchText>
+        {delegateHasSelected ? 'Select to see your match' : "Delegate didn't pick priorities"}
+      </MatchText>
+      <MatchValue>?</MatchValue>
+    </MatchRow>
+  )
+}
+
+const MatchRow = styled.div<{ $variant: 'strong' | 'partial' | 'none' }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.sm};
+  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
+  border-radius: ${tokens.radius.sm};
+  background: ${({ $variant }) =>
+    $variant === 'strong' ? tokens.color.status.success.bg : tokens.color.surfaceAlt};
+  color: ${({ $variant }) => {
+    if ($variant === 'strong') return tokens.color.status.success.fg
+    if ($variant === 'partial') return tokens.color.darkBlue
+    return tokens.color.textSecondary
+  }};
+`
+
+const MatchText = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.medium};
+  line-height: 20px;
+`
+
+const MatchValue = styled.span`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  white-space: nowrap;
+  line-height: 20px;
+`
