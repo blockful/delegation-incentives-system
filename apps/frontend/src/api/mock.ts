@@ -359,6 +359,7 @@ const MOCK_VOTERS: ActiveVotersResponse = {
     ...v,
     last10Proposals: buildMockProposals(v.last10ProposalsVoted),
     words: MOCK_VOTER_SELECTIONS[i] ?? null,
+    match: null,
   })),
 }
 
