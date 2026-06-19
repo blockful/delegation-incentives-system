@@ -131,7 +131,7 @@ export function Footer() {
               ENS Forum ↗
             </ExternalLink>
             <ExternalLink
-              href="https://github.com/blockful-io"
+              href="https://github.com/blockful/delegation-incentives-system"
               target="_blank"
               rel="noopener noreferrer"
             >
