@@ -16,6 +16,7 @@ function voter(overrides: Partial<VoterDetail> = {}): VoterDetail {
     tokenHolderCount: 10,
     activeSince: null,
     words: null,
+    match: null,
     ...overrides,
   }
 }
