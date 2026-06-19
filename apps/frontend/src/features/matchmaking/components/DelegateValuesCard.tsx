@@ -129,19 +129,7 @@ export function DelegateValuesCard({ delegateAddress }: DelegateValuesCardProps)
   return (
     <ComparisonCard>
       <HeaderStrip>
-        <TitleAndLegend>
-          <CardTitle>Values comparison</CardTitle>
-          <Legend>
-            <LegendItem>
-              <LegendDot $variant="delegate" aria-hidden="true" />
-              This delegate
-            </LegendItem>
-            <LegendItem>
-              <LegendDot $variant="you" aria-hidden="true" />
-              You
-            </LegendItem>
-          </Legend>
-        </TitleAndLegend>
+        <CardTitle>Values comparison</CardTitle>
         <MatchPill $strong={score.strongMatch}>
           <span aria-hidden="true">⭐</span> {score.percent}% match with your priorities
         </MatchPill>
@@ -246,12 +234,6 @@ const HeaderStrip = styled.div`
   background: ${tokens.color.surfaceAlt};
 `
 
-const TitleAndLegend = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xs};
-`
-
 const CardTitle = styled.h3`
   margin: 0;
   font-size: ${tokens.font.size.lg};
@@ -259,23 +241,7 @@ const CardTitle = styled.h3`
   color: ${tokens.color.darkBlue};
 `
 
-const Legend = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${tokens.spacing.md};
-`
-
-const LegendItem = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: ${tokens.spacing.xs};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  white-space: nowrap;
-`
-
-// Solid dot = delegate, hollow ring = you (matches the Figma legend dots).
+// Solid dot = delegate, hollow ring = you — used in the per-column heads.
 const LegendDot = styled.span<{ $variant: 'delegate' | 'you' }>`
   width: 10px;
   height: 10px;
