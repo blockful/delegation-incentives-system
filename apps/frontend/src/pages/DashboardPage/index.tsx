@@ -18,6 +18,7 @@ import { api } from '@/api'
 import type { AddressDistributionRound } from '@/api/types'
 import { DashboardPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { DashboardValuesCard } from '@/features/matchmaking'
 import { useGasSponsorshipMinEns } from '@/features/delegate/hooks/useGaslessRelayer'
 import { useAsync } from '@/hooks/useAsync'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
@@ -590,6 +591,8 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
           </StatusTag>
         </AvatarColumn>
       </HeroCard>
+
+      <DashboardValuesCard />
 
       {/* Recent payouts */}
       <PayoutsCard>

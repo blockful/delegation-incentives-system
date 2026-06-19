@@ -26,6 +26,7 @@ import { DelegateProfileSkeleton } from '@/components/shared/PageSkeletons'
 import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
 import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { DelegateValuesCard } from '@/features/matchmaking'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import {
   DelegationEligibilityModal,
@@ -954,6 +955,8 @@ export function VoterProfilePage() {
           <StatLabel>Active since</StatLabel>
         </StatCard>
       </StatsRow>
+
+      <DelegateValuesCard delegateAddress={resolvedAddr} />
 
       <VotingRecordSection>
         <SectionTitle>Voting record</SectionTitle>
