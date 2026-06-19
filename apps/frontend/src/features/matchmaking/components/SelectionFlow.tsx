@@ -53,13 +53,10 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
 
   const canSubmit = selected.length === SELECTION_COUNT && !submit.isPending
 
-  const handleSubmit = async () => {
-    try {
-      await submit.mutateAsync(selected)
-      setStep('confirm')
-    } catch {
-      // surfaced inline via submit.isError
-    }
+  const handleSubmit = () => {
+    // mutate (not mutateAsync) doesn't reject — no empty catch needed. The error
+    // is surfaced inline via submit.isError; advance only on success.
+    submit.mutate(selected, { onSuccess: () => setStep('confirm') })
   }
 
   const handleViewMatches = () => {
