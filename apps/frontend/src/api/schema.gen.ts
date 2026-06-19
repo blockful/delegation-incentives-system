@@ -13,11 +13,14 @@ export interface paths {
         };
         /**
          * List active voters
-         * @description Returns voters who meet the voting activity threshold, sorted by voting power descending.
+         * @description Returns voters who meet the voting activity threshold, sorted by voting power descending. Pass `?viewer=0x..` to get each voter's match against that address's selection.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Optional connected address. When given, each voter carries a `match` against this address's selection. */
+                    viewer?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -94,6 +97,30 @@ export interface paths {
                                  *     ]
                                  */
                                 words: string[] | null;
+                                /** @description Overlap with the ?viewer address's selection (server-computed). null when no viewer is given, the viewer hasn't selected, or this voter hasn't selected. */
+                                match: {
+                                    /**
+                                     * @description Overlap as a % of the 5-word selection
+                                     * @example 80
+                                     */
+                                    percent: number;
+                                    /**
+                                     * @description >= 80% overlap
+                                     * @example true
+                                     */
+                                    strongMatch: boolean;
+                                    /**
+                                     * @example [
+                                     *       "security",
+                                     *       "decentralization"
+                                     *     ]
+                                     */
+                                    sharedWords: string[];
+                                    /** @description Words only the viewer selected */
+                                    aUnique: string[];
+                                    /** @description Words only this voter selected */
+                                    bUnique: string[];
+                                } | null;
                             }[];
                         };
                     };

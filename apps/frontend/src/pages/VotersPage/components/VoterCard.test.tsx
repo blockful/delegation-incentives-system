@@ -26,6 +26,7 @@ const fullVoter: VoterDetail = {
   last10ProposalsVoted: [true, true, true, true, true, true, true, true, true, false],
   last10Proposals: [],
   words: null,
+  match: null,
 }
 
 const minimalVoter: VoterDetail = {
@@ -39,6 +40,7 @@ const minimalVoter: VoterDetail = {
   last10ProposalsVoted: [true, true, true, true, true, true, true, false, false, false],
   last10Proposals: [],
   words: null,
+  match: null,
 }
 
 describe('VoterCard', () => {

@@ -42,6 +42,7 @@ function makeVoter(overrides: Partial<VoterDetail>): VoterDetail {
     tokenHolderCount: 0,
     activeSince: null,
     words: null,
+    match: null,
     ...overrides,
   }
 }
@@ -74,14 +75,18 @@ describe('useMySelection', () => {
 })
 
 describe('useVotersWithMatch', () => {
-  it('scores each voter against the viewer selection, null when a side is unselected', async () => {
+  it('surfaces the server-computed match per voter, null when a side is unselected', async () => {
     server.use(
       http.get('/api/voters/active', () =>
         HttpResponse.json({
           count: 2,
           voters: [
-            makeVoter({ address: '0x00000000000000000000000000000000000000a1', words: FIVE_WORDS }),
-            makeVoter({ address: '0x00000000000000000000000000000000000000a2', words: null }),
+            makeVoter({
+              address: '0x00000000000000000000000000000000000000a1',
+              words: FIVE_WORDS,
+              match: { percent: 100, strongMatch: true, sharedWords: FIVE_WORDS, aUnique: [], bUnique: [] },
+            }),
+            makeVoter({ address: '0x00000000000000000000000000000000000000a2', words: null, match: null }),
           ],
         }),
       ),
