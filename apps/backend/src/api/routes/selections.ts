@@ -218,8 +218,8 @@ app.openapi(putRoute, async (c) => {
 
     return c.json({ address, words, updatedAt: Number(now) }, 200);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
+    console.error("selections API error:", err);
+    return c.json({ error: "Internal server error" }, 500);
   }
 });
 
@@ -257,8 +257,8 @@ app.openapi(getRoute, async (c) => {
       200,
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
+    console.error("selections API error:", err);
+    return c.json({ error: "Internal server error" }, 500);
   }
 });
 
@@ -304,8 +304,8 @@ app.openapi(matchCountRoute, async (c) => {
 
     return c.json({ matchCount, matchingActiveVoters }, 200);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return c.json({ error: message }, 500);
+    console.error("selections API error:", err);
+    return c.json({ error: "Internal server error" }, 500);
   }
 });
 

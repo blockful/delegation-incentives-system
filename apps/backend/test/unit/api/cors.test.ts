@@ -68,4 +68,18 @@ describe("applyCors", () => {
     expect(allowHeaders).toContain("content-type");
     expect(allowHeaders).toContain("x-client-source");
   });
+
+  it("allows PUT preflight for the selections write route", async () => {
+    const app = makeApp("https://foo.example");
+    const res = await app.request("/ping", {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://foo.example",
+        "Access-Control-Request-Method": "PUT",
+      },
+    });
+    expect(res.status).toBe(204);
+    const allowMethods = res.headers.get("access-control-allow-methods") ?? "";
+    expect(allowMethods.toUpperCase()).toContain("PUT");
+  });
 });
