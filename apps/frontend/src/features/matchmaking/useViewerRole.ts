@@ -14,8 +14,10 @@ export function useViewerRole(): { role: ViewerRole | null; loading: boolean } {
   const address = wallet.status === 'disconnected' ? undefined : wallet.address
 
   const { data, isLoading } = useQuery({
-    queryKey: ['voters', 'active'],
-    queryFn: () => api.activeVoters(),
+    // Same key/shape as useVotersWithMatch so the two share one fetch; the role
+    // check only reads voter addresses, not the match.
+    queryKey: ['voters', 'active', address ?? null],
+    queryFn: () => api.activeVoters(address),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     enabled: !!address,
