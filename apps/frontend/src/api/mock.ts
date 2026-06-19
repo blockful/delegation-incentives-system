@@ -19,6 +19,7 @@ import type {
 } from './types'
 
 import { ApiClientError } from './client'
+import { scoreSelection } from '@ens-dis/domain'
 
 function delay<T>(value: T, ms = 400): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms))
@@ -860,7 +861,19 @@ export const mockApi = {
       holdersEarning: 412,
     }),
 
-  activeVoters: () => delay(MOCK_VOTERS),
+  activeVoters: (viewer?: string) => {
+    // Mirror the server: score every voter against the viewer's stored selection.
+    const viewerWords = viewer
+      ? mockSelectionStore.get(viewer.toLowerCase()) ?? null
+      : null
+    return delay<ActiveVotersResponse>({
+      count: MOCK_VOTERS.count,
+      voters: MOCK_VOTERS.voters.map((v) => ({
+        ...v,
+        match: viewerWords && v.words ? scoreSelection(viewerWords, v.words) : null,
+      })),
+    })
+  },
 
   eligibility: (_address: string) =>
     delay<EligibilityResponse>({
