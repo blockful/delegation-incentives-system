@@ -31,16 +31,22 @@ export function DashboardValuesCard() {
       <>
         <Card>
           <Header>
-            <CardTitle>Your values</CardTitle>
+            <CardTitle>Values</CardTitle>
             <EditLink type="button" onClick={() => setEditOpen(true)}>
               Edit values →
             </EditLink>
           </Header>
-          <ChipRow>
+          <Divider />
+          <ValuesList>
             {words.map((id) => (
-              <Chip key={id}>{labelOf(id)}</Chip>
+              <ValueRow key={id}>
+                <Marker aria-hidden="true">
+                  <Dot />
+                </Marker>
+                <ValueLabel>{labelOf(id)}</ValueLabel>
+              </ValueRow>
             ))}
-          </ChipRow>
+          </ValuesList>
         </Card>
         <EditSelectionModal open={editOpen} onClose={() => setEditOpen(false)} />
       </>
@@ -90,8 +96,9 @@ const Header = styled.div`
 
 const CardTitle = styled.h3`
   margin: 0;
-  font-size: ${tokens.font.size.lg};
+  font-size: ${tokens.font.size.xl};
   font-weight: ${tokens.font.weight.bold};
+  line-height: 24px;
   color: ${tokens.color.darkBlue};
 `
 
@@ -102,19 +109,55 @@ const Muted = styled.p`
   line-height: 1.5;
 `
 
-const ChipRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${tokens.spacing.sm};
+const Divider = styled.div`
+  width: 100%;
+  height: 1px;
+  background: ${tokens.color.borderLight};
 `
 
-const Chip = styled.span`
-  padding: ${tokens.spacing.xs} ${tokens.spacing.md};
+const ValuesList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.md};
+`
+
+const ValueRow = styled.li`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+`
+
+/* Pill marker mirrors the Figma list rail; a neutral dot replaces the rank
+   number / category icon, since the values are 5 free-form words from a pool
+   (no ranking, no fixed-category iconography). */
+const Marker = styled.span`
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
   border-radius: ${tokens.radius.pill};
-  font-size: ${tokens.font.size.sm};
+  background: ${tokens.color.lightBlue};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const Dot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.blue};
+`
+
+const ValueLabel = styled.span`
+  flex: 1;
+  min-width: 0;
+  font-size: ${tokens.font.size.lg};
   font-weight: ${tokens.font.weight.medium};
-  border: 1px solid ${tokens.color.border};
-  background: ${tokens.color.surfaceAlt};
+  line-height: 1.56;
   color: ${tokens.color.darkBlue};
 `
 
