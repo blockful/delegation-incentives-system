@@ -60,6 +60,7 @@ export const votersFixture: ActiveVotersResponse = {
       last10ProposalsVoted: voter1Voted,
       last10Proposals: buildMockProposals(voter1Voted, voter1Supports),
       words: null,
+      match: null,
     },
     {
       address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
@@ -72,6 +73,7 @@ export const votersFixture: ActiveVotersResponse = {
       last10ProposalsVoted: voter2Voted,
       last10Proposals: buildMockProposals(voter2Voted, voter2Supports),
       words: null,
+      match: null,
     },
     {
       address: '0x9876543210fedcba9876543210fedcba98765432',
@@ -84,6 +86,7 @@ export const votersFixture: ActiveVotersResponse = {
       last10ProposalsVoted: voter3Voted,
       last10Proposals: buildMockProposals(voter3Voted, voter3Supports),
       words: null,
+      match: null,
     },
   ],
 }

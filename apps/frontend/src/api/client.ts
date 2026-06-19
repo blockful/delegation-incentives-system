@@ -70,7 +70,10 @@ export const api = {
 
   status: () => request<StatusResponse>("/stats"),
 
-  activeVoters: () => request<ActiveVotersResponse>("/voters/active"),
+  activeVoters: (viewer?: string) =>
+    request<ActiveVotersResponse>(
+      viewer ? `/voters/active?viewer=${viewer}` : "/voters/active",
+    ),
 
   eligibility: (address: string) =>
     request<EligibilityResponse>(`/eligibility/${address}`),
