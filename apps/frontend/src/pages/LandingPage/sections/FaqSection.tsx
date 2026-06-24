@@ -233,12 +233,11 @@ function buildFaqEntries(gasMinEns: string): FaqEntry[] {
 }
 
 /**
- * Single FAQ card. Every item starts expanded — the section is a plain-language
- * explainer, not a collapsed accordion — but each card can still be collapsed,
- * matching the two states of the Figma "FAQ Item" component.
+ * Single FAQ card. Items start collapsed — readers expand the questions they
+ * care about — matching the two states of the Figma "FAQ Item" component.
  */
 function FaqItem({ entry }: { entry: FaqEntry }) {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(false)
   const panelId = useId()
 
   return (
@@ -293,6 +292,7 @@ export function FaqSection() {
             target="_blank"
             rel="noopener noreferrer"
             colorStyle="bluePrimary"
+            width="fit"
             suffix={<RightArrowSVG width={16} height={16} />}
           >
             Ask us anything
