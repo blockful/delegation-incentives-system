@@ -1196,9 +1196,6 @@ export function CheckWalletSection({
       )}
       </CardRow>
 
-      {/* DEV-944: expansion hidden with its toggle; flag-gated so a single
-          flip restores both. showMath can't be set without the toggle, but
-          gating here keeps the revival self-evidently complete. */}
       {SHOW_PROVENANCE_MATH && showMath && canShowMath && provenance && round.addressReward ? (
         <div
           id={mathRegionId}
