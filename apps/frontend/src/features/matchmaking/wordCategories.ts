@@ -24,32 +24,37 @@ export const CATEGORY_ORDER: readonly WordCategory[] = [
   'Technology & Ecosystem',
 ]
 
-/** Pool word id → category. Must cover every id in the backend WORD_POOL. */
+/**
+ * Pool word id → category. Must cover every id in the backend WORD_POOL.
+ *
+ * Canonical 5-5-5-5 split per the matchmaking PRD §1 (ClickUp 86aj53bjc) — this
+ * is the source of truth; do not re-derive the buckets by intuition.
+ */
 export const WORD_CATEGORY: Readonly<Record<string, WordCategory>> = {
   // Security & Trust
   security: 'Security & Trust',
-  transparency: 'Security & Trust',
-  credible_neutrality: 'Security & Trust',
-  censorship_resistance: 'Security & Trust',
   user_privacy: 'Security & Trust',
   self_custody: 'Security & Trust',
+  censorship_resistance: 'Security & Trust',
+  credible_neutrality: 'Security & Trust',
   // Funding & Treasury
-  cost_efficiency: 'Funding & Treasury',
-  growth_investment: 'Funding & Treasury',
   public_goods_funding: 'Funding & Treasury',
-  treasury_growth: 'Funding & Treasury',
   ecosystem_funding: 'Funding & Treasury',
+  growth_investment: 'Funding & Treasury',
+  treasury_growth: 'Funding & Treasury',
+  cost_efficiency: 'Funding & Treasury',
   // Governance & Process
   decentralization: 'Governance & Process',
+  transparency: 'Governance & Process',
   community_governance: 'Governance & Process',
   long_term_vision: 'Governance & Process',
-  sustainability: 'Governance & Process',
+  accessibility: 'Governance & Process',
   // Technology & Ecosystem
   developer_experience: 'Technology & Ecosystem',
   protocol_simplicity: 'Technology & Ecosystem',
   open_source: 'Technology & Ecosystem',
-  accessibility: 'Technology & Ecosystem',
   interoperability: 'Technology & Ecosystem',
+  sustainability: 'Technology & Ecosystem',
 }
 
 export interface WordGroup {

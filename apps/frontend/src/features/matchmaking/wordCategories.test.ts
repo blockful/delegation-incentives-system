@@ -48,6 +48,28 @@ describe('WORD_CATEGORY map', () => {
       expect(CATEGORY_ORDER).toContain(cat)
     }
   })
+
+  it('matches the canonical PRD 5-5-5-5 split (ClickUp 86aj53bjc §1)', () => {
+    const byCategory = (cat: (typeof CATEGORY_ORDER)[number]) =>
+      new Set(
+        Object.entries(WORD_CATEGORY)
+          .filter(([, c]) => c === cat)
+          .map(([id]) => id),
+      )
+
+    expect(byCategory('Security & Trust')).toEqual(
+      new Set(['security', 'user_privacy', 'self_custody', 'censorship_resistance', 'credible_neutrality']),
+    )
+    expect(byCategory('Funding & Treasury')).toEqual(
+      new Set(['public_goods_funding', 'ecosystem_funding', 'growth_investment', 'treasury_growth', 'cost_efficiency']),
+    )
+    expect(byCategory('Governance & Process')).toEqual(
+      new Set(['decentralization', 'transparency', 'community_governance', 'long_term_vision', 'accessibility']),
+    )
+    expect(byCategory('Technology & Ecosystem')).toEqual(
+      new Set(['developer_experience', 'protocol_simplicity', 'open_source', 'interoperability', 'sustainability']),
+    )
+  })
 })
 
 describe('groupPoolByCategory', () => {
@@ -71,15 +93,19 @@ describe('groupPoolByCategory', () => {
   it('preserves the incoming pool order within a category', () => {
     const groups = groupPoolByCategory(pool)
     const security = groups.find((g) => g.category === 'Security & Trust')!
-    // security appears before transparency in POOL_IDS → same order in-group
+    // Order follows POOL_IDS, filtered to the Security & Trust members.
     expect(security.words.map((w) => w.id)).toEqual([
       'security',
-      'transparency',
       'credible_neutrality',
       'censorship_resistance',
       'user_privacy',
       'self_custody',
     ])
+  })
+
+  it('groups the full pool into a 5-5-5-5 split', () => {
+    const groups = groupPoolByCategory(pool)
+    expect(groups.map((g) => g.words.length)).toEqual([5, 5, 5, 5])
   })
 
   it('drops empty categories rather than rendering a bare heading', () => {
