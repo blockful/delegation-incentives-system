@@ -94,7 +94,7 @@ export function DelegateValuesCard({ delegateAddress, delegateName }: DelegateVa
           <PromptCard
             icon={<FontAwesomeIcon icon={faEyeSlash} />}
             title="Your profile is missing values"
-            body="Holders can't see what you stand for."
+            body="Holders can't see what you stand for. Pick 5 values in 30 seconds."
             cta={
               <Button colorStyle="bluePrimary" onClick={openFlow}>
                 Complete profile
