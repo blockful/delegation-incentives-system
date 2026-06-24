@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, LockSVG } from '@ensdomains/thorin'
 import { tokens } from '@/styles'
 import { useWordPool } from '../useWordPool'
 import { useMySelection } from '../useMySelection'
@@ -13,8 +13,8 @@ import { SelectionFlow } from './SelectionFlow'
  * Dashboard matchmaking card:
  *  - connected + selected (any role) → "Values" card (5 words + Edit values →)
  *  - connected + not selected + delegate → "missing values" nudge → Pitch
- *  - holders pre-selection / disconnected → nothing
- * ⚠️ Copy is placeholder.
+ *  - connected + not selected + holder → "missing values" nudge (Lock) → Pitch
+ *  - disconnected → nothing
  */
 export function DashboardValuesCard() {
   const { state } = useSelectionState()
@@ -72,7 +72,27 @@ export function DashboardValuesCard() {
     )
   }
 
-  // Holders pre-selection see nothing here; disconnected sees nothing.
+  if (state === 'connected-not-selected' && role === 'holder') {
+    return (
+      <>
+        <Card>
+          <IconWrap aria-hidden="true">
+            <LockSVG />
+          </IconWrap>
+          <CardTitle>Your profile is missing values</CardTitle>
+          <Muted>We cannot match you to delegates. Rank 5 values in 30 seconds.</Muted>
+          <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
+            Complete profile
+          </Button>
+        </Card>
+        {flowOpen && role && (
+          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
+        )}
+      </>
+    )
+  }
+
+  // Disconnected sees nothing.
   return null
 }
 
@@ -107,6 +127,17 @@ const Muted = styled.p`
   color: ${tokens.color.darkGray};
   font-size: ${tokens.font.size.base};
   line-height: 1.5;
+`
+
+const IconWrap = styled.span`
+  display: inline-flex;
+  flex-shrink: 0;
+  color: ${tokens.color.darkGray};
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `
 
 const Divider = styled.div`
