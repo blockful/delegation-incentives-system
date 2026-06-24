@@ -95,9 +95,6 @@ export function DelegateValuesCard({ delegateAddress }: DelegateValuesCardProps)
   }
 
   // ── Visited profile, viewer NOT selected ─────────────────────────────────
-  // Gate: a holder who hasn't picked their own values must NEVER see the
-  // delegate's chips — only the locked prompt. Revealing them removes the
-  // incentive to select. (FE-hide only; the values are public data.)
   if (!viewerSelected) {
     if (!delegateSelected) return null // nothing to show
     return (
