@@ -49,9 +49,9 @@ describe('VoterCard', () => {
     expect(screen.getByText('alice.eth')).toBeInTheDocument()
   })
 
-  it('renders truncated address', () => {
+  it('does not render the truncated address (it lives on the profile page)', () => {
     renderApp(<VoterCard voter={fullVoter} />)
-    expect(screen.getByText('0x1234…5678')).toBeInTheDocument()
+    expect(screen.queryByText('0x1234…5678')).not.toBeInTheDocument()
   })
 
   it('renders voting power formatted compactly', () => {
@@ -60,21 +60,26 @@ describe('VoterCard', () => {
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
   })
 
+  it('renders the Match stat instead of Delegators', () => {
+    renderApp(<VoterCard voter={fullVoter} />)
+    expect(screen.getByText('Match')).toBeInTheDocument()
+    expect(screen.queryByText('Delegators')).not.toBeInTheDocument()
+  })
+
   it('renders proposal score', () => {
     renderApp(<VoterCard voter={fullVoter} />)
     expect(screen.getByText('9/10')).toBeInTheDocument()
   })
 
-  it('renders delegate button when not delegated', () => {
+  it('renders the shortened "Delegate" button when not delegated', () => {
     renderApp(<VoterCard voter={fullVoter} />)
-    expect(screen.getByRole('button', { name: 'Delegate now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
   })
 
-  it('omits Active since when activeSince is null', () => {
+  it('still renders Voting Power when activeSince is null', () => {
     renderApp(<VoterCard voter={minimalVoter} />)
-    expect(screen.queryByText('Active since')).not.toBeInTheDocument()
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
-    expect(screen.getByText('Delegators')).toBeInTheDocument()
+    expect(screen.queryByText('Delegators')).not.toBeInTheDocument()
   })
 
   it('renders a visible View profile link to the voter profile', () => {
@@ -142,7 +147,7 @@ describe('VoterCard delegate trigger', () => {
     const user = userEvent.setup()
     renderApp(<VoterCard voter={fullVoter} />)
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
     expect(openWalletModalMock).toHaveBeenCalledTimes(1)
     expectNoEligibilityModal()
@@ -157,7 +162,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
     expect(screen.getByText(NO_ENS_TITLE)).toBeInTheDocument()
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
@@ -184,7 +189,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
     expect(screen.getByText(BELOW_MINIMUM_TITLE)).toBeInTheDocument()
 
     await user.click(
@@ -211,7 +216,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
     await screen.findByText(RELAYER_PAUSED_TITLE)
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
 
@@ -233,7 +238,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
     expectNoEligibilityModal()
     expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()

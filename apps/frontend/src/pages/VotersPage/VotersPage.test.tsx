@@ -86,8 +86,11 @@ describe('VotersPage', () => {
     const search = screen.getByLabelText('Search voters')
     await userEvent.type(search, 'nameless')
 
+    // The matching voter has ensName=null in the API but reverse-resolves to
+    // "nameless.eth", which the card now shows as its title (the truncated
+    // address subtitle was removed in DEV-941).
     await waitFor(() => {
-      expect(screen.getByText(/0x6f7a…4f5a/i)).toBeInTheDocument()
+      expect(screen.getByText('nameless.eth')).toBeInTheDocument()
     })
 
     expect(screen.queryByText('nick.eth')).not.toBeInTheDocument()

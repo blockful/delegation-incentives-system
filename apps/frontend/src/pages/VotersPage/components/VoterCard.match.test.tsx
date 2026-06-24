@@ -15,7 +15,9 @@ function voter(overrides: Partial<VoterDetail> = {}): VoterDetail {
     last10Proposals: [],
     tokenHolderCount: 10,
     activeSince: null,
-    words: null,
+    // A non-null `match` already implies both sides ranked; `words` mirrors that
+    // so the card's delegateHasRanked derivation stays consistent.
+    words: ['a', 'b', 'c', 'd', 'e'],
     match: null,
     ...overrides,
   }
@@ -35,28 +37,53 @@ const partial: MatchScore = {
   aUnique: ['d', 'e'],
   bUnique: ['f', 'g'],
 }
+const weak: MatchScore = {
+  percent: 20,
+  strongMatch: false,
+  sharedWords: ['a'],
+  aUnique: ['b', 'c', 'd', 'e'],
+  bUnique: ['public_goods_funding', 'security'],
+}
 
 describe('VoterCard match variants', () => {
-  it('renders the strong-match line + percent', () => {
+  it('renders the strong-match subtitle + percent in the Match stat', () => {
     renderApp(<VoterCard voter={voter()} match={strong} viewerHasSelected />)
-    expect(screen.getByText(/strong match with your values/i)).toBeInTheDocument()
-    expect(screen.getByText('80% Match')).toBeInTheDocument()
+    expect(screen.getByText(/strong match/i)).toBeInTheDocument()
+    expect(screen.getByText('80%')).toBeInTheDocument()
+    expect(screen.getByText('Match')).toBeInTheDocument()
   })
 
-  it('renders the partial-match shared-word count', () => {
+  it('renders the partial-match subtitle (replacing the shared-word count)', () => {
     renderApp(<VoterCard voter={voter()} match={partial} viewerHasSelected />)
-    expect(screen.getByText(/shares 3 of your words/i)).toBeInTheDocument()
-    expect(screen.getByText('60% Match')).toBeInTheDocument()
+    expect(screen.getByText('Partial match')).toBeInTheDocument()
+    expect(screen.getByText('60%')).toBeInTheDocument()
+    expect(screen.queryByText(/shares 3 of your words/i)).not.toBeInTheDocument()
   })
 
-  it('renders the "delegate didn\'t pick" state when the delegate is unselected', () => {
-    renderApp(<VoterCard voter={voter()} match={null} viewerHasSelected />)
-    expect(screen.getByText(/delegate didn.t pick priorities/i)).toBeInTheDocument()
-    expect(screen.getByText('– Match')).toBeInTheDocument()
+  it('renders the weak-match subtitle + the diverging-word differ list', () => {
+    renderApp(<VoterCard voter={voter()} match={weak} viewerHasSelected />)
+    expect(screen.getByText('Weak match')).toBeInTheDocument()
+    expect(screen.getByText('20%')).toBeInTheDocument()
+    // bUnique ids are humanized in the differ list.
+    expect(screen.getByText('Public goods funding')).toBeInTheDocument()
+    expect(screen.getByText('Security')).toBeInTheDocument()
   })
 
-  it('shows no match line when the viewer has not selected', () => {
-    renderApp(<VoterCard voter={voter()} match={null} viewerHasSelected={false} />)
-    expect(screen.queryByText(/Match/)).not.toBeInTheDocument()
+  it('shows the "delegate didn\'t rank" state when the delegate is unranked', () => {
+    renderApp(
+      <VoterCard voter={voter({ words: null })} match={null} viewerHasSelected />,
+    )
+    expect(screen.getByText(/delegate didn.t rank priorities/i)).toBeInTheDocument()
+    // The Match stat shows the em dash placeholder.
+    expect(screen.getByText('–')).toBeInTheDocument()
+  })
+
+  it('prompts the holder to rank when the viewer has not selected', () => {
+    renderApp(
+      <VoterCard voter={voter()} match={null} viewerHasSelected={false} />,
+    )
+    expect(screen.getByText(/rank to see your match/i)).toBeInTheDocument()
+    // The Match stat shows the "?" placeholder.
+    expect(screen.getByText('?')).toBeInTheDocument()
   })
 })
