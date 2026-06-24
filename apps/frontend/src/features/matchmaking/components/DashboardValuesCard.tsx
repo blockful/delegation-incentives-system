@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { Button, LockSVG } from '@ensdomains/thorin'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles'
 import { useWordPool } from '../useWordPool'
 import { useMySelection } from '../useMySelection'
@@ -56,15 +58,20 @@ export function DashboardValuesCard() {
   if (state === 'connected-not-selected' && role === 'delegate') {
     return (
       <>
-        <Card>
-          <CardTitle>Your profile is missing values</CardTitle>
-          <Muted>
-            Pick the values you stand for so holders can find you by what matters to them.
-          </Muted>
-          <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
+        <Banner>
+          <IconBadge aria-hidden="true">
+            <FontAwesomeIcon icon={faEyeSlash} />
+          </IconBadge>
+          <BannerText>
+            <CardTitle>Your profile is missing values</CardTitle>
+            <Muted>
+              Pick the values you stand for so holders can find you by what matters to them.
+            </Muted>
+          </BannerText>
+          <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
             Complete profile
           </Button>
-        </Card>
+        </Banner>
         {flowOpen && role && (
           <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
         )}
@@ -162,8 +169,9 @@ const IconBadge = styled.span`
   align-items: center;
   justify-content: center;
 
+  /* height-locked, width auto so non-square glyphs (eye-slash) keep their ratio */
   svg {
-    width: 20px;
+    width: auto;
     height: 20px;
   }
 `
