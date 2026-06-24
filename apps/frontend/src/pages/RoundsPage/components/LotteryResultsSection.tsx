@@ -22,8 +22,12 @@ const SectionCard = styled.section`
   border: 1px solid ${tokens.color.borderLight};
   border-radius: 16px;
 
+  /* Mobile: drop the card wrapper so the pool content goes edge-to-edge. */
   @media (max-width: 767px) {
-    padding: ${tokens.spacing.lg};
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
   }
 `
 

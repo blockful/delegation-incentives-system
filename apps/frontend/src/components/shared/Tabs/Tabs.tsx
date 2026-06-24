@@ -15,11 +15,18 @@ interface TabsProps {
   'aria-label'?: string
 }
 
+// Segmented switcher track: both tabs sit inside one pill-shaped container
+// with a subtle background + hairline border and no gap between segments. The
+// active tab reads as a filled pill floating inside this track. The thin
+// padding insets the active fill so the track edge stays visible around it.
 const TabList = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: ${tokens.spacing.xs};
-  flex-wrap: wrap;
+  gap: 0;
+  padding: 3px;
+  border-radius: ${tokens.radius.pill};
+  border: 1px solid ${tokens.color.borderLight};
+  background: ${tokens.color.bgSubtle};
 `
 
 const TabButton = styled.button<{ $active: boolean }>`
@@ -29,7 +36,7 @@ const TabButton = styled.button<{ $active: boolean }>`
   min-height: 32px;
   padding: 0 ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
-  border: 1px solid ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.borderLight)};
+  border: 1px solid transparent;
   background: ${({ $active }) => ($active ? tokens.color.lightBlue : 'transparent')};
   color: ${({ $active }) => ($active ? tokens.color.darkBlue : tokens.color.darkGray)};
   font-family: inherit;
@@ -38,12 +45,11 @@ const TabButton = styled.button<{ $active: boolean }>`
   letter-spacing: 0;
   cursor: pointer;
   transition:
-    border-color ${tokens.transition.fast},
     background ${tokens.transition.fast},
     color ${tokens.transition.fast};
 
   &:hover {
-    border-color: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.blue)};
+    color: ${tokens.color.darkBlue};
   }
 
   &:focus-visible {
