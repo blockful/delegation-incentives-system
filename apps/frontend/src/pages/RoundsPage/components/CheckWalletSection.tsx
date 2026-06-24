@@ -73,6 +73,19 @@ export type CheckWalletView =
     }
   | { kind: 'lottery-lost'; entry: LostLotteryEntry }
 
+/*
+ * DEV-944 (designer QA, PRD 86aj53bjc §6): temporarily hide two affordances of
+ * the shipped DEV-764 provenance feature in the "This wallet reward" panel —
+ * the "Show the math" / "Hide the math" toggle (plus its ProvenanceMath
+ * expansion) and the "Paid directly in one transfer (1 ENS or more)." caption.
+ *
+ * Nothing is deleted: the ProvenanceMath component, the showMath state and all
+ * the provenance computation stay in place. Reviving is a single flag flip —
+ * set this to true. Typed `boolean` (not the literal `false`) on purpose, so
+ * the gated branches stay type-checked as live code.
+ */
+export const SHOW_PROVENANCE_MATH: boolean = false // DEV-944: flip to true to restore
+
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a || !b) return false
   return a.toLowerCase() === b.toLowerCase()
@@ -932,8 +945,11 @@ export function CheckWalletSection({
         : null
 
   // Affordance (or the degraded note) on the states that have math to show.
+  // DEV-944: gated off for now — hides the "Show the math" toggle AND its
+  // "Math not available for this round." degraded sibling (same panel slot).
   const mathFoot =
-    view.kind === 'earned' || view.kind === 'lottery-lost' ? (
+    SHOW_PROVENANCE_MATH &&
+    (view.kind === 'earned' || view.kind === 'lottery-lost') ? (
       canShowMath ? (
         <MathToggle
           type="button"
@@ -1089,11 +1105,12 @@ export function CheckWalletSection({
                 ENS. Your pool drew you as the winner, so you took the whole{' '}
                 {formatEnsFixed(view.lotteryWin.prizeEns)} ENS.
               </ExplainerFootnote>
-            ) : (
+            ) : SHOW_PROVENANCE_MATH ? (
+              // DEV-944: caption temporarily hidden (PRD 86aj53bjc §6).
               <ExplainerFootnote>
                 Paid directly in one transfer (1 ENS or more).
               </ExplainerFootnote>
-            )}
+            ) : null}
             {mathFoot}
           </PanelFoot>
         </ResultPanel>
@@ -1190,7 +1207,10 @@ export function CheckWalletSection({
       )}
       </CardRow>
 
-      {showMath && canShowMath && provenance && round.addressReward ? (
+      {/* DEV-944: expansion hidden with its toggle; flag-gated so a single
+          flip restores both. showMath can't be set without the toggle, but
+          gating here keeps the revival self-evidently complete. */}
+      {SHOW_PROVENANCE_MATH && showMath && canShowMath && provenance && round.addressReward ? (
         <div
           id={mathRegionId}
           role="region"
