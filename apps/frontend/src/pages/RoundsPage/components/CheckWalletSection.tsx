@@ -73,17 +73,6 @@ export type CheckWalletView =
     }
   | { kind: 'lottery-lost'; entry: LostLotteryEntry }
 
-/*
- * DEV-944 (designer QA, PRD 86aj53bjc §6): temporarily hide two affordances of
- * the shipped DEV-764 provenance feature in the "This wallet reward" panel —
- * the "Show the math" / "Hide the math" toggle (plus its ProvenanceMath
- * expansion) and the "Paid directly in one transfer (1 ENS or more)." caption.
- *
- * Nothing is deleted: the ProvenanceMath component, the showMath state and all
- * the provenance computation stay in place. Reviving is a single flag flip —
- * set this to true. Typed `boolean` (not the literal `false`) on purpose, so
- * the gated branches stay type-checked as live code.
- */
 export const SHOW_PROVENANCE_MATH: boolean = false // DEV-944: flip to true to restore
 
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
