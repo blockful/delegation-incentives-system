@@ -45,7 +45,7 @@ describe('matchLevel — graduated match visuals', () => {
   it('1/5 → 20% muted, Weak, stacked', () => {
     const lvl = matchLevel(1)
     expect(lvl.ringPercent).toBe(20)
-    expect(lvl.ringColor).toBe(tokens.color.textSubtle)
+    expect(lvl.ringColor).toBe(tokens.color.textMuted)
     expect(lvl.tier).toBe('weak')
     expect(lvl.pillLabel).toBe('Weak match')
     expect(lvl.showStar).toBe(false)
@@ -55,7 +55,7 @@ describe('matchLevel — graduated match visuals', () => {
   it('0/5 → 0% grey, None, delegate-only', () => {
     const lvl = matchLevel(0)
     expect(lvl.ringPercent).toBe(0)
-    expect(lvl.ringColor).toBe(tokens.color.middleGray)
+    expect(lvl.ringColor).toBe(tokens.color.border)
     expect(lvl.tier).toBe('none')
     expect(lvl.pillLabel).toBe('No shared values')
     expect(lvl.showStar).toBe(false)

@@ -94,7 +94,7 @@ export function matchLevel(sharedCount: number): MatchLevel {
   if (ringPercent >= 20) {
     return {
       ringPercent,
-      ringColor: tokens.color.textSubtle,
+      ringColor: tokens.color.textMuted,
       tier: 'weak',
       pillLabel: 'Weak match',
       showStar: false,
@@ -105,7 +105,7 @@ export function matchLevel(sharedCount: number): MatchLevel {
   // 0/5 — no shared values; show what the delegate stands for.
   return {
     ringPercent,
-    ringColor: tokens.color.middleGray,
+    ringColor: tokens.color.border,
     tier: 'none',
     pillLabel: 'No shared values',
     showStar: false,
