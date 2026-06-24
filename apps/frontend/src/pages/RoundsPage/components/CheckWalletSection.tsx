@@ -73,7 +73,7 @@ export type CheckWalletView =
     }
   | { kind: 'lottery-lost'; entry: LostLotteryEntry }
 
-export const SHOW_PROVENANCE_MATH: boolean = false // DEV-944: flip to true to restore
+export const SHOW_PROVENANCE_MATH: boolean = false
 
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a || !b) return false
@@ -934,8 +934,6 @@ export function CheckWalletSection({
         : null
 
   // Affordance (or the degraded note) on the states that have math to show.
-  // DEV-944: gated off for now — hides the "Show the math" toggle AND its
-  // "Math not available for this round." degraded sibling (same panel slot).
   const mathFoot =
     SHOW_PROVENANCE_MATH &&
     (view.kind === 'earned' || view.kind === 'lottery-lost') ? (
@@ -1095,7 +1093,6 @@ export function CheckWalletSection({
                 {formatEnsFixed(view.lotteryWin.prizeEns)} ENS.
               </ExplainerFootnote>
             ) : SHOW_PROVENANCE_MATH ? (
-              // DEV-944: caption temporarily hidden (PRD 86aj53bjc §6).
               <ExplainerFootnote>
                 Paid directly in one transfer (1 ENS or more).
               </ExplainerFootnote>
