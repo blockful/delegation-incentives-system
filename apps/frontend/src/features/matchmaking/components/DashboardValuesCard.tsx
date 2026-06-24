@@ -75,16 +75,18 @@ export function DashboardValuesCard() {
   if (state === 'connected-not-selected' && role === 'holder') {
     return (
       <>
-        <Card>
-          <IconWrap aria-hidden="true">
+        <Banner>
+          <IconBadge aria-hidden="true">
             <LockSVG />
-          </IconWrap>
-          <CardTitle>Your profile is missing values</CardTitle>
-          <Muted>We cannot match you to delegates. Rank 5 values in 30 seconds.</Muted>
-          <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
+          </IconBadge>
+          <BannerText>
+            <CardTitle>Your profile is missing values</CardTitle>
+            <Muted>We cannot match you to delegates. Rank 5 values in 30 seconds.</Muted>
+          </BannerText>
+          <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
             Complete profile
           </Button>
-        </Card>
+        </Banner>
         {flowOpen && role && (
           <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
         )}
@@ -129,15 +131,49 @@ const Muted = styled.p`
   line-height: 1.5;
 `
 
-const IconWrap = styled.span`
-  display: inline-flex;
+/* Holder pre-rank nudge — horizontal blue banner (Figma node 5899:7918):
+   icon badge · title+body · content-width CTA, not a stacked card. */
+const Banner = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.lightBlue};
+  border: 1px solid ${tokens.color.blue};
+  border-radius: ${tokens.radius.md};
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ${tokens.spacing.sm};
+  }
+`
+
+const IconBadge = styled.span`
   flex-shrink: 0;
-  color: ${tokens.color.darkGray};
+  width: 40px;
+  height: 40px;
+  border-radius: ${tokens.radius.pill};
+  /* Figma blue/light (#d1e4ff) — one shade above the banner's lightBlue; no DS token */
+  background: #d1e4ff;
+  color: ${tokens.color.blue};
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   svg {
     width: 20px;
     height: 20px;
   }
+`
+
+const BannerText = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `
 
 const Divider = styled.div`
