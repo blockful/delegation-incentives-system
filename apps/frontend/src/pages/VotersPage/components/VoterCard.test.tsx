@@ -101,6 +101,44 @@ describe('VoterCard', () => {
   })
 })
 
+// The "Free" pill on the Delegate button (Figma node 5899-6899 — present on
+// every voter-card variant). It is variant-independent and gated only on the
+// relayer actually having gas to sponsor, so it disappears when sponsorship is
+// down rather than advertising a "free" delegation that wouldn't be free.
+describe('VoterCard "Free" badge', () => {
+  afterEach(() => {
+    // Restore the default relayer-balance handler (hasEnoughBalance: true) so a
+    // per-test override doesn't leak into the rest of the file.
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', () =>
+        HttpResponse.json({ hasEnoughBalance: true }),
+      ),
+    )
+  })
+
+  it('shows the Free pill on the Delegate button when the relayer has gas', async () => {
+    renderApp(<VoterCard voter={fullVoter} />)
+    // Balance query is async (null until it resolves), so wait for the pill.
+    expect(await screen.findByText('Free')).toBeInTheDocument()
+    // The pill is decorative — the button's accessible name stays "Delegate".
+    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
+  })
+
+  it('hides the Free pill when sponsored gas is unavailable (relayer paused)', async () => {
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', () =>
+        HttpResponse.json({ hasEnoughBalance: false }),
+      ),
+    )
+    renderApp(<VoterCard voter={fullVoter} />)
+    // The button is still there; "Free" must never appear.
+    expect(
+      await screen.findByRole('button', { name: 'Delegate' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Free')).not.toBeInTheDocument()
+  })
+})
+
 describe('VoterCard delegate trigger', () => {
   const CONNECTED_WALLET =
     '0x9999999999999999999999999999999999999999' as `0x${string}`

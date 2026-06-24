@@ -293,6 +293,21 @@ const ActionsBlock = styled.div`
   z-index: 2;
 `
 
+/**
+ * Faint "Free" pill that sits INSIDE the blue Delegate button (Figma node
+ * 5899-6899; present on every voter-card variant). It signals gas-free /
+ * sponsored delegation.
+ *
+ * Styling: a translucent white-on-primary pill. The design system only exposes
+ * solid semantic colours, so there's no token for "white at low opacity over
+ * the primary button" — these literal rgba values are deliberate and match the
+ * Figma. Reuse, don't re-invent, if a token is ever added.
+ *
+ * Decorative (`aria-hidden`): the button's accessible name stays a clean
+ * "Delegate". Per-viewer free-gas eligibility is conveyed at click time via the
+ * DelegationEligibilityModal, so hiding the pill from the a11y tree loses no
+ * actionable information.
+ */
 const FreeBadge = styled.span.attrs({ 'aria-hidden': true })`
   display: inline-flex;
   align-items: center;
