@@ -15,30 +15,29 @@ interface TabsProps {
   'aria-label'?: string
 }
 
-// Segmented switcher track: both tabs sit inside one pill-shaped container
-// with a subtle background + hairline border and no gap between segments. The
-// active tab reads as a filled pill floating inside this track. The thin
-// padding insets the active fill so the track edge stays visible around it.
+// Segmented switcher track (Figma 5620:158): both tabs sit inside one
+// pill-shaped grey track with no border and a 4px gutter. The active tab
+// reads as a white pill floating inside the track with a subtle shadow.
 const TabList = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 0;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   border-radius: ${tokens.radius.pill};
-  border: 1px solid ${tokens.color.borderLight};
-  background: ${tokens.color.bgSubtle};
+  background: ${tokens.color.surfaceAlt};
 `
 
 const TabButton = styled.button<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 0 ${tokens.spacing.md};
+  padding: 8px 16px;
   border-radius: ${tokens.radius.pill};
-  border: 1px solid transparent;
-  background: ${({ $active }) => ($active ? tokens.color.lightBlue : 'transparent')};
-  color: ${({ $active }) => ($active ? tokens.color.darkBlue : tokens.color.darkGray)};
+  border: none;
+  background: ${({ $active }) => ($active ? tokens.color.white : 'transparent')};
+  box-shadow: ${({ $active }) =>
+    $active ? '0px 1px 1px rgba(0, 0, 0, 0.08)' : 'none'};
+  color: ${({ $active }) => ($active ? tokens.color.text : tokens.color.textMuted)};
   font-family: inherit;
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
@@ -46,10 +45,11 @@ const TabButton = styled.button<{ $active: boolean }>`
   cursor: pointer;
   transition:
     background ${tokens.transition.fast},
+    box-shadow ${tokens.transition.fast},
     color ${tokens.transition.fast};
 
   &:hover {
-    color: ${tokens.color.darkBlue};
+    color: ${tokens.color.text};
   }
 
   &:focus-visible {
