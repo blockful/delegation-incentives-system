@@ -26,6 +26,26 @@ describe('DelegateValuesCard — matrix states', () => {
     )
   })
 
+  it('viewer NOT selected, delegate selected → locked prompt only, never the delegate values (gate)', async () => {
+    // Connect as an address with no selection (zero address → 404) while
+    // visiting a delegate that HAS selected. The gate must show only the
+    // locked prompt and never reveal the delegate's chips. (DEV-939)
+    renderApp(<DelegateValuesCard delegateAddress={DELEGATE} />, {
+      walletState: { status: 'connected', address: NO_SELECTION },
+    })
+    // Locked prompt is shown.
+    await waitFor(() =>
+      expect(
+        screen.getByText(/select your values to see how well you match/i),
+      ).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: /select your values/i })).toBeInTheDocument()
+    // The delegate's values must NOT be revealed.
+    expect(screen.queryByText(/this delegate.s values/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Decentralization')).not.toBeInTheDocument()
+    expect(screen.queryByText('Public goods funding')).not.toBeInTheDocument()
+  })
+
   it('logged out → connect wallet CTA', () => {
     renderApp(<DelegateValuesCard delegateAddress={DELEGATE} />, {
       walletState: { status: 'disconnected' },

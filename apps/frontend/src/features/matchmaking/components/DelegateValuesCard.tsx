@@ -99,10 +99,6 @@ export function DelegateValuesCard({ delegateAddress }: DelegateValuesCardProps)
     if (!delegateSelected) return null // nothing to show
     return (
       <>
-        <Card>
-          <CardTitle>This delegate&apos;s values</CardTitle>
-          <Chips words={delegateWords ?? []} labelOf={labelOf} />
-        </Card>
         <UnlockMatchmakingBanner
           onSelect={() => setFlowOpen(true)}
           message="Select your values to see how well you match."
