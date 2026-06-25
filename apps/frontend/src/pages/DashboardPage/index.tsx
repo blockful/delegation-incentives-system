@@ -66,9 +66,9 @@ const HeroText = styled.div`
 `
 
 const RewardsLabel = styled.span`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
   line-height: 1.6;
 `
 
@@ -83,7 +83,7 @@ const RewardsNumber = styled.p<{ $delegated: boolean }>`
   font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${({ $delegated }) =>
-    $delegated ? tokens.color.positiveEmphasis : tokens.color.darkGray};
+    $delegated ? tokens.color.greenDeep : tokens.color.darkBlue};
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   word-break: break-word;
@@ -222,8 +222,7 @@ const StatusTag = styled.span<{ $delegated: boolean }>`
 const PayoutsCard = styled.section`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: ${tokens.spacing.xl};
+  overflow: hidden;
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
   border-radius: 12px;
@@ -234,13 +233,21 @@ const PayoutsHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: ${tokens.spacing.sm};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.surfaceAlt};
+`
+
+const PayoutsDivider = styled.div`
+  height: 1px;
+  width: 100%;
+  background: ${tokens.color.borderLight};
 `
 
 const PayoutsTitle = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 24px;
 `
 
 const PayoutsLink = styled.button`
@@ -269,6 +276,7 @@ const PayoutsRow = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
+  padding: ${tokens.spacing.lg};
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(3, 1fr);
@@ -280,7 +288,7 @@ const PayoutCard = styled.button`
   align-items: stretch;
   gap: 12px;
   padding: ${tokens.spacing.lg};
-  background: ${tokens.color.bgSubtle};
+  background: ${tokens.color.surfaceAlt};
   border: none;
   border-radius: 8px;
   font-family: ${tokens.font.family};
@@ -367,7 +375,7 @@ const PayoutArrow = styled.span`
 
 const PayoutsEmpty = styled.div`
   padding: ${tokens.spacing.xl};
-  background: ${tokens.color.bgSubtle};
+  background: ${tokens.color.surfaceAlt};
   border-radius: 8px;
   text-align: center;
   color: ${tokens.color.darkGray};
@@ -555,7 +563,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
             <HeroCtaWrap>
               <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                 <Button
-                  colorStyle="bluePrimary"
+                  colorStyle="blueSecondary"
                   prefix={<FontAwesomeIcon icon={faShareNodes} />}
                 >
                   Share to earn more
@@ -597,11 +605,12 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
       {/* Recent payouts */}
       <PayoutsCard>
         <PayoutsHeader>
-          <PayoutsTitle>Recent payouts</PayoutsTitle>
+          <PayoutsTitle>Recent Payouts</PayoutsTitle>
           <PayoutsLink type="button" onClick={() => navigate(`/rounds?address=${address}`)}>
             View all rounds <FontAwesomeIcon icon={faArrowRight} />
           </PayoutsLink>
         </PayoutsHeader>
+        <PayoutsDivider />
 
         {!hasPayouts ? (
           <PayoutsEmpty>
@@ -619,7 +628,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
                     ? '0 ENS'
                     : '—'
               const tone: 'positive' | 'neutral' | 'muted' =
-                row.hasReward ? 'positive' : isUnavailable ? 'muted' : 'neutral'
+                row.hasReward ? 'positive' : 'neutral'
               return (
                 <PayoutCard
                   key={row.roundNumber}

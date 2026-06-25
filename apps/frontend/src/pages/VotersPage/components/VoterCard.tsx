@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faStar, faHeart } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import type { MatchScore } from '@ens-dis/domain'
 import type { VoterDetail } from '@/api/types'
@@ -82,25 +82,33 @@ function formatActiveSince(iso: string | null): string {
   return `${month} ‘${year}`
 }
 
-const StyledCard = styled.div<{ $highlight: boolean }>`
+const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
   position: relative;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xl};
   padding: ${tokens.spacing.lg};
-  background: ${({ $highlight }) =>
-    $highlight ? tokens.color.status.success.bg : tokens.color.surface};
+  background: ${({ $tone }) =>
+    $tone === 'highlight'
+      ? tokens.color.status.success.bg
+      : $tone === 'muted'
+        ? tokens.color.surfaceAlt
+        : tokens.color.surface};
   border: 1px solid
-    ${({ $highlight }) =>
-      $highlight ? tokens.color.status.success.border : tokens.color.borderLight};
+    ${({ $tone }) =>
+      $tone === 'highlight'
+        ? tokens.color.status.success.border
+        : $tone === 'muted'
+          ? tokens.color.border
+          : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   transition: border-color ${tokens.transition.base},
     background ${tokens.transition.base};
 
   &:hover {
-    border-color: ${({ $highlight }) =>
-      $highlight ? tokens.color.status.success.fg : tokens.color.blue};
+    border-color: ${({ $tone }) =>
+      $tone === 'highlight' ? tokens.color.status.success.fg : tokens.color.blue};
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -415,7 +423,15 @@ export function VoterCard({
 
   return (
     <>
-      <StyledCard $highlight={matchDisplay.highlight}>
+      <StyledCard
+        $tone={
+          matchDisplay.highlight
+            ? 'highlight'
+            : matchDisplay.variant === 'unranked'
+              ? 'muted'
+              : 'plain'
+        }
+      >
         <CardLink to={profileUrl} aria-label={`View profile for ${displayName}`} />
 
         <CardHeader>
@@ -434,6 +450,11 @@ export function VoterCard({
                 {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
               </TitleRow>
               <MatchSubtitle $variant={matchDisplay.variant} $color={matchDisplay.color}>
+                {matchDisplay.variant === 'strong' ? (
+                  <FontAwesomeIcon icon={faStar} aria-hidden style={{ marginRight: 6 }} />
+                ) : matchDisplay.variant === 'partial' ? (
+                  <FontAwesomeIcon icon={faHeart} aria-hidden style={{ marginRight: 6 }} />
+                ) : null}
                 {matchDisplay.subtitle}
               </MatchSubtitle>
               {differWords.length > 0 && (

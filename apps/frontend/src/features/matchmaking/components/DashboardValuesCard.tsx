@@ -32,70 +32,53 @@ export function DashboardValuesCard() {
     return (
       <>
         <Card>
-          <Header>
+          <HeaderStrip>
             <CardTitle>Values</CardTitle>
             <EditLink type="button" onClick={() => setEditOpen(true)}>
               Edit values →
             </EditLink>
-          </Header>
+          </HeaderStrip>
           <Divider />
-          <ValuesList>
-            {words.map((id) => (
-              <ValueRow key={id}>
-                <Marker aria-hidden="true">
-                  <Dot />
-                </Marker>
-                <ValueLabel>{labelOf(id)}</ValueLabel>
-              </ValueRow>
-            ))}
-          </ValuesList>
+          <Body>
+            <ChipRow>
+              {words.map((id) => (
+                <Chip key={id}>{labelOf(id)}</Chip>
+              ))}
+            </ChipRow>
+          </Body>
         </Card>
         <EditSelectionModal open={editOpen} onClose={() => setEditOpen(false)} />
       </>
     )
   }
 
-  if (state === 'connected-not-selected' && role === 'delegate') {
+  // Connected but no values yet → the "missing values" nudge. The banner must
+  // NOT depend on `role` resolving: useViewerRole returns null while /voters
+  // loads or if it errors, and gating the banner on it made the nudge silently
+  // disappear. Render for any connected, unselected viewer; `role` only swaps
+  // the icon + body copy (delegate vs holder), defaulting to the holder copy.
+  if (state === 'connected-not-selected') {
+    const isDelegate = role === 'delegate'
     return (
       <>
         <Banner>
           <IconBadge aria-hidden="true">
-            <FontAwesomeIcon icon={faEyeSlash} />
+            {isDelegate ? <FontAwesomeIcon icon={faEyeSlash} /> : <LockSVG />}
           </IconBadge>
           <BannerText>
             <CardTitle>Your profile is missing values</CardTitle>
             <Muted>
-              Pick the values you stand for so holders can find you by what matters to them.
+              {isDelegate
+                ? 'Pick the values you stand for so holders can find you by what matters to them.'
+                : 'We cannot match you to delegates. Rank 5 values in 30 seconds.'}
             </Muted>
           </BannerText>
           <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
             Complete profile
           </Button>
         </Banner>
-        {flowOpen && role && (
-          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
-        )}
-      </>
-    )
-  }
-
-  if (state === 'connected-not-selected' && role === 'holder') {
-    return (
-      <>
-        <Banner>
-          <IconBadge aria-hidden="true">
-            <LockSVG />
-          </IconBadge>
-          <BannerText>
-            <CardTitle>Your profile is missing values</CardTitle>
-            <Muted>We cannot match you to delegates. Rank 5 values in 30 seconds.</Muted>
-          </BannerText>
-          <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
-            Complete profile
-          </Button>
-        </Banner>
-        {flowOpen && role && (
-          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
+        {flowOpen && (
+          <SelectionFlow open role={role ?? 'holder'} onClose={() => setFlowOpen(false)} />
         )}
       </>
     )
@@ -109,18 +92,25 @@ const Card = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.lg};
+  overflow: hidden;
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
+  border-radius: 12px;
 `
 
-const Header = styled.div`
+// Grey header strip (Figma 5899-6474): "Values" + "Edit values →" on surfaceAlt,
+// divider, then the chips on a white body.
+const HeaderStrip = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: ${tokens.spacing.sm};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.surfaceAlt};
+`
+
+const Body = styled.div`
+  padding: ${tokens.spacing.lg};
 `
 
 const CardTitle = styled.h3`
@@ -190,50 +180,22 @@ const Divider = styled.div`
   background: ${tokens.color.borderLight};
 `
 
-const ValuesList = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  width: 100%;
+/* Values render as light-blue chips (Figma 5899:6474 / 5899:6811) — matching the
+   value chips used elsewhere (own-profile, delegate card), not a list rail. */
+const ChipRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.sm};
 `
 
-const ValueRow = styled.li`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-`
-
-/* Pill marker mirrors the Figma list rail; a neutral dot replaces the rank
-   number / category icon, since the values are 5 free-form words from a pool
-   (no ranking, no fixed-category iconography). */
-const Marker = styled.span`
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+const Chip = styled.span`
+  padding: ${tokens.spacing.xs} ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.lightBlue};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
-
-const Dot = styled.span`
-  width: 6px;
-  height: 6px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.blue};
-`
-
-const ValueLabel = styled.span`
-  flex: 1;
-  min-width: 0;
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.medium};
-  line-height: 1.56;
-  color: ${tokens.color.darkBlue};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
+  line-height: 20px;
 `
 
 const EditLink = styled.button`

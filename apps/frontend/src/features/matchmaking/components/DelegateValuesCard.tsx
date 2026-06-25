@@ -96,7 +96,7 @@ export function DelegateValuesCard({ delegateAddress, delegateName }: DelegateVa
             title="Your profile is missing values"
             body="Holders can't see what you stand for. Pick 5 values in 30 seconds."
             cta={
-              <Button colorStyle="bluePrimary" onClick={openFlow}>
+              <Button colorStyle="bluePrimary" width="fit" onClick={openFlow}>
                 Complete profile
               </Button>
             }
@@ -113,7 +113,7 @@ export function DelegateValuesCard({ delegateAddress, delegateName }: DelegateVa
           title="Connect to see your match"
           body="Connect your wallet to see how this delegate matches your priorities."
           cta={
-            <Button colorStyle="bluePrimary" onClick={() => void openWalletModal()}>
+            <Button colorStyle="bluePrimary" width="fit" onClick={() => void openWalletModal()}>
               Connect wallet
             </Button>
           }
@@ -129,7 +129,7 @@ export function DelegateValuesCard({ delegateAddress, delegateName }: DelegateVa
             title="Start matching"
             body="Pick your 5 values to see how you match delegates."
             cta={
-              <Button colorStyle="bluePrimary" onClick={openFlow}>
+              <Button colorStyle="bluePrimary" width="fit" onClick={openFlow}>
                 Pick your values
               </Button>
             }
@@ -147,7 +147,7 @@ export function DelegateValuesCard({ delegateAddress, delegateName }: DelegateVa
             title={`See how you match ${who}`}
             body={`Pick your 5 values to unlock your match, with ${who} and every delegate.`}
             cta={
-              <Button colorStyle="bluePrimary" onClick={openFlow}>
+              <Button colorStyle="bluePrimary" width="fit" onClick={openFlow}>
                 Pick your values
               </Button>
             }
@@ -196,38 +196,43 @@ function BothPicked({
 
   return (
     <ComparisonCard>
+      {/* Header strip: "{name}'s values" (left) + the graduated match pill (right). */}
       <HeaderStrip>
-        <RingAndPill>
+        <CardTitle>{`${who}'s values`}</CardTitle>
+        <MatchPill $tier={level.tier}>
+          {level.showStar ? (
+            <FontAwesomeIcon icon={faStar} aria-hidden="true" />
+          ) : null}
+          {level.pillLabel}
+        </MatchPill>
+      </HeaderStrip>
+
+      <Divider />
+
+      {/* Body: the match ring (left) beside the shared/differ words (right). */}
+      <Body>
+        <BodyRow>
           <MatchRing $percent={level.ringPercent} $color={level.ringColor}>
             <RingInner>
               <RingPercent>{level.ringPercent}%</RingPercent>
               <RingLabel>match</RingLabel>
             </RingInner>
           </MatchRing>
-          <MatchPill $tier={level.tier}>
-            {level.showStar ? (
-              <FontAwesomeIcon icon={faStar} aria-hidden="true" />
-            ) : null}
-            {level.pillLabel}
-          </MatchPill>
-        </RingAndPill>
-      </HeaderStrip>
+          <RightColumn>
+            {/* Shared values — always shown when there's any overlap. */}
+            {score.sharedWords.length > 0 && (
+              <Section>
+                <SectionHead>
+                  <CheckSVG style={{ color: tokens.color.green }} aria-hidden="true" />
+                  <SectionLabel>You both value</SectionLabel>
+                </SectionHead>
+                <Chips words={score.sharedWords} labelOf={labelOf} highlight />
+              </Section>
+            )}
 
-      <Divider />
-
-      <Body>
-        {/* Shared values — always shown when there's any overlap. */}
-        {score.sharedWords.length > 0 && (
-          <Section>
-            <SectionHead>
-              <CheckSVG style={{ color: tokens.color.green }} aria-hidden="true" />
-              <SectionLabel>You both value</SectionLabel>
-            </SectionHead>
-            <Chips words={score.sharedWords} labelOf={labelOf} highlight />
-          </Section>
-        )}
-
-        {renderDiffer(level.differLayout, score, who, labelOf, delegateWords)}
+            {renderDiffer(level.differLayout, score, who, labelOf, delegateWords)}
+          </RightColumn>
+        </BodyRow>
       </Body>
     </ComparisonCard>
   )
@@ -293,7 +298,6 @@ function renderDiffer(
   }
 }
 
-/** Shared shell for the single-message states (icon + title + body + optional CTA). */
 function PromptCard({
   icon,
   title,
@@ -306,14 +310,14 @@ function PromptCard({
   cta?: React.ReactNode
 }) {
   return (
-    <Card>
+    <PromptBanner>
       <PromptIcon aria-hidden="true">{icon}</PromptIcon>
       <PromptText>
         <CardTitle>{title}</CardTitle>
         <Muted>{body}</Muted>
       </PromptText>
       {cta}
-    </Card>
+    </PromptBanner>
   )
 }
 
@@ -370,6 +374,7 @@ const Header = styled.div`
 const HeaderStrip = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${tokens.spacing.lg};
   padding: ${tokens.spacing.lg};
   background: ${tokens.color.surfaceAlt};
@@ -389,25 +394,47 @@ const Muted = styled.p`
   line-height: 1.5;
 `
 
-// Icon medallion for the single-message prompt states.
+// Horizontal light-blue banner for the single-message states (Figma 5900-5557).
+const PromptBanner = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.lightBlue};
+  border: 1px solid ${tokens.color.blue};
+  border-radius: ${tokens.radius.md};
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ${tokens.spacing.sm};
+  }
+`
+
+// Icon badge for the single-message prompt states (matches the dashboard nudge).
 const PromptIcon = styled.span`
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.lightBlue};
+  /* Figma blue/light (#d1e4ff) — one shade above the banner's lightBlue; no token */
+  background: #d1e4ff;
   color: ${tokens.color.blue};
-  font-size: 18px;
 
+  /* height-locked, width auto so non-square glyphs (eye-slash) keep their ratio */
   svg {
-    width: 20px;
+    width: auto;
     height: 20px;
   }
 `
 
 const PromptText = styled.div`
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xs};
@@ -415,18 +442,30 @@ const PromptText = styled.div`
 
 // ── Match ring ─────────────────────────────────────────────────────────────
 // A conic-gradient ring filled to $percent; the unfilled arc is a faint track.
-const RingAndPill = styled.div`
+// Both-picked body: ring (left) beside the shared/differ words (right).
+const BodyRow = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: ${tokens.spacing.lg};
-  flex-wrap: wrap;
+
+  @media (max-width: 520px) {
+    flex-direction: column;
+  }
+`
+
+const RightColumn = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.lg};
 `
 
 const MatchRing = styled.div<{ $percent: number; $color: string }>`
   position: relative;
   flex-shrink: 0;
-  width: 72px;
-  height: 72px;
+  width: 132px;
+  height: 132px;
   border-radius: ${tokens.radius.pill};
   background: conic-gradient(
     ${({ $color }) => $color} ${({ $percent }) => $percent * 3.6}deg,
@@ -438,8 +477,8 @@ const MatchRing = styled.div<{ $percent: number; $color: string }>`
 `
 
 const RingInner = styled.div`
-  width: 56px;
-  height: 56px;
+  width: 108px;
+  height: 108px;
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.surface};
   display: flex;
@@ -450,13 +489,13 @@ const RingInner = styled.div`
 `
 
 const RingPercent = styled.span`
-  font-size: ${tokens.font.size.lg};
+  font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
 `
 
 const RingLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textSecondary};
 `
