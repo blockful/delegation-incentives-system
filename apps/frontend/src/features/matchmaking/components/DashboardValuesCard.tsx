@@ -55,47 +55,33 @@ export function DashboardValuesCard() {
     )
   }
 
-  if (state === 'connected-not-selected' && role === 'delegate') {
+  // Connected but no values yet → the "missing values" nudge. The banner must
+  // NOT depend on `role` resolving: useViewerRole returns null while /voters
+  // loads or if it errors, and gating the banner on it made the nudge silently
+  // disappear. Render for any connected, unselected viewer; `role` only swaps
+  // the icon + body copy (delegate vs holder), defaulting to the holder copy.
+  if (state === 'connected-not-selected') {
+    const isDelegate = role === 'delegate'
     return (
       <>
         <Banner>
           <IconBadge aria-hidden="true">
-            <FontAwesomeIcon icon={faEyeSlash} />
+            {isDelegate ? <FontAwesomeIcon icon={faEyeSlash} /> : <LockSVG />}
           </IconBadge>
           <BannerText>
             <CardTitle>Your profile is missing values</CardTitle>
             <Muted>
-              Pick the values you stand for so holders can find you by what matters to them.
+              {isDelegate
+                ? 'Pick the values you stand for so holders can find you by what matters to them.'
+                : 'We cannot match you to delegates. Rank 5 values in 30 seconds.'}
             </Muted>
           </BannerText>
           <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
             Complete profile
           </Button>
         </Banner>
-        {flowOpen && role && (
-          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
-        )}
-      </>
-    )
-  }
-
-  if (state === 'connected-not-selected' && role === 'holder') {
-    return (
-      <>
-        <Banner>
-          <IconBadge aria-hidden="true">
-            <LockSVG />
-          </IconBadge>
-          <BannerText>
-            <CardTitle>Your profile is missing values</CardTitle>
-            <Muted>We cannot match you to delegates. Rank 5 values in 30 seconds.</Muted>
-          </BannerText>
-          <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
-            Complete profile
-          </Button>
-        </Banner>
-        {flowOpen && role && (
-          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
+        {flowOpen && (
+          <SelectionFlow open role={role ?? 'holder'} onClose={() => setFlowOpen(false)} />
         )}
       </>
     )
