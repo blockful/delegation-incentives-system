@@ -956,7 +956,7 @@ export function VoterProfilePage() {
         </StatCard>
       </StatsRow>
 
-      <DelegateValuesCard delegateAddress={resolvedAddr} />
+      <DelegateValuesCard delegateAddress={resolvedAddr} delegateName={ensName ?? undefined} />
 
       <VotingRecordSection>
         <SectionTitle>Voting record</SectionTitle>
