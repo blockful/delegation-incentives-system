@@ -6,6 +6,7 @@ import { Modal } from '@/components/shared/Modal'
 import { useWordPool } from '../useWordPool'
 import { useMySelection } from '../useMySelection'
 import { useSubmitSelection } from '../useSubmitSelection'
+import { toggleSelection } from '../selectionLogic'
 import { WordChipGrid } from './WordChipGrid'
 
 export interface EditSelectionModalProps {
@@ -36,13 +37,7 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
   }, [open, current])
 
   const toggle = (id: string) =>
-    setSelected((cur) =>
-      cur.includes(id)
-        ? cur.filter((x) => x !== id)
-        : cur.length < SELECTION_COUNT
-          ? [...cur, id]
-          : cur,
-    )
+    setSelected((cur) => toggleSelection(cur, id, SELECTION_COUNT))
 
   const canSave = selected.length === SELECTION_COUNT && !submit.isPending
 

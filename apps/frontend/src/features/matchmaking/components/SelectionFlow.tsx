@@ -8,6 +8,7 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { useWordPool } from '../useWordPool'
 import { useSubmitSelection } from '../useSubmitSelection'
 import { useMatchCount } from '../useMatchCount'
+import { isAtMax, progressFill, toggleSelection } from '../selectionLogic'
 import type { ViewerRole } from '../useViewerRole'
 import { pitchCopy, confirmCopy, matchPillText } from '../copy'
 import { WordChipGrid } from './WordChipGrid'
@@ -47,15 +48,10 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
   const navigate = useNavigate()
 
   const toggle = (id: string) =>
-    setSelected((cur) =>
-      cur.includes(id)
-        ? cur.filter((x) => x !== id)
-        : cur.length < SELECTION_COUNT
-          ? [...cur, id]
-          : cur,
-    )
+    setSelected((cur) => toggleSelection(cur, id, SELECTION_COUNT))
 
   const canSubmit = selected.length === SELECTION_COUNT && !submit.isPending
+  const atMax = isAtMax(selected.length, SELECTION_COUNT)
 
   const handleSubmit = () => {
     // mutate (not mutateAsync) doesn't reject — no empty catch needed. The error
@@ -101,9 +97,21 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
             ) : (
               <WordChipGrid pool={pool} selected={selected} onToggle={toggle} max={SELECTION_COUNT} />
             )}
-            <Counter aria-live="polite">
-              {selected.length}/{SELECTION_COUNT}
-            </Counter>
+            {atMax && <Hint role="status">Limit reached — deselect one to swap</Hint>}
+            <Progress>
+              <ProgressTrack
+                role="progressbar"
+                aria-label="Words selected"
+                aria-valuemin={0}
+                aria-valuemax={SELECTION_COUNT}
+                aria-valuenow={selected.length}
+              >
+                <ProgressFill style={{ transform: `scaleX(${progressFill(selected.length, SELECTION_COUNT)})` }} />
+              </ProgressTrack>
+              <Counter aria-live="polite">
+                {selected.length}/{SELECTION_COUNT}
+              </Counter>
+            </Progress>
             {submit.isError && <ErrorText>Couldn&apos;t save your values. Please try again.</ErrorText>}
             <Row>
               {initialStep !== 'select' && (
@@ -199,6 +207,36 @@ const Counter = styled.div`
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkBlue};
+  white-space: nowrap;
+`
+
+const Progress = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+`
+
+const ProgressTrack = styled.div`
+  flex: 1;
+  height: 6px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.border};
+  overflow: hidden;
+`
+
+const ProgressFill = styled.div`
+  height: 100%;
+  border-radius: inherit;
+  background: ${tokens.color.blue};
+  transform-origin: left center;
+  /* Live update as the count changes. */
+  transition: transform ${tokens.transition.base};
+`
+
+const Hint = styled.p`
+  margin: 0;
+  font-size: ${tokens.font.size.sm};
+  color: ${tokens.color.textMuted};
 `
 
 const Pill = styled.div`
