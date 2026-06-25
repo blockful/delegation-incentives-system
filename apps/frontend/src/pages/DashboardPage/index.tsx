@@ -66,9 +66,9 @@ const HeroText = styled.div`
 `
 
 const RewardsLabel = styled.span`
-  font-size: ${tokens.font.size.lg};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
   line-height: 1.6;
 `
 
@@ -237,10 +237,10 @@ const PayoutsHeader = styled.div`
 `
 
 const PayoutsTitle = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 20px;
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.darkBlue};
+  line-height: 24px;
 `
 
 const PayoutsLink = styled.button`
@@ -555,7 +555,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
             <HeroCtaWrap>
               <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                 <Button
-                  colorStyle="bluePrimary"
+                  colorStyle="blueSecondary"
                   prefix={<FontAwesomeIcon icon={faShareNodes} />}
                 >
                   Share to earn more
@@ -597,7 +597,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
       {/* Recent payouts */}
       <PayoutsCard>
         <PayoutsHeader>
-          <PayoutsTitle>Recent payouts</PayoutsTitle>
+          <PayoutsTitle>Recent Payouts</PayoutsTitle>
           <PayoutsLink type="button" onClick={() => navigate(`/rounds?address=${address}`)}>
             View all rounds <FontAwesomeIcon icon={faArrowRight} />
           </PayoutsLink>

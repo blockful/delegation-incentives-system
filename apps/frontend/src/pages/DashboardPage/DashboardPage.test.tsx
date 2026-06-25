@@ -36,7 +36,7 @@ describe('DashboardPage', () => {
   it('renders the recent payouts section', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText('Recent payouts')).toBeInTheDocument()
+      expect(screen.getByText('Recent Payouts')).toBeInTheDocument()
     })
     expect(
       screen.getByRole('button', { name: /View all rounds/ }),
