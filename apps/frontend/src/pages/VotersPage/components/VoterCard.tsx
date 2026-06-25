@@ -155,25 +155,12 @@ const NameText = styled.p`
   text-overflow: ellipsis;
 `
 
-/** Colour the match subtitle per variant (strong green, partial blue, rest muted). */
-function subtitleColor(variant: MatchVariant): string {
-  switch (variant) {
-    case 'strong':
-      return tokens.color.status.success.fg
-    case 'partial':
-      return tokens.color.blue
-    default:
-      // weak / none / unranked / unpicked all read as muted secondary text.
-      return tokens.color.textSecondary
-  }
-}
-
-const MatchSubtitle = styled.p<{ $variant: MatchVariant }>`
+const MatchSubtitle = styled.p<{ $variant: MatchVariant; $color: string }>`
   margin: 0;
   font-size: ${tokens.font.size.base};
   font-weight: ${({ $variant }) =>
     $variant === 'strong' ? tokens.font.weight.bold : tokens.font.weight.medium};
-  color: ${({ $variant }) => subtitleColor($variant)};
+  color: ${({ $color }) => $color};
   line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
@@ -446,7 +433,7 @@ export function VoterCard({
                 <NameText>{displayName}</NameText>
                 {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
               </TitleRow>
-              <MatchSubtitle $variant={matchDisplay.variant}>
+              <MatchSubtitle $variant={matchDisplay.variant} $color={matchDisplay.color}>
                 {matchDisplay.subtitle}
               </MatchSubtitle>
               {differWords.length > 0 && (

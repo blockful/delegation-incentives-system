@@ -12,6 +12,7 @@
  * so the `>=` thresholds collapse to those exact buckets.
  */
 import type { MatchScore } from '@ens-dis/domain'
+import { tokens } from '@/styles'
 
 /** Qualitative buckets for a real (both-sides-selected) match score. */
 export type MatchBucket = 'strong' | 'partial' | 'weak' | 'none'
@@ -43,10 +44,13 @@ export function matchBucket(percent: number): MatchBucket {
 }
 
 export interface VoterCardMatchDisplay {
-  /** Drives the subtitle colour and the whole-card highlight. */
+  /** Still drives the subtitle font-weight + the weak differ-list, and is kept
+   *  so callers can branch on the bucket. The colour is pre-resolved (`color`). */
   variant: MatchVariant
   /** Subtitle line under the name (replaces the old truncated address). */
   subtitle: string
+  /** Pre-resolved subtitle colour token for this variant. */
+  color: string
   /** Value shown in the "Match" stat slot (e.g. "80%", "–", "?"). */
   statValue: string
   /** Whole-card green highlight — only the strong / compatible variant. */
@@ -63,18 +67,22 @@ interface VoterCardMatchArgs {
 }
 
 /**
- * Per-variant presentation: the subtitle copy + whether this variant highlights
- * the whole card. Keyed by variant so it is the single source of truth, and the
- * `Record<MatchVariant, …>` makes it exhaustive — a new variant won't compile
- * until it has a row here (no silent `default` branch to swallow it).
+ * Per-variant presentation: the subtitle copy, its colour, and whether this
+ * variant highlights the whole card. Keyed by variant so it is the single
+ * source of truth, and the `Record<MatchVariant, …>` makes it exhaustive — a
+ * new variant won't compile until it has a row (no silent `default` to swallow
+ * it). `color` folds in what used to be a second variant switch in the view.
  */
-const VARIANT_DISPLAY: Record<MatchVariant, { subtitle: string; highlight: boolean }> = {
-  strong: { subtitle: '⭐ Strong match', highlight: true },
-  partial: { subtitle: 'Partial match', highlight: false },
-  weak: { subtitle: 'Weak match', highlight: false },
-  none: { subtitle: 'No shared priorities', highlight: false },
-  unranked: { subtitle: "Delegate didn't rank priorities", highlight: false },
-  unpicked: { subtitle: 'Rank to see your match', highlight: false },
+const VARIANT_DISPLAY: Record<
+  MatchVariant,
+  { subtitle: string; highlight: boolean; color: string }
+> = {
+  strong: { subtitle: '⭐ Strong match', highlight: true, color: tokens.color.status.success.fg },
+  partial: { subtitle: 'Partial match', highlight: false, color: tokens.color.blue },
+  weak: { subtitle: 'Weak match', highlight: false, color: tokens.color.textSecondary },
+  none: { subtitle: 'No shared priorities', highlight: false, color: tokens.color.textSecondary },
+  unranked: { subtitle: "Delegate didn't rank priorities", highlight: false, color: tokens.color.textSecondary },
+  unpicked: { subtitle: 'Rank to see your match', highlight: false, color: tokens.color.textSecondary },
 }
 
 /**

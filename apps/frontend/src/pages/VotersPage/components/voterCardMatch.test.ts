@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MatchScore } from '@ens-dis/domain'
+import { tokens } from '@/styles'
 import {
   matchBucket,
   voterCardMatchDisplay,
@@ -138,5 +139,38 @@ describe('voterCardMatchDisplay — defensive fallback', () => {
       delegateHasRanked: true,
     })
     expect(result.variant).toBe('weak')
+  })
+})
+
+describe('voterCardMatchDisplay — subtitle colour pre-resolved per variant', () => {
+  const both = { viewerHasSelected: true, delegateHasRanked: true }
+
+  it('strong → success foreground, partial → blue', () => {
+    expect(voterCardMatchDisplay({ match: score(80), ...both }).color).toBe(
+      tokens.color.status.success.fg,
+    )
+    expect(voterCardMatchDisplay({ match: score(60), ...both }).color).toBe(
+      tokens.color.blue,
+    )
+  })
+
+  it('weak / none / unranked / unpicked all read as muted secondary text', () => {
+    const muted = tokens.color.textSecondary
+    expect(voterCardMatchDisplay({ match: score(20), ...both }).color).toBe(muted)
+    expect(voterCardMatchDisplay({ match: score(0), ...both }).color).toBe(muted)
+    expect(
+      voterCardMatchDisplay({
+        match: null,
+        viewerHasSelected: true,
+        delegateHasRanked: false,
+      }).color,
+    ).toBe(muted)
+    expect(
+      voterCardMatchDisplay({
+        match: null,
+        viewerHasSelected: false,
+        delegateHasRanked: true,
+      }).color,
+    ).toBe(muted)
   })
 })
