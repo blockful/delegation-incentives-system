@@ -3,59 +3,74 @@
  *
  * The backend `word-pool.ts` stays a flat list of 20 — the "category" concept
  * lives purely on the frontend as a presentation aid for the Selection modal.
- * This map covers ALL 20 pool ids; render order follows {@link CATEGORY_ORDER}.
  *
- * If the pool grows/changes server-side, add the new id here (it falls back to
- * the last category if missing — see {@link groupPoolByCategory}).
+ * Authoring shape mirrors the PRD §1 table (category → its 5 words) so the
+ * 5-5-5-5 split is verifiable at a glance. Everything else is DERIVED from it:
+ *   - {@link WordCategory}  — the category union (keys of the table)
+ *   - {@link CATEGORY_ORDER} — heading order (table's insertion order)
+ *   - {@link WORD_CATEGORY}  — the word→category lookup the grouping uses
+ *
+ * If the pool grows/changes server-side, add the new id to the right bucket
+ * below — a single source of truth. An id missing from every bucket falls back
+ * to the last category so it stays visible (see {@link groupPoolByCategory}).
  */
 import type { PoolWord } from '@/api'
 
-export type WordCategory =
-  | 'Security & Trust'
-  | 'Funding & Treasury'
-  | 'Governance & Process'
-  | 'Technology & Ecosystem'
+/**
+ * Canonical category → pool-word-ids, per the matchmaking PRD §1
+ * (ClickUp 86aj53bjc). This is the SINGLE SOURCE OF TRUTH — do not re-derive
+ * the buckets by intuition, and do not maintain a parallel list elsewhere.
+ */
+export const CATEGORY_WORDS = {
+  'Security & Trust': [
+    'security',
+    'user_privacy',
+    'self_custody',
+    'censorship_resistance',
+    'credible_neutrality',
+  ],
+  'Funding & Treasury': [
+    'public_goods_funding',
+    'ecosystem_funding',
+    'growth_investment',
+    'treasury_growth',
+    'cost_efficiency',
+  ],
+  'Governance & Process': [
+    'decentralization',
+    'transparency',
+    'community_governance',
+    'long_term_vision',
+    'accessibility',
+  ],
+  'Technology & Ecosystem': [
+    'developer_experience',
+    'protocol_simplicity',
+    'open_source',
+    'interoperability',
+    'sustainability',
+  ],
+} as const satisfies Record<string, readonly string[]>
 
-/** Heading render order (spec-mandated). */
-export const CATEGORY_ORDER: readonly WordCategory[] = [
-  'Security & Trust',
-  'Funding & Treasury',
-  'Governance & Process',
-  'Technology & Ecosystem',
-]
+export type WordCategory = keyof typeof CATEGORY_WORDS
 
 /**
- * Pool word id → category. Must cover every id in the backend WORD_POOL.
- *
- * Canonical 5-5-5-5 split per the matchmaking PRD §1 (ClickUp 86aj53bjc) — this
- * is the source of truth; do not re-derive the buckets by intuition.
+ * Heading render order (spec-mandated). Intrinsic to the authoring order of
+ * {@link CATEGORY_WORDS}: non-numeric string keys keep insertion order, so this
+ * stays in sync by construction instead of being a hand-maintained twin.
  */
-export const WORD_CATEGORY: Readonly<Record<string, WordCategory>> = {
-  // Security & Trust
-  security: 'Security & Trust',
-  user_privacy: 'Security & Trust',
-  self_custody: 'Security & Trust',
-  censorship_resistance: 'Security & Trust',
-  credible_neutrality: 'Security & Trust',
-  // Funding & Treasury
-  public_goods_funding: 'Funding & Treasury',
-  ecosystem_funding: 'Funding & Treasury',
-  growth_investment: 'Funding & Treasury',
-  treasury_growth: 'Funding & Treasury',
-  cost_efficiency: 'Funding & Treasury',
-  // Governance & Process
-  decentralization: 'Governance & Process',
-  transparency: 'Governance & Process',
-  community_governance: 'Governance & Process',
-  long_term_vision: 'Governance & Process',
-  accessibility: 'Governance & Process',
-  // Technology & Ecosystem
-  developer_experience: 'Technology & Ecosystem',
-  protocol_simplicity: 'Technology & Ecosystem',
-  open_source: 'Technology & Ecosystem',
-  interoperability: 'Technology & Ecosystem',
-  sustainability: 'Technology & Ecosystem',
-}
+export const CATEGORY_ORDER = Object.keys(CATEGORY_WORDS) as WordCategory[]
+
+/**
+ * Pool word id → category, derived from {@link CATEGORY_WORDS}. Covers every id
+ * in the backend WORD_POOL; the coverage test is the guard against drift.
+ */
+export const WORD_CATEGORY: Readonly<Record<string, WordCategory>> =
+  Object.fromEntries(
+    (Object.entries(CATEGORY_WORDS) as [WordCategory, readonly string[]][]).flatMap(
+      ([category, ids]) => ids.map((id) => [id, category] as const),
+    ),
+  )
 
 export interface WordGroup {
   category: WordCategory
