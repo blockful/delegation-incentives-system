@@ -49,9 +49,9 @@ describe('VoterCard', () => {
     expect(screen.getByText('alice.eth')).toBeInTheDocument()
   })
 
-  it('renders truncated address', () => {
+  it('does not render the truncated address (it lives on the profile page)', () => {
     renderApp(<VoterCard voter={fullVoter} />)
-    expect(screen.getByText('0x1234…5678')).toBeInTheDocument()
+    expect(screen.queryByText('0x1234…5678')).not.toBeInTheDocument()
   })
 
   it('renders voting power formatted compactly', () => {
@@ -60,21 +60,26 @@ describe('VoterCard', () => {
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
   })
 
+  it('renders the Match stat instead of Delegators', () => {
+    renderApp(<VoterCard voter={fullVoter} />)
+    expect(screen.getByText('Match')).toBeInTheDocument()
+    expect(screen.queryByText('Delegators')).not.toBeInTheDocument()
+  })
+
   it('renders proposal score', () => {
     renderApp(<VoterCard voter={fullVoter} />)
     expect(screen.getByText('9/10')).toBeInTheDocument()
   })
 
-  it('renders delegate button when not delegated', () => {
+  it('renders the shortened "Delegate" button when not delegated', () => {
     renderApp(<VoterCard voter={fullVoter} />)
-    expect(screen.getByRole('button', { name: 'Delegate now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
   })
 
-  it('omits Active since when activeSince is null', () => {
+  it('still renders Voting Power when activeSince is null', () => {
     renderApp(<VoterCard voter={minimalVoter} />)
-    expect(screen.queryByText('Active since')).not.toBeInTheDocument()
     expect(screen.getByText('Voting Power')).toBeInTheDocument()
-    expect(screen.getByText('Delegators')).toBeInTheDocument()
+    expect(screen.queryByText('Delegators')).not.toBeInTheDocument()
   })
 
   it('renders a visible View profile link to the voter profile', () => {
@@ -93,6 +98,44 @@ describe('VoterCard', () => {
     renderApp(<VoterCard voter={fullVoter} />)
     const overlay = screen.getByRole('link', { name: 'View profile for alice.eth' })
     expect(overlay).toHaveAttribute('href', '/voters/alice.eth')
+  })
+})
+
+// The "Free" pill on the Delegate button (Figma node 5899-6899 — present on
+// every voter-card variant). It is variant-independent and gated only on the
+// relayer actually having gas to sponsor, so it disappears when sponsorship is
+// down rather than advertising a "free" delegation that wouldn't be free.
+describe('VoterCard "Free" badge', () => {
+  afterEach(() => {
+    // Restore the default relayer-balance handler (hasEnoughBalance: true) so a
+    // per-test override doesn't leak into the rest of the file.
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', () =>
+        HttpResponse.json({ hasEnoughBalance: true }),
+      ),
+    )
+  })
+
+  it('shows the Free pill on the Delegate button when the relayer has gas', async () => {
+    renderApp(<VoterCard voter={fullVoter} />)
+    // Balance query is async (null until it resolves), so wait for the pill.
+    expect(await screen.findByText('Free')).toBeInTheDocument()
+    // The pill is decorative — the button's accessible name stays "Delegate".
+    expect(screen.getByRole('button', { name: 'Delegate' })).toBeInTheDocument()
+  })
+
+  it('hides the Free pill when sponsored gas is unavailable (relayer paused)', async () => {
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', () =>
+        HttpResponse.json({ hasEnoughBalance: false }),
+      ),
+    )
+    renderApp(<VoterCard voter={fullVoter} />)
+    // The button is still there; "Free" must never appear.
+    expect(
+      await screen.findByRole('button', { name: 'Delegate' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Free')).not.toBeInTheDocument()
   })
 })
 
@@ -142,7 +185,7 @@ describe('VoterCard delegate trigger', () => {
     const user = userEvent.setup()
     renderApp(<VoterCard voter={fullVoter} />)
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
     expect(openWalletModalMock).toHaveBeenCalledTimes(1)
     expectNoEligibilityModal()
@@ -157,7 +200,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
     expect(screen.getByText(NO_ENS_TITLE)).toBeInTheDocument()
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
@@ -184,7 +227,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
     expect(screen.getByText(BELOW_MINIMUM_TITLE)).toBeInTheDocument()
 
     await user.click(
@@ -211,7 +254,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
     await screen.findByText(RELAYER_PAUSED_TITLE)
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
 
@@ -233,7 +276,7 @@ describe('VoterCard delegate trigger', () => {
       walletState: { status: 'connected', address: CONNECTED_WALLET },
     })
 
-    await user.click(screen.getByRole('button', { name: /Delegate now/ }))
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
     expectNoEligibilityModal()
     expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()

@@ -23,6 +23,10 @@ import { useWalletState } from '@/features/wallet/useWalletState'
 import { truncateAddress } from '@/utils/format'
 import { contracts } from '@/config/contracts'
 import { tokens } from '@/styles'
+import {
+  voterCardMatchDisplay,
+  type MatchVariant,
+} from './voterCardMatch'
 
 interface VoterCardProps {
   voter: VoterDetail
@@ -32,9 +36,13 @@ interface VoterCardProps {
   onEnsResolved?: (lowercasedAddress: string, name: string | null) => void
   /** Match vs the viewer's selection (null when either side hasn't selected). Computed client-side. */
   match?: MatchScore | null
-  /** Whether the connected viewer has selected. Gates the match line; the unselected viewer state is FE-4's. */
+  /** Whether the connected viewer has selected. Drives the match subtitle + first stat. */
   viewerHasSelected?: boolean
-  /** Degraded /voters: viewer connected, dismissed the prompt, not selected — show a "?" placeholder. */
+  /**
+   * Degraded /voters: viewer connected, dismissed the prompt, not selected.
+   * Retained for the page's call site; the "?" placeholder is now driven purely
+   * by `viewerHasSelected`, so this no longer changes copy.
+   */
   degraded?: boolean
 }
 
@@ -53,6 +61,18 @@ function formatVotingPower(vpWei: string): string {
   return `${Math.round(ens)}`
 }
 
+/**
+ * Humanize a word id for the compact weak-match chips (e.g.
+ * `public_goods_funding` → `Public goods funding`). The list card doesn't
+ * subscribe to the word pool — keeping these 12 cards free of an extra async
+ * dependency — so we derive a readable label from the id itself.
+ */
+function humanizeWordId(id: string): string {
+  const spaced = id.replace(/[_-]+/g, ' ').trim()
+  if (!spaced) return id
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
 function formatActiveSince(iso: string | null): string {
   if (!iso) return '—'
   const date = new Date(iso)
@@ -62,20 +82,25 @@ function formatActiveSince(iso: string | null): string {
   return `${month} ‘${year}`
 }
 
-const StyledCard = styled.div`
+const StyledCard = styled.div<{ $highlight: boolean }>`
   position: relative;
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.xl};
   padding: ${tokens.spacing.lg};
-  background: ${tokens.color.surface};
-  border: 1px solid ${tokens.color.borderLight};
+  background: ${({ $highlight }) =>
+    $highlight ? tokens.color.status.success.bg : tokens.color.surface};
+  border: 1px solid
+    ${({ $highlight }) =>
+      $highlight ? tokens.color.status.success.border : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  transition: border-color ${tokens.transition.base};
+  transition: border-color ${tokens.transition.base},
+    background ${tokens.transition.base};
 
   &:hover {
-    border-color: ${tokens.color.blue};
+    border-color: ${({ $highlight }) =>
+      $highlight ? tokens.color.status.success.fg : tokens.color.blue};
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -130,12 +155,42 @@ const NameText = styled.p`
   text-overflow: ellipsis;
 `
 
-const AddressLine = styled.p`
+const MatchSubtitle = styled.p<{ $variant: MatchVariant; $color: string }>`
   margin: 0;
   font-size: ${tokens.font.size.base};
+  font-weight: ${({ $variant }) =>
+    $variant === 'strong' ? tokens.font.weight.bold : tokens.font.weight.medium};
+  color: ${({ $color }) => $color};
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+/**
+ * Weak-match "differ list": the words only this delegate picked, shown as small
+ * wrapped chips so the holder sees *where* they diverge. Stacked under the
+ * subtitle; only rendered for the weak variant (per the Figma set).
+ */
+const DifferList = styled.ul`
+  list-style: none;
+  margin: ${tokens.spacing.xs} 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.xs};
+`
+
+const DifferChip = styled.li`
+  padding: 1px ${tokens.spacing.sm};
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.surfaceAlt};
+  border: 1px solid ${tokens.color.borderLight};
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
-  line-height: 20px;
+  line-height: 16px;
+  white-space: nowrap;
 `
 
 const DelegatedTag = styled.span`
@@ -295,7 +350,6 @@ export function VoterCard({
   onEnsResolved,
   match,
   viewerHasSelected = false,
-  degraded = false,
 }: VoterCardProps) {
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
@@ -323,6 +377,19 @@ export function VoterCard({
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
 
+  // Match display (subtitle label + colour + first-stat value + card highlight).
+  // The qualitative label now lives in the subtitle; the percentage is the
+  // first stat. `degraded` no longer changes copy — an unpicked viewer always
+  // sees "Rank to see your match" ("?"), which also reads fine under the blur.
+  const matchDisplay = voterCardMatchDisplay({
+    match,
+    viewerHasSelected,
+    delegateHasRanked: voter.words != null,
+  })
+  // The weak variant shows the delegate's diverging picks as small chips.
+  const differWords =
+    matchDisplay.variant === 'weak' ? (match?.bUnique ?? []) : []
+
   // Relayer paused is global — it beats the balance-gated states because a
   // bigger balance wouldn't unlock sponsored gas while the relayer is down.
   const eligibilityReason: DelegationEligibilityReason | null =
@@ -348,7 +415,7 @@ export function VoterCard({
 
   return (
     <>
-      <StyledCard>
+      <StyledCard $highlight={matchDisplay.highlight}>
         <CardLink to={profileUrl} aria-label={`View profile for ${displayName}`} />
 
         <CardHeader>
@@ -366,14 +433,18 @@ export function VoterCard({
                 <NameText>{displayName}</NameText>
                 {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
               </TitleRow>
-              <AddressLine>{truncateAddress(voter.address)}</AddressLine>
+              <MatchSubtitle $variant={matchDisplay.variant} $color={matchDisplay.color}>
+                {matchDisplay.subtitle}
+              </MatchSubtitle>
+              {differWords.length > 0 && (
+                <DifferList aria-label="Words this delegate prioritises">
+                  {differWords.map((id) => (
+                    <DifferChip key={id}>{humanizeWordId(id)}</DifferChip>
+                  ))}
+                </DifferList>
+              )}
             </NameStack>
           </IdentityRow>
-
-          {viewerHasSelected && <MatchStatus match={match} />}
-          {!viewerHasSelected && degraded && (
-            <DegradedMatchStatus delegateHasSelected={voter.words != null} />
-          )}
 
           <ProposalSection>
             <ProposalHeader>
@@ -388,12 +459,12 @@ export function VoterCard({
 
         <StatsRow>
           <Stat>
-            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
-            <StatLabel>Voting Power</StatLabel>
+            <StatValue>{matchDisplay.statValue}</StatValue>
+            <StatLabel>Match</StatLabel>
           </Stat>
           <Stat>
-            <StatValue>{voter.tokenHolderCount}</StatValue>
-            <StatLabel>Delegators</StatLabel>
+            <StatValue>{formatVotingPower(voter.votingPower)}</StatValue>
+            <StatLabel>Voting Power</StatLabel>
           </Stat>
           <Stat>
             <StatValue>{formatActiveSince(voter.activeSince)}</StatValue>
@@ -407,7 +478,7 @@ export function VoterCard({
             size="small"
             onClick={handleDelegate}
           >
-            Delegate now{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
+            Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
           </Button>
           <ProfileLink to={profileUrl}>
             View profile <FontAwesomeIcon icon={faArrowRight} aria-hidden />
@@ -438,82 +509,3 @@ export function VoterCard({
     </>
   )
 }
-
-/**
- * Match status line, shown only once the viewer has selected. With both sides
- * selected it shows the strong/partial variant + percent; if the delegate
- * hasn't selected (`match` null), the neutral "didn't pick" state. The
- * unselected-viewer state is owned by FE-4. ⚠️ Copy is placeholder (copy-pass).
- */
-function MatchStatus({ match }: { match: MatchScore | null | undefined }) {
-  if (!match) {
-    return (
-      <MatchRow $variant="none">
-        <MatchText>Delegate didn&apos;t pick priorities</MatchText>
-        <MatchValue>– Match</MatchValue>
-      </MatchRow>
-    )
-  }
-  if (match.strongMatch) {
-    return (
-      <MatchRow $variant="strong">
-        <MatchText>⭐ Strong match with your values</MatchText>
-        <MatchValue>{match.percent}% Match</MatchValue>
-      </MatchRow>
-    )
-  }
-  return (
-    <MatchRow $variant="partial">
-      <MatchText>
-        Shares {match.sharedWords.length} of your word
-        {match.sharedWords.length === 1 ? '' : 's'}
-      </MatchText>
-      <MatchValue>{match.percent}% Match</MatchValue>
-    </MatchRow>
-  )
-}
-
-/**
- * Degraded /voters placeholder: the viewer is connected but hasn't selected (and
- * dismissed the prompt). Shows "?" with a nudge, or the delegate's own
- * unselected state. ⚠️ Copy is placeholder.
- */
-function DegradedMatchStatus({ delegateHasSelected }: { delegateHasSelected: boolean }) {
-  return (
-    <MatchRow $variant="none">
-      <MatchText>
-        {delegateHasSelected ? 'Select to see your match' : "Delegate didn't pick priorities"}
-      </MatchText>
-      <MatchValue>?</MatchValue>
-    </MatchRow>
-  )
-}
-
-const MatchRow = styled.div<{ $variant: 'strong' | 'partial' | 'none' }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${tokens.spacing.sm};
-  padding: ${tokens.spacing.sm} ${tokens.spacing.md};
-  border-radius: ${tokens.radius.sm};
-  background: ${({ $variant }) =>
-    $variant === 'strong' ? tokens.color.status.success.bg : tokens.color.surfaceAlt};
-  color: ${({ $variant }) => {
-    if ($variant === 'strong') return tokens.color.status.success.fg
-    if ($variant === 'partial') return tokens.color.darkBlue
-    return tokens.color.textSecondary
-  }};
-`
-
-const MatchText = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
-  line-height: 20px;
-`
-
-const MatchValue = styled.span`
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  white-space: nowrap;
-  line-height: 20px;
-`
