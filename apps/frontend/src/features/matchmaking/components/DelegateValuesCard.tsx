@@ -470,8 +470,8 @@ const RightColumn = styled.div`
 const MatchRing = styled.div<{ $percent: number; $color: string }>`
   position: relative;
   flex-shrink: 0;
-  width: 72px;
-  height: 72px;
+  width: 132px;
+  height: 132px;
   border-radius: ${tokens.radius.pill};
   background: conic-gradient(
     ${({ $color }) => $color} ${({ $percent }) => $percent * 3.6}deg,
@@ -483,8 +483,8 @@ const MatchRing = styled.div<{ $percent: number; $color: string }>`
 `
 
 const RingInner = styled.div`
-  width: 56px;
-  height: 56px;
+  width: 108px;
+  height: 108px;
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.surface};
   display: flex;
@@ -495,13 +495,13 @@ const RingInner = styled.div`
 `
 
 const RingPercent = styled.span`
-  font-size: ${tokens.font.size.lg};
+  font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
 `
 
 const RingLabel = styled.span`
-  font-size: ${tokens.font.size.xs};
+  font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.textSecondary};
 `
