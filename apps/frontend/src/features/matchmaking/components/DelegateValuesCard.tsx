@@ -13,7 +13,7 @@ import { useDelegateSelection } from '../useDelegateSelection'
 import { useViewerRole } from '../useViewerRole'
 import { SelectionFlow } from './SelectionFlow'
 import { EditSelectionModal } from './EditSelectionModal'
-import { matchLevel, resolveCardState } from './delegateValuesState'
+import { matchLevel, resolveCardState, type MatchTier } from './delegateValuesState'
 
 export interface DelegateValuesCardProps {
   delegateAddress: string
@@ -461,9 +461,20 @@ const RingLabel = styled.span`
   color: ${tokens.color.textSecondary};
 `
 
-// Graduated pill — colour follows the bucket (Strong/Partial = blue/green-ish,
-// Weak = muted, None = grey). Strong leads with a ★.
-const MatchPill = styled.span<{ $tier: 'strong' | 'partial' | 'weak' | 'none' }>`
+/**
+ * Pill colours per match tier (background / text / border). One row each, and
+ * `Record<MatchTier, …>` makes it exhaustive — a new tier won't compile until it
+ * has a row (the old switch had no `default` to catch a missing one).
+ */
+const PILL_STYLE: Record<MatchTier, { bg: string; fg: string; border: string }> = {
+  strong: { bg: tokens.color.status.success.bg, fg: tokens.color.positiveEmphasis, border: tokens.color.status.success.border },
+  partial: { bg: tokens.color.lightBlue, fg: tokens.color.blue, border: tokens.color.lightBlue },
+  weak: { bg: tokens.color.surfaceAlt, fg: tokens.color.darkGray, border: tokens.color.border },
+  none: { bg: tokens.color.surfaceAlt, fg: tokens.color.textSecondary, border: tokens.color.border },
+}
+
+// Graduated pill — colour follows the tier (see PILL_STYLE). Strong leads with a ★.
+const MatchPill = styled.span<{ $tier: MatchTier }>`
   display: inline-flex;
   align-items: center;
   gap: ${tokens.spacing.xs};
@@ -474,32 +485,12 @@ const MatchPill = styled.span<{ $tier: 'strong' | 'partial' | 'weak' | 'none' }>
   white-space: nowrap;
 
   ${({ $tier }) => {
-    switch ($tier) {
-      case 'strong':
-        return `
-          background: ${tokens.color.status.success.bg};
-          color: ${tokens.color.positiveEmphasis};
-          border: 1px solid ${tokens.color.status.success.border};
-        `
-      case 'partial':
-        return `
-          background: ${tokens.color.lightBlue};
-          color: ${tokens.color.blue};
-          border: 1px solid ${tokens.color.lightBlue};
-        `
-      case 'weak':
-        return `
-          background: ${tokens.color.surfaceAlt};
-          color: ${tokens.color.darkGray};
-          border: 1px solid ${tokens.color.border};
-        `
-      case 'none':
-        return `
-          background: ${tokens.color.surfaceAlt};
-          color: ${tokens.color.textSecondary};
-          border: 1px solid ${tokens.color.border};
-        `
-    }
+    const s = PILL_STYLE[$tier]
+    return `
+      background: ${s.bg};
+      color: ${s.fg};
+      border: 1px solid ${s.border};
+    `
   }}
 `
 
