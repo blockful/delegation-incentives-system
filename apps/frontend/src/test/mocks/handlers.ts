@@ -104,15 +104,14 @@ export const handlers = [
   http.get('/api/gateful/ens/relay/config', () =>
     HttpResponse.json({
       minVotingPower: '1000000000000000000',
-      maxRelayPerAddressPerDay: 5,
+      limits: { vote: 5, delegation: 5 },
     }),
   ),
 
   http.get('/api/gateful/ens/relay/rate-limit/:address', () =>
     HttpResponse.json({
-      delegation: { remaining: 5 },
-      vote: { remaining: 5 },
-      maxPerDay: 5,
+      delegation: { used: 0, remaining: 5, limit: 5 },
+      vote: { used: 0, remaining: 5, limit: 5 },
       resetsAt: '2099-12-31T00:00:00.000Z',
     }),
   ),

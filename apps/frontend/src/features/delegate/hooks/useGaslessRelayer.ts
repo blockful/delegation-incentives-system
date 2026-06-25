@@ -37,13 +37,20 @@ interface RelayerBalanceResponse {
 
 interface RelayerConfigResponse {
   minVotingPower: string;
-  maxRelayPerAddressPerDay: number;
+  // Max relays per address per calendar month (UTC), per operation.
+  limits: { vote: number; delegation: number };
+}
+
+interface RelayerRateLimitOp {
+  used: number;
+  remaining: number;
+  limit: number;
 }
 
 interface RelayerRateLimitResponse {
-  delegation: { remaining: number };
-  vote: { remaining: number };
-  maxPerDay: number;
+  delegation: RelayerRateLimitOp;
+  vote: RelayerRateLimitOp;
+  // ISO 8601 timestamp of the next UTC month start, when the quota resets.
   resetsAt: string;
 }
 
@@ -74,7 +81,6 @@ export const useRelayerBalance = (): UseRelayerBalanceResult => {
 
 interface UseRelayerConfigResult {
   minVotingPower: bigint | null;
-  maxRelayPerAddressPerDay: number | null;
   isLoading: boolean;
 }
 
@@ -99,7 +105,6 @@ export const useRelayerConfig = (): UseRelayerConfigResult => {
 
   return {
     minVotingPower,
-    maxRelayPerAddressPerDay: data?.maxRelayPerAddressPerDay ?? null,
     isLoading: balanceLoading || (enabled && isLoading),
   };
 };
@@ -142,6 +147,8 @@ interface UseGaslessEligibilityResult {
   isEligible: boolean;
   reason: SponsorshipBlockReason | null;
   remaining: number | null;
+  /** ISO timestamp when the monthly quota resets (next UTC month start). */
+  resetsAt: string | null;
   isLoading: boolean;
 }
 
@@ -173,6 +180,7 @@ export const useGaslessEligibility = (
   });
 
   const delegationRemaining = rateLimitData?.delegation.remaining ?? null;
+  const resetsAt = rateLimitData?.resetsAt ?? null;
 
   const { data: userBalanceData, isLoading: userBalanceLoading } =
     useReadContract({
@@ -217,5 +225,11 @@ export const useGaslessEligibility = (
 
   const isEligible = !isLoading && !!address && reason === null;
 
-  return { isEligible, reason, remaining: delegationRemaining, isLoading };
+  return {
+    isEligible,
+    reason,
+    remaining: delegationRemaining,
+    resetsAt,
+    isLoading,
+  };
 };

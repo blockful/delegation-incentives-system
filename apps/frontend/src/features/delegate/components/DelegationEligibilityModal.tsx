@@ -33,9 +33,34 @@ export type DelegationEligibilityReason = SponsorshipBlockReason
 export interface DelegationEligibilityModalProps {
   open: boolean
   reason: DelegationEligibilityReason
+  /**
+   * ISO timestamp when the monthly relay quota resets, from the relayer's
+   * `resetsAt`. Used only by the `rate-limited` state to tell the user when
+   * their free allowance comes back.
+   */
+  resetsAt?: string | null
   onClose: () => void
   /** Continue with the regular delegation flow, paying the network fee. */
   onDelegateAnyway: () => void
+}
+
+/**
+ * Relative, human-friendly countdown to the relayer's monthly quota reset
+ * ("in 6 days" / "tomorrow"). The reset is always a UTC month boundary, so
+ * the granularity is days — never minutes/seconds. Falls back to the generic
+ * "next month" when the timestamp is missing or unparseable.
+ */
+export function formatResetCountdown(
+  resetsAt: string | null | undefined,
+): string {
+  if (!resetsAt) return 'next month'
+  const resetMs = new Date(resetsAt).getTime()
+  if (Number.isNaN(resetMs)) return 'next month'
+  const diffMs = resetMs - Date.now()
+  if (diffMs <= 0) return 'soon'
+  const days = Math.ceil(diffMs / 86_400_000)
+  if (days === 1) return 'tomorrow'
+  return `in ${days} days`
 }
 
 /**
@@ -49,7 +74,11 @@ export interface DelegationEligibilityModalProps {
  * Important copy constraint: the threshold gates GAS SPONSORSHIP ONLY.
  * Earning rewards never requires the threshold — don't imply otherwise.
  */
-function getCopy(reason: DelegationEligibilityReason, minEns: string) {
+function getCopy(
+  reason: DelegationEligibilityReason,
+  minEns: string,
+  resetLabel: string,
+) {
   switch (reason) {
     case 'no-ens':
       return {
@@ -64,7 +93,7 @@ function getCopy(reason: DelegationEligibilityReason, minEns: string) {
     case 'rate-limited':
       return {
         title: 'No free delegations left this month',
-        body: "You've used all your sponsored delegations for this month, so this one needs the network fee, about $2. Your free allowance resets next month and your rewards are unaffected.",
+        body: `You've used all your sponsored delegations for this month, so this one needs the network fee, about $2. Your free allowance resets ${resetLabel} and your rewards are unaffected.`,
       }
     case 'relayer-paused':
       return {
@@ -97,11 +126,12 @@ const NON_BALANCE_REASONS: ReadonlySet<DelegationEligibilityReason> = new Set([
 export function DelegationEligibilityModal({
   open,
   reason,
+  resetsAt,
   onClose,
   onDelegateAnyway,
 }: DelegationEligibilityModalProps) {
   const minEns = useGasSponsorshipMinEns()
-  const { title, body } = getCopy(reason, minEns)
+  const { title, body } = getCopy(reason, minEns, formatResetCountdown(resetsAt))
 
   return (
     <Dialog

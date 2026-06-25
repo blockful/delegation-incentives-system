@@ -18,13 +18,18 @@ interface RelayerBalancePayload {
 
 interface RelayerConfigPayload {
   minVotingPower: string;
-  maxRelayPerAddressPerDay: number;
+  limits: { vote: number; delegation: number };
+}
+
+interface RelayerRateLimitOpPayload {
+  used: number;
+  remaining: number;
+  limit: number;
 }
 
 interface RelayerRateLimitPayload {
-  delegation: { remaining: number };
-  vote: { remaining: number };
-  maxPerDay: number;
+  delegation: RelayerRateLimitOpPayload;
+  vote: RelayerRateLimitOpPayload;
   resetsAt: string;
 }
 
@@ -45,12 +50,11 @@ function freshState(): HandlerState {
     balance: { hasEnoughBalance: true },
     config: {
       minVotingPower: "100000000000000000000",
-      maxRelayPerAddressPerDay: 5,
+      limits: { vote: 5, delegation: 5 },
     },
     rateLimit: {
-      delegation: { remaining: 5 },
-      vote: { remaining: 5 },
-      maxPerDay: 5,
+      delegation: { used: 0, remaining: 5, limit: 5 },
+      vote: { used: 0, remaining: 5, limit: 5 },
       resetsAt: "2026-05-20T00:00:00Z",
     },
   };
@@ -96,6 +100,7 @@ describe("useGaslessRelayer", () => {
         isEligible: false,
         reason: null,
         remaining: null,
+        resetsAt: null,
         isLoading: false,
       }),
     );
@@ -120,6 +125,7 @@ describe("useGaslessRelayer", () => {
         isEligible: false,
         reason: "relayer-paused",
         remaining: null,
+        resetsAt: null,
         isLoading: false,
       }),
     );
@@ -134,9 +140,8 @@ describe("useGaslessRelayer", () => {
 
   it("rate limited: delegation remaining 0 yields ineligible", async () => {
     state.rateLimit = {
-      delegation: { remaining: 0 },
-      vote: { remaining: 5 },
-      maxPerDay: 5,
+      delegation: { used: 5, remaining: 0, limit: 5 },
+      vote: { used: 0, remaining: 5, limit: 5 },
       resetsAt: "2026-05-20T00:00:00Z",
     };
     useReadContractMock.mockReturnValue(
@@ -154,6 +159,7 @@ describe("useGaslessRelayer", () => {
         isEligible: false,
         reason: "rate-limited",
         remaining: 0,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );
@@ -175,6 +181,7 @@ describe("useGaslessRelayer", () => {
         isEligible: false,
         reason: "below-minimum",
         remaining: 5,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );
@@ -196,7 +203,7 @@ describe("useGaslessRelayer", () => {
   it("minVotingPower 0: a 0-ENS wallet is eligible (mirrors the relayer)", async () => {
     // Regression: the front used to hardcode `balance === 0 → not sponsored`,
     // ignoring the relayer. With minVotingPower 0 everyone qualifies.
-    state.config = { minVotingPower: "0", maxRelayPerAddressPerDay: 5 };
+    state.config = { minVotingPower: "0", limits: { vote: 5, delegation: 5 } };
     useReadContractMock.mockReturnValue(readContractResult({ data: 0n }));
 
     const { useGaslessEligibility } = await import("./useGaslessRelayer");
@@ -210,6 +217,7 @@ describe("useGaslessRelayer", () => {
         isEligible: true,
         reason: null,
         remaining: 5,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );
@@ -231,6 +239,7 @@ describe("useGaslessRelayer", () => {
         isEligible: true,
         reason: null,
         remaining: 5,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );

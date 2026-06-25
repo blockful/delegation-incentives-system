@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 
@@ -7,6 +7,7 @@ import { server } from '@/test/mocks/server'
 import {
   DelegationEligibilityModal,
   UNISWAP_BUY_ENS_URL,
+  formatResetCountdown,
 } from './DelegationEligibilityModal'
 
 // Thorin's Modal restores the page scroll position on unmount; jsdom doesn't
@@ -21,7 +22,7 @@ function installRelayerConfig(minVotingPower: string) {
       HttpResponse.json({ hasEnoughBalance: true }),
     ),
     http.get('/api/gateful/ens/relay/config', () =>
-      HttpResponse.json({ minVotingPower, maxRelayPerAddressPerDay: 5 }),
+      HttpResponse.json({ minVotingPower, limits: { vote: 5, delegation: 5 } }),
     ),
   )
 }
@@ -108,15 +109,21 @@ describe('DelegationEligibilityModal', () => {
     expect(onDelegateAnyway).toHaveBeenCalledTimes(1)
   })
 
-  it('rate-limited: explains the monthly allowance and offers Maybe later / pay gas, no Buy ENS', async () => {
+  it('rate-limited: shows the relative reset countdown from the relayer and offers Maybe later / pay gas, no Buy ENS', async () => {
     const onClose = vi.fn()
     const onDelegateAnyway = vi.fn()
     const user = userEvent.setup()
+    // ~6 days out — the copy must surface a relative "in N days", never the
+    // raw timestamp and never minutes/seconds (the reset is a month boundary).
+    const resetsAt = new Date(
+      Date.now() + 6 * 24 * 60 * 60 * 1000 + 60_000,
+    ).toISOString()
 
     renderApp(
       <DelegationEligibilityModal
         open
         reason="rate-limited"
+        resetsAt={resetsAt}
         onClose={onClose}
         onDelegateAnyway={onDelegateAnyway}
       />,
@@ -125,7 +132,11 @@ describe('DelegationEligibilityModal', () => {
     expect(
       screen.getByText('No free delegations left this month'),
     ).toBeInTheDocument()
-    expect(screen.getByText(/your rewards are unaffected/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Your free allowance resets in \d+ days and your rewards are unaffected/,
+      ),
+    ).toBeInTheDocument()
     // Buying ENS wouldn't lift a rate limit — no Buy ENS action here.
     expect(
       screen.queryByRole('link', { name: 'Buy ENS' }),
@@ -244,5 +255,38 @@ describe('DelegationEligibilityModal', () => {
     expect(
       screen.queryByText('You need more ENS for free gas'),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('formatResetCountdown', () => {
+  // Pin "now" so the day math is deterministic.
+  const NOW = new Date('2026-06-25T12:00:00.000Z').getTime()
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('renders whole days remaining (rounding up partial days)', () => {
+    // Next UTC month start, ~5.5 days out → rounds up to 6.
+    expect(formatResetCountdown('2026-07-01T00:00:00.000Z')).toBe('in 6 days')
+  })
+
+  it('says "tomorrow" when under a day remains', () => {
+    expect(formatResetCountdown('2026-06-26T06:00:00.000Z')).toBe('tomorrow')
+  })
+
+  it('falls back to "next month" when the timestamp is missing or invalid', () => {
+    expect(formatResetCountdown(null)).toBe('next month')
+    expect(formatResetCountdown(undefined)).toBe('next month')
+    expect(formatResetCountdown('not-a-date')).toBe('next month')
+  })
+
+  it('says "soon" when the reset moment has already passed', () => {
+    expect(formatResetCountdown('2026-06-25T11:00:00.000Z')).toBe('soon')
   })
 })

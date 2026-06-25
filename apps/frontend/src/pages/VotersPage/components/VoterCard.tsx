@@ -372,6 +372,7 @@ export function VoterCard({
   const {
     isEligible: gaslessEligible,
     reason: eligibilityReason,
+    resetsAt: rateLimitResetsAt,
     isLoading: eligibilityLoading,
   } = useGaslessEligibility(connectedAddress)
   // Set when the user clicks Delegate before the verdict has resolved, so we
@@ -509,6 +510,7 @@ export function VoterCard({
         <DelegationEligibilityModal
           open
           reason={eligibilityReason}
+          resetsAt={rateLimitResetsAt}
           onClose={() => setEligibilityModalOpen(false)}
           onDelegateAnyway={() => {
             setEligibilityModalOpen(false)

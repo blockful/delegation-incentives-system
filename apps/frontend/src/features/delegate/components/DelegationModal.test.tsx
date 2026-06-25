@@ -77,11 +77,13 @@ interface RelayerHandlerState {
   rateLimitCalls: number
   relayCalls: number
   balance: { hasEnoughBalance: boolean }
-  config: { minVotingPower: string; maxRelayPerAddressPerDay: number }
+  config: {
+    minVotingPower: string
+    limits: { vote: number; delegation: number }
+  }
   rateLimit: {
-    delegation: { remaining: number }
-    vote: { remaining: number }
-    maxPerDay: number
+    delegation: { used: number; remaining: number; limit: number }
+    vote: { used: number; remaining: number; limit: number }
     resetsAt: string
   }
   relayResponse: (() => Response) | null
@@ -96,12 +98,11 @@ function freshState(): RelayerHandlerState {
     balance: { hasEnoughBalance: true },
     config: {
       minVotingPower: '100000000000000000000',
-      maxRelayPerAddressPerDay: 5,
+      limits: { vote: 5, delegation: 5 },
     },
     rateLimit: {
-      delegation: { remaining: 5 },
-      vote: { remaining: 5 },
-      maxPerDay: 5,
+      delegation: { used: 0, remaining: 5, limit: 5 },
+      vote: { used: 0, remaining: 5, limit: 5 },
       resetsAt: '2026-05-20T00:00:00Z',
     },
     relayResponse: () =>

@@ -743,6 +743,7 @@ export function VoterProfilePage() {
   const {
     isEligible: gaslessEligible,
     reason: eligibilityReason,
+    resetsAt: rateLimitResetsAt,
     isLoading: eligibilityLoading,
   } = useGaslessEligibility(connectedAddress)
   // Set when Delegate is clicked before the verdict resolves, so we route to
@@ -1040,6 +1041,7 @@ export function VoterProfilePage() {
       <DelegationEligibilityModal
         open
         reason={eligibilityReason}
+        resetsAt={rateLimitResetsAt}
         onClose={() => setEligibilityModalOpen(false)}
         onDelegateAnyway={() => {
           setEligibilityModalOpen(false)

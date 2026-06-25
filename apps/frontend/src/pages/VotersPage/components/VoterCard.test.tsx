@@ -214,7 +214,7 @@ describe('VoterCard delegate trigger', () => {
       http.get('/api/gateful/ens/relay/config', () =>
         HttpResponse.json({
           minVotingPower: '100000000000000000000',
-          maxRelayPerAddressPerDay: 5,
+          limits: { vote: 5, delegation: 5 },
         }),
       ),
     )
@@ -290,7 +290,7 @@ describe('VoterCard delegate trigger', () => {
       http.get('/api/gateful/ens/relay/config', () =>
         HttpResponse.json({
           minVotingPower: '0',
-          maxRelayPerAddressPerDay: 5,
+          limits: { vote: 5, delegation: 5 },
         }),
       ),
     )

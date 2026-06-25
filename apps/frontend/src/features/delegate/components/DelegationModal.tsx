@@ -235,8 +235,8 @@ export function DelegationModal({
           {isGaslessEligible && delegationRemaining !== null && (
             <FreeAlert>
               {delegationRemaining === 1
-                ? 'This delegation is free! Last one for today — refreshes tomorrow.'
-                : `This delegation is free! You'll still have ${delegationRemaining - 1} left to use today.`}
+                ? 'This delegation is free! Last one this month — your free allowance resets next month.'
+                : `This delegation is free! You'll still have ${delegationRemaining - 1} left to use this month.`}
             </FreeAlert>
           )}
         </Context>
