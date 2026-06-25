@@ -228,8 +228,6 @@ const PayoutsCard = styled.section`
   border-radius: 12px;
 `
 
-// Grey header strip (Figma 5899-6474): title (+ our "View all rounds" link) on
-// surfaceAlt, divider, then the cards on a white body.
 const PayoutsHeader = styled.div`
   display: flex;
   align-items: center;
