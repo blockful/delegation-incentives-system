@@ -298,12 +298,6 @@ function renderDiffer(
   }
 }
 
-/**
- * Shared shell for the single-message states (icon + title + body + optional
- * CTA). Renders as the horizontal light-blue banner from the Figma state set
- * (5900-5557): icon badge left · title+body middle · content-width CTA right —
- * the same treatment as the dashboard "missing values" nudge. Stacks on mobile.
- */
 function PromptCard({
   icon,
   title,
