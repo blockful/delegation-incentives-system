@@ -82,8 +82,6 @@ function formatActiveSince(iso: string | null): string {
   return `${month} ‘${year}`
 }
 
-// Card tone tracks the match state (Figma 5899-6898): strong → green, a delegate
-// who hasn't ranked their values → muted grey, everything else → plain white.
 const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
   position: relative;
   display: flex;
