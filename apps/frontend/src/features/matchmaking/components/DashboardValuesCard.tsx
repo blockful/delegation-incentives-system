@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { Button } from '@ensdomains/thorin'
+import { Button, LockSVG } from '@ensdomains/thorin'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles'
 import { useWordPool } from '../useWordPool'
 import { useMySelection } from '../useMySelection'
@@ -13,8 +15,8 @@ import { SelectionFlow } from './SelectionFlow'
  * Dashboard matchmaking card:
  *  - connected + selected (any role) → "Values" card (5 words + Edit values →)
  *  - connected + not selected + delegate → "missing values" nudge → Pitch
- *  - holders pre-selection / disconnected → nothing
- * ⚠️ Copy is placeholder.
+ *  - connected + not selected + holder → "missing values" nudge (Lock) → Pitch
+ *  - disconnected → nothing
  */
 export function DashboardValuesCard() {
   const { state } = useSelectionState()
@@ -56,15 +58,20 @@ export function DashboardValuesCard() {
   if (state === 'connected-not-selected' && role === 'delegate') {
     return (
       <>
-        <Card>
-          <CardTitle>Your profile is missing values</CardTitle>
-          <Muted>
-            Pick the values you stand for so holders can find you by what matters to them.
-          </Muted>
-          <Button colorStyle="bluePrimary" onClick={() => setFlowOpen(true)}>
+        <Banner>
+          <IconBadge aria-hidden="true">
+            <FontAwesomeIcon icon={faEyeSlash} />
+          </IconBadge>
+          <BannerText>
+            <CardTitle>Your profile is missing values</CardTitle>
+            <Muted>
+              Pick the values you stand for so holders can find you by what matters to them.
+            </Muted>
+          </BannerText>
+          <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
             Complete profile
           </Button>
-        </Card>
+        </Banner>
         {flowOpen && role && (
           <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
         )}
@@ -72,7 +79,29 @@ export function DashboardValuesCard() {
     )
   }
 
-  // Holders pre-selection see nothing here; disconnected sees nothing.
+  if (state === 'connected-not-selected' && role === 'holder') {
+    return (
+      <>
+        <Banner>
+          <IconBadge aria-hidden="true">
+            <LockSVG />
+          </IconBadge>
+          <BannerText>
+            <CardTitle>Your profile is missing values</CardTitle>
+            <Muted>We cannot match you to delegates. Rank 5 values in 30 seconds.</Muted>
+          </BannerText>
+          <Button colorStyle="bluePrimary" width="fit" onClick={() => setFlowOpen(true)}>
+            Complete profile
+          </Button>
+        </Banner>
+        {flowOpen && role && (
+          <SelectionFlow open role={role} onClose={() => setFlowOpen(false)} />
+        )}
+      </>
+    )
+  }
+
+  // Disconnected sees nothing.
   return null
 }
 
@@ -107,6 +136,52 @@ const Muted = styled.p`
   color: ${tokens.color.darkGray};
   font-size: ${tokens.font.size.base};
   line-height: 1.5;
+`
+
+/* Holder pre-rank nudge — horizontal blue banner (Figma node 5899:7918):
+   icon badge · title+body · content-width CTA, not a stacked card. */
+const Banner = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: ${tokens.spacing.md};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.lightBlue};
+  border: 1px solid ${tokens.color.blue};
+  border-radius: ${tokens.radius.md};
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ${tokens.spacing.sm};
+  }
+`
+
+const IconBadge = styled.span`
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: ${tokens.radius.pill};
+  /* Figma blue/light (#d1e4ff) — one shade above the banner's lightBlue; no DS token */
+  background: #d1e4ff;
+  color: ${tokens.color.blue};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* height-locked, width auto so non-square glyphs (eye-slash) keep their ratio */
+  svg {
+    width: auto;
+    height: 20px;
+  }
+`
+
+const BannerText = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `
 
 const Divider = styled.div`
