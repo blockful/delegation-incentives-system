@@ -202,7 +202,7 @@ describe('VoterCard delegate trigger', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delegate' }))
 
-    expect(screen.getByText(NO_ENS_TITLE)).toBeInTheDocument()
+    expect(await screen.findByText(NO_ENS_TITLE)).toBeInTheDocument()
     expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
     expect(openWalletModalMock).not.toHaveBeenCalled()
   })
@@ -214,7 +214,7 @@ describe('VoterCard delegate trigger', () => {
       http.get('/api/gateful/ens/relay/config', () =>
         HttpResponse.json({
           minVotingPower: '100000000000000000000',
-          maxRelayPerAddressPerDay: 5,
+          limits: { vote: 5, delegation: 5 },
         }),
       ),
     )
@@ -228,7 +228,7 @@ describe('VoterCard delegate trigger', () => {
     })
 
     await user.click(screen.getByRole('button', { name: 'Delegate' }))
-    expect(screen.getByText(BELOW_MINIMUM_TITLE)).toBeInTheDocument()
+    expect(await screen.findByText(BELOW_MINIMUM_TITLE)).toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', { name: 'Delegate and pay gas' }),
@@ -280,5 +280,46 @@ describe('VoterCard delegate trigger', () => {
 
     expectNoEligibilityModal()
     expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()
+  })
+
+  it('minVotingPower 0 + 0-ENS wallet: sponsored, so it skips the eligibility modal', async () => {
+    // Regression: the front used to hardcode "0 ENS → not sponsored". When the
+    // relayer publishes minVotingPower 0, a 0-ENS wallet is eligible and the
+    // Free pill shows — clicking Delegate goes straight to the delegation flow.
+    server.use(
+      http.get('/api/gateful/ens/relay/config', () =>
+        HttpResponse.json({
+          minVotingPower: '0',
+          limits: { vote: 5, delegation: 5 },
+        }),
+      ),
+    )
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }))
+    const user = userEvent.setup()
+
+    renderApp(<VoterCard voter={fullVoter} />, {
+      walletState: { status: 'connected', address: CONNECTED_WALLET },
+    })
+
+    expect(await screen.findByText('Free')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
+
+    expectNoEligibilityModal()
+    expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()
+  })
+
+  it('connected but ineligible: hides the Free pill (badge mirrors the verdict)', async () => {
+    // Default mock minVotingPower is 1 ENS; a 0-ENS wallet is below it.
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }))
+
+    renderApp(<VoterCard voter={fullVoter} />, {
+      walletState: { status: 'connected', address: CONNECTED_WALLET },
+    })
+
+    expect(
+      await screen.findByRole('button', { name: 'Delegate' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Free')).not.toBeInTheDocument()
   })
 })

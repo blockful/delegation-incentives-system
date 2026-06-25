@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from "wagmi";
-import { formatUnits, parseUnits, zeroAddress, type Address } from "viem";
+import { formatUnits, zeroAddress, type Address } from "viem";
 
 import { FRONTEND_CLIENT_SOURCE, RELAYER_BASE_URL } from "../relayerClient";
 
@@ -37,13 +37,20 @@ interface RelayerBalanceResponse {
 
 interface RelayerConfigResponse {
   minVotingPower: string;
-  maxRelayPerAddressPerDay: number;
+  // Max relays per address per calendar month (UTC), per operation.
+  limits: { vote: number; delegation: number };
+}
+
+interface RelayerRateLimitOp {
+  used: number;
+  remaining: number;
+  limit: number;
 }
 
 interface RelayerRateLimitResponse {
-  delegation: { remaining: number };
-  vote: { remaining: number };
-  maxPerDay: number;
+  delegation: RelayerRateLimitOp;
+  vote: RelayerRateLimitOp;
+  // ISO 8601 timestamp of the next UTC month start, when the quota resets.
   resetsAt: string;
 }
 
@@ -74,7 +81,6 @@ export const useRelayerBalance = (): UseRelayerBalanceResult => {
 
 interface UseRelayerConfigResult {
   minVotingPower: bigint | null;
-  maxRelayPerAddressPerDay: number | null;
   isLoading: boolean;
 }
 
@@ -99,7 +105,6 @@ export const useRelayerConfig = (): UseRelayerConfigResult => {
 
   return {
     minVotingPower,
-    maxRelayPerAddressPerDay: data?.maxRelayPerAddressPerDay ?? null,
     isLoading: balanceLoading || (enabled && isLoading),
   };
 };
@@ -122,60 +127,41 @@ export const useGasSponsorshipMinEns = (): string => {
   }, [minVotingPower]);
 };
 
-export type GasSponsorshipBalanceStatus =
-  | "unknown"
+/**
+ * Why a connected wallet's delegation won't get sponsored (free) gas. Mirrors
+ * the relayer's published signals — the front never invents its own rule:
+ * - `relayer-paused`: the relayer is unfunded (global, beats every other state).
+ * - `no-ens`: the wallet holds 0 ENS and the relayer's `minVotingPower > 0`.
+ * - `below-minimum`: the wallet holds some ENS, but less than `minVotingPower`.
+ * - `rate-limited`: the wallet has no delegation relays left this month.
+ *
+ * `null` means eligible (or still loading, or no wallet connected).
+ */
+export type SponsorshipBlockReason =
+  | "relayer-paused"
   | "no-ens"
   | "below-minimum"
-  | "meets-minimum";
+  | "rate-limited";
 
-interface UseGasSponsorshipBalanceStatusResult {
-  status: GasSponsorshipBalanceStatus;
+interface UseGaslessEligibilityResult {
+  isEligible: boolean;
+  reason: SponsorshipBlockReason | null;
+  remaining: number | null;
+  /** ISO timestamp when the monthly quota resets (next UTC month start). */
+  resetsAt: string | null;
   isLoading: boolean;
 }
 
 /**
- * Where the wallet's ENS balance stands relative to the gas-sponsorship
- * minimum. Drives the eligibility modal shown before delegating: wallets
- * below the minimum get no sponsored gas (gas only — rewards eligibility is
- * NOT affected) but can still delegate paying their own network fee.
+ * Single source of truth for gas-sponsorship eligibility. Derives the verdict
+ * (and, when blocked, the {@link SponsorshipBlockReason}) purely from
+ * relayer-published signals: `minVotingPower` (config), `hasEnoughBalance`
+ * (funding), and `rate-limit.delegation.remaining`, compared against the
+ * wallet's on-chain ENS balance. No hardcoded thresholds, no front-side rules.
  *
- * Unlike {@link useGaslessEligibility} this deliberately ignores relayer
- * funding and rate limits: the balance read works even when the relayer is
- * down, falling back to {@link DEFAULT_GAS_SPONSORSHIP_MIN_ENS} for the
- * threshold so the modal copy stays correct.
+ * Note: the threshold gates GAS SPONSORSHIP ONLY — rewards eligibility is
+ * independent and never requires holding a minimum.
  */
-export const useGasSponsorshipBalanceStatus = (
-  address: Address | undefined,
-): UseGasSponsorshipBalanceStatusResult => {
-  const { minVotingPower } = useRelayerConfig();
-
-  const { data: balance, isLoading } = useReadContract({
-    address: ENS_TOKEN_ADDRESS,
-    abi: ENS_TOKEN_ABI,
-    functionName: "balanceOf",
-    args: [address ?? zeroAddress],
-    query: { enabled: !!address },
-  });
-
-  const status = useMemo<GasSponsorshipBalanceStatus>(() => {
-    if (!address || balance === undefined) return "unknown";
-    if (balance === 0n) return "no-ens";
-    const threshold =
-      minVotingPower !== null && minVotingPower > 0n
-        ? minVotingPower
-        : parseUnits(DEFAULT_GAS_SPONSORSHIP_MIN_ENS, ENS_TOKEN_DECIMALS);
-    return balance < threshold ? "below-minimum" : "meets-minimum";
-  }, [address, balance, minVotingPower]);
-
-  return { status, isLoading: !!address && isLoading };
-};
-
-interface UseGaslessEligibilityResult {
-  isEligible: boolean;
-  remaining: number | null;
-  isLoading: boolean;
-}
-
 export const useGaslessEligibility = (
   address: Address | undefined,
 ): UseGaslessEligibilityResult => {
@@ -194,6 +180,7 @@ export const useGaslessEligibility = (
   });
 
   const delegationRemaining = rateLimitData?.delegation.remaining ?? null;
+  const resetsAt = rateLimitData?.resetsAt ?? null;
 
   const { data: userBalanceData, isLoading: userBalanceLoading } =
     useReadContract({
@@ -212,14 +199,37 @@ export const useGaslessEligibility = (
       (hasEnoughBalance === true &&
         (configLoading || rateLimitLoading || userBalanceLoading)));
 
-  const isEligible =
-    !isLoading &&
-    hasEnoughBalance === true &&
-    userBalance !== null &&
-    minVotingPower !== null &&
-    userBalance >= minVotingPower &&
-    delegationRemaining !== null &&
-    delegationRemaining > 0;
+  // Reason precedence mirrors the relayer: funding (global) beats the balance
+  // gate, which beats the rate limit. Each tier is decided as soon as its own
+  // inputs are known — the balance-gated reasons don't wait on the rate limit.
+  // `null` = eligible or not-yet-resolved.
+  const reason = useMemo<SponsorshipBlockReason | null>(() => {
+    if (!address || balanceLoading) return null;
+    if (hasEnoughBalance !== true) return "relayer-paused";
+    if (minVotingPower === null || userBalance === null) return null;
+    if (userBalance < minVotingPower) {
+      return userBalance === 0n ? "no-ens" : "below-minimum";
+    }
+    // Balance clears the bar — the rate limit is the only remaining blocker.
+    if (delegationRemaining === null) return null;
+    if (delegationRemaining <= 0) return "rate-limited";
+    return null;
+  }, [
+    address,
+    balanceLoading,
+    hasEnoughBalance,
+    userBalance,
+    minVotingPower,
+    delegationRemaining,
+  ]);
 
-  return { isEligible, remaining: delegationRemaining, isLoading };
+  const isEligible = !isLoading && !!address && reason === null;
+
+  return {
+    isEligible,
+    reason,
+    remaining: delegationRemaining,
+    resetsAt,
+    isLoading,
+  };
 };

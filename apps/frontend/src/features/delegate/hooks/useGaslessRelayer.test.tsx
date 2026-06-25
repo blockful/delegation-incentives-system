@@ -18,13 +18,18 @@ interface RelayerBalancePayload {
 
 interface RelayerConfigPayload {
   minVotingPower: string;
-  maxRelayPerAddressPerDay: number;
+  limits: { vote: number; delegation: number };
+}
+
+interface RelayerRateLimitOpPayload {
+  used: number;
+  remaining: number;
+  limit: number;
 }
 
 interface RelayerRateLimitPayload {
-  delegation: { remaining: number };
-  vote: { remaining: number };
-  maxPerDay: number;
+  delegation: RelayerRateLimitOpPayload;
+  vote: RelayerRateLimitOpPayload;
   resetsAt: string;
 }
 
@@ -45,12 +50,11 @@ function freshState(): HandlerState {
     balance: { hasEnoughBalance: true },
     config: {
       minVotingPower: "100000000000000000000",
-      maxRelayPerAddressPerDay: 5,
+      limits: { vote: 5, delegation: 5 },
     },
     rateLimit: {
-      delegation: { remaining: 5 },
-      vote: { remaining: 5 },
-      maxPerDay: 5,
+      delegation: { used: 0, remaining: 5, limit: 5 },
+      vote: { used: 0, remaining: 5, limit: 5 },
       resetsAt: "2026-05-20T00:00:00Z",
     },
   };
@@ -94,7 +98,9 @@ describe("useGaslessRelayer", () => {
     await waitFor(() =>
       expect(result.current).toEqual({
         isEligible: false,
+        reason: null,
         remaining: null,
+        resetsAt: null,
         isLoading: false,
       }),
     );
@@ -117,7 +123,9 @@ describe("useGaslessRelayer", () => {
     await waitFor(() =>
       expect(result.current).toEqual({
         isEligible: false,
+        reason: "relayer-paused",
         remaining: null,
+        resetsAt: null,
         isLoading: false,
       }),
     );
@@ -132,9 +140,8 @@ describe("useGaslessRelayer", () => {
 
   it("rate limited: delegation remaining 0 yields ineligible", async () => {
     state.rateLimit = {
-      delegation: { remaining: 0 },
-      vote: { remaining: 5 },
-      maxPerDay: 5,
+      delegation: { used: 5, remaining: 0, limit: 5 },
+      vote: { used: 0, remaining: 5, limit: 5 },
       resetsAt: "2026-05-20T00:00:00Z",
     };
     useReadContractMock.mockReturnValue(
@@ -150,13 +157,15 @@ describe("useGaslessRelayer", () => {
     await waitFor(() =>
       expect(result.current).toEqual({
         isEligible: false,
+        reason: "rate-limited",
         remaining: 0,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );
   });
 
-  it("user balance below min voting power: ineligible", async () => {
+  it("user balance below min voting power: below-minimum", async () => {
     useReadContractMock.mockReturnValue(
       readContractResult({ data: 50n * 10n ** 18n }),
     );
@@ -170,7 +179,45 @@ describe("useGaslessRelayer", () => {
     await waitFor(() =>
       expect(result.current).toEqual({
         isEligible: false,
+        reason: "below-minimum",
         remaining: 5,
+        resetsAt: "2026-05-20T00:00:00Z",
+        isLoading: false,
+      }),
+    );
+  });
+
+  it("zero balance with a non-zero minimum: no-ens", async () => {
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }));
+
+    const { useGaslessEligibility } = await import("./useGaslessRelayer");
+
+    const { result } = renderHook(() => useGaslessEligibility(TEST_ADDRESS), {
+      wrapper: TestQueryProvider,
+    });
+
+    await waitFor(() => expect(result.current.reason).toBe("no-ens"));
+    expect(result.current.isEligible).toBe(false);
+  });
+
+  it("minVotingPower 0: a 0-ENS wallet is eligible (mirrors the relayer)", async () => {
+    // Regression: the front used to hardcode `balance === 0 → not sponsored`,
+    // ignoring the relayer. With minVotingPower 0 everyone qualifies.
+    state.config = { minVotingPower: "0", limits: { vote: 5, delegation: 5 } };
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }));
+
+    const { useGaslessEligibility } = await import("./useGaslessRelayer");
+
+    const { result } = renderHook(() => useGaslessEligibility(TEST_ADDRESS), {
+      wrapper: TestQueryProvider,
+    });
+
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        isEligible: true,
+        reason: null,
+        remaining: 5,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );
@@ -190,109 +237,11 @@ describe("useGaslessRelayer", () => {
     await waitFor(() =>
       expect(result.current).toEqual({
         isEligible: true,
+        reason: null,
         remaining: 5,
+        resetsAt: "2026-05-20T00:00:00Z",
         isLoading: false,
       }),
     );
-  });
-});
-
-describe("useGasSponsorshipBalanceStatus", () => {
-  let state: HandlerState;
-
-  beforeEach(() => {
-    vi.resetModules();
-    state = freshState();
-    installRelayerHandlers(state);
-    useReadContractMock.mockReset();
-    useReadContractMock.mockReturnValue(readContractResult());
-  });
-
-  it("no connected address: unknown, balance read disabled", async () => {
-    const { useGasSponsorshipBalanceStatus } = await import(
-      "./useGaslessRelayer"
-    );
-
-    const { result } = renderHook(
-      () => useGasSponsorshipBalanceStatus(undefined),
-      { wrapper: TestQueryProvider },
-    );
-
-    await waitFor(() =>
-      expect(result.current).toEqual({ status: "unknown", isLoading: false }),
-    );
-    expect(useReadContractMock).toHaveBeenCalledWith(
-      expect.objectContaining({ query: { enabled: false } }),
-    );
-  });
-
-  it("zero balance: no-ens", async () => {
-    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }));
-
-    const { useGasSponsorshipBalanceStatus } = await import(
-      "./useGaslessRelayer"
-    );
-
-    const { result } = renderHook(
-      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
-      { wrapper: TestQueryProvider },
-    );
-
-    await waitFor(() => expect(result.current.status).toBe("no-ens"));
-  });
-
-  it("balance below the relayer minimum: below-minimum", async () => {
-    useReadContractMock.mockReturnValue(
-      readContractResult({ data: 50n * 10n ** 18n }),
-    );
-
-    const { useGasSponsorshipBalanceStatus } = await import(
-      "./useGaslessRelayer"
-    );
-
-    const { result } = renderHook(
-      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
-      { wrapper: TestQueryProvider },
-    );
-
-    await waitFor(() => expect(result.current.status).toBe("below-minimum"));
-  });
-
-  it("balance at or above the relayer minimum: meets-minimum", async () => {
-    useReadContractMock.mockReturnValue(
-      readContractResult({ data: 200n * 10n ** 18n }),
-    );
-
-    const { useGasSponsorshipBalanceStatus } = await import(
-      "./useGaslessRelayer"
-    );
-
-    const { result } = renderHook(
-      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
-      { wrapper: TestQueryProvider },
-    );
-
-    await waitFor(() => expect(result.current.status).toBe("meets-minimum"));
-  });
-
-  it("relayer unfunded: still classifies against the 100 ENS fallback", async () => {
-    state.balance = { hasEnoughBalance: false };
-    useReadContractMock.mockReturnValue(
-      readContractResult({ data: 99n * 10n ** 18n }),
-    );
-
-    const { useGasSponsorshipBalanceStatus } = await import(
-      "./useGaslessRelayer"
-    );
-
-    const { result } = renderHook(
-      () => useGasSponsorshipBalanceStatus(TEST_ADDRESS),
-      { wrapper: TestQueryProvider },
-    );
-
-    // Config never loads (gated on relayer funding), so the threshold falls
-    // back to DEFAULT_GAS_SPONSORSHIP_MIN_ENS: 99 < 100.
-    await waitFor(() => expect(result.current.status).toBe("below-minimum"));
-    expect(state.configCalls).toBe(0);
   });
 });

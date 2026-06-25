@@ -3,7 +3,10 @@ import styled from 'styled-components'
 
 import { tokens } from '@/styles'
 
-import { useGasSponsorshipMinEns } from '../hooks/useGaslessRelayer'
+import {
+  useGasSponsorshipMinEns,
+  type SponsorshipBlockReason,
+} from '../hooks/useGaslessRelayer'
 
 /**
  * Uniswap swap page pre-filled with the ENS token as the output currency.
@@ -13,27 +16,51 @@ export const UNISWAP_BUY_ENS_URL =
   'https://app.uniswap.org/swap?outputCurrency=0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72'
 
 /**
- * Why this delegation won't get sponsored gas:
- * - `no-ens`: the wallet holds no ENS at all.
+ * Why this delegation won't get sponsored gas. Mirrors the relayer's
+ * {@link SponsorshipBlockReason} 1:1:
+ * - `no-ens`: the wallet holds no ENS and the relayer requires a minimum.
  * - `below-minimum`: the wallet holds some ENS, but less than the
  *   sponsorship threshold.
+ * - `rate-limited`: the wallet has no sponsored delegations left this month.
  * - `relayer-paused`: the relayer can't sponsor anyone right now (global),
  *   regardless of the wallet's balance.
  *
- * A fourth case — wallet not connected — never reaches this modal: the
- * Delegate trigger opens the wallet-connect (AppKit) modal instead.
+ * The wallet-not-connected case never reaches this modal: the Delegate
+ * trigger opens the wallet-connect (AppKit) modal instead.
  */
-export type DelegationEligibilityReason =
-  | 'no-ens'
-  | 'below-minimum'
-  | 'relayer-paused'
+export type DelegationEligibilityReason = SponsorshipBlockReason
 
 export interface DelegationEligibilityModalProps {
   open: boolean
   reason: DelegationEligibilityReason
+  /**
+   * ISO timestamp when the monthly relay quota resets, from the relayer's
+   * `resetsAt`. Used only by the `rate-limited` state to tell the user when
+   * their free allowance comes back.
+   */
+  resetsAt?: string | null
   onClose: () => void
   /** Continue with the regular delegation flow, paying the network fee. */
   onDelegateAnyway: () => void
+}
+
+/**
+ * Relative, human-friendly countdown to the relayer's monthly quota reset
+ * ("in 6 days" / "tomorrow"). The reset is always a UTC month boundary, so
+ * the granularity is days — never minutes/seconds. Falls back to the generic
+ * "next month" when the timestamp is missing or unparseable.
+ */
+export function formatResetCountdown(
+  resetsAt: string | null | undefined,
+): string {
+  if (!resetsAt) return 'next month'
+  const resetMs = new Date(resetsAt).getTime()
+  if (Number.isNaN(resetMs)) return 'next month'
+  const diffMs = resetMs - Date.now()
+  if (diffMs <= 0) return 'soon'
+  const days = Math.ceil(diffMs / 86_400_000)
+  if (days === 1) return 'tomorrow'
+  return `in ${days} days`
 }
 
 /**
@@ -47,7 +74,11 @@ export interface DelegationEligibilityModalProps {
  * Important copy constraint: the threshold gates GAS SPONSORSHIP ONLY.
  * Earning rewards never requires the threshold — don't imply otherwise.
  */
-function getCopy(reason: DelegationEligibilityReason, minEns: string) {
+function getCopy(
+  reason: DelegationEligibilityReason,
+  minEns: string,
+  resetLabel: string,
+) {
   switch (reason) {
     case 'no-ens':
       return {
@@ -59,6 +90,11 @@ function getCopy(reason: DelegationEligibilityReason, minEns: string) {
         title: 'You need more ENS for free gas',
         body: `Free gas covers wallets holding at least ${minEns} ENS and yours holds less than that. Add some ENS to delegate with sponsored gas. You can still delegate now and pay the fee yourself, about $2. Gas is the only difference and your rewards stay the same.`,
       }
+    case 'rate-limited':
+      return {
+        title: 'No free delegations left this month',
+        body: `You've used all your sponsored delegations for this month, so this one needs the network fee, about $2. Your free allowance resets ${resetLabel} and your rewards are unaffected.`,
+      }
     case 'relayer-paused':
       return {
         title: 'Sponsored gas is paused',
@@ -66,6 +102,15 @@ function getCopy(reason: DelegationEligibilityReason, minEns: string) {
       }
   }
 }
+
+/**
+ * Reasons where buying ENS would not unlock free gas (the block isn't a
+ * balance shortfall), so the modal offers "Maybe later" instead of "Buy ENS".
+ */
+const NON_BALANCE_REASONS: ReadonlySet<DelegationEligibilityReason> = new Set([
+  'rate-limited',
+  'relayer-paused',
+])
 
 /**
  * Shown when a connected wallet clicks Delegate but this delegation won't
@@ -81,11 +126,12 @@ function getCopy(reason: DelegationEligibilityReason, minEns: string) {
 export function DelegationEligibilityModal({
   open,
   reason,
+  resetsAt,
   onClose,
   onDelegateAnyway,
 }: DelegationEligibilityModalProps) {
   const minEns = useGasSponsorshipMinEns()
-  const { title, body } = getCopy(reason, minEns)
+  const { title, body } = getCopy(reason, minEns, formatResetCountdown(resetsAt))
 
   return (
     <Dialog
@@ -99,7 +145,7 @@ export function DelegationEligibilityModal({
         <Paragraph>{body}</Paragraph>
 
         <Actions>
-          {reason === 'relayer-paused' ? (
+          {NON_BALANCE_REASONS.has(reason) ? (
             <>
               <Button colorStyle="blueSecondary" onClick={onClose}>
                 Maybe later

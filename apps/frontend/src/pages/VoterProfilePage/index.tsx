@@ -28,13 +28,10 @@ import { useVoter } from '@/features/voters/useVoter'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { DelegateValuesCard } from '@/features/matchmaking'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
-import {
-  DelegationEligibilityModal,
-  type DelegationEligibilityReason,
-} from '@/features/delegate/components/DelegationEligibilityModal'
+import { DelegationEligibilityModal } from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
 import {
-  useGasSponsorshipBalanceStatus,
+  useGaslessEligibility,
   useRelayerBalance,
 } from '@/features/delegate/hooks/useGaslessRelayer'
 import { openWalletModal } from '@/features/wallet/openWalletModal'
@@ -742,19 +739,41 @@ export function VoterProfilePage() {
   const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false)
   const connectedAddress =
     walletState.status !== 'disconnected' ? walletState.address : undefined
-  const { status: sponsorshipStatus } =
-    useGasSponsorshipBalanceStatus(connectedAddress)
+  // Single source of truth — the relayer's own verdict, never a front-side rule.
+  const {
+    isEligible: gaslessEligible,
+    reason: eligibilityReason,
+    resetsAt: rateLimitResetsAt,
+    isLoading: eligibilityLoading,
+  } = useGaslessEligibility(connectedAddress)
+  // Set when Delegate is clicked before the verdict resolves, so we route to
+  // the right modal once it does instead of guessing mid-flight.
+  const [pendingDelegate, setPendingDelegate] = useState(false)
 
-  // Relayer paused is global — it beats the balance-gated states because a
-  // bigger balance wouldn't unlock sponsored gas while the relayer is down.
-  const eligibilityReason: DelegationEligibilityReason | null =
-    relayerHasGas === false
-      ? 'relayer-paused'
-      : sponsorshipStatus === 'no-ens'
-        ? 'no-ens'
-        : sponsorshipStatus === 'below-minimum'
-          ? 'below-minimum'
-          : null
+  // The Free pill mirrors the relayer: once connected it reflects the wallet's
+  // actual eligibility; disconnected it shows the program-level promise.
+  const showFreeBadge = connectedAddress
+    ? gaslessEligible
+    : relayerHasGas === true
+
+  // Route a connected wallet to the eligibility modal (if the relayer blocks
+  // sponsorship) or straight to the delegation flow. Declared before the
+  // early returns below so the routing effect obeys the rules of hooks.
+  const routeDelegate = () => {
+    if (eligibilityReason) {
+      setEligibilityModalOpen(true)
+      return
+    }
+    setModalOpen(true)
+  }
+
+  useEffect(() => {
+    if (pendingDelegate && !eligibilityLoading) {
+      setPendingDelegate(false)
+      routeDelegate()
+    }
+    // routeDelegate reads the latest reason on each render; deps cover its inputs.
+  }, [pendingDelegate, eligibilityLoading, eligibilityReason])
 
   const { data: resolvedEnsName } = useEnsName({
     address: resolvedAddr as `0x${string}`,
@@ -827,11 +846,13 @@ export function VoterProfilePage() {
       void openWalletModal()
       return
     }
-    if (eligibilityReason) {
-      setEligibilityModalOpen(true)
+    // Don't guess while the relayer verdict is still loading — defer and let
+    // the routing effect (declared above) run once it resolves.
+    if (eligibilityLoading) {
+      setPendingDelegate(true)
       return
     }
-    setModalOpen(true)
+    routeDelegate()
   }
 
   const proposalRows = buildProposalRows(voter.last10Proposals ?? [])
@@ -910,7 +931,7 @@ export function VoterProfilePage() {
           <CtaRow>
             {!isDelegated && (
               <Button colorStyle="bluePrimary" width="auto" onClick={handleDelegate}>
-                Delegate now{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
+                Delegate now{showFreeBadge && <FreeBadge>Free</FreeBadge>}
               </Button>
             )}
             <Button
@@ -1020,6 +1041,7 @@ export function VoterProfilePage() {
       <DelegationEligibilityModal
         open
         reason={eligibilityReason}
+        resetsAt={rateLimitResetsAt}
         onClose={() => setEligibilityModalOpen(false)}
         onDelegateAnyway={() => {
           setEligibilityModalOpen(false)
