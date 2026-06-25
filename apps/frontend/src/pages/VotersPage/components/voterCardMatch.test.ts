@@ -43,8 +43,8 @@ describe('matchBucket', () => {
 describe('voterCardMatchDisplay — viewer has selected, delegate has ranked', () => {
   it.each<[number, MatchVariant, string, boolean]>([
     // percent, variant, subtitle, highlight
-    [100, 'strong', '⭐ Strong match', true],
-    [80, 'strong', '⭐ Strong match', true],
+    [100, 'strong', 'Strong match', true],
+    [80, 'strong', 'Strong match', true],
     [60, 'partial', 'Partial match', false],
     [40, 'partial', 'Partial match', false],
     [20, 'weak', 'Weak match', false],

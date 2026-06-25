@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faStar, faHeart } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import type { MatchScore } from '@ens-dis/domain'
 import type { VoterDetail } from '@/api/types'
@@ -434,6 +434,11 @@ export function VoterCard({
                 {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
               </TitleRow>
               <MatchSubtitle $variant={matchDisplay.variant} $color={matchDisplay.color}>
+                {matchDisplay.variant === 'strong' ? (
+                  <FontAwesomeIcon icon={faStar} aria-hidden style={{ marginRight: 6 }} />
+                ) : matchDisplay.variant === 'partial' ? (
+                  <FontAwesomeIcon icon={faHeart} aria-hidden style={{ marginRight: 6 }} />
+                ) : null}
                 {matchDisplay.subtitle}
               </MatchSubtitle>
               {differWords.length > 0 && (

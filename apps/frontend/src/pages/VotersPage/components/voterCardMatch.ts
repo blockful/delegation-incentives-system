@@ -77,7 +77,7 @@ const VARIANT_DISPLAY: Record<
   MatchVariant,
   { subtitle: string; highlight: boolean; color: string }
 > = {
-  strong: { subtitle: '⭐ Strong match', highlight: true, color: tokens.color.status.success.fg },
+  strong: { subtitle: 'Strong match', highlight: true, color: tokens.color.status.success.fg },
   partial: { subtitle: 'Partial match', highlight: false, color: tokens.color.blue },
   weak: { subtitle: 'Weak match', highlight: false, color: tokens.color.textSecondary },
   none: { subtitle: 'No shared priorities', highlight: false, color: tokens.color.textSecondary },
