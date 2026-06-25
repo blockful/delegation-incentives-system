@@ -629,8 +629,6 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
                   : row.status === 'not_eligible' || row.status === 'no_reward'
                     ? '0 ENS'
                     : '—'
-              // Amount stays dark for every state (Figma 5899-6474); the badge,
-              // not the colour, signals Unavailable/Pending.
               const tone: 'positive' | 'neutral' | 'muted' =
                 row.hasReward ? 'positive' : 'neutral'
               return (
