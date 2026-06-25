@@ -63,86 +63,46 @@ interface VoterCardMatchArgs {
 }
 
 /**
+ * Per-variant presentation: the subtitle copy + whether this variant highlights
+ * the whole card. Keyed by variant so it is the single source of truth, and the
+ * `Record<MatchVariant, …>` makes it exhaustive — a new variant won't compile
+ * until it has a row here (no silent `default` branch to swallow it).
+ */
+const VARIANT_DISPLAY: Record<MatchVariant, { subtitle: string; highlight: boolean }> = {
+  strong: { subtitle: '⭐ Strong match', highlight: true },
+  partial: { subtitle: 'Partial match', highlight: false },
+  weak: { subtitle: 'Weak match', highlight: false },
+  none: { subtitle: 'No shared priorities', highlight: false },
+  unranked: { subtitle: "Delegate didn't rank priorities", highlight: false },
+  unpicked: { subtitle: 'Rank to see your match', highlight: false },
+}
+
+/**
+ * Assemble the full display descriptor. `variant` fixes the subtitle + card
+ * highlight (via {@link VARIANT_DISPLAY}); `statValue` is the only piece that
+ * varies independently of the variant (e.g. "80%" vs "?" vs "–").
+ */
+function display(variant: MatchVariant, statValue: string): VoterCardMatchDisplay {
+  return { variant, statValue, ...VARIANT_DISPLAY[variant] }
+}
+
+/**
  * Map the raw match state to everything the card needs to render. Order of
  * precedence matters:
  *  1. A non-null `match` means BOTH sides ranked (the server only computes it
  *     then) → bucket the percentage. This is the only path that highlights.
- *  2. Viewer hasn't picked → "Rank to see your match" ("?"). If the delegate
- *     also hasn't ranked, surface that instead (the more permanent blocker).
- *  3. Viewer picked but the delegate hasn't → "didn't rank" ("–").
+ *  2. Viewer hasn't picked → "?" stat. If the delegate hasn't ranked either,
+ *     surface that ("unranked") rather than the rank-nudge ("unpicked"), since
+ *     there'd be nothing to match against anyway.
+ *  3. Viewer picked but the delegate hasn't (or a defensive no-score) → the
+ *     "didn't rank" state with a "–" stat.
  */
 export function voterCardMatchDisplay({
   match,
   viewerHasSelected,
   delegateHasRanked,
 }: VoterCardMatchArgs): VoterCardMatchDisplay {
-  // 1. Both ranked → score is present → bucket it.
-  if (match) {
-    return bucketDisplay(match)
-  }
-
-  // 2. Viewer hasn't picked. Nudge them to rank — unless the delegate hasn't
-  // ranked either, in which case there'd be nothing to match against anyway.
-  if (!viewerHasSelected) {
-    if (!delegateHasRanked) {
-      return {
-        variant: 'unranked',
-        subtitle: "Delegate didn't rank priorities",
-        statValue: '?',
-        highlight: false,
-      }
-    }
-    return {
-      variant: 'unpicked',
-      subtitle: 'Rank to see your match',
-      statValue: '?',
-      highlight: false,
-    }
-  }
-
-  // 3. Viewer picked, but no score → the delegate hasn't ranked.
-  return {
-    variant: 'unranked',
-    subtitle: "Delegate didn't rank priorities",
-    statValue: '–',
-    highlight: false,
-  }
-}
-
-/** Bucket a present score into the strong/partial/weak/none display. */
-function bucketDisplay(match: MatchScore): VoterCardMatchDisplay {
-  const bucket = matchBucket(match.percent)
-  const statValue = `${match.percent}%`
-
-  switch (bucket) {
-    case 'strong':
-      return {
-        variant: 'strong',
-        subtitle: '⭐ Strong match',
-        statValue,
-        highlight: true,
-      }
-    case 'partial':
-      return {
-        variant: 'partial',
-        subtitle: 'Partial match',
-        statValue,
-        highlight: false,
-      }
-    case 'weak':
-      return {
-        variant: 'weak',
-        subtitle: 'Weak match',
-        statValue,
-        highlight: false,
-      }
-    case 'none':
-    default:
-      return {
-        variant: 'none',
-        subtitle: 'No shared priorities',
-        statValue,
-        highlight: false,
-      }
-  }
+  if (match) return display(matchBucket(match.percent), `${match.percent}%`)
+  if (!viewerHasSelected) return display(delegateHasRanked ? 'unpicked' : 'unranked', '?')
+  return display('unranked', '–')
 }
