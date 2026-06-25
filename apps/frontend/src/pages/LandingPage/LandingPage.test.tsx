@@ -40,7 +40,7 @@ describe('LandingPage', () => {
     })
   })
 
-  it('renders FAQ section with all 8 questions expanded', async () => {
+  it('renders FAQ section with all 8 questions, collapsed by default', async () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(screen.getByTestId('faq-section')).toBeInTheDocument()
@@ -59,19 +59,24 @@ describe('LandingPage', () => {
     for (const question of questions) {
       expect(
         screen.getByRole('button', { name: question }),
-      ).toHaveAttribute('aria-expanded', 'true')
+      ).toHaveAttribute('aria-expanded', 'false')
     }
-    // Answers are visible without any interaction (not a collapsed accordion).
+    // Answers stay out of the DOM until a question is expanded (collapsed accordion).
     expect(
-      screen.getByText(/Delegating only assigns your voting power/),
-    ).toBeVisible()
+      screen.queryByText(/Delegating only assigns your voting power/),
+    ).not.toBeInTheDocument()
   })
 
-  it('FAQ free-gas answer interpolates the sponsorship threshold', async () => {
+  it('FAQ free-gas answer interpolates the sponsorship threshold once expanded', async () => {
+    // Items start collapsed, so expand the free-gas question before asserting.
     // `useGasSponsorshipMinEns` reads the relayer config (MSW returns
     // minVotingPower=1e18 → '1') and falls back to the copy default while it
     // loads, so assert the sentence shape rather than a fixed number.
     renderApp(<LandingPage />)
+    const question = await screen.findByRole('button', {
+      name: 'Is delegating really free?',
+    })
+    await userEvent.click(question)
     await waitFor(() => {
       expect(
         screen.getByText(/as long as you hold at least [\d.]+ ENS/),
@@ -79,21 +84,23 @@ describe('LandingPage', () => {
     })
   })
 
-  it('FAQ collapses an item when its question is clicked', async () => {
+  it('FAQ expands an item when its question is clicked', async () => {
     renderApp(<LandingPage />)
     const question = await screen.findByRole('button', {
       name: 'Do I keep control of my tokens?',
     })
-    expect(
-      screen.getByText(/Delegating only assigns your voting power/),
-    ).toBeInTheDocument()
-
-    await userEvent.click(question)
-
+    // Collapsed by default → the answer is not rendered yet.
     expect(question).toHaveAttribute('aria-expanded', 'false')
     expect(
       screen.queryByText(/Delegating only assigns your voting power/),
     ).not.toBeInTheDocument()
+
+    await userEvent.click(question)
+
+    expect(question).toHaveAttribute('aria-expanded', 'true')
+    expect(
+      screen.getByText(/Delegating only assigns your voting power/),
+    ).toBeInTheDocument()
   })
 
   it('renders Ask us anything button linking to the ClickUp form', async () => {
