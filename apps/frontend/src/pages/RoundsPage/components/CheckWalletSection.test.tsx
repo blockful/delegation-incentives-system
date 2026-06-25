@@ -8,6 +8,7 @@ import type {
 } from '@/api/types'
 import {
   CheckWalletSection,
+  SHOW_PROVENANCE_MATH,
   deriveCheckWalletView,
   findLostLotteryEntry,
 } from './CheckWalletSection'
@@ -547,7 +548,9 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     expect(within(breakdown).getByText('83%')).toBeInTheDocument()
   })
 
-  it('expands the math with both role sections and distinct averaging windows', async () => {
+  // DEV-944: exercises the hidden "Show the math" toggle + ProvenanceMath
+  // panel — runs again only when SHOW_PROVENANCE_MATH is flipped back on.
+  it.runIf(SHOW_PROVENANCE_MATH)('expands the math with both role sections and distinct averaging windows', async () => {
     renderSection({
       activeAddress: WALLET,
       round: { addressReward: dualRoleReward(fullProvenance) },
@@ -579,7 +582,8 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     expect(within(inputs).getByText('+1.25%')).toBeInTheDocument()
   })
 
-  it('collapses the math again from the same toggle', async () => {
+  // DEV-944: hidden toggle (see SHOW_PROVENANCE_MATH).
+  it.runIf(SHOW_PROVENANCE_MATH)('collapses the math again from the same toggle', async () => {
     renderSection({
       activeAddress: WALLET,
       round: { addressReward: dualRoleReward(fullProvenance) },
@@ -593,7 +597,8 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     expect(screen.queryByTestId('check-wallet-math')).not.toBeInTheDocument()
   })
 
-  it('renders the reached-cap ledger with the reconstructed trail', async () => {
+  // DEV-944: hidden math panel (see SHOW_PROVENANCE_MATH).
+  it.runIf(SHOW_PROVENANCE_MATH)('renders the reached-cap ledger with the reconstructed trail', async () => {
     renderSection({
       activeAddress: WALLET,
       round: { addressReward: dualRoleReward(fullProvenance) },
@@ -625,7 +630,8 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders the received-redistribution ledger with the green footnote', async () => {
+  // DEV-944: hidden math panel (see SHOW_PROVENANCE_MATH).
+  it.runIf(SHOW_PROVENANCE_MATH)('renders the received-redistribution ledger with the green footnote', async () => {
     renderSection({
       activeAddress: WALLET,
       round: {
@@ -661,7 +667,8 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     expect(within(math).queryByTestId('check-wallet-math-voter')).not.toBeInTheDocument()
   })
 
-  it('lists generic delegation sources and hides them when null', async () => {
+  // DEV-944: hidden math panel (see SHOW_PROVENANCE_MATH).
+  it.runIf(SHOW_PROVENANCE_MATH)('lists generic delegation sources and hides them when null', async () => {
     const { unmount } = renderSection({
       activeAddress: WALLET,
       round: { addressReward: dualRoleReward(fullProvenance) },
@@ -700,7 +707,8 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('renders the reconciliation line from the wei strings', async () => {
+  // DEV-944: hidden math panel (see SHOW_PROVENANCE_MATH).
+  it.runIf(SHOW_PROVENANCE_MATH)('renders the reconciliation line from the wei strings', async () => {
     renderSection({
       activeAddress: WALLET,
       round: { addressReward: dualRoleReward(fullProvenance) },
@@ -715,7 +723,8 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('flags a reconciliation mismatch against the recorded total', async () => {
+  // DEV-944: hidden math panel (see SHOW_PROVENANCE_MATH).
+  it.runIf(SHOW_PROVENANCE_MATH)('flags a reconciliation mismatch against the recorded total', async () => {
     renderSection({
       activeAddress: WALLET,
       round: {
@@ -751,11 +760,20 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     expect(
       screen.getByTestId('check-wallet-reward-value'),
     ).toHaveTextContent('25.00 ENS')
-    // …but the math affordance is replaced by the muted note.
+    // The "Show the math" toggle never appears when provenance is null.
     expect(screen.queryByTestId('check-wallet-show-math')).not.toBeInTheDocument()
-    expect(
-      screen.getByTestId('check-wallet-math-unavailable'),
-    ).toHaveTextContent('Math not available for this round.')
+    // DEV-944: the whole math foot is hidden for now, so its degraded
+    // "Math not available" sibling is gone too. Branches on the flag so a
+    // single flip back to true restores the original expectation.
+    if (SHOW_PROVENANCE_MATH) {
+      expect(
+        screen.getByTestId('check-wallet-math-unavailable'),
+      ).toHaveTextContent('Math not available for this round.')
+    } else {
+      expect(
+        screen.queryByTestId('check-wallet-math-unavailable'),
+      ).not.toBeInTheDocument()
+    }
   })
 
   it('shows no single-role note when both roles paid', () => {
@@ -785,14 +803,25 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
     })
 
     const breakdown = screen.getByTestId('check-wallet-breakdown')
+    // The single-role note and the % share stay — only the provenance caption
+    // and math toggle are hidden.
     expect(
       within(breakdown).getByText(
         'You earned only by voting this round. No tokens were delegated to you.',
       ),
     ).toBeInTheDocument()
-    expect(
-      within(breakdown).getByText('Paid directly in one transfer (1 ENS or more).'),
-    ).toBeInTheDocument()
+    // DEV-944: "Paid directly in one transfer (1 ENS or more)." is hidden for
+    // now (PRD 86aj53bjc §6). Branches on the flag so a single flip back to
+    // true restores the original presence assertion.
+    if (SHOW_PROVENANCE_MATH) {
+      expect(
+        within(breakdown).getByText('Paid directly in one transfer (1 ENS or more).'),
+      ).toBeInTheDocument()
+    } else {
+      expect(
+        within(breakdown).queryByText('Paid directly in one transfer (1 ENS or more).'),
+      ).not.toBeInTheDocument()
+    }
     expect(within(breakdown).getByText('100%')).toBeInTheDocument()
   })
 
@@ -823,15 +852,18 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
       ),
     ).toBeInTheDocument()
 
-    // The math panel carries the draw detail from the lottery payload.
-    const math = await openMath()
-    const draw = within(math).getByTestId('check-wallet-math-lottery')
-    expect(within(draw).getByText('Lottery draw')).toBeInTheDocument()
-    expect(within(math).getByText('Entry that qualified')).toBeInTheDocument()
-    expect(within(math).getByText('0.62 ENS')).toBeInTheDocument()
-    expect(within(math).getByText('6.2%')).toBeInTheDocument()
-    expect(within(math).getByText('#24,996,367')).toBeInTheDocument()
-    expect(within(math).getByText('Ethereum prevRandao')).toBeInTheDocument()
+    // DEV-944: the math panel + its draw detail are hidden for now — this half
+    // runs again only when SHOW_PROVENANCE_MATH flips back on.
+    if (SHOW_PROVENANCE_MATH) {
+      const math = await openMath()
+      const draw = within(math).getByTestId('check-wallet-math-lottery')
+      expect(within(draw).getByText('Lottery draw')).toBeInTheDocument()
+      expect(within(math).getByText('Entry that qualified')).toBeInTheDocument()
+      expect(within(math).getByText('0.62 ENS')).toBeInTheDocument()
+      expect(within(math).getByText('6.2%')).toBeInTheDocument()
+      expect(within(math).getByText('#24,996,367')).toBeInTheDocument()
+      expect(within(math).getByText('Ethereum prevRandao')).toBeInTheDocument()
+    }
   })
 
   it('offers the math on a lost lottery entry when provenance exists', async () => {
@@ -853,10 +885,14 @@ describe('CheckWalletSection · provenance (DEV-764)', () => {
       ),
     ).toBeInTheDocument()
 
-    const math = await openMath()
-    expect(within(math).getByTestId('check-wallet-math-lottery')).toBeInTheDocument()
-    expect(within(math).getByText('6.2%')).toBeInTheDocument()
-    expect(within(math).getByTestId('check-wallet-round-inputs')).toBeInTheDocument()
+    // DEV-944: math toggle/panel hidden for now — restored when
+    // SHOW_PROVENANCE_MATH flips back on.
+    if (SHOW_PROVENANCE_MATH) {
+      const math = await openMath()
+      expect(within(math).getByTestId('check-wallet-math-lottery')).toBeInTheDocument()
+      expect(within(math).getByText('6.2%')).toBeInTheDocument()
+      expect(within(math).getByTestId('check-wallet-round-inputs')).toBeInTheDocument()
+    }
   })
 
   it('upgrades the no-reward state with the small-state card', () => {

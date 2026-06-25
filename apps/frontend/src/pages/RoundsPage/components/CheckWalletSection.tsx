@@ -73,6 +73,8 @@ export type CheckWalletView =
     }
   | { kind: 'lottery-lost'; entry: LostLotteryEntry }
 
+export const SHOW_PROVENANCE_MATH: boolean = false
+
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a || !b) return false
   return a.toLowerCase() === b.toLowerCase()
@@ -933,7 +935,8 @@ export function CheckWalletSection({
 
   // Affordance (or the degraded note) on the states that have math to show.
   const mathFoot =
-    view.kind === 'earned' || view.kind === 'lottery-lost' ? (
+    SHOW_PROVENANCE_MATH &&
+    (view.kind === 'earned' || view.kind === 'lottery-lost') ? (
       canShowMath ? (
         <MathToggle
           type="button"
@@ -1089,11 +1092,11 @@ export function CheckWalletSection({
                 ENS. Your pool drew you as the winner, so you took the whole{' '}
                 {formatEnsFixed(view.lotteryWin.prizeEns)} ENS.
               </ExplainerFootnote>
-            ) : (
+            ) : SHOW_PROVENANCE_MATH ? (
               <ExplainerFootnote>
                 Paid directly in one transfer (1 ENS or more).
               </ExplainerFootnote>
-            )}
+            ) : null}
             {mathFoot}
           </PanelFoot>
         </ResultPanel>
@@ -1190,7 +1193,7 @@ export function CheckWalletSection({
       )}
       </CardRow>
 
-      {showMath && canShowMath && provenance && round.addressReward ? (
+      {SHOW_PROVENANCE_MATH && showMath && canShowMath && provenance && round.addressReward ? (
         <div
           id={mathRegionId}
           role="region"

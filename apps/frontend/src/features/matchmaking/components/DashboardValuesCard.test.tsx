@@ -23,7 +23,7 @@ describe('DashboardValuesCard', () => {
     expect(screen.getByText('Security')).toBeInTheDocument()
   })
 
-  it('delegate pre-selection: missing-values nudge', async () => {
+  it('delegate pre-selection: missing-values nudge with the delegate body copy', async () => {
     // Force the active voter to have no selection.
     server.use(
       http.get('/api/selections/:address', () =>
@@ -37,15 +37,23 @@ describe('DashboardValuesCard', () => {
       expect(screen.getByText(/profile is missing values/i)).toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: /complete profile/i })).toBeInTheDocument()
+    // Distinct from the holder nudge: keeps the delegate-facing "holders can find you" body.
+    expect(screen.getByText(/holders can find you/i)).toBeInTheDocument()
+    expect(screen.queryByText(/we cannot match you to delegates/i)).not.toBeInTheDocument()
   })
 
-  it('holder pre-selection: renders nothing', async () => {
+  it('holder pre-selection: missing-values nudge with the distinct holder body copy', async () => {
     renderApp(<DashboardValuesCard />, {
       walletState: { status: 'connected', address: HOLDER },
     })
-    await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: /^values$/i })).not.toBeInTheDocument()
-      expect(screen.queryByText(/missing values/i)).not.toBeInTheDocument()
-    })
+    await waitFor(() =>
+      expect(screen.getByText(/profile is missing values/i)).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: /complete profile/i })).toBeInTheDocument()
+    // Distinct from the delegate nudge: holder-facing body, no "holders can find you".
+    expect(
+      screen.getByText(/we cannot match you to delegates\. rank 5 values in 30 seconds\./i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/holders can find you/i)).not.toBeInTheDocument()
   })
 })

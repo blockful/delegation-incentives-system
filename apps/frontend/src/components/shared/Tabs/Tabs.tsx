@@ -15,35 +15,41 @@ interface TabsProps {
   'aria-label'?: string
 }
 
+// Segmented switcher track (Figma 5620:158): both tabs sit inside one
+// pill-shaped grey track with no border and a 4px gutter. The active tab
+// reads as a white pill floating inside the track with a subtle shadow.
 const TabList = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: ${tokens.spacing.xs};
-  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: ${tokens.radius.pill};
+  background: ${tokens.color.surfaceAlt};
 `
 
 const TabButton = styled.button<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 0 ${tokens.spacing.md};
+  padding: 8px 16px;
   border-radius: ${tokens.radius.pill};
-  border: 1px solid ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.borderLight)};
-  background: ${({ $active }) => ($active ? tokens.color.lightBlue : 'transparent')};
-  color: ${({ $active }) => ($active ? tokens.color.darkBlue : tokens.color.darkGray)};
+  border: none;
+  background: ${({ $active }) => ($active ? tokens.color.white : 'transparent')};
+  box-shadow: ${({ $active }) =>
+    $active ? '0px 1px 1px rgba(0, 0, 0, 0.08)' : 'none'};
+  color: ${({ $active }) => ($active ? tokens.color.text : tokens.color.textMuted)};
   font-family: inherit;
   font-size: ${tokens.font.size.sm};
   font-weight: ${tokens.font.weight.semibold};
   letter-spacing: 0;
   cursor: pointer;
   transition:
-    border-color ${tokens.transition.fast},
     background ${tokens.transition.fast},
+    box-shadow ${tokens.transition.fast},
     color ${tokens.transition.fast};
 
   &:hover {
-    border-color: ${({ $active }) => ($active ? tokens.color.lightBlue : tokens.color.blue)};
+    color: ${tokens.color.text};
   }
 
   &:focus-visible {
