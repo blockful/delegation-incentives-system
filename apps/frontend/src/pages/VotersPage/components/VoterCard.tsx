@@ -3,7 +3,8 @@ import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight, faStar, faHeart } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
+import { faStar, faHeart } from '@fortawesome/free-regular-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import type { MatchScore } from '@ens-dis/domain'
 import type { VoterDetail } from '@/api/types'
@@ -88,19 +89,16 @@ const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
   flex-direction: column;
   gap: ${tokens.spacing.xl};
   padding: ${tokens.spacing.lg};
+  /* Strong = subtle green gradient over white (Figma 5899:6899), not a flat fill */
   background: ${({ $tone }) =>
     $tone === 'highlight'
-      ? tokens.color.status.success.bg
+      ? `linear-gradient(180deg, rgba(25, 156, 117, 0.08) 0%, rgba(25, 156, 117, 0) 100%), ${tokens.color.surface}`
       : $tone === 'muted'
         ? tokens.color.surfaceAlt
         : tokens.color.surface};
   border: 1px solid
     ${({ $tone }) =>
-      $tone === 'highlight'
-        ? tokens.color.status.success.border
-        : $tone === 'muted'
-          ? tokens.color.border
-          : tokens.color.borderLight};
+      $tone === 'muted' ? tokens.color.border : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   transition: border-color ${tokens.transition.base},
@@ -166,8 +164,7 @@ const NameText = styled.p`
 const MatchSubtitle = styled.p<{ $variant: MatchVariant; $color: string }>`
   margin: 0;
   font-size: ${tokens.font.size.base};
-  font-weight: ${({ $variant }) =>
-    $variant === 'strong' ? tokens.font.weight.bold : tokens.font.weight.medium};
+  font-weight: ${tokens.font.weight.medium};
   color: ${({ $color }) => $color};
   line-height: 20px;
   white-space: nowrap;
@@ -480,7 +477,7 @@ export function VoterCard({
 
         <StatsRow>
           <Stat>
-            <StatValue>{matchDisplay.statValue}</StatValue>
+            <StatValue style={{ color: matchDisplay.color }}>{matchDisplay.statValue}</StatValue>
             <StatLabel>Match</StatLabel>
           </Stat>
           <Stat>
