@@ -108,6 +108,38 @@ describe('DelegationEligibilityModal', () => {
     expect(onDelegateAnyway).toHaveBeenCalledTimes(1)
   })
 
+  it('rate-limited: explains the monthly allowance and offers Maybe later / pay gas, no Buy ENS', async () => {
+    const onClose = vi.fn()
+    const onDelegateAnyway = vi.fn()
+    const user = userEvent.setup()
+
+    renderApp(
+      <DelegationEligibilityModal
+        open
+        reason="rate-limited"
+        onClose={onClose}
+        onDelegateAnyway={onDelegateAnyway}
+      />,
+    )
+
+    expect(
+      screen.getByText('No free delegations left this month'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/your rewards are unaffected/i)).toBeInTheDocument()
+    // Buying ENS wouldn't lift a rate limit — no Buy ENS action here.
+    expect(
+      screen.queryByRole('link', { name: 'Buy ENS' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Maybe later' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Delegate and pay gas' }),
+    )
+    expect(onDelegateAnyway).toHaveBeenCalledTimes(1)
+  })
+
   it('falls back to the default 100 ENS threshold when the relayer is unavailable', () => {
     server.use(
       http.get('/api/gateful/ens/relay/balance', () =>

@@ -9,13 +9,10 @@ import type { MatchScore } from '@ens-dis/domain'
 import type { VoterDetail } from '@/api/types'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
-import {
-  DelegationEligibilityModal,
-  type DelegationEligibilityReason,
-} from '@/features/delegate/components/DelegationEligibilityModal'
+import { DelegationEligibilityModal } from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
 import {
-  useGasSponsorshipBalanceStatus,
+  useGaslessEligibility,
   useRelayerBalance,
 } from '@/features/delegate/hooks/useGaslessRelayer'
 import { openWalletModal } from '@/features/wallet/openWalletModal'
@@ -371,8 +368,15 @@ export function VoterCard({
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const connectedAddress =
     walletState.status !== 'disconnected' ? walletState.address : undefined
-  const { status: sponsorshipStatus } =
-    useGasSponsorshipBalanceStatus(connectedAddress)
+  // Single source of truth — the relayer's own verdict, never a front-side rule.
+  const {
+    isEligible: gaslessEligible,
+    reason: eligibilityReason,
+    isLoading: eligibilityLoading,
+  } = useGaslessEligibility(connectedAddress)
+  // Set when the user clicks Delegate before the verdict has resolved, so we
+  // route to the right modal once it does instead of guessing mid-flight.
+  const [pendingDelegate, setPendingDelegate] = useState(false)
   const ensName = voter.ensName ?? resolvedEnsName ?? localResolved ?? null
   const displayName = ensName ?? truncateAddress(voter.address)
   const profileUrl = `/voters/${ensName ?? voter.address}`
@@ -390,28 +394,44 @@ export function VoterCard({
   const differWords =
     matchDisplay.variant === 'weak' ? (match?.bUnique ?? []) : []
 
-  // Relayer paused is global — it beats the balance-gated states because a
-  // bigger balance wouldn't unlock sponsored gas while the relayer is down.
-  const eligibilityReason: DelegationEligibilityReason | null =
-    relayerHasGas === false
-      ? 'relayer-paused'
-      : sponsorshipStatus === 'no-ens'
-        ? 'no-ens'
-        : sponsorshipStatus === 'below-minimum'
-          ? 'below-minimum'
-          : null
+  // The Free pill mirrors the relayer: once connected it reflects the wallet's
+  // actual eligibility; disconnected it shows the program-level promise (the
+  // only signal known without an address — whether the relayer is funded).
+  const showFreeBadge = connectedAddress
+    ? gaslessEligible
+    : relayerHasGas === true
 
-  const handleDelegate = () => {
-    if (walletState.status === 'disconnected') {
-      void openWalletModal()
-      return
-    }
+  // Route a connected wallet to the eligibility modal (if the relayer blocks
+  // sponsorship) or straight to the delegation flow.
+  const routeDelegate = () => {
     if (eligibilityReason) {
       setEligibilityModalOpen(true)
       return
     }
     setModalOpen(true)
   }
+
+  const handleDelegate = () => {
+    if (walletState.status === 'disconnected') {
+      void openWalletModal()
+      return
+    }
+    // Don't guess while the relayer verdict is still loading — defer and let
+    // the effect below route once it resolves.
+    if (eligibilityLoading) {
+      setPendingDelegate(true)
+      return
+    }
+    routeDelegate()
+  }
+
+  useEffect(() => {
+    if (pendingDelegate && !eligibilityLoading) {
+      setPendingDelegate(false)
+      routeDelegate()
+    }
+    // routeDelegate reads the latest reason on each render; deps cover its inputs.
+  }, [pendingDelegate, eligibilityLoading, eligibilityReason])
 
   return (
     <>
@@ -478,7 +498,7 @@ export function VoterCard({
             size="small"
             onClick={handleDelegate}
           >
-            Delegate{relayerHasGas === true && <FreeBadge>Free</FreeBadge>}
+            Delegate{showFreeBadge && <FreeBadge>Free</FreeBadge>}
           </Button>
           <ProfileLink to={profileUrl}>
             View profile <FontAwesomeIcon icon={faArrowRight} aria-hidden />
