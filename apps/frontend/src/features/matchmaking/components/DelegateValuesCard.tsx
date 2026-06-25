@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { Button, WalletSVG, LockSVG, CheckSVG } from '@ensdomains/thorin'
+import { Button, WalletSVG, LockSVG } from '@ensdomains/thorin'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHeart, faHourglass, faStar, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { faHeart, faHourglass, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { faStar } from '@fortawesome/free-regular-svg-icons'
 import { scoreSelection } from '@ens-dis/domain'
 import { tokens } from '@/styles'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -223,8 +224,7 @@ function BothPicked({
             {score.sharedWords.length > 0 && (
               <Section>
                 <SectionHead>
-                  <CheckSVG style={{ color: tokens.color.green }} aria-hidden="true" />
-                  <SectionLabel>You both value</SectionLabel>
+                  <SectionLabel $accent>You both value</SectionLabel>
                 </SectionHead>
                 <Chips words={score.sharedWords} labelOf={labelOf} highlight />
               </Section>
@@ -361,7 +361,7 @@ const ComparisonCard = styled.div`
   overflow: hidden;
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
+  border-radius: 12px;
 `
 
 const Header = styled.div`
@@ -495,9 +495,9 @@ const RingPercent = styled.span`
 `
 
 const RingLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.textSecondary};
+  color: ${tokens.color.darkGray};
 `
 
 /**
@@ -506,7 +506,7 @@ const RingLabel = styled.span`
  * has a row (the old switch had no `default` to catch a missing one).
  */
 const PILL_STYLE: Record<MatchTier, { bg: string; fg: string; border: string }> = {
-  strong: { bg: tokens.color.status.success.bg, fg: tokens.color.positiveEmphasis, border: tokens.color.status.success.border },
+  strong: { bg: tokens.color.blue, fg: tokens.color.white, border: tokens.color.blue },
   partial: { bg: tokens.color.lightBlue, fg: tokens.color.blue, border: tokens.color.lightBlue },
   weak: { bg: tokens.color.surfaceAlt, fg: tokens.color.darkGray, border: tokens.color.border },
   none: { bg: tokens.color.surfaceAlt, fg: tokens.color.textSecondary, border: tokens.color.border },
@@ -564,10 +564,12 @@ const SectionHead = styled.div`
   }
 `
 
-const SectionLabel = styled.span`
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.semibold};
-  color: ${tokens.color.textSecondary};
+const SectionLabel = styled.span<{ $accent?: boolean }>`
+  font-size: ${tokens.font.size.base};
+  font-weight: ${({ $accent }) =>
+    $accent ? tokens.font.weight.bold : tokens.font.weight.semibold};
+  color: ${({ $accent }) =>
+    $accent ? tokens.color.green : tokens.color.textSecondary};
 `
 
 // Side-by-side differ columns (4/5, 3/5, 2/5). Collapses on narrow viewports.
@@ -611,10 +613,10 @@ const ChipRow = styled.div`
 const Chip = styled.span<{ $highlight: boolean }>`
   padding: ${tokens.spacing.xs} ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
-  font-size: ${tokens.font.size.sm};
-  font-weight: ${tokens.font.weight.medium};
-  border: 1px solid
-    ${({ $highlight }) => ($highlight ? tokens.color.status.success.fg : tokens.color.border)};
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  border: ${({ $highlight }) =>
+    $highlight ? 'none' : `1px solid ${tokens.color.border}`};
   background: ${({ $highlight }) =>
     $highlight ? tokens.color.status.success.bg : tokens.color.surfaceAlt};
   color: ${({ $highlight }) =>
