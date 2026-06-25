@@ -39,16 +39,11 @@ export function DashboardValuesCard() {
             </EditLink>
           </Header>
           <Divider />
-          <ValuesList>
+          <ChipRow>
             {words.map((id) => (
-              <ValueRow key={id}>
-                <Marker aria-hidden="true">
-                  <Dot />
-                </Marker>
-                <ValueLabel>{labelOf(id)}</ValueLabel>
-              </ValueRow>
+              <Chip key={id}>{labelOf(id)}</Chip>
             ))}
-          </ValuesList>
+          </ChipRow>
         </Card>
         <EditSelectionModal open={editOpen} onClose={() => setEditOpen(false)} />
       </>
@@ -176,50 +171,22 @@ const Divider = styled.div`
   background: ${tokens.color.borderLight};
 `
 
-const ValuesList = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  width: 100%;
+/* Values render as light-blue chips (Figma 5899:6474 / 5899:6811) — matching the
+   value chips used elsewhere (own-profile, delegate card), not a list rail. */
+const ChipRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.md};
+  flex-wrap: wrap;
+  gap: ${tokens.spacing.sm};
 `
 
-const ValueRow = styled.li`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-`
-
-/* Pill marker mirrors the Figma list rail; a neutral dot replaces the rank
-   number / category icon, since the values are 5 free-form words from a pool
-   (no ranking, no fixed-category iconography). */
-const Marker = styled.span`
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+const Chip = styled.span`
+  padding: ${tokens.spacing.xs} ${tokens.spacing.md};
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.lightBlue};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
-
-const Dot = styled.span`
-  width: 6px;
-  height: 6px;
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.blue};
-`
-
-const ValueLabel = styled.span`
-  flex: 1;
-  min-width: 0;
-  font-size: ${tokens.font.size.lg};
+  color: ${tokens.color.blue};
+  font-size: ${tokens.font.size.base};
   font-weight: ${tokens.font.weight.medium};
-  line-height: 1.56;
-  color: ${tokens.color.darkBlue};
+  line-height: 20px;
 `
 
 const EditLink = styled.button`
