@@ -32,18 +32,20 @@ export function DashboardValuesCard() {
     return (
       <>
         <Card>
-          <Header>
+          <HeaderStrip>
             <CardTitle>Values</CardTitle>
             <EditLink type="button" onClick={() => setEditOpen(true)}>
               Edit values →
             </EditLink>
-          </Header>
+          </HeaderStrip>
           <Divider />
-          <ChipRow>
-            {words.map((id) => (
-              <Chip key={id}>{labelOf(id)}</Chip>
-            ))}
-          </ChipRow>
+          <Body>
+            <ChipRow>
+              {words.map((id) => (
+                <Chip key={id}>{labelOf(id)}</Chip>
+              ))}
+            </ChipRow>
+          </Body>
         </Card>
         <EditSelectionModal open={editOpen} onClose={() => setEditOpen(false)} />
       </>
@@ -90,18 +92,25 @@ const Card = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.md};
-  padding: ${tokens.spacing.lg};
+  overflow: hidden;
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.borderLight};
-  border-radius: ${tokens.radius.md};
+  border-radius: 12px;
 `
 
-const Header = styled.div`
+// Grey header strip (Figma 5899-6474): "Values" + "Edit values →" on surfaceAlt,
+// divider, then the chips on a white body.
+const HeaderStrip = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: ${tokens.spacing.sm};
+  padding: ${tokens.spacing.md} ${tokens.spacing.lg};
+  background: ${tokens.color.surfaceAlt};
+`
+
+const Body = styled.div`
+  padding: ${tokens.spacing.lg};
 `
 
 const CardTitle = styled.h3`
@@ -184,8 +193,8 @@ const Chip = styled.span`
   border-radius: ${tokens.radius.pill};
   background: ${tokens.color.lightBlue};
   color: ${tokens.color.blue};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.medium};
+  font-size: ${tokens.font.size.sm};
+  font-weight: ${tokens.font.weight.bold};
   line-height: 20px;
 `
 
