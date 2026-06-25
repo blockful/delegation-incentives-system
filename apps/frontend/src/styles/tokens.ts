@@ -16,7 +16,7 @@ export const tokens = {
 
     // Extended
     green: '#199c75',
-    greenDeep: '#158463', // Figma color/light/green/500 — deeper green for the dashboard reward number
+    greenDeep: '#158463', 
 
     magenta: '#F53293',
     yellow: '#FFF72F',
