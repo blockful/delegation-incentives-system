@@ -42,75 +42,44 @@ export interface MatchLevel {
 }
 
 /**
+ * One match band: an inclusive lower %-bound plus the visuals for that band.
+ * Split out as data so {@link matchLevel} is a table lookup, not a 5-arm ladder.
+ */
+interface MatchBand {
+  /** Inclusive lower bound on ringPercent; matchLevel takes the first band met. */
+  min: number
+  level: Omit<MatchLevel, 'ringPercent'>
+}
+
+/**
+ * Match bands, highest first — read top-to-bottom as the Figma set.
+ *
+ * The two groupings differ ON PURPOSE: `tier` / `pillLabel` / `showStar` bucket
+ * {100, 80} together as Strong, but `ringColor` / `differLayout` give 100 its
+ * own band (green, nothing differs) while 80 joins 60/40 (blue, side-by-side).
+ * Keep these as explicit rows — do NOT collapse to a single tier-keyed map, or
+ * the 100-vs-80 distinction is lost.
+ */
+const MATCH_BANDS: readonly MatchBand[] = [
+  { min: 100, level: { ringColor: tokens.color.green, tier: 'strong', pillLabel: 'Strong match', showStar: true, differLayout: 'none' } },
+  { min: 80, level: { ringColor: tokens.color.blue, tier: 'strong', pillLabel: 'Strong match', showStar: true, differLayout: 'side-by-side' } },
+  { min: 40, level: { ringColor: tokens.color.blue, tier: 'partial', pillLabel: 'Partial match', showStar: false, differLayout: 'side-by-side' } },
+  { min: 20, level: { ringColor: tokens.color.textMuted, tier: 'weak', pillLabel: 'Weak match', showStar: false, differLayout: 'stacked' } },
+  { min: 0, level: { ringColor: tokens.color.border, tier: 'none', pillLabel: 'No shared values', showStar: false, differLayout: 'delegate-only' } },
+]
+
+/**
  * Map a shared-word count (0–SELECTION_COUNT) to the card's match visuals.
  *
- * Ring colour: 100 green · 80/60 blue · 20 muted · 0 grey.
- * Bucket:      ≥80 Strong (★) · 40–60 Partial · 20 Weak · 0 None.
- *
  * `sharedCount` is clamped into [0, SELECTION_COUNT] defensively so an
- * unexpected value never produces a percentage outside 0–100.
+ * unexpected value never produces a percentage outside 0–100; the `min: 0` band
+ * guarantees a match.
  */
 export function matchLevel(sharedCount: number): MatchLevel {
   const shared = Math.max(0, Math.min(SELECTION_COUNT, Math.trunc(sharedCount)))
   const ringPercent = Math.round((shared / SELECTION_COUNT) * 100)
-
-  // 5/5 — perfect overlap.
-  if (ringPercent >= 100) {
-    return {
-      ringPercent,
-      ringColor: tokens.color.green,
-      tier: 'strong',
-      pillLabel: 'Strong match',
-      showStar: true,
-      differLayout: 'none',
-    }
-  }
-
-  // 4/5 — still Strong, but now there are differing words to show.
-  if (ringPercent >= 80) {
-    return {
-      ringPercent,
-      ringColor: tokens.color.blue,
-      tier: 'strong',
-      pillLabel: 'Strong match',
-      showStar: true,
-      differLayout: 'side-by-side',
-    }
-  }
-
-  // 3/5 and 2/5 — Partial. Same side-by-side differ layout.
-  if (ringPercent >= 40) {
-    return {
-      ringPercent,
-      ringColor: tokens.color.blue,
-      tier: 'partial',
-      pillLabel: 'Partial match',
-      showStar: false,
-      differLayout: 'side-by-side',
-    }
-  }
-
-  // 1/5 — Weak. The four non-shared words stack ("the other 4").
-  if (ringPercent >= 20) {
-    return {
-      ringPercent,
-      ringColor: tokens.color.textMuted,
-      tier: 'weak',
-      pillLabel: 'Weak match',
-      showStar: false,
-      differLayout: 'stacked',
-    }
-  }
-
-  // 0/5 — no shared values; show what the delegate stands for.
-  return {
-    ringPercent,
-    ringColor: tokens.color.border,
-    tier: 'none',
-    pillLabel: 'No shared values',
-    showStar: false,
-    differLayout: 'delegate-only',
-  }
+  const { level } = MATCH_BANDS.find((band) => ringPercent >= band.min)!
+  return { ringPercent, ...level }
 }
 
 /** The 7 mutually exclusive states the card can render. */
