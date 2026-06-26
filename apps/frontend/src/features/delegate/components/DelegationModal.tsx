@@ -224,6 +224,7 @@ export function DelegationModal({
     <Backdrop role="presentation" onClick={handleClose}>
       <Dialog
         ref={dialogRef}
+        $success={isSuccessState}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
@@ -234,9 +235,13 @@ export function DelegationModal({
         {isSuccessState ? (
           <>
             <CloseRow>
-              <CloseButton type="button" aria-label="Close" onClick={handleClose}>
-                ×
-              </CloseButton>
+              <IconCloseButton
+                type="button"
+                aria-label="Close"
+                onClick={handleClose}
+              >
+                <XIcon />
+              </IconCloseButton>
             </CloseRow>
             <ShareCardBlock
               title="Your ENS is now delegated"
@@ -382,6 +387,24 @@ function DotIcon() {
   )
 }
 
+function XIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <line x1="5" y1="5" x2="19" y2="19" />
+      <line x1="19" y1="5" x2="5" y2="19" />
+    </svg>
+  )
+}
+
 const spin = keyframes`
   to { transform: rotate(360deg); }
 `
@@ -397,16 +420,22 @@ const Backdrop = styled.div`
   padding: ${tokens.spacing.lg};
 `
 
-const Dialog = styled.div`
+const Dialog = styled.div<{ $success?: boolean }>`
   background: ${tokens.color.surface};
-  box-shadow: ${tokens.shadow.lg};
-  border-radius: ${tokens.radius.lg};
-  max-width: 480px;
+  /* Success/share step: wider card, hairline border + subtle drop, tighter
+     padding and a 20px radius. Other steps keep the original chrome. */
+  box-shadow: ${({ $success }) =>
+    $success ? tokens.shadow.sm : tokens.shadow.lg};
+  border: ${({ $success }) =>
+    $success ? `1px solid ${tokens.color.border}` : 'none'};
+  border-radius: ${({ $success }) => ($success ? '20px' : tokens.radius.lg)};
+  max-width: ${({ $success }) => ($success ? tokens.maxWidth.md : '480px')};
   width: 100%;
-  padding: ${tokens.spacing['2xl']};
+  padding: ${({ $success }) =>
+    $success ? tokens.spacing.lg : tokens.spacing['2xl']};
   display: flex;
   flex-direction: column;
-  gap: ${tokens.spacing.lg};
+  gap: ${({ $success }) => ($success ? tokens.spacing.xl : tokens.spacing.lg)};
 
   &:focus {
     outline: none;
@@ -441,6 +470,27 @@ const CloseButton = styled.button`
   &:hover {
     background: ${tokens.color.bgSubtle};
     color: ${tokens.color.darkBlue};
+  }
+`
+
+// Circular icon close button for the success/share step: 28px, white, hairline
+// border, centered X. The plain-glyph CloseButton stays on the other steps.
+const IconCloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: ${tokens.color.surface};
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius.pill};
+  color: ${tokens.color.textSecondary};
+  cursor: pointer;
+  transition: background ${tokens.transition.fast};
+
+  &:hover {
+    background: ${tokens.color.bgSubtle};
   }
 `
 

@@ -38,12 +38,15 @@ export function ShareCardBlock({ title, body, tweetText, shareUrl, ogImageUrl }:
 
   return (
     <Content>
-      <Badge aria-hidden>
-        <FontAwesomeIcon icon={faCheck} />
-      </Badge>
-
-      <Heading>{title}</Heading>
-      <Body>{body}</Body>
+      <Header>
+        <Badge aria-hidden>
+          <FontAwesomeIcon icon={faCheck} />
+        </Badge>
+        <Headings>
+          <Heading>{title}</Heading>
+          <Body>{body}</Body>
+        </Headings>
+      </Header>
 
       <PostCard>
         <PostLabel>Pre-filled post</PostLabel>
@@ -74,6 +77,23 @@ const Content = styled.div`
   flex-direction: column;
   align-items: center;
   gap: ${tokens.spacing.xl};
+  width: 100%;
+`
+
+// Design groups the badge + headings tightly (16 badge→title, 4 title→body),
+// set apart from the 20 between the cluster, post card and CTA (the Content gap).
+const Header = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${tokens.spacing.lg};
+  width: 100%;
+`
+
+const Headings = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
   width: 100%;
 `
 
@@ -137,6 +157,7 @@ const TweetText = styled.p`
 const CardPreview = styled.div`
   width: 100%;
   aspect-ratio: 1120 / 630;
+  border: 1px solid ${tokens.color.border};
   border-radius: 12px;
   overflow: hidden;
   /* Subtle skeleton while the OG image loads (and a graceful empty state if it
