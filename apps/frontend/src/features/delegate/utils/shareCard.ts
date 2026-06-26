@@ -24,6 +24,17 @@ export function buildVoterShareUrl({ address, ensName }: ShareTarget): string {
 }
 
 /**
+ * Post-delegation share URL for a holder. Crawlers get the holder card OG tags
+ * (see api/holder-html.ts); humans are redirected to the landing page by the
+ * SPA route (the holder isn't necessarily a delegate, so there's no profile to
+ * show). Prefers the ENS name over the raw address.
+ */
+export function buildHolderShareUrl({ address, ensName }: ShareTarget): string {
+  const id = ensName ?? address
+  return `${safeOrigin()}/share/holder/${encodeURIComponent(id)}`
+}
+
+/**
  * The OG card image endpoint — the exact same image the link unfurl renders,
  * reused for the in-app preview. Passing `name` lets the renderer fetch the
  * ENS avatar; otherwise it falls back to the address + initials.

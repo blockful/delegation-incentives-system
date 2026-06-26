@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildVoterShareUrl, buildVoterOgImageUrl } from './shareCard'
+import { buildVoterShareUrl, buildHolderShareUrl, buildVoterOgImageUrl } from './shareCard'
 
 const ORIGIN = window.location.origin
 
@@ -17,6 +17,23 @@ describe('buildVoterShareUrl', () => {
     expect(
       buildVoterShareUrl({ address: '0xABC0000000000000000000000000000000000001' }),
     ).toBe(`${ORIGIN}/voters/0xABC0000000000000000000000000000000000001`)
+  })
+})
+
+describe('buildHolderShareUrl', () => {
+  it('builds the holder share path, preferring the ENS name', () => {
+    expect(
+      buildHolderShareUrl({
+        address: '0xabc0000000000000000000000000000000000001',
+        ensName: 'nick.eth',
+      }),
+    ).toBe(`${ORIGIN}/share/holder/nick.eth`)
+  })
+
+  it('falls back to the address when there is no ENS name', () => {
+    expect(
+      buildHolderShareUrl({ address: '0xABC0000000000000000000000000000000000001' }),
+    ).toBe(`${ORIGIN}/share/holder/0xABC0000000000000000000000000000000000001`)
   })
 })
 

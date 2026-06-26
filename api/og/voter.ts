@@ -13,12 +13,18 @@ const WHITE = '#ffffff'
 const BORDER = '#e8e8e8'
 
 // Heading + CTA copy per card variant. The two personal cards share an
-// identical layout and differ only in these two strings. `holder` is added by
-// the stacked holder-share PR.
-const VARIANT_COPY: Record<'delegate', { heading: string; cta: string }> = {
+// identical layout and differ only in these strings and the headline size
+// (the holder line is longer, so it steps down to stay on one line).
+const VARIANT_COPY: Record<'delegate' | 'holder', { heading: string; cta: string; headingFontSize: number }> = {
   delegate: {
     heading: 'I’m an active voter!',
     cta: 'Check my profile, delegate and earn rewards',
+    headingFontSize: 92,
+  },
+  holder: {
+    heading: 'I just delegated my ENS!',
+    cta: 'Join me, delegate and earn rewards',
+    headingFontSize: 80,
   },
 }
 
@@ -212,6 +218,7 @@ function ensMarkWhite(width: number, height: number): ReactElement {
 interface WrappedCardProps {
   heading: string
   cta: string
+  headingFontSize: number
   displayName: string
   initials: string
   avatarUrl: string | null
@@ -223,6 +230,7 @@ interface WrappedCardProps {
 function renderWrappedCard({
   heading,
   cta,
+  headingFontSize,
   displayName,
   initials,
   avatarUrl,
@@ -248,7 +256,7 @@ function renderWrappedCard({
       'span',
       {
         style: {
-          fontSize: 92,
+          fontSize: headingFontSize,
           fontWeight: 700,
           color: ENS_BLUE,
           lineHeight: 1.1,
@@ -617,7 +625,7 @@ export default async function handler(request: Request) {
     : (rawName && isAddress(rawName) ? rawName : null)
 
   // Unknown variants fall back to the delegate card so a stale link never 500s.
-  const copy = VARIANT_COPY[variant as 'delegate'] ?? VARIANT_COPY.delegate
+  const copy = VARIANT_COPY[variant as 'delegate' | 'holder'] ?? VARIANT_COPY.delegate
 
   const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
   const initials = name
@@ -662,6 +670,7 @@ export default async function handler(request: Request) {
     renderWrappedCard({
       heading: copy.heading,
       cta: copy.cta,
+      headingFontSize: copy.headingFontSize,
       displayName,
       initials,
       avatarUrl,

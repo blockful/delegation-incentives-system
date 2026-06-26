@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactElement, type ReactNode } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import {
   DashboardPageSkeleton,
@@ -36,6 +36,9 @@ export function Router() {
         <Route path="rounds/:roundNumber" element={<LazyPage><RoundDetailPage /></LazyPage>} />
         <Route path="rounds" element={<LazyPage fallback={<RoundsPageSkeleton />}><RoundsPage /></LazyPage>} />
         <Route path="transparency" element={<LazyPage fallback={<TransparencyPageSkeleton />}><TransparencyPage /></LazyPage>} />
+        {/* Holder share links are crawler-only (OG tags via api/holder-html);
+            humans who open one land on the campaign. */}
+        <Route path="share/holder/:address" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   )
