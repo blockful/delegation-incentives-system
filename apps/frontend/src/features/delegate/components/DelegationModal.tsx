@@ -3,11 +3,13 @@ import { createPortal } from 'react-dom'
 import styled, { keyframes } from 'styled-components'
 import { formatUnits } from 'viem'
 import { mainnet } from 'viem/chains'
-import { useAccount, useReadContract, useWalletClient } from 'wagmi'
+import { useAccount, useEnsName, useReadContract, useWalletClient } from 'wagmi'
 
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { tokens } from '@/styles'
 import { formatEnsAmount } from '@/utils/format'
+import { ShareCardBlock } from './ShareCardBlock'
+import { buildHolderShareUrl, buildVoterOgImageUrl } from '../utils/shareCard'
 
 import {
   useGaslessEligibility,
@@ -32,6 +34,14 @@ const ERC20VotesAbi = [
 
 type DelegationStep = 'waiting-signature' | 'pending-tx' | 'success' | 'error'
 
+/**
+ * Pre-filled X copy for a holder who just delegated (first person). Compliant:
+ * no APR / yield / price; "free, gasless", "tokens never leave my wallet",
+ * "rewards from the DAO". The trailing colon leads into the appended share URL.
+ */
+export const HOLDER_TWEET_TEXT =
+  "I just delegated my ENS to keep governance active. It's free, gasless, and my tokens never leave my wallet. Delegate yours and earn rewards from the DAO for strengthening ENS:"
+
 export interface DelegationModalProps {
   open: boolean
   onClose: () => void
@@ -53,6 +63,7 @@ export function DelegationModal({
 }: DelegationModalProps) {
   const titleId = useId()
   const { address } = useAccount()
+  const { data: holderEnsName } = useEnsName({ address, chainId: mainnet.id })
   const { data: walletClient } = useWalletClient({ chainId: 1 })
 
   const [step, setStep] = useState<DelegationStep>('waiting-signature')
@@ -180,6 +191,23 @@ export function DelegationModal({
     }
   }, [open, mounted])
 
+  // The holder (whoever just delegated) is the connected wallet. Their card +
+  // share URL identify them, preferring their ENS name when it resolves.
+  const holderShareUrl = buildHolderShareUrl({ address: address ?? '', ensName: holderEnsName })
+  const holderOgImageUrl = buildVoterOgImageUrl({
+    address: address ?? '',
+    ensName: holderEnsName,
+    variant: 'holder',
+  })
+
+  // Pre-warm the holder share URL so the OG card is cached before the X crawler
+  // fetches it. (The preview <img> in the success state also warms the image
+  // render itself.)
+  useEffect(() => {
+    if (step !== 'success' || !address) return
+    void fetch(holderShareUrl).catch(() => {})
+  }, [step, address, holderShareUrl])
+
   if (!open || !mounted) return null
 
   const step1Done =
@@ -199,94 +227,103 @@ export function DelegationModal({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-label={isSuccessState ? 'Your ENS is now delegated' : undefined}
+        aria-labelledby={isSuccessState ? undefined : titleId}
         onClick={(e) => e.stopPropagation()}
       >
-        <TitleBar>
-          <Title id={titleId}>Delegate voting power</Title>
-          <CloseButton
-            type="button"
-            aria-label="Close"
-            onClick={handleClose}
-          >
-            ×
-          </CloseButton>
-        </TitleBar>
+        {isSuccessState ? (
+          <>
+            <CloseRow>
+              <CloseButton type="button" aria-label="Close" onClick={handleClose}>
+                ×
+              </CloseButton>
+            </CloseRow>
+            <ShareCardBlock
+              title="Your ENS is now delegated"
+              body="Share your card to bring more ENS into active governance."
+              tweetText={HOLDER_TWEET_TEXT}
+              shareUrl={holderShareUrl}
+              ogImageUrl={holderOgImageUrl}
+            />
+            {txHash && (
+              <TxLink
+                href={`https://etherscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View transaction on Etherscan
+              </TxLink>
+            )}
+          </>
+        ) : (
+          <>
+            <TitleBar>
+              <Title id={titleId}>Delegate voting power</Title>
+              <CloseButton
+                type="button"
+                aria-label="Close"
+                onClick={handleClose}
+              >
+                ×
+              </CloseButton>
+            </TitleBar>
 
-        <Context>
-          <Row>
-            <Label>Your voting power</Label>
-            <Value>{votingPowerLabel}</Value>
-          </Row>
-          <Row>
-            <Label>Delegating to</Label>
-            <IdentityWrap>
-              <AddressIdentity
-                address={delegateAddress}
-                ensName={delegateEnsName ?? undefined}
-                avatarUrl={delegateAvatarUrl ?? undefined}
-                showAvatar
-                avatarSize={20}
-                size="sm"
-                secondaryAddress="never"
+            <Context>
+              <Row>
+                <Label>Your voting power</Label>
+                <Value>{votingPowerLabel}</Value>
+              </Row>
+              <Row>
+                <Label>Delegating to</Label>
+                <IdentityWrap>
+                  <AddressIdentity
+                    address={delegateAddress}
+                    ensName={delegateEnsName ?? undefined}
+                    avatarUrl={delegateAvatarUrl ?? undefined}
+                    showAvatar
+                    avatarSize={20}
+                    size="sm"
+                    secondaryAddress="never"
+                  />
+                </IdentityWrap>
+              </Row>
+              {isGaslessEligible && delegationRemaining !== null && (
+                <FreeAlert>
+                  {delegationRemaining === 1
+                    ? 'This delegation is free! Last one this month — your free allowance resets next month.'
+                    : `This delegation is free! You'll still have ${delegationRemaining - 1} left to use this month.`}
+                </FreeAlert>
+              )}
+            </Context>
+
+            <Stepper>
+              <StepRow
+                done={step1Done}
+                active={step1Active}
+                label="Confirm your delegation in your wallet"
+                error={isErrorState && !step1Done ? error : undefined}
               />
-            </IdentityWrap>
-          </Row>
-          {isGaslessEligible && delegationRemaining !== null && (
-            <FreeAlert>
-              {delegationRemaining === 1
-                ? 'This delegation is free! Last one this month — your free allowance resets next month.'
-                : `This delegation is free! You'll still have ${delegationRemaining - 1} left to use this month.`}
-            </FreeAlert>
-          )}
-        </Context>
+              <Connector />
+              <StepRow
+                done={step2Done}
+                active={step2Active}
+                label="Wait for the delegation to complete"
+                error={isErrorState && step1Done ? error : undefined}
+              />
+            </Stepper>
 
-        <Stepper>
-          <StepRow
-            done={step1Done}
-            active={step1Active}
-            label="Confirm your delegation in your wallet"
-            error={isErrorState && !step1Done ? error : undefined}
-          />
-          <Connector />
-          <StepRow
-            done={step2Done}
-            active={step2Active}
-            label="Wait for the delegation to complete"
-            error={isErrorState && step1Done ? error : undefined}
-          />
-        </Stepper>
-
-        {isSuccessState && txHash && (
-          <SuccessBox>
-            <SuccessMessage>Delegation successful.</SuccessMessage>
-            <TxLink
-              href={`https://etherscan.io/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View transaction on Etherscan
-            </TxLink>
-          </SuccessBox>
+            {isErrorState && (
+              <Actions>
+                <PrimaryButton type="button" onClick={handleDelegate}>
+                  Retry
+                </PrimaryButton>
+                <SecondaryButton type="button" onClick={handleClose}>
+                  Close
+                </SecondaryButton>
+              </Actions>
+            )}
+          </>
         )}
-
-        <Actions>
-          {isErrorState && (
-            <>
-              <PrimaryButton type="button" onClick={handleDelegate}>
-                Retry
-              </PrimaryButton>
-              <SecondaryButton type="button" onClick={handleClose}>
-                Close
-              </SecondaryButton>
-            </>
-          )}
-          {isSuccessState && (
-            <PrimaryButton type="button" onClick={handleClose}>
-              Close
-            </PrimaryButton>
-          )}
-        </Actions>
       </Dialog>
     </Backdrop>
   )
@@ -526,20 +563,14 @@ const StepError = styled.p`
   font-size: ${tokens.font.size.sm};
 `
 
-const SuccessBox = styled.div`
+const CloseRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${tokens.spacing.xs};
-`
-
-const SuccessMessage = styled.p`
-  margin: 0;
-  color: ${tokens.color.positiveEmphasis};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.semibold};
+  justify-content: flex-end;
+  width: 100%;
 `
 
 const TxLink = styled.a`
+  align-self: center;
   font-size: ${tokens.font.size.sm};
   color: ${tokens.color.accent};
   text-decoration: underline;

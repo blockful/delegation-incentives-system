@@ -131,6 +131,8 @@ function installRelayerHandlers(state: RelayerHandlerState) {
       }
       return state.relayResponse()
     }),
+    // The success state pre-warms the holder share URL (fire-and-forget).
+    http.get('/share/holder/:address', () => new HttpResponse(null, { status: 200 })),
   )
 }
 
@@ -185,7 +187,7 @@ describe('DelegationModal', () => {
     vi.clearAllMocks()
   })
 
-  it('eligible + relayer 200: stepper progresses to success and shows Etherscan link', async () => {
+  it('eligible + relayer 200: completes into the post-delegation share state', async () => {
     const { client, asWalletClient } = buildWalletFake()
     client.readContract.mockImplementation(({ functionName }) => {
       if (functionName === 'name') return Promise.resolve('ENS')
@@ -210,17 +212,12 @@ describe('DelegationModal', () => {
       />,
     )
 
+    // On success the stepper is replaced by the holder share card.
     await waitFor(() => {
-      expect(collectVisibleState()).toEqual({
-        step1Done: true,
-        step2Done: true,
-        errorVisible: false,
-        successVisible: true,
-      })
+      expect(screen.getByText('Your ENS is now delegated')).toBeInTheDocument()
     })
-
     expect(
-      screen.getByText(/This delegation is free/i),
+      screen.getByRole('button', { name: /share on x/i }),
     ).toBeInTheDocument()
 
     const txLink = screen.getByRole('link', {
@@ -230,6 +227,7 @@ describe('DelegationModal', () => {
       'href',
       `https://etherscan.io/tx/${RELAY_TX_HASH}`,
     )
+    // Relayer was used → the gasless (free) path.
     expect(state.relayCalls).toBe(1)
   })
 
@@ -341,12 +339,7 @@ describe('DelegationModal', () => {
     )
 
     await waitFor(() => {
-      expect(collectVisibleState()).toEqual({
-        step1Done: true,
-        step2Done: true,
-        errorVisible: false,
-        successVisible: true,
-      })
+      expect(screen.getByText('Your ENS is now delegated')).toBeInTheDocument()
     })
 
     expect(
