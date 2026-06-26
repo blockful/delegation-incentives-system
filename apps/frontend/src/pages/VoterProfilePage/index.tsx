@@ -12,7 +12,6 @@ import {
   faCircleXmark,
   faClock,
   faCopy,
-  faShareNodes,
   faSquarePollVertical,
   faUsers,
 } from '@fortawesome/free-solid-svg-icons'
@@ -30,6 +29,8 @@ import { DelegateValuesCard } from '@/features/matchmaking'
 import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { DelegationEligibilityModal } from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
+import { DelegateShareModal } from '@/features/delegate/components/DelegateShareModal'
+import { buildVoterShareUrl } from '@/features/delegate/utils/shareCard'
 import {
   useGaslessEligibility,
   useRelayerBalance,
@@ -737,8 +738,38 @@ export function VoterProfilePage() {
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const [modalOpen, setModalOpen] = useState(false)
   const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const connectedAddress =
     walletState.status !== 'disconnected' ? walletState.address : undefined
+
+  // True when the connected wallet is viewing its own delegate profile.
+  const isOwnProfile =
+    !!connectedAddress &&
+    !!resolvedAddr &&
+    connectedAddress.toLowerCase() === resolvedAddr.toLowerCase()
+
+  // First-visit nudge: the one time a delegate lands on their own profile, pop
+  // the share modal so they spread the word. Keyed by address in localStorage
+  // so it fires exactly once per delegate per browser. Waits for resolvedAddr,
+  // so it never flashes before ENS resolution.
+  useEffect(() => {
+    if (!isOwnProfile || !resolvedAddr) return
+    const key = `ens-dis:delegate-share-seen:${resolvedAddr.toLowerCase()}`
+    let seen = false
+    try {
+      seen = localStorage.getItem(key) === '1'
+    } catch {
+      // localStorage blocked (private mode): treat as seen so we don't nag.
+      seen = true
+    }
+    if (seen) return
+    setShareModalOpen(true)
+    try {
+      localStorage.setItem(key, '1')
+    } catch {
+      // ignore write failures
+    }
+  }, [isOwnProfile, resolvedAddr])
   // Single source of truth — the relayer's own verdict, never a front-side rule.
   const {
     isEligible: gaslessEligible,
@@ -803,12 +834,18 @@ export function VoterProfilePage() {
 
   const handleShareOnTwitter = () => {
     if (!voter) return
-    const handle = twitter ? `@${twitter.replace(/^@/, '')}` : (ensName ?? truncateAddress(voter.address))
-    const votedCount = voter.last10ProposalsVoted.filter(Boolean).length
-    const totalProposals = voter.last10ProposalsVoted.length || 10
-    const text = `Check out ${handle} on the ENS Delegation Incentives Program — ${votedCount}/${totalProposals} recent proposals voted.`
-    const url = window.location.href
-    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+    // Own profile → open the rich share modal (preview + pre-filled post).
+    if (isOwnProfile) {
+      setShareModalOpen(true)
+      return
+    }
+    // Visitor sharing this delegate (third person). x.com (the twitter.com
+    // intent has an Oct-2025 mobile login bug), no APR language, no dash
+    // punctuation. The trailing colon leads into the appended profile URL.
+    const handle = ensName ?? truncateAddress(voter.address)
+    const text = `${handle} is an active voter on ENS governance. Delegate your ENS to them to keep the DAO strong. It's free, gasless, and you earn rewards from the DAO for strengthening ENS:`
+    const url = buildVoterShareUrl({ address: voter.address, ensName })
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
     window.open(intent, '_blank', 'noopener,noreferrer')
   }
 
@@ -936,11 +973,11 @@ export function VoterProfilePage() {
             )}
             <Button
               colorStyle="blueSecondary"
-              prefix={<FontAwesomeIcon icon={faShareNodes} />}
+              prefix={<FontAwesomeIcon icon={faXTwitter} />}
               onClick={handleShareOnTwitter}
               width="auto"
             >
-              Share profile
+              Share on X
             </Button>
           </CtaRow>
         </HeaderText>
@@ -1059,6 +1096,12 @@ export function VoterProfilePage() {
         tokenAddress={contracts.ensToken}
       />
     )}
+    <DelegateShareModal
+      open={shareModalOpen}
+      onClose={() => setShareModalOpen(false)}
+      address={resolvedAddr}
+      ensName={ensName}
+    />
     </>
   )
 }
