@@ -59,25 +59,6 @@ function formatVotingPower(vpWei: string): string {
   return `${Math.round(ens)}`
 }
 
-/**
- * Humanize a word id for the compact weak-match chips (e.g.
- * `public_goods_funding` → `Public Goods Funding`, `ens_adoption` → `ENS
- * Adoption`). The list card doesn't subscribe to the word pool — keeping these
- * 12 cards free of an extra async dependency — so we derive a readable label
- * from the id itself: title-case each token, with `ens`/`ensv2` special-cased.
- * Lossy by design (it can't recover punctuation like `&`); the canonical labels
- * are used wherever the pool is loaded (selection modal, delegate card).
- */
-function humanizeWordId(id: string): string {
-  const parts = id.split(/[_-]+/).filter(Boolean)
-  if (parts.length === 0) return id
-  return parts
-    .map((p) =>
-      p === 'ens' ? 'ENS' : p === 'ensv2' ? 'ENSv2' : p.charAt(0).toUpperCase() + p.slice(1),
-    )
-    .join(' ')
-}
-
 function formatActiveSince(iso: string | null): string {
   if (!iso) return '—'
   const date = new Date(iso)
@@ -105,6 +86,8 @@ const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
       $tone === 'muted' ? tokens.color.border : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* Delegates who didn't rank are de-emphasised at 80% opacity. */
+  opacity: ${({ $tone }) => ($tone === 'muted' ? 0.8 : 1)};
   transition: border-color ${tokens.transition.base},
     background ${tokens.transition.base};
 
@@ -174,32 +157,6 @@ const MatchSubtitle = styled.p<{ $variant: MatchVariant; $color: string }>`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-`
-
-/**
- * Weak-match "differ list": the words only this delegate picked, shown as small
- * wrapped chips so the holder sees *where* they diverge. Stacked under the
- * subtitle; only rendered for the weak variant (per the Figma set).
- */
-const DifferList = styled.ul`
-  list-style: none;
-  margin: ${tokens.spacing.xs} 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${tokens.spacing.xs};
-`
-
-const DifferChip = styled.li`
-  padding: 1px ${tokens.spacing.sm};
-  border-radius: ${tokens.radius.pill};
-  background: ${tokens.color.surfaceAlt};
-  border: 1px solid ${tokens.color.borderLight};
-  font-size: ${tokens.font.size.xs};
-  font-weight: ${tokens.font.weight.medium};
-  color: ${tokens.color.darkGray};
-  line-height: 16px;
-  white-space: nowrap;
 `
 
 const DelegatedTag = styled.span`
@@ -403,9 +360,6 @@ export function VoterCard({
     viewerHasSelected,
     delegateHasRanked: voter.words != null,
   })
-  // The weak variant shows the delegate's diverging picks as small chips.
-  const differWords =
-    matchDisplay.variant === 'weak' ? (match?.bUnique ?? []) : []
 
   // The Free pill mirrors the relayer: once connected it reflects the wallet's
   // actual eligibility; disconnected it shows the program-level promise (the
@@ -482,13 +436,6 @@ export function VoterCard({
                 ) : null}
                 {matchDisplay.subtitle}
               </MatchSubtitle>
-              {differWords.length > 0 && (
-                <DifferList aria-label="Words this delegate prioritises">
-                  {differWords.map((id) => (
-                    <DifferChip key={id}>{humanizeWordId(id)}</DifferChip>
-                  ))}
-                </DifferList>
-              )}
             </NameStack>
           </IdentityRow>
 

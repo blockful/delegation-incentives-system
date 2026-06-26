@@ -42,7 +42,7 @@ describe('VotersPage — unselected viewer', () => {
     await user.click(await screen.findByRole('button', { name: 'Select values' }))
     // The hero is the pitch, so the modal opens directly at Select (chips) — no re-pitch.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Decentralization' })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'Decentralization & Resilience' })).toBeInTheDocument(),
     )
   })
 })

@@ -65,7 +65,9 @@ describe('DelegateValuesCard — matrix states', () => {
     })
     await waitFor(() => expect(screen.getByText('0%')).toBeInTheDocument())
     expect(screen.getByText('No shared values')).toBeInTheDocument()
-    expect(screen.getByText(/what they stand for/i)).toBeInTheDocument()
+    // Explicit "no values in common" message + what the delegate stands for.
+    expect(screen.getByText('No values in common')).toBeInTheDocument()
+    expect(screen.getByText(/stands for/i)).toBeInTheDocument()
   })
 
   it('viewer not picked + delegate picked → locked prompt, NO delegate chips (the gate)', async () => {

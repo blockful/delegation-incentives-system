@@ -97,21 +97,23 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
             ) : (
               <WordChipGrid pool={pool} selected={selected} onToggle={toggle} max={SELECTION_COUNT} />
             )}
-            {atMax && <Hint role="status">Limit reached — deselect one to swap</Hint>}
-            <Progress>
-              <ProgressTrack
-                role="progressbar"
-                aria-label="Words selected"
-                aria-valuemin={0}
-                aria-valuemax={SELECTION_COUNT}
-                aria-valuenow={selected.length}
-              >
-                <ProgressFill style={{ transform: `scaleX(${progressFill(selected.length, SELECTION_COUNT)})` }} />
-              </ProgressTrack>
-              <Counter aria-live="polite">
-                {selected.length}/{SELECTION_COUNT}
-              </Counter>
-            </Progress>
+            <ProgressGroup>
+              {atMax && <Hint role="status">Limit reached — deselect one to swap</Hint>}
+              <Progress>
+                <ProgressTrack
+                  role="progressbar"
+                  aria-label="Words selected"
+                  aria-valuemin={0}
+                  aria-valuemax={SELECTION_COUNT}
+                  aria-valuenow={selected.length}
+                >
+                  <ProgressFill style={{ transform: `scaleX(${progressFill(selected.length, SELECTION_COUNT)})` }} />
+                </ProgressTrack>
+                <Counter aria-live="polite">
+                  {selected.length}/{SELECTION_COUNT}
+                </Counter>
+              </Progress>
+            </ProgressGroup>
             {submit.isError && <ErrorText>Couldn&apos;t save your values. Please try again.</ErrorText>}
             <Row>
               {initialStep !== 'select' && (
@@ -208,6 +210,14 @@ const Counter = styled.div`
   font-weight: ${tokens.font.weight.semibold};
   color: ${tokens.color.darkBlue};
   white-space: nowrap;
+`
+
+// Groups the "limit reached" hint tight to the progress bar: a small gap
+// between them instead of the parent Stack's larger `lg` gap.
+const ProgressGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacing.xs};
 `
 
 const Progress = styled.div`

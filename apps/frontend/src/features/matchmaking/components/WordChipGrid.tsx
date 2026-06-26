@@ -60,6 +60,23 @@ const Groups = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${tokens.spacing.lg};
+  /* Keep the chip pool inside a bounded scroll region so the modal's action
+     buttons stay pinned below it. The scrollbar is reserved + always-on as a
+     visual clue, not a macOS overlay bar that hides at rest. */
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: ${tokens.spacing.sm};
+  scrollbar-width: thin;
+  scrollbar-color: ${tokens.color.border} transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${tokens.color.border};
+    border-radius: ${tokens.radius.pill};
+  }
 `
 
 const Group = styled.div`
