@@ -17,38 +17,40 @@
 import type { PoolWord } from '@/api'
 
 /**
- * Canonical category → pool-word-ids, per the matchmaking PRD §1
- * (ClickUp 86aj53bjc). This is the SINGLE SOURCE OF TRUTH — do not re-derive
- * the buckets by intuition, and do not maintain a parallel list elsewhere.
+ * Canonical category → pool-word-ids (research-provided values, grouped by
+ * similarity). This is the SINGLE SOURCE OF TRUTH — do not re-derive the buckets
+ * by intuition, and do not maintain a parallel list elsewhere. Every id must
+ * exist in the backend WORD_POOL, and the 5-5-5-5 split is asserted by the
+ * coverage test (wordCategories.test.ts).
  */
 export const CATEGORY_WORDS = {
-  'Security & Trust': [
-    'security',
-    'user_privacy',
-    'self_custody',
-    'censorship_resistance',
-    'credible_neutrality',
+  'Growth & Adoption': [
+    'ens_adoption',
+    'user_experience',
+    'community_onboarding',
+    'education_literacy',
+    'ecosystem_integrations',
+  ],
+  'Protocol & Product': [
+    'ensv2',
+    'fair_pricing',
+    'name_ownership_rights',
+    'decentralization_resilience',
+    'service_provider_quality',
   ],
   'Funding & Treasury': [
-    'public_goods_funding',
-    'ecosystem_funding',
-    'growth_investment',
-    'treasury_growth',
+    'financial_sustainability',
+    'treasury_stewardship',
     'cost_efficiency',
+    'protocol_first_funding',
+    'public_goods_funding',
   ],
-  'Governance & Process': [
-    'decentralization',
-    'transparency',
-    'community_governance',
-    'long_term_vision',
-    'accessibility',
-  ],
-  'Technology & Ecosystem': [
-    'developer_experience',
-    'protocol_simplicity',
-    'open_source',
-    'interoperability',
-    'sustainability',
+  'Governance & Accountability': [
+    'accountability_reporting',
+    'operational_execution',
+    'governance_transparency',
+    'clear_governance_process',
+    'long_term_strategy',
   ],
 } as const satisfies Record<string, readonly string[]>
 

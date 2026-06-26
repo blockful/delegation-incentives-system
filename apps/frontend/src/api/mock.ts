@@ -349,9 +349,9 @@ const MOCK_VOTERS_BASE = [
 // the backend pool). The rest are left unselected (null) to exercise the
 // "delegate hasn't picked" state. Used only in mock mode.
 const MOCK_VOTER_SELECTIONS: (string[] | null)[] = [
-  ["security", "decentralization", "public_goods_funding", "transparency", "open_source"],
-  ["security", "decentralization", "public_goods_funding", "transparency", "credible_neutrality"],
-  ["growth_investment", "treasury_growth", "ecosystem_funding", "cost_efficiency", "interoperability"],
+  ["ens_adoption", "user_experience", "ensv2", "ecosystem_integrations", "service_provider_quality"],
+  ["financial_sustainability", "treasury_stewardship", "cost_efficiency", "protocol_first_funding", "public_goods_funding"],
+  ["accountability_reporting", "operational_execution", "governance_transparency", "clear_governance_process", "long_term_strategy"],
 ]
 
 const MOCK_VOTERS: ActiveVotersResponse = {
@@ -364,29 +364,33 @@ const MOCK_VOTERS: ActiveVotersResponse = {
   })),
 }
 
-// Mirror of the backend placeholder pool (ids must match for selections to validate).
+// Mirror of the backend pool (ids must match for selections to validate).
 const MOCK_WORD_POOL: WordPoolResponse = {
   pool: [
-    { id: 'security', label: 'Security' },
-    { id: 'cost_efficiency', label: 'Cost efficiency' },
-    { id: 'growth_investment', label: 'Growth investment' },
-    { id: 'decentralization', label: 'Decentralization' },
-    { id: 'public_goods_funding', label: 'Public goods funding' },
-    { id: 'transparency', label: 'Transparency' },
-    { id: 'credible_neutrality', label: 'Credible neutrality' },
-    { id: 'censorship_resistance', label: 'Censorship resistance' },
-    { id: 'user_privacy', label: 'User privacy' },
-    { id: 'developer_experience', label: 'Developer experience' },
-    { id: 'treasury_growth', label: 'Treasury growth' },
-    { id: 'community_governance', label: 'Community governance' },
-    { id: 'protocol_simplicity', label: 'Protocol simplicity' },
-    { id: 'long_term_vision', label: 'Long-term vision' },
-    { id: 'ecosystem_funding', label: 'Ecosystem funding' },
-    { id: 'self_custody', label: 'Self custody' },
-    { id: 'open_source', label: 'Open source' },
-    { id: 'accessibility', label: 'Accessibility' },
-    { id: 'sustainability', label: 'Sustainability' },
-    { id: 'interoperability', label: 'Interoperability' },
+    // Growth & Adoption
+    { id: 'ens_adoption', label: 'ENS Adoption' },
+    { id: 'user_experience', label: 'ENS User Experience' },
+    { id: 'community_onboarding', label: 'ENS Community Onboarding' },
+    { id: 'education_literacy', label: 'ENS Education & Literacy' },
+    { id: 'ecosystem_integrations', label: 'Ecosystem Integrations' },
+    // Protocol & Product
+    { id: 'ensv2', label: 'ENSv2' },
+    { id: 'fair_pricing', label: 'Fair ENS Pricing' },
+    { id: 'name_ownership_rights', label: 'Name Ownership Rights' },
+    { id: 'decentralization_resilience', label: 'Decentralization & Resilience' },
+    { id: 'service_provider_quality', label: 'ENS Service Provider Quality' },
+    // Funding & Treasury
+    { id: 'financial_sustainability', label: 'Financial Sustainability' },
+    { id: 'treasury_stewardship', label: 'Treasury & Endowment Stewardship' },
+    { id: 'cost_efficiency', label: 'Cost Efficiency' },
+    { id: 'protocol_first_funding', label: 'Protocol-First Funding' },
+    { id: 'public_goods_funding', label: 'Public Goods Funding' },
+    // Governance & Accountability
+    { id: 'accountability_reporting', label: 'Accountability & Reporting' },
+    { id: 'operational_execution', label: 'Operational Execution' },
+    { id: 'governance_transparency', label: 'Governance Transparency' },
+    { id: 'clear_governance_process', label: 'Clear Governance Process' },
+    { id: 'long_term_strategy', label: 'Long Term Strategy' },
   ],
 }
 

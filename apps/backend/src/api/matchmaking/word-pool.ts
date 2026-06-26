@@ -13,31 +13,39 @@ export interface PoolWord {
 }
 
 /**
- * ⚠️ Placeholder. The five mockup seeds + plausible governance values to give
- * the pool a realistic shape until BE-2 lands the AI+Zeugh list. Do NOT treat
- * these as final copy.
+ * The canonical matchmaking values (research-provided list). The `label` is the
+ * user-facing copy; the `id` is stable and stored in selections + signed in the
+ * auth message, so a label can be reworded without invalidating stored picks —
+ * but renaming an `id` orphans existing selections. The frontend groups these 20
+ * into display categories (see the frontend `wordCategories.ts`); the backend
+ * stays a flat list and knows nothing about categories. Order here is the
+ * server's canonical order (the frontend regroups it for display).
  */
 export const WORD_POOL: readonly PoolWord[] = [
-  { id: "security", label: "Security" },
-  { id: "cost_efficiency", label: "Cost efficiency" },
-  { id: "growth_investment", label: "Growth investment" },
-  { id: "decentralization", label: "Decentralization" },
-  { id: "public_goods_funding", label: "Public goods funding" },
-  { id: "transparency", label: "Transparency" },
-  { id: "credible_neutrality", label: "Credible neutrality" },
-  { id: "censorship_resistance", label: "Censorship resistance" },
-  { id: "user_privacy", label: "User privacy" },
-  { id: "developer_experience", label: "Developer experience" },
-  { id: "treasury_growth", label: "Treasury growth" },
-  { id: "community_governance", label: "Community governance" },
-  { id: "protocol_simplicity", label: "Protocol simplicity" },
-  { id: "long_term_vision", label: "Long-term vision" },
-  { id: "ecosystem_funding", label: "Ecosystem funding" },
-  { id: "self_custody", label: "Self custody" },
-  { id: "open_source", label: "Open source" },
-  { id: "accessibility", label: "Accessibility" },
-  { id: "sustainability", label: "Sustainability" },
-  { id: "interoperability", label: "Interoperability" },
+  // Growth & Adoption
+  { id: "ens_adoption", label: "ENS Adoption" },
+  { id: "user_experience", label: "ENS User Experience" },
+  { id: "community_onboarding", label: "ENS Community Onboarding" },
+  { id: "education_literacy", label: "ENS Education & Literacy" },
+  { id: "ecosystem_integrations", label: "Ecosystem Integrations" },
+  // Protocol & Product
+  { id: "ensv2", label: "ENSv2" },
+  { id: "fair_pricing", label: "Fair ENS Pricing" },
+  { id: "name_ownership_rights", label: "Name Ownership Rights" },
+  { id: "decentralization_resilience", label: "Decentralization & Resilience" },
+  { id: "service_provider_quality", label: "ENS Service Provider Quality" },
+  // Funding & Treasury
+  { id: "financial_sustainability", label: "Financial Sustainability" },
+  { id: "treasury_stewardship", label: "Treasury & Endowment Stewardship" },
+  { id: "cost_efficiency", label: "Cost Efficiency" },
+  { id: "protocol_first_funding", label: "Protocol-First Funding" },
+  { id: "public_goods_funding", label: "Public Goods Funding" },
+  // Governance & Accountability
+  { id: "accountability_reporting", label: "Accountability & Reporting" },
+  { id: "operational_execution", label: "Operational Execution" },
+  { id: "governance_transparency", label: "Governance Transparency" },
+  { id: "clear_governance_process", label: "Clear Governance Process" },
+  { id: "long_term_strategy", label: "Long Term Strategy" },
 ];
 
 const POOL_IDS: ReadonlySet<string> = new Set(WORD_POOL.map((w) => w.id));

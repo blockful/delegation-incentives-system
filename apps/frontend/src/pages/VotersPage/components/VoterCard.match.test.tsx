@@ -42,7 +42,7 @@ const weak: MatchScore = {
   strongMatch: false,
   sharedWords: ['a'],
   aUnique: ['b', 'c', 'd', 'e'],
-  bUnique: ['public_goods_funding', 'security'],
+  bUnique: ['public_goods_funding', 'ens_adoption'],
 }
 
 describe('VoterCard match variants', () => {
@@ -65,8 +65,8 @@ describe('VoterCard match variants', () => {
     expect(screen.getByText('Weak match')).toBeInTheDocument()
     expect(screen.getByText('20%')).toBeInTheDocument()
     // bUnique ids are humanized in the differ list.
-    expect(screen.getByText('Public goods funding')).toBeInTheDocument()
-    expect(screen.getByText('Security')).toBeInTheDocument()
+    expect(screen.getByText('Public Goods Funding')).toBeInTheDocument()
+    expect(screen.getByText('ENS Adoption')).toBeInTheDocument()
   })
 
   it('shows the "delegate didn\'t rank" state when the delegate is unranked', () => {

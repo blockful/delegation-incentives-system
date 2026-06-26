@@ -20,7 +20,7 @@ describe('DashboardValuesCard', () => {
       expect(screen.getByRole('heading', { name: /^values$/i })).toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: /edit values/i })).toBeInTheDocument()
-    expect(screen.getByText('Security')).toBeInTheDocument()
+    expect(screen.getByText('ENS Adoption')).toBeInTheDocument()
   })
 
   it('delegate pre-selection: missing-values nudge with the delegate body copy', async () => {

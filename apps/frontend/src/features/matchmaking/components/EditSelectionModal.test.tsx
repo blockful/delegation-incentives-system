@@ -18,15 +18,15 @@ describe('EditSelectionModal', () => {
 
     // Prefilled from the wallet's stored selection (msw fixture = 5 words).
     await waitFor(() => expect(screen.getByText('5/5')).toBeInTheDocument())
-    expect(screen.getByRole('button', { name: 'Security' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'ENS Adoption' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
 
     // Swap one word out and another in.
-    await user.click(screen.getByRole('button', { name: 'Security' }))
+    await user.click(screen.getByRole('button', { name: 'ENS Adoption' }))
     expect(screen.getByText('4/5')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Credible neutrality' }))
+    await user.click(screen.getByRole('button', { name: 'Decentralization & Resilience' }))
     expect(screen.getByText('5/5')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -38,7 +38,7 @@ describe('EditSelectionModal', () => {
     renderApp(<EditSelectionModal open onClose={() => {}} />, { walletState: CONNECTED })
 
     await waitFor(() => expect(screen.getByText('5/5')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Security' })) // → 4/5
+    await user.click(screen.getByRole('button', { name: 'ENS Adoption' })) // → 4/5
     expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
   })
 })

@@ -22,18 +22,18 @@ describe('SelectionFlow', () => {
 
     // Select: chips from the word-pool fixture
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Decentralization' })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'ENS Adoption' })).toBeInTheDocument(),
     )
 
     const submit = () => screen.getByRole('button', { name: /submit/i })
     expect(submit()).toBeDisabled()
 
     for (const label of [
-      'Security',
-      'Decentralization',
-      'Public goods funding',
-      'Transparency',
-      'Open source',
+      'ENS Adoption',
+      'ENS User Experience',
+      'Public Goods Funding',
+      'Governance Transparency',
+      'ENSv2',
     ]) {
       await user.click(screen.getByRole('button', { name: label }))
     }
@@ -56,19 +56,19 @@ describe('SelectionFlow', () => {
     })
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Decentralization' })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'ENS Adoption' })).toBeInTheDocument(),
     )
     for (const label of [
-      'Security',
-      'Decentralization',
-      'Public goods funding',
-      'Transparency',
-      'Open source',
+      'ENS Adoption',
+      'ENS User Experience',
+      'Public Goods Funding',
+      'Governance Transparency',
+      'ENSv2',
     ]) {
       await user.click(screen.getByRole('button', { name: label }))
     }
     // A 6th, unselected chip is now disabled.
-    expect(screen.getByRole('button', { name: 'Credible neutrality' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Decentralization & Resilience' })).toBeDisabled()
   })
 
   it('shows delegate-specific pitch copy', () => {

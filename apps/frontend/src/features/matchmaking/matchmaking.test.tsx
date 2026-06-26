@@ -15,7 +15,7 @@ import { useSubmitSelection } from './useSubmitSelection'
 
 const SELECTED = '0x1234567890abcdef1234567890abcdef12345678' as const
 const NO_SELECTION = '0x0000000000000000000000000000000000000000' as const
-const FIVE_WORDS = ['security', 'decentralization', 'public_goods_funding', 'transparency', 'open_source']
+const FIVE_WORDS = ['ens_adoption', 'user_experience', 'public_goods_funding', 'governance_transparency', 'ensv2']
 
 function makeWrapper(walletState: AppWalletState = { status: 'disconnected' }) {
   const client = createTestQueryClient()
@@ -51,7 +51,7 @@ describe('useWordPool', () => {
   it('loads the pool', async () => {
     const { result } = renderHook(() => useWordPool(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.pool?.map((w) => w.id)).toContain('decentralization')
+    expect(result.current.pool?.map((w) => w.id)).toContain('ens_adoption')
   })
 })
 
