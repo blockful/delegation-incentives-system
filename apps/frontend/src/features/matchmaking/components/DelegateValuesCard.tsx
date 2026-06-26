@@ -493,7 +493,10 @@ const RingInner = styled.div`
 `
 
 const RingPercent = styled.span`
-  font-size: ${tokens.font.size['3xl']};
+  /* Figma "Values card" ring — Heading/H4: Satoshi Bold 22/30 (node 5904:11657).
+     No 22px token (2xl=20 / 3xl=32), so raw to match the spec exactly. */
+  font-size: 22px;
+  line-height: 30px;
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
 `
