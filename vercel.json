@@ -6,6 +6,7 @@
   "framework": null,
   "rewrites": [
     { "source": "/voters/:address", "destination": "/api/voter-html?address=:address" },
+    { "source": "/share/holder/:address", "destination": "/api/holder-html?address=:address" },
     { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }
   ]
 }
