@@ -446,7 +446,7 @@ const PromptText = styled.div`
 // Both-picked body: ring (left) beside the shared/differ words (right).
 const BodyRow = styled.div`
   display: flex;
-  /* Center the match ring against the words column (designer review). */
+  /* Center the match ring against the words column. */
   align-items: center;
   gap: ${tokens.spacing.lg};
 
@@ -493,8 +493,7 @@ const RingInner = styled.div`
 `
 
 const RingPercent = styled.span`
-  /* Figma "Values card" ring — Heading/H4: Satoshi Bold 22/30 (node 5904:11657).
-     No 22px token (2xl=20 / 3xl=32), so raw to match the spec exactly. */
+  /* No 22px token (2xl=20 / 3xl=32), so raw. */
   font-size: 22px;
   line-height: 30px;
   font-weight: ${tokens.font.weight.bold};

@@ -61,8 +61,8 @@ const Groups = styled.div`
   flex-direction: column;
   gap: ${tokens.spacing.lg};
   /* Keep the chip pool inside a bounded scroll region so the modal's action
-     buttons stay pinned below it (designer review). The scrollbar is reserved +
-     always-on as a visual clue, not a macOS overlay bar that hides at rest. */
+     buttons stay pinned below it. The scrollbar is reserved + always-on as a
+     visual clue, not a macOS overlay bar that hides at rest. */
   max-height: 360px;
   overflow-y: auto;
   scrollbar-gutter: stable;

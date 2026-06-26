@@ -86,7 +86,7 @@ const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
       $tone === 'muted' ? tokens.color.border : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  /* Delegates who didn't rank are de-emphasised at 80% opacity (designer review). */
+  /* Delegates who didn't rank are de-emphasised at 80% opacity. */
   opacity: ${({ $tone }) => ($tone === 'muted' ? 0.8 : 1)};
   transition: border-color ${tokens.transition.base},
     background ${tokens.transition.base};

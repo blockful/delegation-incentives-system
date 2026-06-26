@@ -212,8 +212,8 @@ const Counter = styled.div`
   white-space: nowrap;
 `
 
-// Groups the "limit reached" hint tight to the progress bar (designer review):
-// a small gap between them instead of the parent Stack's larger `lg` gap.
+// Groups the "limit reached" hint tight to the progress bar: a small gap
+// between them instead of the parent Stack's larger `lg` gap.
 const ProgressGroup = styled.div`
   display: flex;
   flex-direction: column;

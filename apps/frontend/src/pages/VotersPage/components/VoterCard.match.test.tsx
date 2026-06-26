@@ -64,7 +64,7 @@ describe('VoterCard match variants', () => {
     renderApp(<VoterCard voter={voter()} match={weak} viewerHasSelected />)
     expect(screen.getByText('Weak match')).toBeInTheDocument()
     expect(screen.getByText('20%')).toBeInTheDocument()
-    // Weak matches no longer surface the delegate's diverging picks (designer review).
+    // Weak matches no longer surface the delegate's diverging picks.
     expect(screen.queryByText('Public Goods Funding')).not.toBeInTheDocument()
     expect(screen.queryByText('ENS Adoption')).not.toBeInTheDocument()
   })
