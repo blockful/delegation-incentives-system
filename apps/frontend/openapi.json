@@ -149,11 +149,11 @@
                             },
                             "description": "The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.",
                             "example": [
-                              "security",
-                              "decentralization",
+                              "ens_adoption",
+                              "user_experience",
                               "public_goods_funding",
-                              "transparency",
-                              "open_source"
+                              "governance_transparency",
+                              "ensv2"
                             ]
                           },
                           "match": {
@@ -178,8 +178,8 @@
                                   "type": "string"
                                 },
                                 "example": [
-                                  "security",
-                                  "decentralization"
+                                  "ens_adoption",
+                                  "public_goods_funding"
                                 ]
                               },
                               "aUnique": {
@@ -3327,11 +3327,11 @@
                         "type": "string"
                       },
                       "example": [
-                        "security",
-                        "decentralization",
+                        "ens_adoption",
+                        "user_experience",
                         "public_goods_funding",
-                        "transparency",
-                        "open_source"
+                        "governance_transparency",
+                        "ensv2"
                       ]
                     },
                     "updatedAt": {
@@ -3440,11 +3440,11 @@
                         "type": "string"
                       },
                       "example": [
-                        "security",
-                        "decentralization",
+                        "ens_adoption",
+                        "user_experience",
                         "public_goods_funding",
-                        "transparency",
-                        "open_source"
+                        "governance_transparency",
+                        "ensv2"
                       ]
                     },
                     "updatedAt": {
@@ -3541,11 +3541,11 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "example": "decentralization"
+                            "example": "ens_adoption"
                           },
                           "label": {
                             "type": "string",
-                            "example": "Decentralization"
+                            "example": "ENS Adoption"
                           }
                         },
                         "required": [

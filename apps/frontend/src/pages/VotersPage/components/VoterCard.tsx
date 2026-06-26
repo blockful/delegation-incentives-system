@@ -61,14 +61,21 @@ function formatVotingPower(vpWei: string): string {
 
 /**
  * Humanize a word id for the compact weak-match chips (e.g.
- * `public_goods_funding` → `Public goods funding`). The list card doesn't
- * subscribe to the word pool — keeping these 12 cards free of an extra async
- * dependency — so we derive a readable label from the id itself.
+ * `public_goods_funding` → `Public Goods Funding`, `ens_adoption` → `ENS
+ * Adoption`). The list card doesn't subscribe to the word pool — keeping these
+ * 12 cards free of an extra async dependency — so we derive a readable label
+ * from the id itself: title-case each token, with `ens`/`ensv2` special-cased.
+ * Lossy by design (it can't recover punctuation like `&`); the canonical labels
+ * are used wherever the pool is loaded (selection modal, delegate card).
  */
 function humanizeWordId(id: string): string {
-  const spaced = id.replace(/[_-]+/g, ' ').trim()
-  if (!spaced) return id
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+  const parts = id.split(/[_-]+/).filter(Boolean)
+  if (parts.length === 0) return id
+  return parts
+    .map((p) =>
+      p === 'ens' ? 'ENS' : p === 'ensv2' ? 'ENSv2' : p.charAt(0).toUpperCase() + p.slice(1),
+    )
+    .join(' ')
 }
 
 function formatActiveSince(iso: string | null): string {

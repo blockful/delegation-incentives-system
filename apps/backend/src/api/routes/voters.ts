@@ -32,7 +32,7 @@ const ProposalVoteSchema = z.object({
 const MatchSchema = z.object({
   percent: z.number().openapi({ description: "Overlap as a % of the 5-word selection", example: 80 }),
   strongMatch: z.boolean().openapi({ description: ">= 80% overlap", example: true }),
-  sharedWords: z.array(z.string()).openapi({ example: ["security", "decentralization"] }),
+  sharedWords: z.array(z.string()).openapi({ example: ["ens_adoption", "public_goods_funding"] }),
   aUnique: z.array(z.string()).openapi({ description: "Words only the viewer selected" }),
   bUnique: z.array(z.string()).openapi({ description: "Words only this voter selected" }),
 });
@@ -62,7 +62,7 @@ const VoterSchema = z.object({
     .nullable()
     .openapi({
       description: "The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.",
-      example: ["security", "decentralization", "public_goods_funding", "transparency", "open_source"],
+      example: ["ens_adoption", "user_experience", "public_goods_funding", "governance_transparency", "ensv2"],
     }),
   match: MatchSchema.nullable().openapi({
     description:

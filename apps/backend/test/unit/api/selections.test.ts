@@ -72,11 +72,11 @@ const otherAccount = privateKeyToAccount(
 );
 
 const VALID_WORDS = [
-  "security",
-  "decentralization",
+  "ens_adoption",
+  "decentralization_resilience",
   "public_goods_funding",
-  "transparency",
-  "open_source",
+  "governance_transparency",
+  "ensv2",
 ];
 
 function makeApp() {
@@ -115,15 +115,15 @@ describe("validateSelection", () => {
     expect(validateSelection(VALID_WORDS.slice(0, 4))).toBe("count");
   });
   it("rejects more than 5", () => {
-    expect(validateSelection([...VALID_WORDS, "transparency"])).toBe("count");
+    expect(validateSelection([...VALID_WORDS, "ens_adoption"])).toBe("count");
   });
   it("rejects duplicates", () => {
-    expect(validateSelection(["security", "security", "decentralization", "transparency", "open_source"])).toBe(
+    expect(validateSelection(["ens_adoption", "ens_adoption", "decentralization_resilience", "governance_transparency", "ensv2"])).toBe(
       "duplicate",
     );
   });
   it("rejects a word outside the pool", () => {
-    expect(validateSelection(["security", "decentralization", "transparency", "open_source", "not_a_word"])).toBe(
+    expect(validateSelection(["ens_adoption", "decentralization_resilience", "governance_transparency", "ensv2", "not_a_word"])).toBe(
       "unknown_word",
     );
   });
@@ -160,7 +160,7 @@ describe("PUT /selections/{address}", () => {
     const signature = await account.signMessage({
       message: buildSelectionMessage(account.address, VALID_WORDS),
     });
-    const tampered = ["security", "decentralization", "public_goods_funding", "transparency", "accessibility"];
+    const tampered = ["ens_adoption", "decentralization_resilience", "public_goods_funding", "governance_transparency", "ecosystem_integrations"];
 
     const res = await put(account.address, { words: tampered, signature });
     expect(res.status).toBe(401);
@@ -218,7 +218,7 @@ describe("GET /selections/word-pool", () => {
     expect(
       json.pool.every((w) => typeof w.id === "string" && typeof w.label === "string"),
     ).toBe(true);
-    expect(json.pool.map((w) => w.id)).toContain("decentralization");
+    expect(json.pool.map((w) => w.id)).toContain("ens_adoption");
   });
 
   it("does not collide with GET /selections/{address}", async () => {
@@ -239,17 +239,17 @@ describe("scoreSelection", () => {
   });
 
   it("4 of 5 shared = 80% = strong (threshold), with shared/unique split", () => {
-    const b = ["security", "decentralization", "public_goods_funding", "transparency", "accessibility"];
+    const b = ["ens_adoption", "decentralization_resilience", "public_goods_funding", "governance_transparency", "ecosystem_integrations"];
     const s = scoreSelection(VALID_WORDS, b);
     expect(s.percent).toBe(STRONG_MATCH_THRESHOLD);
     expect(s.strongMatch).toBe(true);
     expect(s.sharedWords).toHaveLength(4);
-    expect(s.aUnique).toEqual(["open_source"]);
-    expect(s.bUnique).toEqual(["accessibility"]);
+    expect(s.aUnique).toEqual(["ensv2"]);
+    expect(s.bUnique).toEqual(["ecosystem_integrations"]);
   });
 
   it("3 of 5 shared = 60% = not strong", () => {
-    const b = ["security", "decentralization", "public_goods_funding", "self_custody", "accessibility"];
+    const b = ["ens_adoption", "decentralization_resilience", "public_goods_funding", "cost_efficiency", "ecosystem_integrations"];
     const s = scoreSelection(VALID_WORDS, b);
     expect(s.percent).toBe(60);
     expect(s.strongMatch).toBe(false);
@@ -267,7 +267,7 @@ describe("GET /selections/{address}/match-count", () => {
   const voter = "0x1111111111111111111111111111111111111111";
   const holder = "0x2222222222222222222222222222222222222222";
   const weak = "0x3333333333333333333333333333333333333333";
-  const strongWords = ["security", "decentralization", "public_goods_funding", "transparency", "accessibility"];
+  const strongWords = ["ens_adoption", "decentralization_resilience", "public_goods_funding", "governance_transparency", "ecosystem_integrations"];
 
   beforeEach(() => {
     fetchActiveVotersMock.mockResolvedValue({ activeVoters: new Set([voter]) });
@@ -280,7 +280,7 @@ describe("GET /selections/{address}/match-count", () => {
     store.set(holder, { address: holder, words: strongWords, createdAt: 1n, updatedAt: 1n }); // strong, not a voter
     store.set(weak, {
       address: weak,
-      words: ["security", "decentralization", "self_custody", "accessibility", "sustainability"],
+      words: ["ens_adoption", "decentralization_resilience", "ecosystem_integrations", "cost_efficiency", "long_term_strategy"],
       createdAt: 1n,
       updatedAt: 1n,
     }); // 2/5 = weak

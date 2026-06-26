@@ -33,14 +33,14 @@ describe('DelegateValuesCard — matrix states', () => {
     await waitFor(() => expect(screen.getByText('100%')).toBeInTheDocument())
     expect(screen.getByText('Strong match')).toBeInTheDocument()
     expect(screen.getByText('You both value')).toBeInTheDocument()
-    expect(screen.getByText('Security')).toBeInTheDocument()
+    expect(screen.getByText('ENS Adoption')).toBeInTheDocument()
   })
 
   it('both selected, partial overlap → 60% ring + Partial match + differ list', async () => {
     server.use(
       selectionsBy({
-        [VIEWER.toLowerCase()]: ['security', 'decentralization', 'transparency', 'a', 'b'],
-        [DELEGATE.toLowerCase()]: ['security', 'decentralization', 'transparency', 'c', 'd'],
+        [VIEWER.toLowerCase()]: ['ens_adoption', 'user_experience', 'public_goods_funding', 'a', 'b'],
+        [DELEGATE.toLowerCase()]: ['ens_adoption', 'user_experience', 'public_goods_funding', 'c', 'd'],
       }),
     )
     renderApp(<DelegateValuesCard delegateAddress={DELEGATE} delegateName="nick.eth" />, {
@@ -57,7 +57,7 @@ describe('DelegateValuesCard — matrix states', () => {
     server.use(
       selectionsBy({
         [VIEWER.toLowerCase()]: ['a', 'b', 'c', 'd', 'e'],
-        [DELEGATE.toLowerCase()]: ['security', 'decentralization', 'transparency', 'open_source', 'public_goods_funding'],
+        [DELEGATE.toLowerCase()]: ['ens_adoption', 'user_experience', 'public_goods_funding', 'governance_transparency', 'ensv2'],
       }),
     )
     renderApp(<DelegateValuesCard delegateAddress={DELEGATE} delegateName="nick.eth" />, {
@@ -72,7 +72,7 @@ describe('DelegateValuesCard — matrix states', () => {
     server.use(
       selectionsBy({
         // viewer (VIEWER) → 404; delegate has the default 5 words.
-        [DELEGATE.toLowerCase()]: ['security', 'decentralization', 'transparency', 'open_source', 'public_goods_funding'],
+        [DELEGATE.toLowerCase()]: ['ens_adoption', 'user_experience', 'public_goods_funding', 'governance_transparency', 'ensv2'],
       }),
     )
     renderApp(<DelegateValuesCard delegateAddress={DELEGATE} delegateName="nick.eth" />, {
@@ -83,7 +83,7 @@ describe('DelegateValuesCard — matrix states', () => {
     )
     expect(screen.getByRole('button', { name: /pick your values/i })).toBeInTheDocument()
     // The delegate's words must NOT leak to a holder who hasn't picked.
-    expect(screen.queryByText('Security')).not.toBeInTheDocument()
+    expect(screen.queryByText('ENS Adoption')).not.toBeInTheDocument()
   })
 
   it('neither picked → "Start matching" nudge', async () => {

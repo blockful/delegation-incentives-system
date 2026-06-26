@@ -9,26 +9,26 @@ import {
 // WORD_POOL / mock fixture). If the pool changes, this list + the map update
 // together — the coverage test below is the guard.
 const POOL_IDS = [
-  'security',
+  'ens_adoption',
+  'user_experience',
+  'community_onboarding',
+  'education_literacy',
+  'ecosystem_integrations',
+  'ensv2',
+  'fair_pricing',
+  'name_ownership_rights',
+  'decentralization_resilience',
+  'service_provider_quality',
+  'financial_sustainability',
+  'treasury_stewardship',
   'cost_efficiency',
-  'growth_investment',
-  'decentralization',
+  'protocol_first_funding',
   'public_goods_funding',
-  'transparency',
-  'credible_neutrality',
-  'censorship_resistance',
-  'user_privacy',
-  'developer_experience',
-  'treasury_growth',
-  'community_governance',
-  'protocol_simplicity',
-  'long_term_vision',
-  'ecosystem_funding',
-  'self_custody',
-  'open_source',
-  'accessibility',
-  'sustainability',
-  'interoperability',
+  'accountability_reporting',
+  'operational_execution',
+  'governance_transparency',
+  'clear_governance_process',
+  'long_term_strategy',
 ] as const
 
 const pool: PoolWord[] = POOL_IDS.map((id) => ({ id, label: id }))
@@ -57,17 +57,17 @@ describe('WORD_CATEGORY map', () => {
           .map(([id]) => id),
       )
 
-    expect(byCategory('Security & Trust')).toEqual(
-      new Set(['security', 'user_privacy', 'self_custody', 'censorship_resistance', 'credible_neutrality']),
+    expect(byCategory('Growth & Adoption')).toEqual(
+      new Set(['ens_adoption', 'user_experience', 'community_onboarding', 'education_literacy', 'ecosystem_integrations']),
+    )
+    expect(byCategory('Protocol & Product')).toEqual(
+      new Set(['ensv2', 'fair_pricing', 'name_ownership_rights', 'decentralization_resilience', 'service_provider_quality']),
     )
     expect(byCategory('Funding & Treasury')).toEqual(
-      new Set(['public_goods_funding', 'ecosystem_funding', 'growth_investment', 'treasury_growth', 'cost_efficiency']),
+      new Set(['financial_sustainability', 'treasury_stewardship', 'cost_efficiency', 'protocol_first_funding', 'public_goods_funding']),
     )
-    expect(byCategory('Governance & Process')).toEqual(
-      new Set(['decentralization', 'transparency', 'community_governance', 'long_term_vision', 'accessibility']),
-    )
-    expect(byCategory('Technology & Ecosystem')).toEqual(
-      new Set(['developer_experience', 'protocol_simplicity', 'open_source', 'interoperability', 'sustainability']),
+    expect(byCategory('Governance & Accountability')).toEqual(
+      new Set(['accountability_reporting', 'operational_execution', 'governance_transparency', 'clear_governance_process', 'long_term_strategy']),
     )
   })
 })
@@ -76,10 +76,10 @@ describe('groupPoolByCategory', () => {
   it('returns the 4 categories in spec order', () => {
     const groups = groupPoolByCategory(pool)
     expect(groups.map((g) => g.category)).toEqual([
-      'Security & Trust',
+      'Growth & Adoption',
+      'Protocol & Product',
       'Funding & Treasury',
-      'Governance & Process',
-      'Technology & Ecosystem',
+      'Governance & Accountability',
     ])
   })
 
@@ -92,14 +92,14 @@ describe('groupPoolByCategory', () => {
 
   it('preserves the incoming pool order within a category', () => {
     const groups = groupPoolByCategory(pool)
-    const security = groups.find((g) => g.category === 'Security & Trust')!
-    // Order follows POOL_IDS, filtered to the Security & Trust members.
-    expect(security.words.map((w) => w.id)).toEqual([
-      'security',
-      'credible_neutrality',
-      'censorship_resistance',
-      'user_privacy',
-      'self_custody',
+    const growth = groups.find((g) => g.category === 'Growth & Adoption')!
+    // Order follows POOL_IDS, filtered to the Growth & Adoption members.
+    expect(growth.words.map((w) => w.id)).toEqual([
+      'ens_adoption',
+      'user_experience',
+      'community_onboarding',
+      'education_literacy',
+      'ecosystem_integrations',
     ])
   })
 
@@ -109,9 +109,9 @@ describe('groupPoolByCategory', () => {
   })
 
   it('drops empty categories rather than rendering a bare heading', () => {
-    const groups = groupPoolByCategory([{ id: 'security', label: 'Security' }])
+    const groups = groupPoolByCategory([{ id: 'ens_adoption', label: 'ENS Adoption' }])
     expect(groups).toHaveLength(1)
-    expect(groups[0].category).toBe('Security & Trust')
+    expect(groups[0].category).toBe('Growth & Adoption')
   })
 
   it('keeps an unknown id visible under the fallback (last) category', () => {

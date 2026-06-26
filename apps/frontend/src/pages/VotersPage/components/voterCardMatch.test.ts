@@ -134,7 +134,7 @@ describe('voterCardMatchDisplay — defensive fallback', () => {
     // (The component reads match.bUnique for the weak differ-list; this just
     // confirms the weak bucket is selected so the component renders it.)
     const result = voterCardMatchDisplay({
-      match: score(20, ['public_goods_funding', 'security']),
+      match: score(20, ['public_goods_funding', 'ens_adoption']),
       viewerHasSelected: true,
       delegateHasRanked: true,
     })

@@ -89,11 +89,11 @@ export interface paths {
                                 /**
                                  * @description The voter's matchmaking word selection (null if they haven't selected). The client scores overlap against the viewer's own selection.
                                  * @example [
-                                 *       "security",
-                                 *       "decentralization",
+                                 *       "ens_adoption",
+                                 *       "user_experience",
                                  *       "public_goods_funding",
-                                 *       "transparency",
-                                 *       "open_source"
+                                 *       "governance_transparency",
+                                 *       "ensv2"
                                  *     ]
                                  */
                                 words: string[] | null;
@@ -111,8 +111,8 @@ export interface paths {
                                     strongMatch: boolean;
                                     /**
                                      * @example [
-                                     *       "security",
-                                     *       "decentralization"
+                                     *       "ens_adoption",
+                                     *       "public_goods_funding"
                                      *     ]
                                      */
                                     sharedWords: string[];
@@ -1720,11 +1720,11 @@ export interface paths {
                             address: string;
                             /**
                              * @example [
-                             *       "security",
-                             *       "decentralization",
+                             *       "ens_adoption",
+                             *       "user_experience",
                              *       "public_goods_funding",
-                             *       "transparency",
-                             *       "open_source"
+                             *       "governance_transparency",
+                             *       "ensv2"
                              *     ]
                              */
                             words: string[];
@@ -1809,11 +1809,11 @@ export interface paths {
                             address: string;
                             /**
                              * @example [
-                             *       "security",
-                             *       "decentralization",
+                             *       "ens_adoption",
+                             *       "user_experience",
                              *       "public_goods_funding",
-                             *       "transparency",
-                             *       "open_source"
+                             *       "governance_transparency",
+                             *       "ensv2"
                              *     ]
                              */
                             words: string[];
@@ -1895,9 +1895,9 @@ export interface paths {
                     content: {
                         "application/json": {
                             pool: {
-                                /** @example decentralization */
+                                /** @example ens_adoption */
                                 id: string;
-                                /** @example Decentralization */
+                                /** @example ENS Adoption */
                                 label: string;
                             }[];
                         };

@@ -20,13 +20,13 @@ const SelectionResponse = z.object({
   address: z.string().openapi({ example: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045" }),
   words: z
     .array(z.string())
-    .openapi({ example: ["security", "decentralization", "public_goods_funding", "transparency", "open_source"] }),
+    .openapi({ example: ["ens_adoption", "user_experience", "public_goods_funding", "governance_transparency", "ensv2"] }),
   updatedAt: z.number().openapi({ description: "Last-write Unix time in ms", example: 1781619462005 }),
 });
 
 const PoolWordSchema = z.object({
-  id: z.string().openapi({ example: "decentralization" }),
-  label: z.string().openapi({ example: "Decentralization" }),
+  id: z.string().openapi({ example: "ens_adoption" }),
+  label: z.string().openapi({ example: "ENS Adoption" }),
 });
 
 const WordPoolResponse = z.object({

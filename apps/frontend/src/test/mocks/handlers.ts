@@ -60,12 +60,12 @@ export const handlers = [
   http.get('/api/selections/word-pool', () =>
     HttpResponse.json({
       pool: [
-        { id: 'security', label: 'Security' },
-        { id: 'decentralization', label: 'Decentralization' },
-        { id: 'public_goods_funding', label: 'Public goods funding' },
-        { id: 'transparency', label: 'Transparency' },
-        { id: 'open_source', label: 'Open source' },
-        { id: 'credible_neutrality', label: 'Credible neutrality' },
+        { id: 'ens_adoption', label: 'ENS Adoption' },
+        { id: 'user_experience', label: 'ENS User Experience' },
+        { id: 'public_goods_funding', label: 'Public Goods Funding' },
+        { id: 'governance_transparency', label: 'Governance Transparency' },
+        { id: 'ensv2', label: 'ENSv2' },
+        { id: 'decentralization_resilience', label: 'Decentralization & Resilience' },
       ],
     }),
   ),
@@ -82,7 +82,7 @@ export const handlers = [
     }
     return HttpResponse.json({
       address,
-      words: ['security', 'decentralization', 'public_goods_funding', 'transparency', 'open_source'],
+      words: ['ens_adoption', 'user_experience', 'public_goods_funding', 'governance_transparency', 'ensv2'],
       updatedAt: 1781619462005,
     })
   }),
