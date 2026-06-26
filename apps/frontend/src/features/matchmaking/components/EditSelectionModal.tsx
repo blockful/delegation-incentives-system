@@ -32,9 +32,16 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
   const [selected, setSelected] = useState<string[]>([])
 
   // Prefill with the stored selection when the modal opens or the data loads.
+  // Drop orphaned ids (words removed from the pool after the user picked them):
+  // otherwise they silently fill the cap, blocking every edit, and can't be
+  // deselected because they no longer render as chips. Filtering here lets the
+  // selection survive future pool changes without a DB reset.
   useEffect(() => {
-    if (open && current) setSelected(current)
-  }, [open, current])
+    if (open && current && pool) {
+      const ids = new Set(pool.map((w) => w.id))
+      setSelected(current.filter((id) => ids.has(id)))
+    }
+  }, [open, current, pool])
 
   const toggle = (id: string) =>
     setSelected((cur) => toggleSelection(cur, id, SELECTION_COUNT))

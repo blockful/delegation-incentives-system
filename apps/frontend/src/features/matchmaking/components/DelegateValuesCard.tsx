@@ -287,11 +287,12 @@ function renderDiffer(
         </Section>
       )
 
-    // 0/5 — no overlap; show what the delegate stands for.
+    // 0/5 — no overlap; state it plainly, then show what the delegate stands for.
     case 'delegate-only':
       return (
         <Section>
-          <SectionLabel>Here&apos;s what they stand for</SectionLabel>
+          <SectionLabel>No values in common</SectionLabel>
+          <Muted>Here&apos;s what {who} stands for:</Muted>
           <Chips words={delegateWords} labelOf={labelOf} />
         </Section>
       )
@@ -445,11 +446,14 @@ const PromptText = styled.div`
 // Both-picked body: ring (left) beside the shared/differ words (right).
 const BodyRow = styled.div`
   display: flex;
-  align-items: flex-start;
+  /* Center the match ring against the words column (designer review). */
+  align-items: center;
   gap: ${tokens.spacing.lg};
 
   @media (max-width: 520px) {
     flex-direction: column;
+    /* Keep the words column full-width once stacked. */
+    align-items: stretch;
   }
 `
 
@@ -489,7 +493,7 @@ const RingInner = styled.div`
 `
 
 const RingPercent = styled.span`
-  font-size: ${tokens.font.size['2xl']};
+  font-size: ${tokens.font.size['3xl']};
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
 `

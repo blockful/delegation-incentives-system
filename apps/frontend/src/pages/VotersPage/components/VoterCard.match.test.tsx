@@ -60,13 +60,13 @@ describe('VoterCard match variants', () => {
     expect(screen.queryByText(/shares 3 of your words/i)).not.toBeInTheDocument()
   })
 
-  it('renders the weak-match subtitle + the diverging-word differ list', () => {
+  it('renders the weak-match subtitle but no diverging-word chips', () => {
     renderApp(<VoterCard voter={voter()} match={weak} viewerHasSelected />)
     expect(screen.getByText('Weak match')).toBeInTheDocument()
     expect(screen.getByText('20%')).toBeInTheDocument()
-    // bUnique ids are humanized in the differ list.
-    expect(screen.getByText('Public Goods Funding')).toBeInTheDocument()
-    expect(screen.getByText('ENS Adoption')).toBeInTheDocument()
+    // Weak matches no longer surface the delegate's diverging picks (designer review).
+    expect(screen.queryByText('Public Goods Funding')).not.toBeInTheDocument()
+    expect(screen.queryByText('ENS Adoption')).not.toBeInTheDocument()
   })
 
   it('shows the "delegate didn\'t rank" state when the delegate is unranked', () => {
