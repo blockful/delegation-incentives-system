@@ -86,13 +86,6 @@ const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
       $tone === 'muted' ? tokens.color.border : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  /*
-   * Delegates who didn't rank are de-emphasised at 80%. We dim with the filter
-   * property rather than the opacity property: the parent grid animates opacity
-   * to 1 with animation-fill-mode "both" (see VotersPage Grid), which would
-   * otherwise clobber a static opacity. The filter composes on top of the
-   * animated opacity, so the fade-in still runs and the 80% dim sticks.
-   */
   filter: ${({ $tone }) => ($tone === 'muted' ? 'opacity(0.8)' : 'none')};
   transition: border-color ${tokens.transition.base},
     background ${tokens.transition.base};
