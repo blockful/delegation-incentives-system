@@ -474,6 +474,17 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
     query: { enabled: !!address },
   })
 
+  // The delegate's name may not come from the API (`delegatedToEnsName`); fall
+  // back to an on-chain reverse lookup so the chip shows e.g. `netto.eth`
+  // instead of a raw 0x address — mirroring how the user's own name resolves.
+  const delegateAddrForEns = data?.apr.delegatedTo ?? null
+  const { data: resolvedDelegateName } = useEnsName({
+    address: (delegateAddrForEns ?? undefined) as `0x${string}` | undefined,
+    query: {
+      enabled: !!delegateAddrForEns && !data?.apr.delegatedToEnsName,
+    },
+  })
+
   const gasMinEns = useGasSponsorshipMinEns()
 
   if (loading) return <DashboardPageSkeleton />
@@ -498,7 +509,9 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
   const userDisplayName = resolvedEnsName ?? truncateAddress(address)
 
   const delegateLabel = isDelegated
-    ? delegateEns ?? (delegateAddr ? truncateAddress(delegateAddr) : 'an active voter')
+    ? delegateEns ??
+      resolvedDelegateName ??
+      (delegateAddr ? truncateAddress(delegateAddr) : 'an active voter')
     : null
 
   const payoutRows = distributions.data?.rounds

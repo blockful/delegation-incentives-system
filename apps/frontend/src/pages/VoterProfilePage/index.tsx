@@ -317,6 +317,15 @@ const FreeBadge = styled.span`
   vertical-align: middle;
 `
 
+/**
+ * Non-interactive "Delegated" state for the CTA. When the viewer already
+ * delegates to this voter, the button stays visible but turns green and inert
+ * (no onClick + pointer-events off) instead of disappearing.
+ */
+const DelegatedButton = styled(Button)`
+  pointer-events: none;
+`
+
 /* ─── Avatar column with participation ring ─── */
 
 const AvatarColumn = styled.div`
@@ -966,7 +975,16 @@ export function VoterProfilePage() {
           </SocialLinks>
 
           <CtaRow>
-            {!isDelegated && (
+            {isDelegated ? (
+              <DelegatedButton
+                colorStyle="greenSecondary"
+                width="auto"
+                prefix={<FontAwesomeIcon icon={faCircleCheck} />}
+                aria-disabled
+              >
+                Delegated
+              </DelegatedButton>
+            ) : (
               <Button colorStyle="bluePrimary" width="auto" onClick={handleDelegate}>
                 Delegate now{showFreeBadge && <FreeBadge>Free</FreeBadge>}
               </Button>
