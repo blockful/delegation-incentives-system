@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { useEnsName } from 'wagmi'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 import { faStar, faHeart } from '@fortawesome/free-regular-svg-icons'
 import { Button } from '@ensdomains/thorin'
 import type { MatchScore } from '@ens-dis/domain'
@@ -86,8 +86,7 @@ const StyledCard = styled.div<{ $tone: 'highlight' | 'muted' | 'plain' }>`
       $tone === 'muted' ? tokens.color.border : tokens.color.borderLight};
   border-radius: ${tokens.radius.md};
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  /* Delegates who didn't rank are de-emphasised at 80% opacity. */
-  opacity: ${({ $tone }) => ($tone === 'muted' ? 0.8 : 1)};
+  filter: ${({ $tone }) => ($tone === 'muted' ? 'opacity(0.8)' : 'none')};
   transition: border-color ${tokens.transition.base},
     background ${tokens.transition.base};
 
@@ -159,19 +158,14 @@ const MatchSubtitle = styled.p<{ $variant: MatchVariant; $color: string }>`
   text-overflow: ellipsis;
 `
 
-const DelegatedTag = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 14px;
-  background: ${tokens.color.status.success.bg};
-  color: ${tokens.color.status.success.fg};
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  white-space: nowrap;
-  flex-shrink: 0;
+/**
+ * Non-interactive "Delegated" state for the action button. When the viewer
+ * already delegates to this voter, the primary CTA itself turns green and
+ * inert (no onClick + pointer-events off) instead of showing a separate badge
+ * and inviting another delegation.
+ */
+const DelegatedButton = styled(Button)`
+  pointer-events: none;
 `
 
 const ProposalSection = styled.div`
@@ -426,7 +420,6 @@ export function VoterCard({
             <NameStack>
               <TitleRow>
                 <NameText>{displayName}</NameText>
-                {isDelegated && <DelegatedTag>Delegated</DelegatedTag>}
               </TitleRow>
               <MatchSubtitle $variant={matchDisplay.variant} $color={matchDisplay.color}>
                 {matchDisplay.variant === 'strong' ? (
@@ -466,13 +459,20 @@ export function VoterCard({
         </StatsRow>
 
         <ActionsBlock>
-          <Button
-            colorStyle="bluePrimary"
-            size="small"
-            onClick={handleDelegate}
-          >
-            Delegate{showFreeBadge && <FreeBadge>Free</FreeBadge>}
-          </Button>
+          {isDelegated ? (
+            <DelegatedButton
+              colorStyle="greenSecondary"
+              size="small"
+              prefix={<FontAwesomeIcon icon={faCircleCheck} />}
+              aria-disabled
+            >
+              Delegated
+            </DelegatedButton>
+          ) : (
+            <Button colorStyle="bluePrimary" size="small" onClick={handleDelegate}>
+              Delegate{showFreeBadge && <FreeBadge>Free</FreeBadge>}
+            </Button>
+          )}
           <ProfileLink to={profileUrl}>
             View profile <FontAwesomeIcon icon={faArrowRight} aria-hidden />
           </ProfileLink>

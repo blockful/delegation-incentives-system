@@ -1077,28 +1077,30 @@ export function CheckWalletSection({
               </TotalValue>
             </TotalRow>
           </PanelList>
-          <PanelFoot>
-            {view.note ? (
-              <ExplainerFootnote>{view.note}</ExplainerFootnote>
-            ) : null}
-            {view.lotteryWin ? (
-              <ExplainerFootnote>
-                Your reward was under 1 ENS, so it entered a shared pool of
-                about{' '}
-                {formatEnsAmount(
-                  view.lotteryWin.poolTargetEns ?? view.lotteryWin.prizeEns,
-                  { maximumFractionDigits: 0 },
-                )}{' '}
-                ENS. Your pool drew you as the winner, so you took the whole{' '}
-                {formatEnsFixed(view.lotteryWin.prizeEns)} ENS.
-              </ExplainerFootnote>
-            ) : SHOW_PROVENANCE_MATH ? (
-              <ExplainerFootnote>
-                Paid directly in one transfer (1 ENS or more).
-              </ExplainerFootnote>
-            ) : null}
-            {mathFoot}
-          </PanelFoot>
+          {view.note || view.lotteryWin || SHOW_PROVENANCE_MATH || mathFoot ? (
+            <PanelFoot>
+              {view.note ? (
+                <ExplainerFootnote>{view.note}</ExplainerFootnote>
+              ) : null}
+              {view.lotteryWin ? (
+                <ExplainerFootnote>
+                  Your reward was under 1 ENS, so it entered a shared pool of
+                  about{' '}
+                  {formatEnsAmount(
+                    view.lotteryWin.poolTargetEns ?? view.lotteryWin.prizeEns,
+                    { maximumFractionDigits: 0 },
+                  )}{' '}
+                  ENS. Your pool drew you as the winner, so you took the whole{' '}
+                  {formatEnsFixed(view.lotteryWin.prizeEns)} ENS.
+                </ExplainerFootnote>
+              ) : SHOW_PROVENANCE_MATH ? (
+                <ExplainerFootnote>
+                  Paid directly in one transfer (1 ENS or more).
+                </ExplainerFootnote>
+              ) : null}
+              {mathFoot}
+            </PanelFoot>
+          ) : null}
         </ResultPanel>
       ) : view.kind === 'lottery-lost' ? (
         <ResultPanel $earned={false} data-testid="check-wallet-lottery-entry">

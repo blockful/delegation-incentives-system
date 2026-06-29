@@ -474,6 +474,14 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
     query: { enabled: !!address },
   })
 
+  const delegateAddrForEns = data?.apr.delegatedTo ?? null
+  const { data: resolvedDelegateName } = useEnsName({
+    address: (delegateAddrForEns ?? undefined) as `0x${string}` | undefined,
+    query: {
+      enabled: !!delegateAddrForEns && !data?.apr.delegatedToEnsName,
+    },
+  })
+
   const gasMinEns = useGasSponsorshipMinEns()
 
   if (loading) return <DashboardPageSkeleton />
@@ -498,7 +506,9 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
   const userDisplayName = resolvedEnsName ?? truncateAddress(address)
 
   const delegateLabel = isDelegated
-    ? delegateEns ?? (delegateAddr ? truncateAddress(delegateAddr) : 'an active voter')
+    ? delegateEns ??
+      resolvedDelegateName ??
+      (delegateAddr ? truncateAddress(delegateAddr) : 'an active voter')
     : null
 
   const payoutRows = distributions.data?.rounds
