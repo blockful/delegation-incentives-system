@@ -474,9 +474,6 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
     query: { enabled: !!address },
   })
 
-  // The delegate's name may not come from the API (`delegatedToEnsName`); fall
-  // back to an on-chain reverse lookup so the chip shows e.g. `netto.eth`
-  // instead of a raw 0x address — mirroring how the user's own name resolves.
   const delegateAddrForEns = data?.apr.delegatedTo ?? null
   const { data: resolvedDelegateName } = useEnsName({
     address: (delegateAddrForEns ?? undefined) as `0x${string}` | undefined,
