@@ -496,7 +496,17 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
     try {
       const now = getNow();
       const roundMonths = getConfiguredRoundMonths();
-      const month = getUtcMonth(now);
+      const nowMonth = getUtcMonth(now);
+      // Resolve to a real configured round rather than the raw calendar month:
+      // the active round (today within its month), else the next upcoming round,
+      // else the last round once the program is over. `roundMonths` is sorted
+      // ascending, so "YYYY-MM" string comparison finds the next upcoming month.
+      // Falls back to the calendar month only when nothing is configured.
+      const month =
+        roundMonths.find((m) => m === nowMonth) ??
+        roundMonths.find((m) => m > nowMonth) ??
+        roundMonths[roundMonths.length - 1] ??
+        nowMonth;
       const roundNumber = getRoundNumber(month, roundMonths) ?? 1;
       const range = getRoundDateRange(month);
       const timing = getRoundTiming(month, now, false);
