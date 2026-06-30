@@ -167,6 +167,7 @@ function makeRoundsApp(
       addresses: readonly string[],
       asOfTimestamp: bigint,
     ) => Promise<Map<string, string>>;
+    now?: () => Date;
   } = {},
 ) {
   return createRoundsApp({
@@ -177,7 +178,7 @@ function makeRoundsApp(
       vpGrowthPct: "0.00",
     }),
     getVotingPowers: options.getVotingPowers ?? (async () => new Map()),
-    now: () => new Date("2026-05-03T12:00:00.000Z"),
+    now: options.now ?? (() => new Date("2026-05-03T12:00:00.000Z")),
   });
 }
 
@@ -224,6 +225,39 @@ describe("round month configuration", () => {
     expect(body.endDate).toBe("2026-05-31T23:59:59.999Z");
     expect(body.poolSizeEns).toBe("5000.000000000000000000");
     expect(body.tierIndex).toBe(0);
+  });
+
+  it("resolves to the next upcoming round when no round is active yet", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    // Before the program starts (February), the "current" round must be the
+    // first configured round with its real March dates — never the live
+    // calendar month (February).
+    const res = await makeRoundsApp([], {
+      now: () => new Date("2026-02-15T12:00:00.000Z"),
+    }).request("/rounds/current");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.roundNumber).toBe(1);
+    expect(body.startDate).toBe("2026-03-01T00:00:00.000Z");
+    expect(body.endDate).toBe("2026-03-31T23:59:59.999Z");
+  });
+
+  it("resolves to the last round when the program is over", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    // After the last configured month (August), fall back to the last round
+    // with its real May dates — not the live calendar month (August).
+    const res = await makeRoundsApp([], {
+      now: () => new Date("2026-08-15T12:00:00.000Z"),
+    }).request("/rounds/current");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.roundNumber).toBe(3);
+    expect(body.startDate).toBe("2026-05-01T00:00:00.000Z");
+    expect(body.endDate).toBe("2026-05-31T23:59:59.999Z");
   });
 });
 
