@@ -38,7 +38,7 @@ test.describe('Rounds Page', () => {
     // Pool renders in compact form (e.g. "5K ENS") via formatPool.
     await expect(currentRoundRow).toContainText(/\d+(?:\.\d+)?K? ENS|Unavailable/)
     // Status pill — guaranteed to read one of these regardless of address.
-    await expect(currentRoundRow).toContainText(/live|paid|pending/i)
+    await expect(currentRoundRow).toContainText(/live|paid|upcoming/i)
 
     // Sibling rows for prior rounds should also be present.
     await expect(page.getByRole('button', { name: /Round 2/ }).first()).toBeVisible()

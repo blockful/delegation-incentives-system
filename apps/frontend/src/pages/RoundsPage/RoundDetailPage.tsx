@@ -793,7 +793,7 @@ export function RoundDetailPage() {
     roundData.endDate
   const displayStatus: RoundStatus =
     viewedRoundSummary?.status ?? roundData.status
-  // Closed rounds: full ring. Pending: empty. Live: compute the actual percent
+  // Closed rounds: full ring. Upcoming: empty. Live: compute the actual percent
   // from the round's start/end window (always accurate, no dependency on an
   // API field that may not refresh between deploys).
   const displayPercentComplete =

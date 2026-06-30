@@ -115,7 +115,7 @@ function clampPercent(percent: number): number {
 function statusLabel(status: RoundStatus): string {
   if (status === 'live') return 'In progress'
   if (status === 'paid') return 'Paid'
-  if (status === 'pending') return 'Pending'
+  if (status === 'upcoming') return 'Upcoming'
   return 'Ended'
 }
 

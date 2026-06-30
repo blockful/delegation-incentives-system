@@ -35,7 +35,7 @@ const AddressDistributionRoundSchema = z.object({
   month: z.string(),
   startDate: z.string(),
   endDate: z.string(),
-  roundStatus: z.enum(["live", "ended", "pending", "paid"]),
+  roundStatus: z.enum(["live", "ended", "upcoming", "paid"]),
   distributionDataStatus: z.enum(["available", "in_progress", "missing", "not_started"]),
   rewardStatus: z.enum(["paid", "no_reward", "not_eligible", "pending", "unavailable"]),
   voterReward: z.string(),

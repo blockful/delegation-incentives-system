@@ -92,7 +92,7 @@ export interface DistributionResponse {
   lotteryPools: LotteryPool[];
 }
 
-export type RoundStatus = 'live' | 'ended' | 'pending' | 'paid'
+export type RoundStatus = 'live' | 'ended' | 'upcoming' | 'paid'
 export type DistributionDataStatus = 'available' | 'in_progress' | 'missing' | 'not_started'
 export type RewardStatus = 'paid' | 'no_reward' | 'not_eligible' | 'pending' | 'unavailable'
 
