@@ -16,7 +16,7 @@ interface StatusPillProps {
 function mapToTone(t: StatusPillProps['tone']): StatusTone {
   // Round + reward statuses → visual tone
   if (t === 'live' || t === 'paid' || t === 'success') return 'success'
-  if (t === 'pending') return 'pending'
+  if (t === 'pending' || t === 'upcoming') return 'pending'
   if (t === 'no_reward' || t === 'not_eligible' || t === 'unavailable' || t === 'ended' || t === 'neutral') return 'neutral'
   if (t === 'warning') return 'warning'
   if (t === 'danger') return 'danger'
@@ -26,6 +26,7 @@ function mapToTone(t: StatusPillProps['tone']): StatusTone {
 function defaultLabel(t: StatusPillProps['tone']): string {
   if (t === 'live') return 'live'
   if (t === 'paid') return 'paid'
+  if (t === 'upcoming') return 'upcoming'
   if (t === 'pending') return 'pending'
   if (t === 'ended') return 'ended'
   if (t === 'no_reward') return 'no payout'

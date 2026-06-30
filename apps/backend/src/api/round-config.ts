@@ -1,4 +1,4 @@
-export type RoundStatus = "live" | "ended" | "pending" | "paid";
+export type RoundStatus = "live" | "ended" | "upcoming" | "paid";
 
 export type DistributionDataStatus =
   | "available"
@@ -115,7 +115,7 @@ export function getRoundTiming(
   }
 
   return {
-    status: "pending",
+    status: "upcoming",
     distributionDataStatus: "not_started",
     isCurrent: false,
     percentComplete: 0,

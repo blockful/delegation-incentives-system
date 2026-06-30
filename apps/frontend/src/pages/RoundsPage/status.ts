@@ -5,6 +5,7 @@ import { formatEnsAmount } from '@/utils/format'
 export function statusLabel(status: RoundStatus | RewardStatus): string {
   if (status === 'live') return 'Ongoing'
   if (status === 'paid') return 'Complete'
+  if (status === 'upcoming') return 'Upcoming'
   if (status === 'pending') return 'Pending'
   if (status === 'not_eligible') return 'No reward'
   if (status === 'no_reward') return 'No payout'

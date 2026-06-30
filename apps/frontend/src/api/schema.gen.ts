@@ -495,7 +495,7 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 /** @enum {string} */
-                                status: "live" | "ended" | "pending" | "paid";
+                                status: "live" | "ended" | "upcoming" | "paid";
                                 /** @enum {string} */
                                 distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
                                 isCurrent: boolean;
@@ -601,7 +601,7 @@ export interface paths {
                             startDate: string;
                             endDate: string;
                             /** @enum {string} */
-                            status: "live" | "ended" | "pending" | "paid";
+                            status: "live" | "ended" | "upcoming" | "paid";
                             /** @enum {string} */
                             distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
                             isCurrent: boolean;
@@ -957,7 +957,7 @@ export interface paths {
                             startDate: string;
                             endDate: string;
                             /** @enum {string} */
-                            status: "live" | "ended" | "pending" | "paid";
+                            status: "live" | "ended" | "upcoming" | "paid";
                             /** @enum {string} */
                             distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
                             isCurrent: boolean;
@@ -1416,7 +1416,7 @@ export interface paths {
                                 startDate: string;
                                 endDate: string;
                                 /** @enum {string} */
-                                roundStatus: "live" | "ended" | "pending" | "paid";
+                                roundStatus: "live" | "ended" | "upcoming" | "paid";
                                 /** @enum {string} */
                                 distributionDataStatus: "available" | "in_progress" | "missing" | "not_started";
                                 /** @enum {string} */

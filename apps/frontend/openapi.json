@@ -753,7 +753,7 @@
                             "enum": [
                               "live",
                               "ended",
-                              "pending",
+                              "upcoming",
                               "paid"
                             ]
                           },
@@ -1013,7 +1013,7 @@
                       "enum": [
                         "live",
                         "ended",
-                        "pending",
+                        "upcoming",
                         "paid"
                       ]
                     },
@@ -1882,7 +1882,7 @@
                       "enum": [
                         "live",
                         "ended",
-                        "pending",
+                        "upcoming",
                         "paid"
                       ]
                     },
@@ -2895,7 +2895,7 @@
                                 "enum": [
                                   "live",
                                   "ended",
-                                  "pending",
+                                  "upcoming",
                                   "paid"
                                 ]
                               },

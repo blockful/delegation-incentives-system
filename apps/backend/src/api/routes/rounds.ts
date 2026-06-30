@@ -32,7 +32,7 @@ import {
   parseRoundMonths,
 } from "../round-config.js";
 
-const RoundStatusSchema = z.enum(["live", "ended", "pending", "paid"]);
+const RoundStatusSchema = z.enum(["live", "ended", "upcoming", "paid"]);
 const DistributionDataStatusSchema = z.enum(["available", "in_progress", "missing", "not_started"]);
 
 const CurrentRoundResponse = z.object({

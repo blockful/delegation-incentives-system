@@ -1003,7 +1003,7 @@ function progressPercent(start: string | null, end: string | null): number {
 
 function formatDaysRemaining(daysRemaining: number | null, status: RoundStatus): string {
   if (status === 'paid') return 'Closed'
-  if (daysRemaining == null) return 'Pending'
+  if (daysRemaining == null) return 'Upcoming'
   if (daysRemaining === 0) return 'Last day'
   if (daysRemaining === 1) return '1 day left'
   return `${daysRemaining} days left`
@@ -1016,7 +1016,7 @@ function isLegacyEndpointError(error: unknown): boolean {
 function selectFeaturedRound(rounds: RoundSummary[]): RoundSummary | null {
   return (
     rounds.find((r) => r.isCurrent) ??
-    rounds.find((r) => r.status === 'pending') ??
+    rounds.find((r) => r.status === 'upcoming') ??
     rounds[0] ??
     null
   )
