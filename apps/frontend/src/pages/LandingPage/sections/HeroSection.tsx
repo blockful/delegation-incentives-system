@@ -239,8 +239,8 @@ export function HeroSection() {
           ENS Governance · Live program
         </HeroEyebrow>
         <Headline>
-          Your ENS can do more <br />
-          than sit idle
+          Delegate your ENS, <br />
+          earn rewards from the DAO
         </Headline>
         <Subtitle>
           Help secure ENS governance by delegating to an active voter.

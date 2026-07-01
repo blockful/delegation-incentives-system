@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/do more than sit idle/),
+        screen.getByText(/earn rewards from the DAO/),
       ).toBeInTheDocument()
     })
   })
@@ -123,7 +123,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/do more than sit idle/),
+        screen.getByText(/earn rewards from the DAO/),
       ).toBeInTheDocument()
     })
   })
@@ -138,7 +138,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/do more than sit idle/),
+        screen.getByText(/earn rewards from the DAO/),
       ).toBeInTheDocument()
     })
   })
