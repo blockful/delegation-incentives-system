@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/on your ENS/),
+        screen.getByText(/Put your ENS to work/),
       ).toBeInTheDocument()
     })
   })
@@ -117,23 +117,13 @@ describe('LandingPage', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
-  it('shows current APR in hero from tier data', async () => {
-    // MSW fixture (`src/test/mocks/fixtures/rounds.ts`) returns
-    // maxTokenHolderAprPct='5400.00'. `formatHeroApr` in HeroSection caps
-    // anything >=1000 at the literal '>1000%'.
-    const { container } = renderApp(<LandingPage />)
-    await waitFor(() => {
-      expect(container.textContent).toMatch(/>1000% APR/)
-    })
-  })
-
   it('renders landing when wallet is connected', async () => {
     renderApp(<LandingPage />, {
       walletState: { status: 'connected', address: '0x1234567890abcdef1234567890abcdef12345678' },
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/on your ENS/),
+        screen.getByText(/Put your ENS to work/),
       ).toBeInTheDocument()
     })
   })
@@ -148,7 +138,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/on your ENS/),
+        screen.getByText(/Put your ENS to work/),
       ).toBeInTheDocument()
     })
   })

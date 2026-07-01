@@ -12,11 +12,9 @@ interface ConnectedLandingProps {
 }
 
 export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps) {
-  const currentAprPct = tierData.maxTokenHolderAprPct
-
   return (
     <>
-      <HeroSection currentAprPct={currentAprPct} />
+      <HeroSection />
       <RoundStatusBar
         currentGrowthPct={roundData.vpGrowthPct}
         currentTierIndex={roundData.tierIndex}
@@ -25,7 +23,7 @@ export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps)
         roundEndDate={roundData.endDate}
       />
       <TierTableSection tiers={tierData.tiers} />
-      <HowItWorksSection currentAprPct={currentAprPct} />
+      <HowItWorksSection />
       <FaqSection />
       <CtaSection />
     </>

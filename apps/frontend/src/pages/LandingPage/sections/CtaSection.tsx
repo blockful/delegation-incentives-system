@@ -254,7 +254,7 @@ const PillName = styled.span`
 `
 
 const SHARE_TWEET_TEXT =
-  "Delegate your ENS to an active voter and earn APR rewards automatically. Share to lift everyone's APR, including yours."
+  'Delegate your ENS to an active voter and earn rewards from the ENS DAO. The more people who join, the bigger the pool for everyone.'
 
 function buildTwitterShareUrl(): string {
   if (typeof window === 'undefined') return '#'
@@ -367,8 +367,8 @@ export function CtaSection() {
             Strengthen governance.
           </Heading>
           <Subtitle>
-            Delegate in under a minute. Share to lift everyone&rsquo;s APR,
-            including&nbsp;yours.
+            Delegate in under a minute. The more people who join, the bigger
+            the pool for&nbsp;everyone.
           </Subtitle>
           <Actions>
             <PrimaryCta to="/voters">

@@ -816,13 +816,9 @@ export function RoundDetailPage() {
     viewedRoundSummary?.tierLabel ??
     (reachedTierIndex != null ? `Tier ${reachedTierIndex + 1}` : '—')
 
-  const reachedTier =
-    reachedTierIndex != null
-      ? tierProgression.data?.tiers[reachedTierIndex] ?? null
-      : null
   const tierAprSubLabel =
-    reachedTier?.estimatedAprPct != null
-      ? `${reachedTier.estimatedAprPct}% APR reached`
+    reachedTierIndex != null
+      ? `Tier ${reachedTierIndex + 1} reached`
       : 'Tier reached'
 
   return (

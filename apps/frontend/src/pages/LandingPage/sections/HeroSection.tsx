@@ -1,4 +1,4 @@
-import styled, { css, keyframes } from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 import { Button, EnsSVG } from '@ensdomains/thorin'
 import { Link } from 'react-router-dom'
 import { tokens } from '@/styles/tokens'
@@ -34,12 +34,6 @@ const AnchorLink = styled.a`
   }
 `
 
-function formatHeroApr(pct: number): string {
-  if (!Number.isFinite(pct) || pct <= 0) return '—'
-  if (pct >= 1000) return '>1000%'
-  return `${pct.toFixed(pct < 10 ? 2 : 1)}%`
-}
-
 function scrollToHowItWorks(e: React.MouseEvent<HTMLAnchorElement>) {
   const target = document.getElementById('how-it-works')
   if (!target) return
@@ -51,10 +45,6 @@ function scrollToHowItWorks(e: React.MouseEvent<HTMLAnchorElement>) {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' })
   history.replaceState(null, '', '#how-it-works')
-}
-
-interface HeroSectionProps {
-  currentAprPct: string
 }
 
 const Section = styled.section`
@@ -164,32 +154,6 @@ const Particle = styled.div<{
   }
 `
 
-const highlightSlide = keyframes`
-  from { background-position: 100% 0; }
-  to   { background-position: 0 0; }
-`
-
-const AprValue = styled.span`
-  display: inline-block;
-  color: ${tokens.color.blue};
-  padding: ${tokens.spacing.xs} ${tokens.spacing.md};
-  border-radius: ${tokens.radius.md};
-  background-image: linear-gradient(
-    to right,
-    ${tokens.color.lightBlueOpacity} 50%,
-    transparent 50%
-  );
-  background-size: 200% 100%;
-  background-position: 100% 0;
-  animation: ${highlightSlide} 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
-
-  @media (prefers-reduced-motion: reduce) {
-    background-image: none;
-    background-color: ${tokens.color.lightBlueOpacity};
-    animation: none;
-  }
-`
-
 const Subtitle = styled.p`
   font-size: ${tokens.font.size.xl};
   line-height: 1.6;
@@ -252,7 +216,7 @@ const PARTICLE_CONFIGS = [
   { id: 13, left: 96, size: 28, duration: 10, delay: 7 },
 ]
 
-export function HeroSection({ currentAprPct }: HeroSectionProps) {
+export function HeroSection() {
   const gasMinEns = useGasSponsorshipMinEns()
   return (
     <Section>
@@ -275,8 +239,8 @@ export function HeroSection({ currentAprPct }: HeroSectionProps) {
           ENS Governance · Live program
         </HeroEyebrow>
         <Headline>
-          Earn up to <AprValue>{`${formatHeroApr(Number(currentAprPct))} APR`}</AprValue> on your ENS
-          automatically
+          Put your ENS to work <br />
+          and earn rewards
         </Headline>
         <Subtitle>
           Help secure ENS governance by delegating to an active voter.

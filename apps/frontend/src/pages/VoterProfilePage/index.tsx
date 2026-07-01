@@ -1041,7 +1041,7 @@ export function VoterProfilePage() {
           <TableHeadCell>Proposal Name</TableHeadCell>
           <TableHeadCell $width="200px">
             <LabelWithTooltip
-              text="How this delegate voted on each proposal — “For”, “Against”, “Abstain”, or didn’t vote."
+              text="How this delegate voted on each proposal - “For”, “Against”, “Abstain”, or didn’t vote."
               iconAriaLabel="About Delegate Vote"
             >
               Delegate Vote

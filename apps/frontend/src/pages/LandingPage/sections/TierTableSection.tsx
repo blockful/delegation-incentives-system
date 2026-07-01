@@ -11,6 +11,30 @@ interface TierTableSectionProps {
   tiers: TierEntry[]
 }
 
+/** Whole-number percent from a decimal string ('15.00' → '15'), or null. */
+function formatPct(value: string | null | undefined): string | null {
+  if (value == null) return null
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  return `${Math.round(n)}`
+}
+
+/**
+ * The participation milestone that unlocks a tier, expressed as the band of
+ * month-over-month growth in active delegated VP (never a reward rate). Locked
+ * tiers read "unlocks at ..."; reached tiers just show the band.
+ */
+function formatMilestone(tier: TierEntry, isLocked: boolean): string | null {
+  const min = formatPct(tier.momGrowthMinPct)
+  if (min == null) return null
+  const max = formatPct(tier.momGrowthMaxPct)
+  const band =
+    max != null
+      ? `+${min}-${max}% delegation growth`
+      : `+${min}% delegation growth`
+  return isLocked ? `unlocks at ${band}` : band
+}
+
 const Section = styled.section`
   position: relative;
   overflow: hidden;
@@ -163,7 +187,7 @@ const Header = styled.div`
   flex-direction: column;
   align-items: center;
   gap: ${tokens.spacing.lg};
-  max-width: 720px;
+  max-width: 900px;
   margin: 0 auto;
   text-align: center;
 `
@@ -257,7 +281,7 @@ const ShareButton = styled.a`
 `
 
 const SHARE_TWEET_TEXT =
-  'Higher tiers unlock as more ENS gets delegated to active voters. Every delegate brought in lifts everyone’s APR.'
+  'As more ENS is delegated to active voters, the shared reward pool grows for everyone. Delegate yours and help strengthen ENS governance.'
 
 function buildTwitterShareUrl(): string {
   if (typeof window === 'undefined') return '#'
@@ -365,39 +389,33 @@ const TierStatus = styled.span<{ $isCurrent: boolean; $isLocked: boolean }>`
 
 const RowRight = styled.div`
   display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: ${tokens.spacing.sm};
-  white-space: nowrap;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
   font-variant-numeric: tabular-nums;
+`
+
+const PoolValue = styled.span<{ $isUnlocked: boolean }>`
+  font-size: ${tokens.font.size.xl};
+  font-weight: ${tokens.font.weight.semibold};
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: ${({ $isUnlocked }) =>
+    $isUnlocked ? tokens.color.darkBlue : tokens.color.darkGray};
 
   @media (min-width: 768px) {
-    gap: ${tokens.spacing.lg};
+    font-size: ${tokens.font.size['3xl']};
   }
 `
 
-const PoolAmount = styled.span`
-  font-size: ${tokens.font.size.base};
+const MilestoneCaption = styled.span`
+  font-size: ${tokens.font.size.xs};
   font-weight: ${tokens.font.weight.medium};
   color: ${tokens.color.darkGray};
-  text-align: right;
 
   @media (min-width: 768px) {
-    font-size: ${tokens.font.size.lg};
-  }
-`
-
-const AprValue = styled.span<{ $isUnlocked: boolean }>`
-  font-size: ${tokens.font.size['3xl']};
-  font-weight: ${tokens.font.weight.medium};
-  letter-spacing: -0.03em;
-  line-height: 1;
-  text-align: right;
-  color: ${({ $isUnlocked }) =>
-    $isUnlocked ? tokens.color.positiveEmphasis : tokens.color.darkBlue};
-
-  @media (min-width: 768px) {
-    font-size: ${tokens.font.size['6xl']};
+    font-size: ${tokens.font.size.sm};
   }
 `
 
@@ -463,11 +481,14 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
         <Header>
           <TitleBlock>
             <Eyebrow>Network effect</Eyebrow>
-            <Heading>Your APR grows when others delegate too</Heading>
+            <Heading>
+              More delegation, <br />
+              bigger reward pool for everyone
+            </Heading>
             <Description>
-              This isn&rsquo;t a fixed yield. Higher tiers unlock as more ENS
-              gets delegated to active voters, so every person you bring in
-              increases everyone&rsquo;s earnings.
+              Rewards come from a shared pool funded by the ENS DAO. <br />
+              The more ENS delegated to active voters, the larger that pool
+              grows for everyone.
             </Description>
           </TitleBlock>
         </Header>
@@ -476,11 +497,10 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
           {tiers.map((tier) => {
             const isCurrent = !!tier.isCurrent
             const isLocked = !tier.isUnlocked && !isCurrent
-            const aprLabel =
-              tier.estimatedAprPct != null ? `${tier.estimatedAprPct}%` : '—'
             const poolLabel = tier.poolSizeEns
               ? `${formatPool(tier.poolSizeEns)} ENS`
-              : null
+              : '—'
+            const milestoneLabel = formatMilestone(tier, isLocked)
             const statusLabel = isCurrent
               ? 'Current tier'
               : tier.isUnlocked
@@ -498,12 +518,12 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
                     </TierStatus>
                   </RowLeft>
                   <RowRight>
-                    <PoolAmount>
-                      {poolLabel ?? ''}
-                    </PoolAmount>
-                    <AprValue $isUnlocked={tier.isUnlocked}>
-                      {aprLabel}
-                    </AprValue>
+                    <PoolValue $isUnlocked={tier.isUnlocked}>
+                      {poolLabel}
+                    </PoolValue>
+                    {milestoneLabel && (
+                      <MilestoneCaption>{milestoneLabel}</MilestoneCaption>
+                    )}
                   </RowRight>
                 </Row>
               </RevealRow>
