@@ -5,7 +5,6 @@ import { isAddress } from 'viem'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faMagnifyingGlass,
-  faCoins,
   faChevronRight,
   faWallet,
   faXmark,
@@ -238,37 +237,6 @@ const TierCardHeading = styled.span`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
   line-height: 1.3;
-`
-
-const TierBadgeRow = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-`
-
-const TierBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  font-size: ${tokens.font.size.base};
-  font-weight: ${tokens.font.weight.bold};
-  line-height: 20px;
-  white-space: nowrap;
-
-  svg {
-    width: 12px;
-    height: 12px;
-    color: currentColor;
-  }
-`
-
-const TierPoolBadge = styled(TierBadge)`
-  background: ${tokens.color.lightBlueOpacity};
-  color: ${tokens.color.blue};
 `
 
 const TierLadder = styled.div`
@@ -1196,12 +1164,6 @@ export function RoundsPage() {
     )
   }
 
-  // Pool comes from the tier the program is currently operating in. (Same
-  // value as currentRound.poolSizeEns in v1 — tier drives the round pool —
-  // but reading from the tier object keeps the card semantically consistent.)
-  const poolLabel =
-    formatPool(currentTier?.poolSizeEns ?? currentRound.poolSizeEns ?? null) ?? '—'
-
   const progressPct = progressPercent(currentRound.startDate, currentRound.endDate)
   const daysLeftLabel = formatDaysRemaining(currentRound.daysRemaining, currentRound.status)
 
@@ -1284,12 +1246,6 @@ export function RoundsPage() {
               Currently on Tier {currentTierIndex + 1} of {tierLadder.length}
             </TierCardHeading>
           </TierCardLabel>
-          <TierBadgeRow>
-            <TierPoolBadge>
-              <FontAwesomeIcon icon={faCoins} />
-              Pool · {poolLabel}
-            </TierPoolBadge>
-          </TierBadgeRow>
         </TierCardHeader>
 
         <TierLadder>
@@ -1324,7 +1280,7 @@ export function RoundsPage() {
             })()
 
             const tierPool = tier.poolSizeEns ? formatPool(tier.poolSizeEns) : null
-            const tierPoolLabel = tierPool ? `${tierPool} ENS` : null
+            const tierPoolLabel = tierPool ? `${tierPool} pool` : null
 
             return (
               <TierPip key={tier.index} $state={state}>
