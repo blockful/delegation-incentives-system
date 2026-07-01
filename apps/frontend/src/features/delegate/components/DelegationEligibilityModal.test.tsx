@@ -185,8 +185,6 @@ describe('DelegationEligibilityModal', () => {
     expect(
       screen.getByRole('button', { name: 'Delegate and pay gas' }),
     ).toBeInTheDocument()
-    // Compliance (Alexander / ENS Labs): no buy / fund / swap path in the
-    // delegation flow — nothing that reads as "buy ENS for a return".
     expect(
       screen.queryByRole('link', { name: 'Buy ENS' }),
     ).not.toBeInTheDocument()
