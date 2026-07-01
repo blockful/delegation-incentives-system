@@ -142,9 +142,9 @@ export function Footer() {
 
         <Bottom>
           <Credit>
-            Built by{' '}
+            Built with{' '}
             <FineLink href="https://blockful.io/" target="_blank" rel="noopener noreferrer">
-              Blockful
+              blockful
             </FineLink>
             {' for ENS DAO.'}
           </Credit>
