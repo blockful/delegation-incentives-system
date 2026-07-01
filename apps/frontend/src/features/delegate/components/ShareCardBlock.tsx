@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faArrowRight } from '@fortawesome/free-solid-svg-icons'
@@ -25,6 +25,13 @@ export interface ShareCardBlockProps {
  */
 export function ShareCardBlock({ title, body, tweetText, shareUrl, ogImageUrl }: ShareCardBlockProps) {
   const [previewFailed, setPreviewFailed] = useState(false)
+
+  // Clear the failed-latch whenever the target image changes (e.g. the ENS name
+  // resolves after mount, or the modal is reused for a different card) so a
+  // stale one-off error doesn't permanently blank the new preview.
+  useEffect(() => {
+    setPreviewFailed(false)
+  }, [ogImageUrl])
 
   const handleShare = () => {
     // x.com (not twitter.com) — the twitter.com intent has an Oct-2025 mobile

@@ -33,10 +33,16 @@ export default async function handler(request: Request) {
   const address = looksLikeAddress ? rawParam : null
   const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
 
-  // Build the OG image URL
+  // Build the OG image URL. The param set + order MUST match the in-app preview
+  // (buildVoterOgImageUrl in features/delegate/utils/shareCard.ts) so the modal
+  // preview <img> and this crawler og:image resolve to the SAME Vercel CDN
+  // cache key. Otherwise opening the share modal warms a different entry than
+  // the one X actually fetches, and the card renders cold (slow) on the first
+  // share. holder-html.ts already sets `variant`; voter-html was missing it.
   const ogQuery = new URLSearchParams()
-  if (address) ogQuery.set('address', address)
+  ogQuery.set('variant', 'delegate')
   if (name) ogQuery.set('name', name)
+  else if (address) ogQuery.set('address', address)
   const ogImageUrl = `${url.origin}/api/og/voter?${ogQuery.toString()}`
 
   const pageTitle = `${displayName} · ENS Delegate`

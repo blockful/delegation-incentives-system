@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 import { createElement as h, type ReactElement } from 'react'
+import { SATOSHI_BOLD_BASE64, SATOSHI_MEDIUM_BASE64 } from './satoshi-font-data'
 
 export const config = {
   runtime: 'edge',
@@ -61,52 +62,24 @@ function stripEnsTld(name: string): string {
 }
 
 /* ─── Satoshi font loading ─── */
-// Satori (which @vercel/og uses) only accepts TTF/OTF/WOFF — NOT WOFF2.
-// Fontshare only serves WOFF2, so we pull Satoshi from a public GitHub mirror
-// via jsDelivr (which serves the raw .ttf bytes directly).
-// Cache the font promises at module scope so subsequent invocations on the
-// same edge instance reuse them instead of re-fetching on every render.
-type FontPromise = Promise<ArrayBuffer | null>
-let satoshiBoldPromise: FontPromise | null = null
-let satoshiMediumPromise: FontPromise | null = null
-
-const SATOSHI_URLS: Record<500 | 700, string> = {
-  500: 'https://cdn.jsdelivr.net/gh/webbycrown/golife-span-statamic-theme@main/public/assets/fonts/Satoshi-Medium.ttf',
-  700: 'https://cdn.jsdelivr.net/gh/webbycrown/golife-span-statamic-theme@main/public/assets/fonts/Satoshi-Bold.ttf',
+// Satori (which @vercel/og uses) only accepts TTF/OTF/WOFF — NOT WOFF2. The
+// font bytes are embedded as base64 (see ./satoshi-font-data) and decoded once
+// at module scope, instead of fetched from a CDN on every cold render. The old
+// approach fetched Satoshi from a jsDelivr mirror per cold render: that added
+// latency and — with no timeout — could hang to the 25s edge limit → 504,
+// which made X's crawler drop the card. Worse, that mirror silently started
+// 404ing, so cards had quietly regressed to the fallback font. Embedding
+// removes the network dependency outright; decoding is cheap and reused across
+// invocations on a warm instance.
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes.buffer
 }
 
-async function loadSatoshiWeight(weight: 500 | 700): Promise<ArrayBuffer | null> {
-  try {
-    const res = await fetch(SATOSHI_URLS[weight])
-    if (!res.ok) return null
-    const buf = await res.arrayBuffer()
-    return buf.byteLength > 0 ? buf : null
-  } catch {
-    return null
-  }
-}
-
-function getSatoshi(weight: 500 | 700): FontPromise {
-  if (weight === 700) {
-    if (satoshiBoldPromise) return satoshiBoldPromise
-    const p = loadSatoshiWeight(700)
-    satoshiBoldPromise = p
-    // If the fetch ultimately failed, drop the cached promise so a future
-    // request on this warm edge instance can retry (avoids a permanent
-    // null cache after a transient jsDelivr blip).
-    void p.then((result) => {
-      if (result === null && satoshiBoldPromise === p) satoshiBoldPromise = null
-    })
-    return p
-  }
-  if (satoshiMediumPromise) return satoshiMediumPromise
-  const p = loadSatoshiWeight(500)
-  satoshiMediumPromise = p
-  void p.then((result) => {
-    if (result === null && satoshiMediumPromise === p) satoshiMediumPromise = null
-  })
-  return p
-}
+const SATOSHI_BOLD = base64ToArrayBuffer(SATOSHI_BOLD_BASE64)
+const SATOSHI_MEDIUM = base64ToArrayBuffer(SATOSHI_MEDIUM_BASE64)
 
 /* ─── Avatar resolution ─── */
 // Fetch the avatar bytes ourselves and embed as a data URL. Letting Satori
@@ -121,7 +94,13 @@ async function fetchAvatarDataUrl(name: string): Promise<AvatarFetchResult> {
   const url = `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
   try {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
+    // Cap the avatar fetch well under social crawlers' ~5s fetch budget: the
+    // entire card must render fast or X/Slack drop the image on the first
+    // share (cold render + slow avatar was the dominant latency — the rest of
+    // the render is now ~milliseconds once fonts are embedded). Warm ENS
+    // avatars resolve in ~0.3s; this 3s cap tolerates a cold resolution, then
+    // falls back to the initials tile rather than stall the whole card.
+    const timer = setTimeout(() => controller.abort(), 3000)
     let res: Response
     try {
       res = await fetch(url, {
@@ -570,8 +549,9 @@ export default async function handler(request: Request) {
   const variant = searchParams.get('variant')
   const debug = searchParams.get('debug') === '1'
 
-  // Fonts are shared by every variant; load once.
-  const [satoshiBold, satoshiMedium] = await Promise.all([getSatoshi(700), getSatoshi(500)])
+  // Fonts are shared by every variant; decoded once at module scope.
+  const satoshiBold = SATOSHI_BOLD
+  const satoshiMedium = SATOSHI_MEDIUM
   const fonts: FontEntry[] = []
   if (satoshiBold) {
     fonts.push({ name: 'Satoshi', data: satoshiBold, style: 'normal', weight: 700 })
