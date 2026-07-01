@@ -6,7 +6,6 @@ import { renderApp, userEvent } from '@/test/utils'
 import { server } from '@/test/mocks/server'
 import {
   DelegationEligibilityModal,
-  UNISWAP_BUY_ENS_URL,
   formatResetCountdown,
 } from './DelegationEligibilityModal'
 
@@ -170,7 +169,7 @@ describe('DelegationEligibilityModal', () => {
     expect(screen.getByText(/holding at least 100 ENS/)).toBeInTheDocument()
   })
 
-  it('Buy ENS opens the Uniswap ENS swap in a new tab', () => {
+  it('below-minimum: offers Maybe later / pay gas and no buy-ENS or Uniswap path', () => {
     renderApp(
       <DelegationEligibilityModal
         open
@@ -180,13 +179,23 @@ describe('DelegationEligibilityModal', () => {
       />,
     )
 
-    const buyLink = screen.getByRole('link', { name: 'Buy ENS' })
-    expect(buyLink).toHaveAttribute('href', UNISWAP_BUY_ENS_URL)
-    expect(buyLink).toHaveAttribute('target', '_blank')
-    expect(buyLink).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(
+      screen.getByRole('button', { name: 'Maybe later' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Delegate and pay gas' }),
+    ).toBeInTheDocument()
+    // Compliance (Alexander / ENS Labs): no buy / fund / swap path in the
+    // delegation flow — nothing that reads as "buy ENS for a return".
+    expect(
+      screen.queryByRole('link', { name: 'Buy ENS' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /uniswap/i }),
+    ).not.toBeInTheDocument()
   })
 
-  it('stacks the secondary action above the primary, per the Figma frames', () => {
+  it('stacks Maybe later above Delegate and pay gas', () => {
     renderApp(
       <DelegationEligibilityModal
         open
@@ -196,12 +205,12 @@ describe('DelegationEligibilityModal', () => {
       />,
     )
 
-    const secondary = screen.getByRole('button', {
+    const maybeLater = screen.getByRole('button', { name: 'Maybe later' })
+    const payGas = screen.getByRole('button', {
       name: 'Delegate and pay gas',
     })
-    const primary = screen.getByRole('link', { name: 'Buy ENS' })
     expect(
-      secondary.compareDocumentPosition(primary) &
+      maybeLater.compareDocumentPosition(payGas) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })

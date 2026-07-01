@@ -499,7 +499,6 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
   const { apr, round } = data
 
   const reward = Number(apr.estimatedMonthlyRewardEns ?? '0')
-  const aprPct = apr.estimatedAprPct ?? '0'
   const delegateEns = apr.delegatedToEnsName ?? null
   const delegateAddr = apr.delegatedTo ?? null
   const balanceEns = Number(apr.currentBalanceEns ?? '0')
@@ -517,7 +516,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
   const hasPayouts = payoutRows.length > 0
 
   const tweetText = isDelegated
-    ? `I'm earning ${aprPct}% APR on my ENS just by delegating to ${delegateLabel}. Payouts are automatic, gas is sponsored for wallets with ${gasMinEns}+ ENS — see the program 👇`
+    ? `I'm delegating my ENS to ${delegateLabel} to help keep ENS governance active, and earning rewards from the DAO. Payouts are automatic, gas is sponsored for wallets with ${gasMinEns}+ ENS - see the program 👇`
     : ''
   const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(window.location.origin)}`
 
@@ -533,11 +532,9 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
             <RewardsNumber $delegated={isDelegated}>
               {isDelegated ? formatEnsReward(reward) : '0.00000'}
             </RewardsNumber>
-            {isDelegated ? (
-              <AprLine>Earning at {aprPct}% APR</AprLine>
-            ) : (
+            {!isDelegated && (
               <AprLineMuted>
-                Pick an active voter to start earning ~{aprPct}% APR.
+                Pick an active voter to start earning rewards.
               </AprLineMuted>
             )}
           </RewardsStack>
@@ -624,7 +621,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
 
         {!hasPayouts ? (
           <PayoutsEmpty>
-            No payouts yet. Your first round closes when the current one ends — check back in {formatDaysLeft(round.daysRemaining).replace(' left', '')}.
+            No payouts yet. Your first round closes when the current one ends - check back in {formatDaysLeft(round.daysRemaining).replace(' left', '')}.
           </PayoutsEmpty>
         ) : (
           <PayoutsRow>

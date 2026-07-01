@@ -152,7 +152,7 @@ export function RoundStatusBar({
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
   const isNegative = growthNum < 0
-  const growthPrefix = isNegative ? '–' : '+'
+  const growthPrefix = isNegative ? '-' : '+'
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
   const displayRound = roundNumber
   const displayTimeLeft = formatTimeLeft(roundEndDate)

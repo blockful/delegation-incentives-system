@@ -9,13 +9,6 @@ import {
 } from '../hooks/useGaslessRelayer'
 
 /**
- * Uniswap swap page pre-filled with the ENS token as the output currency.
- * Opened in a new tab by the "Buy ENS" primary action.
- */
-export const UNISWAP_BUY_ENS_URL =
-  'https://app.uniswap.org/swap?outputCurrency=0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72'
-
-/**
  * Why this delegation won't get sponsored gas. Mirrors the relayer's
  * {@link SponsorshipBlockReason} 1:1:
  * - `no-ens`: the wallet holds no ENS and the relayer requires a minimum.
@@ -83,12 +76,12 @@ function getCopy(
     case 'no-ens':
       return {
         title: 'You need some ENS first',
-        body: 'Your wallet holds 0 ENS, so gas is not sponsored and nothing is earning yet. Add some ENS to delegate with sponsored gas and start earning. You can still delegate now and pay the fee yourself, about $2. Your choice sticks and applies once you hold ENS.',
+        body: 'Your wallet holds 0 ENS, so gas is not sponsored yet. You can still delegate now and pay the fee yourself, about $2. Your choice sticks and applies once you hold ENS.',
       }
     case 'below-minimum':
       return {
         title: 'You need more ENS for free gas',
-        body: `Free gas covers wallets holding at least ${minEns} ENS and yours holds less than that. Add some ENS to delegate with sponsored gas. You can still delegate now and pay the fee yourself, about $2. Gas is the only difference and your rewards stay the same.`,
+        body: `Free gas covers wallets holding at least ${minEns} ENS, and yours holds less than that. You can still delegate now and pay the fee yourself, about $2. Gas is the only difference and your rewards stay the same.`,
       }
     case 'rate-limited':
       return {
@@ -104,24 +97,14 @@ function getCopy(
 }
 
 /**
- * Reasons where buying ENS would not unlock free gas (the block isn't a
- * balance shortfall), so the modal offers "Maybe later" instead of "Buy ENS".
- */
-const NON_BALANCE_REASONS: ReadonlySet<DelegationEligibilityReason> = new Set([
-  'rate-limited',
-  'relayer-paused',
-])
-
-/**
  * Shown when a connected wallet clicks Delegate but this delegation won't
  * get sponsored (free) gas — the wallet's ENS balance is below the
  * sponsorship threshold, it holds no ENS at all, or the relayer is paused.
  * Explains why gas isn't covered and lets the user continue delegating
- * while paying the network fee themselves (and, for the balance-gated
- * states, buy ENS on Uniswap).
+ * while paying the network fee themselves.
  *
- * Layout per Figma: stacked full-width actions on every viewport, with the
- * secondary action on top and the primary action at the bottom.
+ * Layout: stacked full-width actions on every viewport, with "Maybe later"
+ * on top and "Delegate and pay gas" at the bottom.
  */
 export function DelegationEligibilityModal({
   open,
@@ -145,31 +128,12 @@ export function DelegationEligibilityModal({
         <Paragraph>{body}</Paragraph>
 
         <Actions>
-          {NON_BALANCE_REASONS.has(reason) ? (
-            <>
-              <Button colorStyle="blueSecondary" onClick={onClose}>
-                Maybe later
-              </Button>
-              <Button colorStyle="bluePrimary" onClick={onDelegateAnyway}>
-                Delegate and pay gas
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button colorStyle="blueSecondary" onClick={onDelegateAnyway}>
-                Delegate and pay gas
-              </Button>
-              <Button
-                as="a"
-                href={UNISWAP_BUY_ENS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                colorStyle="bluePrimary"
-              >
-                Buy ENS
-              </Button>
-            </>
-          )}
+          <Button colorStyle="blueSecondary" onClick={onClose}>
+            Maybe later
+          </Button>
+          <Button colorStyle="bluePrimary" onClick={onDelegateAnyway}>
+            Delegate and pay gas
+          </Button>
         </Actions>
       </Body>
     </Dialog>

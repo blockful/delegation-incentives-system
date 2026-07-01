@@ -169,15 +169,15 @@ export function Footer() {
       <Inner>
         <Top>
           <BrandBlock>
-            <BrandText>A security campaign for safer ENS governance.</BrandText>
+            <BrandText>A community program for safer ENS governance.</BrandText>
             <BrandSub>
-              Built by{' '}
+              Built with{' '}
               <BrandSubLink
                 href="https://blockful.io?utm_source=ens-incentives&utm_medium=footer&utm_campaign=delegation-incentives"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Blockful
+                blockful
               </BrandSubLink>
               {' · '}Powered by{' '}
               <BrandSubLink

@@ -12,11 +12,9 @@ interface DisconnectedLandingProps {
 }
 
 export function DisconnectedLanding({ tierData, roundData }: DisconnectedLandingProps) {
-  const currentAprPct = tierData.maxTokenHolderAprPct
-
   return (
     <>
-      <HeroSection currentAprPct={currentAprPct} />
+      <HeroSection />
       <RoundStatusBar
         currentGrowthPct={roundData.vpGrowthPct}
         currentTierIndex={roundData.tierIndex}
@@ -25,7 +23,7 @@ export function DisconnectedLanding({ tierData, roundData }: DisconnectedLanding
         roundEndDate={roundData.endDate}
       />
       <TierTableSection tiers={tierData.tiers} />
-      <HowItWorksSection currentAprPct={currentAprPct} />
+      <HowItWorksSection />
       <FaqSection />
       <CtaSection />
     </>

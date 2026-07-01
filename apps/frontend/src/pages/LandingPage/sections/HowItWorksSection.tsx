@@ -220,21 +220,7 @@ type Step = {
   tagColor: string
 }
 
-function formatStepApr(pct: string | null): string | null {
-  if (pct == null) return null
-  const n = Number(pct)
-  if (!Number.isFinite(n) || n <= 0) return null
-  if (n >= 1000) return '>1000%'
-  return `${n.toFixed(n < 10 ? 2 : 1)}%`
-}
-
-function buildSteps(currentAprPct: string | null, gasMinEns: string): Step[] {
-  const formattedApr = formatStepApr(currentAprPct)
-  const aprTag = formattedApr
-    ? formattedApr.startsWith('>')
-      ? `Currently earning ${formattedApr} APR`
-      : `Currently earning ~${formattedApr} APR`
-    : 'Earn APR on your ENS'
+function buildSteps(gasMinEns: string): Step[] {
   return [
     {
       number: '1',
@@ -256,7 +242,7 @@ function buildSteps(currentAprPct: string | null, gasMinEns: string): Step[] {
       number: '3',
       title: 'Receive ENS at round end',
       desc: 'If your share is 1 ENS or more, it’s sent directly to your wallet at the end of each monthly round.',
-      tag: aprTag,
+      tag: 'Paid in ENS, funded by the DAO',
       tagBg: tokens.color.lightOrange,
       tagColor: tokens.color.orange,
     },
@@ -269,10 +255,6 @@ function buildSteps(currentAprPct: string | null, gasMinEns: string): Step[] {
       tagColor: tokens.color.orange,
     },
   ]
-}
-
-interface HowItWorksSectionProps {
-  currentAprPct?: string | null
 }
 
 function RevealStep({
@@ -308,9 +290,9 @@ function RevealStep({
   )
 }
 
-export function HowItWorksSection({ currentAprPct = null }: HowItWorksSectionProps = {}) {
+export function HowItWorksSection() {
   const gasMinEns = useGasSponsorshipMinEns()
-  const steps = buildSteps(currentAprPct, gasMinEns)
+  const steps = buildSteps(gasMinEns)
 
   return (
     <Section id="how-it-works">

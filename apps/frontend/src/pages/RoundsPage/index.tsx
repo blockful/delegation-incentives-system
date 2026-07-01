@@ -1222,12 +1222,9 @@ export function RoundsPage() {
     ? formatVpNeeded(nextTier.additionalVPNeeded)
     : ''
 
-  const nextTierAprLabel = nextTier?.estimatedAprPct
-    ? `~${Number(nextTier.estimatedAprPct).toFixed(2)}%`
-    : null
   const tierShareText = !nextTier
     ? "We're at the top tier of the ENS Delegation Incentives Program. Keep the active-voter pool growing:"
-    : `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated (${nextTierAprLabel ?? 'higher APR'} for everyone). Help us get there:`
+    : `Tier ${nextTier.index + 1} of the ENS Delegation Incentives Program unlocks at ${nextTierTargetLabel || '—'} ENS delegated, growing the reward pool for everyone. Help us get there:`
   const tierShareUrl =
     typeof window !== 'undefined'
       ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(tierShareText)}&url=${encodeURIComponent(window.location.origin)}`
@@ -1326,9 +1323,8 @@ export function RoundsPage() {
               )
             })()
 
-            const tierAprLabel = tier.estimatedAprPct
-              ? `~${Number(tier.estimatedAprPct).toFixed(2)}% APR`
-              : null
+            const tierPool = tier.poolSizeEns ? formatPool(tier.poolSizeEns) : null
+            const tierPoolLabel = tierPool ? `${tierPool} ENS` : null
 
             return (
               <TierPip key={tier.index} $state={state}>
@@ -1336,8 +1332,8 @@ export function RoundsPage() {
                   <FontAwesomeIcon icon={icon} />
                 </TierPipIcon>
                 <TierPipTitle $state={state}>Tier {tier.index + 1}</TierPipTitle>
-                {tierAprLabel ? (
-                  <TierPipApr $state={state}>{tierAprLabel}</TierPipApr>
+                {tierPoolLabel ? (
+                  <TierPipApr $state={state}>{tierPoolLabel}</TierPipApr>
                 ) : null}
                 <TierPipBarTrack>
                   <TierPipBarFill $pct={pipPct} $state={state} />
@@ -1351,11 +1347,9 @@ export function RoundsPage() {
           <TierShareCopy>
             {!nextTier
               ? "You're at the top tier. Help keep the active-voter pool growing."
-              : nextTierVpNeededLabel && nextTierAprLabel
-                ? `${nextTierVpNeededLabel} more ENS in voting power unlocks the next tier, lifting APR to ${nextTierAprLabel} for everyone.`
-                : nextTierAprLabel
-                  ? `Bring in more delegators to unlock ${nextTierAprLabel} APR for everyone.`
-                  : 'Bring in more delegators to unlock a higher APR for everyone.'}
+              : nextTierVpNeededLabel
+                ? `${nextTierVpNeededLabel} more ENS in voting power unlocks the next tier, growing the reward pool for everyone.`
+                : 'Bring in more delegators to grow the reward pool for everyone.'}
           </TierShareCopy>
           <TierShareLink
             href={tierShareUrl}
@@ -1455,7 +1449,7 @@ export function RoundsPage() {
             </TableHeadCell>
             <TableHeadCell $weight={1.4}>
               <LabelWithTooltip
-                text="Earned by delegating to an active delegate at the distribution cutoff. ≥ 1 ENS pays out directly (APR); < 1 ENS enters the lottery instead."
+                text="Earned by delegating to an active delegate at the distribution cutoff. ≥ 1 ENS pays out directly; < 1 ENS enters the lottery instead."
                 iconAriaLabel="About holder rewards"
               >
                 Holder rewards (ENS)
@@ -1463,7 +1457,7 @@ export function RoundsPage() {
             </TableHeadCell>
             <TableHeadCell $weight={1.4}>
               <LabelWithTooltip
-                text="Earned by being an active delegate — voted on at least 7 of the last 10 on-chain proposals (rolling)."
+                text="Earned by being an active delegate - voted on at least 7 of the last 10 on-chain proposals (rolling)."
                 iconAriaLabel="About delegate rewards"
               >
                 Delegate rewards (ENS)

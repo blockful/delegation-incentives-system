@@ -17,8 +17,12 @@ describe('DashboardPage', () => {
   it('renders the not-earning hero when connected but not delegated', async () => {
     renderApp(<DashboardPage />, { walletState: CONNECTED_WALLET })
     await waitFor(() => {
-      expect(screen.getByText(/3\.95% APR/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/start earning rewards/),
+      ).toBeInTheDocument()
     })
+    // Compliance: no APR / rate framing anywhere on the dashboard.
+    expect(screen.queryByText(/% APR/)).not.toBeInTheDocument()
     expect(screen.getByText('You’re not earning yet')).toBeInTheDocument()
     expect(screen.getByText('Not delegating yet')).toBeInTheDocument()
     expect(
