@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />)
     await waitFor(() => {
       expect(
-        screen.getByText(/earn rewards from the DAO/),
+        screen.getByText(/Put your ENS to work/),
       ).toBeInTheDocument()
     })
   })
@@ -123,7 +123,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/earn rewards from the DAO/),
+        screen.getByText(/Put your ENS to work/),
       ).toBeInTheDocument()
     })
   })
@@ -138,7 +138,7 @@ describe('LandingPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByText(/earn rewards from the DAO/),
+        screen.getByText(/Put your ENS to work/),
       ).toBeInTheDocument()
     })
   })
