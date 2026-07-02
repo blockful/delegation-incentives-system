@@ -12,6 +12,7 @@ import { EnsAvatar } from '@/components/shared/EnsAvatar'
 import { ProposalBar } from '@/components/shared/ProposalBar'
 import { DelegationEligibilityModal } from '@/features/delegate/components/DelegationEligibilityModal'
 import { DelegationModal } from '@/features/delegate/components/DelegationModal'
+import { trackEvent } from '@/utils/analytics'
 import {
   useGaslessEligibility,
   useRelayerBalance,
@@ -373,6 +374,13 @@ export function VoterCard({
   }
 
   const handleDelegate = () => {
+    // Track every Delegate click on the voters list so we can see which
+    // delegates get picked and which wallets are clicking.
+    trackEvent('voters_delegate_click', {
+      delegate: voter.address,
+      viewer: connectedAddress ?? 'disconnected',
+      status: walletState.status,
+    })
     if (walletState.status === 'disconnected') {
       void openWalletModal()
       return

@@ -35,13 +35,30 @@ const Wrapper = styled.div`
 const FULL_WIDTH_PATHS = ['/']
 
 export function AppLayout() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const isFullWidth = FULL_WIDTH_PATHS.includes(pathname)
 
-  // Reset scroll on route change so navigating into a new page starts at the top
   useEffect(() => {
+    // A shared deep link like `/#faq` should land on that section. The landing
+    // view depends on wallet state, so the target may not exist on the first
+    // frame — retry across a few frames before giving up. `scroll-margin-top`
+    // on the target section keeps it clear of the sticky header.
+    if (hash) {
+      const id = decodeURIComponent(hash.slice(1))
+      let frames = 0
+      let raf = requestAnimationFrame(function tryScroll() {
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ block: 'start' })
+        } else if (frames++ < 20) {
+          raf = requestAnimationFrame(tryScroll)
+        }
+      })
+      return () => cancelAnimationFrame(raf)
+    }
+    // Reset scroll on route change so navigating into a new page starts at the top
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
-  }, [pathname])
+  }, [pathname, hash])
 
   return (
     <Wrapper>
