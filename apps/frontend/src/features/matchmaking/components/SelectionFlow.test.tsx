@@ -10,8 +10,16 @@ const CONNECTED = {
 describe('SelectionFlow', () => {
   it('walks pitch → select → confirm and enables Submit only at 5', async () => {
     const user = userEvent.setup()
+    const umamiTrack = vi.fn()
+    window.umami = { track: umamiTrack }
     renderApp(<SelectionFlow open role="holder" onClose={() => {}} />, {
       walletState: CONNECTED,
+    })
+
+    expect(umamiTrack).toHaveBeenCalledWith('matchmaking_open', {
+      role: 'holder',
+      entry: 'pitch',
+      viewer: CONNECTED.address,
     })
 
     // Pitch (holder copy)
@@ -47,6 +55,17 @@ describe('SelectionFlow', () => {
       expect(screen.getByText(/the voters list is now sorted/i)).toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: /view matches/i })).toBeInTheDocument()
+
+    // The saved selection fires the submit event; reaching Confirm means no dismiss.
+    expect(umamiTrack).toHaveBeenCalledWith(
+      'matchmaking_submit',
+      expect.objectContaining({ viewer: CONNECTED.address, source: 'new' }),
+    )
+    expect(umamiTrack).not.toHaveBeenCalledWith(
+      'matchmaking_dismiss',
+      expect.anything(),
+    )
+    delete window.umami
   })
 
   it('caps selection at 5 — extra chips are disabled', async () => {

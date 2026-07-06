@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import { SELECTION_COUNT } from '@ens-dis/domain'
 import { tokens } from '@/styles'
+import { trackEvent } from '@/utils/analytics'
 import { Modal } from '@/components/shared/Modal'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { useWordPool } from '../useWordPool'
@@ -47,6 +48,33 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
   )
   const navigate = useNavigate()
 
+  // One matchmaking_open per open cycle (not per re-render while open).
+  const openTracked = useRef(false)
+  useEffect(() => {
+    if (open && !openTracked.current) {
+      openTracked.current = true
+      trackEvent('matchmaking_open', {
+        role,
+        entry: initialStep,
+        viewer: address ?? 'disconnected',
+      })
+    }
+    if (!open) openTracked.current = false
+  }, [open, role, initialStep, address])
+
+  // Closing before Confirm is an abandonment — record which step lost them.
+  // After Confirm the selection is saved, so closing is just completion.
+  const handleClose = () => {
+    if (step !== 'confirm') {
+      trackEvent('matchmaking_dismiss', {
+        role,
+        step,
+        viewer: address ?? 'disconnected',
+      })
+    }
+    onClose()
+  }
+
   const toggle = (id: string) =>
     setSelected((cur) => toggleSelection(cur, id, SELECTION_COUNT))
 
@@ -74,7 +102,7 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
         : confirmCopy[role].title
 
   return (
-    <Modal open={open} onClose={onClose} label={title}>
+    <Modal open={open} onClose={handleClose} label={title}>
       <Flow>
         <StepDots count={3} active={STEP_INDEX[step]} />
 
@@ -84,7 +112,7 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
             body={pitchCopy[role].body}
             primaryLabel={pitchCopy[role].cta}
             onPrimary={() => setStep('select')}
-            onSecondary={onClose}
+            onSecondary={handleClose}
           />
         )}
 

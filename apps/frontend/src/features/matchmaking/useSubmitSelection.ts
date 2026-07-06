@@ -2,7 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSignMessage } from 'wagmi'
 import { buildSelectionMessage } from '@ens-dis/domain'
 import { api } from '@/api'
+import { isUserRejection } from '@/features/delegate/utils/gaslessRelayerError'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { trackEvent } from '@/utils/analytics'
 import { matchmakingKeys } from './queryKeys'
 
 /**
@@ -11,8 +13,12 @@ import { matchmakingKeys } from './queryKeys'
  * cards, profile, and dashboard all resolve together (FE requirement).
  *
  * Call `mutateAsync(words)` with the 5 selected word ids.
+ *
+ * Being the single write path also makes this the single analytics point:
+ * matchmaking_submit / matchmaking_submit_error fire here for every surface.
+ * `source` only labels the events ('new' = first-time flow, 'edit' = edit modal).
  */
-export function useSubmitSelection() {
+export function useSubmitSelection(source: 'new' | 'edit' = 'new') {
   const wallet = useWalletState()
   const address = wallet.status === 'disconnected' ? undefined : wallet.address
   const { signMessageAsync } = useSignMessage()
@@ -21,11 +27,30 @@ export function useSubmitSelection() {
   return useMutation({
     mutationFn: async (words: string[]) => {
       if (!address) throw new Error('Connect your wallet to save your values')
-      const message = buildSelectionMessage(address, words)
-      const signature = await signMessageAsync({ message })
-      return api.putSelection(address, { words, signature })
+      let stage: 'signature' | 'api' = 'signature'
+      try {
+        const message = buildSelectionMessage(address, words)
+        const signature = await signMessageAsync({ message })
+        stage = 'api'
+        return await api.putSelection(address, { words, signature })
+      } catch (err) {
+        trackEvent('matchmaking_submit_error', {
+          viewer: address,
+          source,
+          stage,
+          reason: isUserRejection(err) ? 'user-rejected' : 'other',
+          message:
+            err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160),
+        })
+        throw err
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_data, words) => {
+      trackEvent('matchmaking_submit', {
+        viewer: address,
+        source,
+        words: words.join(','),
+      })
       queryClient.invalidateQueries({ queryKey: matchmakingKeys.all })
       queryClient.invalidateQueries({ queryKey: ['voters'] })
     },

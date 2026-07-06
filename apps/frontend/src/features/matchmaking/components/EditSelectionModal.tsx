@@ -28,7 +28,7 @@ export interface EditSelectionModalProps {
 export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModalProps) {
   const { pool, loading: poolLoading } = useWordPool()
   const { words: current } = useMySelection()
-  const submit = useSubmitSelection()
+  const submit = useSubmitSelection('edit')
   const [selected, setSelected] = useState<string[]>([])
 
   // Prefill with the stored selection when the modal opens or the data loads.
