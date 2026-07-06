@@ -197,6 +197,7 @@ export function Footer() {
             <FooterLink to="/voters">Voters</FooterLink>
             <FooterLink to="/rounds">Rounds</FooterLink>
             <FooterLink to="/transparency">Transparency</FooterLink>
+            <FooterLink to="/privacy">Privacy</FooterLink>
           </NavColumn>
 
           <NavColumn>

@@ -64,6 +64,9 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
       <Stack>
         <Title>Edit your values</Title>
         <Body>Update the {SELECTION_COUNT} words that reflect your priorities.</Body>
+        <PrivacyNote>
+          We use privacy-friendly product analytics to improve matching flows. Your connected wallet address is not sent to analytics.
+        </PrivacyNote>
         {poolLoading || !pool ? (
           <Body>Loading…</Body>
         ) : (
@@ -105,6 +108,13 @@ const Body = styled.p`
   color: ${tokens.color.textMuted};
   font-size: ${tokens.font.size.lg};
   line-height: 1.56;
+`
+
+const PrivacyNote = styled.p`
+  margin: 0;
+  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.sm};
+  line-height: 1.5;
 `
 
 const Counter = styled.div`

@@ -131,10 +131,8 @@ export function DelegationModal({
         // voters_delegate_click to give the click -> delegation conversion.
         trackEvent('delegate_success', {
           delegate: delegateAddress,
-          holder: address,
           mode: isGaslessEligible ? 'gasless' : 'fallback',
           source: source ?? 'unknown',
-          tx: receipt.transactionHash,
         })
         onSuccess?.()
       } catch (err) {
@@ -144,7 +142,6 @@ export function DelegationModal({
         // EIP-712 signature step) without on-chain forensics.
         trackEvent('delegate_error', {
           delegate: delegateAddress,
-          holder: address,
           mode: isGaslessEligible ? 'gasless' : 'fallback',
           source: source ?? 'unknown',
           stage: sentTxHash ? 'transaction' : 'signature',

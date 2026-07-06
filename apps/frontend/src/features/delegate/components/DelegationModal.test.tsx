@@ -224,10 +224,8 @@ describe('DelegationModal', () => {
     // The delegate_success event fires only after the receipt confirms.
     expect(umamiTrack).toHaveBeenCalledWith('delegate_success', {
       delegate: DELEGATEE_ADDRESS,
-      holder: USER_ADDRESS,
       mode: 'gasless',
       source: 'voters',
-      tx: RELAY_TX_HASH,
     })
     delete window.umami
     expect(
@@ -288,7 +286,6 @@ describe('DelegationModal', () => {
     // Failure before any tx was sent → signature stage, user-rejected.
     expect(umamiTrack).toHaveBeenCalledWith('delegate_error', {
       delegate: DELEGATEE_ADDRESS,
-      holder: USER_ADDRESS,
       mode: 'gasless',
       source: 'unknown',
       stage: 'signature',

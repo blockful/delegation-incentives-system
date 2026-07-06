@@ -56,7 +56,7 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
       trackEvent('matchmaking_open', {
         role,
         entry: initialStep,
-        viewer: address ?? 'disconnected',
+        wallet: address ? 'connected' : 'disconnected',
       })
     }
     if (!open) openTracked.current = false
@@ -69,7 +69,7 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
       trackEvent('matchmaking_dismiss', {
         role,
         step,
-        viewer: address ?? 'disconnected',
+        wallet: address ? 'connected' : 'disconnected',
       })
     }
     onClose()
@@ -120,6 +120,9 @@ export function SelectionFlow({ open, onClose, role, initialStep = 'pitch' }: Se
           <Stack>
             <Title $small>Select your values</Title>
             <Body>Pick {SELECTION_COUNT} words that reflect your priorities.</Body>
+            <PrivacyNote>
+              We use privacy-friendly product analytics to improve matching flows. Your connected wallet address is not sent to analytics.
+            </PrivacyNote>
             {poolLoading || !pool ? (
               <Body>Loading…</Body>
             ) : (
@@ -220,6 +223,13 @@ const Body = styled.p`
   color: ${tokens.color.textMuted};
   font-size: ${tokens.font.size.lg};
   line-height: 1.56;
+`
+
+const PrivacyNote = styled.p`
+  margin: 0;
+  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.sm};
+  line-height: 1.5;
 `
 
 const CheckCircle = styled.span`

@@ -4,7 +4,7 @@
  * runs; it can be absent (blocked by an ad-blocker, still loading, or in SSR/
  * test environments), so every call is guarded and never throws.
  *
- * Usage: trackEvent('voters_delegate_click', { delegate, viewer })
+ * Usage: trackEvent('voters_delegate_click', { delegate, wallet })
  */
 type UmamiTracker = {
   track: (eventName: string, eventData?: Record<string, unknown>) => void

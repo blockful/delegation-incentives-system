@@ -35,7 +35,6 @@ export function useSubmitSelection(source: 'new' | 'edit' = 'new') {
         return await api.putSelection(address, { words, signature })
       } catch (err) {
         trackEvent('matchmaking_submit_error', {
-          viewer: address,
           source,
           stage,
           reason: isUserRejection(err) ? 'user-rejected' : 'other',
@@ -47,9 +46,8 @@ export function useSubmitSelection(source: 'new' | 'edit' = 'new') {
     },
     onSuccess: (_data, words) => {
       trackEvent('matchmaking_submit', {
-        viewer: address,
         source,
-        words: words.join(','),
+        wordCount: words.length,
       })
       queryClient.invalidateQueries({ queryKey: matchmakingKeys.all })
       queryClient.invalidateQueries({ queryKey: ['voters'] })

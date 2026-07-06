@@ -19,7 +19,7 @@ describe('SelectionFlow', () => {
     expect(umamiTrack).toHaveBeenCalledWith('matchmaking_open', {
       role: 'holder',
       entry: 'pitch',
-      viewer: CONNECTED.address,
+      wallet: 'connected',
     })
 
     // Pitch (holder copy)
@@ -59,7 +59,7 @@ describe('SelectionFlow', () => {
     // The saved selection fires the submit event; reaching Confirm means no dismiss.
     expect(umamiTrack).toHaveBeenCalledWith(
       'matchmaking_submit',
-      expect.objectContaining({ viewer: CONNECTED.address, source: 'new' }),
+      expect.objectContaining({ source: 'new', wordCount: 5 }),
     )
     expect(umamiTrack).not.toHaveBeenCalledWith(
       'matchmaking_dismiss',
