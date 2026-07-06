@@ -7,7 +7,7 @@ import { useAccount, useEnsName, useReadContract, useWalletClient } from 'wagmi'
 
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { tokens } from '@/styles'
-import { trackEvent } from '@/utils/analytics'
+import { errorMessageForAnalytics, trackEvent } from '@/utils/analytics'
 import { formatEnsAmount } from '@/utils/format'
 import { ShareCardBlock } from './ShareCardBlock'
 import { buildHolderShareUrl, buildVoterOgImageUrl } from '../utils/shareCard'
@@ -150,8 +150,7 @@ export function DelegationModal({
             : isGaslessEligible && isRelayerError(err)
               ? 'relayer'
               : 'other',
-          message:
-            err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160),
+          message: errorMessageForAnalytics(err),
         })
         if (isUserRejection(err)) {
           setError('Transaction rejected by user.')

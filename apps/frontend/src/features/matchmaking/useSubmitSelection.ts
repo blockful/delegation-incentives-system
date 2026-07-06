@@ -4,7 +4,7 @@ import { buildSelectionMessage } from '@ens-dis/domain'
 import { api } from '@/api'
 import { isUserRejection } from '@/features/delegate/utils/gaslessRelayerError'
 import { useWalletState } from '@/features/wallet/useWalletState'
-import { trackEvent } from '@/utils/analytics'
+import { errorMessageForAnalytics, trackEvent } from '@/utils/analytics'
 import { matchmakingKeys } from './queryKeys'
 
 /**
@@ -38,8 +38,7 @@ export function useSubmitSelection(source: 'new' | 'edit' = 'new') {
           source,
           stage,
           reason: isUserRejection(err) ? 'user-rejected' : 'other',
-          message:
-            err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160),
+          message: errorMessageForAnalytics(err),
         })
         throw err
       }
