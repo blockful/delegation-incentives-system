@@ -64,9 +64,6 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
       <Stack>
         <Title>Edit your values</Title>
         <Body>Update the {SELECTION_COUNT} words that reflect your priorities.</Body>
-        <PrivacyNote>
-          We use privacy-friendly product analytics to improve matching flows. Your connected wallet address is not sent to analytics.
-        </PrivacyNote>
         {poolLoading || !pool ? (
           <Body>Loading…</Body>
         ) : (
@@ -84,6 +81,10 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
             {submit.isPending ? 'Saving…' : 'Save'}
           </Primary>
         </Row>
+        <PrivacyNote>
+          We use privacy-friendly product analytics to improve matching flows.
+          <br />Your connected wallet address is not sent to analytics.
+        </PrivacyNote>
       </Stack>
     </Modal>
   )
