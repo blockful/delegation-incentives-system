@@ -7,7 +7,7 @@ export function PrivacyPage() {
       <Shell>
         <Header>
           <Eyebrow>Privacy</Eyebrow>
-          <Title>Privacy-friendly analytics for the ENS Incentives Program</Title>
+          <Title>Privacy-conscious analytics for the ENS Incentives Program</Title>
           <Intro>
             We use <a href="https://umami.is" target="_blank" rel="noopener noreferrer">Umami Cloud</a> to understand which pages and product flows are
             working, improve delegation reliability, and spot errors. Umami is
@@ -19,7 +19,7 @@ export function PrivacyPage() {
         <Section>
           <SectionTitle>What we collect</SectionTitle>
           <List>
-            <li>Pageview analytics such as page path, referrer, browser, device, language, and country-level location.</li>
+            <li>Page analytics such as page path, referrer, browser, device type, language, and country-level location.</li>
             <li>Product events such as delegate clicks, delegation success or error, and matchmaking flow steps.</li>
             <li>Public delegate addresses involved in delegation events, so we can measure delegate conversion and reliability.</li>
           </List>
@@ -30,17 +30,16 @@ export function PrivacyPage() {
           <List>
             <li>Your connected wallet address.</li>
             <li>Your name, email, or contact details.</li>
-            <li>Your selected matchmaking words tied to your wallet.</li>
+            <li>Your matchmaking preferences associated with your wallet address.</li>
           </List>
         </Section>
 
         <Section>
           <SectionTitle>Why we use it</SectionTitle>
           <Body>
-            We use analytics to understand aggregate product performance: which
-            flows are used, where users drop off, and whether delegation succeeds
-            or fails. This helps us improve the program without advertising or
-            profiling individual visitors.
+          We use analytics to understand how the product is used, 
+          identify where users encounter problems, measure delegation reliability, and improve the overall experience. 
+          We do not use analytics for advertising, selling data, or building marketing profiles.
           </Body>
         </Section>
 
