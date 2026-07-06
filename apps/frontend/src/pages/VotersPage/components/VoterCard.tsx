@@ -506,6 +506,7 @@ export function VoterCard({
           delegateEnsName={ensName}
           delegateAvatarUrl={voter.avatarUrl}
           tokenAddress={contracts.ensToken}
+          source="voters"
         />
       )}
     </>
