@@ -259,6 +259,9 @@ describe('DelegationModal', () => {
       walletClientResult({ data: asWalletClient }),
     )
 
+    const umamiTrack = vi.fn()
+    window.umami = { track: umamiTrack }
+
     renderApp(
       <DelegationModal
         open
@@ -281,6 +284,18 @@ describe('DelegationModal', () => {
       screen.getByText('Transaction rejected by user.'),
     ).toBeInTheDocument()
     expect(state.relayCalls).toBe(0)
+
+    // Failure before any tx was sent → signature stage, user-rejected.
+    expect(umamiTrack).toHaveBeenCalledWith('delegate_error', {
+      delegate: DELEGATEE_ADDRESS,
+      holder: USER_ADDRESS,
+      mode: 'gasless',
+      source: 'unknown',
+      stage: 'signature',
+      reason: 'user-rejected',
+      message: 'User rejected the request.',
+    })
+    delete window.umami
   })
 
   it('relayer 429: shows rate-limited error copy', async () => {

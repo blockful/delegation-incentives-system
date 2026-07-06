@@ -107,6 +107,10 @@ export function DelegationModal({
     setError(null)
     setStep('waiting-signature')
 
+    // Local mirror of txHash: the state var is stale inside this closure, and
+    // the error event needs to know whether we died before or after the tx.
+    let sentTxHash: `0x${string}` | null = null
+
     try {
       try {
         const receipt = await delegateTo({
@@ -117,6 +121,7 @@ export function DelegationModal({
           chain: mainnet,
           mode: isGaslessEligible ? 'gasless' : 'fallback',
           onTxHash: (hash) => {
+            sentTxHash = hash
             setTxHash(hash)
             setStep('pending-tx')
           },
@@ -133,6 +138,24 @@ export function DelegationModal({
         })
         onSuccess?.()
       } catch (err) {
+        // stage 'signature' = wallet prompt / relay call; 'transaction' = the
+        // tx was sent but the receipt failed. Together with reason this makes
+        // failures diagnosable in Umami (e.g. mobile wallets dying on the
+        // EIP-712 signature step) without on-chain forensics.
+        trackEvent('delegate_error', {
+          delegate: delegateAddress,
+          holder: address,
+          mode: isGaslessEligible ? 'gasless' : 'fallback',
+          source: source ?? 'unknown',
+          stage: sentTxHash ? 'transaction' : 'signature',
+          reason: isUserRejection(err)
+            ? 'user-rejected'
+            : isGaslessEligible && isRelayerError(err)
+              ? 'relayer'
+              : 'other',
+          message:
+            err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160),
+        })
         if (isUserRejection(err)) {
           setError('Transaction rejected by user.')
           setStep('error')
