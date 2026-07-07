@@ -7,6 +7,7 @@ import { useAccount, useEnsName, useReadContract, useWalletClient } from 'wagmi'
 
 import { AddressIdentity } from '@/components/shared/AddressIdentity'
 import { tokens } from '@/styles'
+import { errorMessageForAnalytics, trackEvent } from '@/utils/analytics'
 import { formatEnsAmount } from '@/utils/format'
 import { ShareCardBlock } from './ShareCardBlock'
 import { buildHolderShareUrl, buildVoterOgImageUrl } from '../utils/shareCard'
@@ -50,6 +51,8 @@ export interface DelegationModalProps {
   delegateAvatarUrl?: string | null
   tokenAddress: `0x${string}`
   onSuccess?: () => void
+  /** Where the flow started, attached to the delegate_success event. */
+  source?: 'voters' | 'profile'
 }
 
 export function DelegationModal({
@@ -60,6 +63,7 @@ export function DelegationModal({
   delegateAvatarUrl,
   tokenAddress,
   onSuccess,
+  source,
 }: DelegationModalProps) {
   const titleId = useId()
   const { address } = useAccount()
@@ -103,9 +107,13 @@ export function DelegationModal({
     setError(null)
     setStep('waiting-signature')
 
+    // Local mirror of txHash: the state var is stale inside this closure, and
+    // the error event needs to know whether we died before or after the tx.
+    let sentTxHash: `0x${string}` | null = null
+
     try {
       try {
-        await delegateTo({
+        const receipt = await delegateTo({
           tokenAddress,
           delegateAddress,
           account: address,
@@ -113,13 +121,33 @@ export function DelegationModal({
           chain: mainnet,
           mode: isGaslessEligible ? 'gasless' : 'fallback',
           onTxHash: (hash) => {
+            sentTxHash = hash
             setTxHash(hash)
             setStep('pending-tx')
           },
         })
         setStep('success')
+        // Confirmed on-chain (delegateTo awaits the receipt) — pairs with
+        // voters_delegate_click to give the click -> delegation conversion.
+        trackEvent('delegate_success', {
+          delegate: delegateAddress,
+          mode: isGaslessEligible ? 'gasless' : 'fallback',
+          source: source ?? 'unknown',
+        })
         onSuccess?.()
       } catch (err) {
+        trackEvent('delegate_error', {
+          delegate: delegateAddress,
+          mode: isGaslessEligible ? 'gasless' : 'fallback',
+          source: source ?? 'unknown',
+          stage: sentTxHash ? 'transaction' : 'signature',
+          reason: isUserRejection(err)
+            ? 'user-rejected'
+            : isGaslessEligible && isRelayerError(err)
+              ? 'relayer'
+              : 'other',
+          message: errorMessageForAnalytics(err),
+        })
         if (isUserRejection(err)) {
           setError('Transaction rejected by user.')
           setStep('error')
@@ -149,6 +177,7 @@ export function DelegationModal({
     onSuccess,
     minVotingPower,
     isGaslessEligible,
+    source,
   ])
 
   useEffect(() => {

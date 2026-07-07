@@ -28,7 +28,7 @@ export interface EditSelectionModalProps {
 export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModalProps) {
   const { pool, loading: poolLoading } = useWordPool()
   const { words: current } = useMySelection()
-  const submit = useSubmitSelection()
+  const submit = useSubmitSelection('edit')
   const [selected, setSelected] = useState<string[]>([])
 
   // Prefill with the stored selection when the modal opens or the data loads.
@@ -81,6 +81,10 @@ export function EditSelectionModal({ open, onClose, onSaved }: EditSelectionModa
             {submit.isPending ? 'Saving…' : 'Save'}
           </Primary>
         </Row>
+        <PrivacyNote>
+          We use privacy-friendly product analytics to improve matching flows.
+          <br />Your connected wallet address is not sent to analytics.
+        </PrivacyNote>
       </Stack>
     </Modal>
   )
@@ -105,6 +109,13 @@ const Body = styled.p`
   color: ${tokens.color.textMuted};
   font-size: ${tokens.font.size.lg};
   line-height: 1.56;
+`
+
+const PrivacyNote = styled.p`
+  margin: 0;
+  color: ${tokens.color.textMuted};
+  font-size: ${tokens.font.size.sm};
+  line-height: 1.5;
 `
 
 const Counter = styled.div`

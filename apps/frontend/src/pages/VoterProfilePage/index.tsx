@@ -1112,6 +1112,7 @@ export function VoterProfilePage() {
         delegateEnsName={ensName}
         delegateAvatarUrl={voter.avatarUrl}
         tokenAddress={contracts.ensToken}
+        source="profile"
       />
     )}
     <DelegateShareModal

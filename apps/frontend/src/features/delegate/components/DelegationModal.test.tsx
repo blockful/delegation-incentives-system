@@ -203,12 +203,16 @@ describe('DelegationModal', () => {
       walletClientResult({ data: asWalletClient }),
     )
 
+    const umamiTrack = vi.fn()
+    window.umami = { track: umamiTrack }
+
     renderApp(
       <DelegationModal
         open
         onClose={() => {}}
         delegateAddress={DELEGATEE_ADDRESS}
         tokenAddress={ENS_TOKEN_ADDRESS}
+        source="voters"
       />,
     )
 
@@ -216,6 +220,14 @@ describe('DelegationModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Your ENS is now delegated')).toBeInTheDocument()
     })
+
+    // The delegate_success event fires only after the receipt confirms.
+    expect(umamiTrack).toHaveBeenCalledWith('delegate_success', {
+      delegate: DELEGATEE_ADDRESS,
+      mode: 'gasless',
+      source: 'voters',
+    })
+    delete window.umami
     expect(
       screen.getByRole('button', { name: /share on x/i }),
     ).toBeInTheDocument()
@@ -245,6 +257,9 @@ describe('DelegationModal', () => {
       walletClientResult({ data: asWalletClient }),
     )
 
+    const umamiTrack = vi.fn()
+    window.umami = { track: umamiTrack }
+
     renderApp(
       <DelegationModal
         open
@@ -267,6 +282,17 @@ describe('DelegationModal', () => {
       screen.getByText('Transaction rejected by user.'),
     ).toBeInTheDocument()
     expect(state.relayCalls).toBe(0)
+
+    // Failure before any tx was sent → signature stage, user-rejected.
+    expect(umamiTrack).toHaveBeenCalledWith('delegate_error', {
+      delegate: DELEGATEE_ADDRESS,
+      mode: 'gasless',
+      source: 'unknown',
+      stage: 'signature',
+      reason: 'user-rejected',
+      message: 'User rejected the request.',
+    })
+    delete window.umami
   })
 
   it('relayer 429: shows rate-limited error copy', async () => {

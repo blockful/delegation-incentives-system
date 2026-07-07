@@ -375,10 +375,10 @@ export function VoterCard({
 
   const handleDelegate = () => {
     // Track every Delegate click on the voters list so we can see which
-    // delegates get picked and which wallets are clicking.
+    // delegates get picked without sending the connected wallet address.
     trackEvent('voters_delegate_click', {
       delegate: voter.address,
-      viewer: connectedAddress ?? 'disconnected',
+      wallet: connectedAddress ? 'connected' : 'disconnected',
       status: walletState.status,
     })
     if (walletState.status === 'disconnected') {
@@ -506,6 +506,7 @@ export function VoterCard({
           delegateEnsName={ensName}
           delegateAvatarUrl={voter.avatarUrl}
           tokenAddress={contracts.ensToken}
+          source="voters"
         />
       )}
     </>
