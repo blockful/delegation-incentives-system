@@ -136,10 +136,6 @@ export function DelegationModal({
         })
         onSuccess?.()
       } catch (err) {
-        // stage 'signature' = wallet prompt / relay call; 'transaction' = the
-        // tx was sent but the receipt failed. Together with reason this makes
-        // failures diagnosable in Umami (e.g. mobile wallets dying on the
-        // EIP-712 signature step) without on-chain forensics.
         trackEvent('delegate_error', {
           delegate: delegateAddress,
           mode: isGaslessEligible ? 'gasless' : 'fallback',
