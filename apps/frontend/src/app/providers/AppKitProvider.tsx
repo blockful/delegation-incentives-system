@@ -17,6 +17,7 @@ export const appKit = createAppKit({
   projectId,
   themeMode: 'light',
   themeVariables: { '--w3m-accent': '#0080BC' },
+  features: { onramp: false, swaps: false },
 })
 
 export function AppKitProvider({ children }: { children: ReactNode }) {
