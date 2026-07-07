@@ -17,6 +17,11 @@ export const appKit = createAppKit({
   projectId,
   themeMode: 'light',
   themeVariables: { '--w3m-accent': '#0080BC' },
+  // ENS asked us to remove the Meld.io on-ramp from the fund-wallet flow;
+  // swaps (1inch) is disabled for the same reason. Our Reown project has no
+  // remote feature config (config: null), so these local flags are what the
+  // SDK actually applies.
+  features: { onramp: false, swaps: false },
 })
 
 export function AppKitProvider({ children }: { children: ReactNode }) {
