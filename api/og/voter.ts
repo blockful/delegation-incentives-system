@@ -60,6 +60,46 @@ function stripEnsTld(name: string): string {
   return name.replace(/\.[a-z0-9-]{2,}$/i, '')
 }
 
+/* ─── Footer name fitting ─── */
+// Satori has no text auto-fit, so the footer name's size is decided before
+// render. The identity column is ~746px (1200 − 96 card padding − 152 avatar
+// − 134 ENS mark − 2×36 gaps); NAME_MAX_WIDTH keeps a small safety margin
+// under that. Width is estimated per character class rather than a flat
+// average because ENS names skew narrow (lowercase + dots).
+const NAME_MAX_WIDTH = 726
+const NAME_FONT_SIZES: ReadonlyArray<number> = [80, 64, 52, 44]
+
+function estimateEmWidth(text: string): number {
+  let em = 0
+  for (const ch of text) {
+    if ('iljt.,\'’"!:;|- '.includes(ch)) em += 0.3
+    else if ('mwMW'.includes(ch)) em += 0.85
+    else if (/[A-Z0-9]/.test(ch)) em += 0.65
+    else em += 0.55
+  }
+  return em
+}
+
+// Step the font size down until the name fits on ONE line; if even the
+// smallest size overflows, middle-truncate (both ends of an ENS name carry
+// meaning — 'ens.garypal…jr.eth' beats 'ens.garypalmerj…').
+function fitDisplayName(name: string): { text: string; fontSize: number } {
+  const emWidth = estimateEmWidth(name)
+  for (const size of NAME_FONT_SIZES) {
+    if (emWidth * size <= NAME_MAX_WIDTH) return { text: name, fontSize: size }
+  }
+  const minSize = NAME_FONT_SIZES[NAME_FONT_SIZES.length - 1]
+  for (let keep = name.length - 1; keep > 8; keep--) {
+    const head = Math.ceil(keep / 2)
+    const tail = keep - head
+    const candidate = `${name.slice(0, head)}…${name.slice(name.length - tail)}`
+    if (estimateEmWidth(candidate) * minSize <= NAME_MAX_WIDTH) {
+      return { text: candidate, fontSize: minSize }
+    }
+  }
+  return { text: `${name.slice(0, 5)}…${name.slice(-4)}`, fontSize: minSize }
+}
+
 /* ─── Satoshi font loading ─── */
 // Satori (which @vercel/og uses) only accepts TTF/OTF/WOFF — NOT WOFF2.
 // Fontshare only serves WOFF2, so we pull Satoshi from a public GitHub mirror
@@ -220,6 +260,7 @@ interface WrappedCardProps {
   cta: string
   headingFontSize: number
   displayName: string
+  displayNameFontSize: number
   initials: string
   avatarUrl: string | null
   satoshiLoaded: boolean
@@ -232,6 +273,7 @@ function renderWrappedCard({
   cta,
   headingFontSize,
   displayName,
+  displayNameFontSize,
   initials,
   avatarUrl,
   satoshiLoaded,
@@ -373,11 +415,11 @@ function renderWrappedCard({
       'span',
       {
         style: {
-          fontSize: 80,
+          fontSize: displayNameFontSize,
           fontWeight: 500,
           color: WHITE,
           lineHeight: 1,
-          wordBreak: 'break-word',
+          whiteSpace: 'nowrap',
         },
       },
       displayName,
@@ -627,7 +669,8 @@ export default async function handler(request: Request) {
   // Unknown variants fall back to the delegate card so a stale link never 500s.
   const copy = VARIANT_COPY[variant as 'delegate' | 'holder'] ?? VARIANT_COPY.delegate
 
-  const displayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
+  const fullDisplayName = name ?? (address ? truncateAddress(address) : 'ENS Delegate')
+  const { text: displayName, fontSize: displayNameFontSize } = fitDisplayName(fullDisplayName)
   const initials = name
     ? initialsForName(name)
     : address
@@ -647,6 +690,7 @@ export default async function handler(request: Request) {
           variant: variant ?? 'delegate',
           name,
           address,
+          nameFit: { rendered: displayName, fontSize: displayNameFontSize },
           avatar: {
             attemptedUrl: name
               ? `https://metadata.ens.domains/mainnet/avatar/${encodeURIComponent(name)}`
@@ -672,6 +716,7 @@ export default async function handler(request: Request) {
       cta: copy.cta,
       headingFontSize: copy.headingFontSize,
       displayName,
+      displayNameFontSize,
       initials,
       avatarUrl,
       satoshiLoaded: fonts.length > 0,
