@@ -75,6 +75,9 @@ function estimateEmWidth(text: string): number {
     if ('iljt.,\'’"!:;|- '.includes(ch)) em += 0.3
     else if ('mwMW'.includes(ch)) em += 0.85
     else if (/[A-Z0-9]/.test(ch)) em += 0.65
+    // Non-Latin-1 code points (CJK, emoji, '…') render at ~1em+; with the
+    // span now nowrap, underestimating these would bleed into the ENS mark.
+    else if ((ch.codePointAt(0) ?? 0) > 0xff) em += 1.0
     else em += 0.55
   }
   return em
@@ -88,15 +91,21 @@ function fitDisplayName(name: string): { text: string; fontSize: number } {
     if (emWidth * size <= NAME_MAX_WIDTH) return { text: name, fontSize: size }
   }
   const minSize = NAME_FONT_SIZES[NAME_FONT_SIZES.length - 1]
-  for (let keep = name.length - 1; keep > 8; keep--) {
+  // Truncate on code points (a UTF-16 slice can split an emoji's surrogate
+  // pair into tofu). At 44px the narrowest char is 0.3em, so at most
+  // ⌊726 / 44 / 0.3⌋ = 55 code points can ever fit — clamping `keep` there
+  // also bounds the O(keep²) loop against multi-KB ?name= values, which
+  // would otherwise burn seconds of edge CPU per uncached request.
+  const cps = [...name]
+  for (let keep = Math.min(cps.length - 1, 55); keep > 8; keep--) {
     const head = Math.ceil(keep / 2)
     const tail = keep - head
-    const candidate = `${name.slice(0, head)}…${name.slice(name.length - tail)}`
+    const candidate = `${cps.slice(0, head).join('')}…${cps.slice(cps.length - tail).join('')}`
     if (estimateEmWidth(candidate) * minSize <= NAME_MAX_WIDTH) {
       return { text: candidate, fontSize: minSize }
     }
   }
-  return { text: `${name.slice(0, 5)}…${name.slice(-4)}`, fontSize: minSize }
+  return { text: `${cps.slice(0, 5).join('')}…${cps.slice(-4).join('')}`, fontSize: minSize }
 }
 
 /* ─── Satoshi font loading ─── */
