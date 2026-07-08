@@ -81,8 +81,7 @@ function estimateEmWidth(text: string): number {
 }
 
 // Step the font size down until the name fits on ONE line; if even the
-// smallest size overflows, middle-truncate (both ends of an ENS name carry
-// meaning — 'ens.garypal…jr.eth' beats 'ens.garypalmerj…').
+// smallest size overflows, middle-truncate.
 function fitDisplayName(name: string): { text: string; fontSize: number } {
   const emWidth = estimateEmWidth(name)
   for (const size of NAME_FONT_SIZES) {
