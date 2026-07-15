@@ -590,7 +590,7 @@ Cron job calls a script after month-end. The script:
 
 | Name | Value | Description |
 |---|---|---|
-| `ACTIVE_VOTE_THRESHOLD` | 7 | Minimum votes in last 10 finalized proposals to qualify as an active voter |
+| `ACTIVE_VOTE_THRESHOLD` | 6 | Minimum votes in last 10 finalized proposals to qualify as an active voter |
 | `PROPOSAL_WINDOW_SIZE` | 10 | Number of recent finalized proposals considered |
 | `VOTER_POOL_BPS` | 1,000 (10%) | Share of monthly pool allocated to active voters |
 | `TOKEN_HOLDER_POOL_BPS` | 9,000 (90%) | Share of monthly pool allocated to eligible token holders |

@@ -124,22 +124,22 @@ describe("identifyActiveVoters", () => {
     expect(active.size).toBe(1);
   });
 
-  it("voter who voted on exactly 7 proposals is active", () => {
-    const votes = proposals.slice(0, 7).map((p) => makeVote(alice, p.id));
+  it("voter who voted on exactly 6 proposals is active", () => {
+    const votes = proposals.slice(0, 6).map((p) => makeVote(alice, p.id));
 
     const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(true);
   });
 
-  it("voter who voted on 6 proposals is not active", () => {
-    const votes = proposals.slice(0, 6).map((p) => makeVote(alice, p.id));
+  it("voter who voted on 5 proposals is not active", () => {
+    const votes = proposals.slice(0, 5).map((p) => makeVote(alice, p.id));
 
     const active = identifyActiveVoters(proposals, votes);
     expect(active.has(alice)).toBe(false);
     expect(active.size).toBe(0);
   });
 
-  it("fewer than 10 proposals (e.g. 5) — no one can reach threshold of 7", () => {
+  it("fewer than 6 proposals (e.g. 5) — no one can reach threshold of 6", () => {
     const fiveProposals = proposals.slice(0, 5);
     const votes = fiveProposals.map((p) => makeVote(alice, p.id));
 
@@ -151,8 +151,8 @@ describe("identifyActiveVoters", () => {
     const votes = [
       // Alice votes on all 10
       ...proposals.map((p) => makeVote(alice, p.id)),
-      // Bob votes on 7
-      ...proposals.slice(0, 7).map((p) => makeVote(bob, p.id)),
+      // Bob votes on exactly 6 (the threshold boundary)
+      ...proposals.slice(0, 6).map((p) => makeVote(bob, p.id)),
       // Carol votes on 3
       ...proposals.slice(0, 3).map((p) => makeVote(carol, p.id)),
     ];
@@ -171,7 +171,7 @@ describe("identifyActiveVoters", () => {
 
   it("ignores votes on proposals not in the given set", () => {
     const votes = [
-      ...proposals.slice(0, 6).map((p) => makeVote(alice, p.id)),
+      ...proposals.slice(0, 5).map((p) => makeVote(alice, p.id)),
       // These votes are for proposals not in the list
       makeVote(alice, "unknown-1"),
       makeVote(alice, "unknown-2"),
@@ -184,14 +184,14 @@ describe("identifyActiveVoters", () => {
 
   it("duplicate votes on the same proposal count once", () => {
     const votes = [
-      // Alice votes on 6 distinct proposals
-      ...proposals.slice(0, 6).map((p) => makeVote(alice, p.id)),
-      // Plus duplicate votes on those same 6 proposals
-      ...proposals.slice(0, 6).map((p) => makeVote(alice, p.id)),
+      // Alice votes on 5 distinct proposals
+      ...proposals.slice(0, 5).map((p) => makeVote(alice, p.id)),
+      // Plus duplicate votes on those same 5 proposals
+      ...proposals.slice(0, 5).map((p) => makeVote(alice, p.id)),
     ];
 
     const active = identifyActiveVoters(proposals, votes);
-    // Still only 6 distinct proposals — not active
+    // Still only 5 distinct proposals — not active
     expect(active.has(alice)).toBe(false);
   });
 

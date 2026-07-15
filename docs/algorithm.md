@@ -34,10 +34,10 @@ The last `PROPOSAL_WINDOW_SIZE = 10` non-active, non-canceled proposals are fetc
 
 ### Step 3 — Identify active voters
 
-A voter is **active** if they cast a vote on at least `ACTIVE_VOTE_THRESHOLD = 7` of the 10 proposals.
+A voter is **active** if they cast a vote on at least `ACTIVE_VOTE_THRESHOLD = 6` of the 10 proposals.
 
 ```
-isActive(voter) = count(votes by voter in last 10 proposals) >= 7
+isActive(voter) = count(votes by voter in last 10 proposals) >= 6
 ```
 
 Implemented in `active-voters.ts`. If no voters are active, an empty distribution is returned immediately.
@@ -233,7 +233,7 @@ Key constants:
 ```typescript
 ONE_ENS = 10n ** 18n              // 1 ENS in wei
 TWB_WINDOW_SECONDS = 180 * 86400  // 180 days (token-holder TWB window)
-ACTIVE_VOTE_THRESHOLD = 7
+ACTIVE_VOTE_THRESHOLD = 6
 PROPOSAL_WINDOW_SIZE = 10
 MIN_REWARD_THRESHOLD = 1 ENS
 LOTTERY_TARGET_POOL_SIZE = 10 ENS

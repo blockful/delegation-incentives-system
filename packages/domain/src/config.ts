@@ -6,7 +6,7 @@ import { bps, seconds, wei } from "./types.js";
 // ──────────────────────────────────────────────────────────
 
 /** Minimum votes in the proposal window to qualify as an active voter. */
-export const ACTIVE_VOTE_THRESHOLD = 7;
+export const ACTIVE_VOTE_THRESHOLD = 6;
 
 /** Number of recent finalized proposals considered for activity. */
 export const PROPOSAL_WINDOW_SIZE = 10;
