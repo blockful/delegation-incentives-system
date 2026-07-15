@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import styled from 'styled-components'
 import { Avatar } from '@ensdomains/thorin'
-import { useEnsName, useEnsAvatar } from 'wagmi'
+import { useEnsName } from 'wagmi'
 import makeBlockie from 'ethereum-blockies-base64'
 import { isAddress } from 'viem'
+import { ensMetadataAvatarUrl } from '@/features/ens/ensAvatar'
 
 interface EnsAvatarProps {
   address: string
@@ -35,22 +36,19 @@ export function EnsAvatar({
     query: { enabled: resolveName && canResolveAddress && !name },
   })
   const ensName = name ?? resolvedName ?? undefined
-  const { data: resolvedAvatar } = useEnsAvatar({
-    name: ensName,
-    query: { enabled: !!ensName && !avatarUrl },
-  })
   // Memoized: makeBlockie renders to a canvas, which adds up in long lists
   // (~1,200 avatars on the round detail page) if regenerated per render.
-  const src = useMemo(
-    () => avatarUrl ?? resolvedAvatar ?? makeBlockie(address),
-    [avatarUrl, resolvedAvatar, address],
-  )
+  const blockie = useMemo(() => makeBlockie(address), [address])
+  const src = avatarUrl ?? (ensName ? ensMetadataAvatarUrl(ensName) : blockie)
 
   return (
     <Wrapper $size={size}>
       <Avatar
         label={ensName ?? address}
         src={src}
+        // Shown while the avatar loads and kept when it errors (e.g. the
+        // metadata service 404s for names with no avatar record).
+        placeholder={`url("${blockie}")`}
         shape="circle"
         noBorder
         loading={loading}

@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
 import { Button, EnsSVG, Profile, WalletSVG } from '@ensdomains/thorin'
-import { useEnsAvatar, useEnsName } from 'wagmi'
+import { useEnsName } from 'wagmi'
 import { mainnet } from 'viem/chains'
 import makeBlockie from 'ethereum-blockies-base64'
+import { useVerifiedEnsAvatar } from '@/features/ens/ensAvatar'
 import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens } from '@/styles/tokens'
@@ -322,10 +323,7 @@ function ConnectedAccount({
 }) {
   const { data: resolvedEnsName } = useEnsName({ address, chainId: mainnet.id })
   const ensName = resolvedEnsName ?? undefined
-  const { data: resolvedAvatar } = useEnsAvatar({
-    name: ensName,
-    query: { enabled: !!ensName },
-  })
+  const resolvedAvatar = useVerifiedEnsAvatar(ensName)
   const avatar = resolvedAvatar ?? makeBlockie(address)
   return (
     <ConnectedAccountWrap>

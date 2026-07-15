@@ -3,9 +3,10 @@ import styled, { keyframes } from 'styled-components'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight, faShareNodes } from '@fortawesome/free-solid-svg-icons'
-import { useEnsAvatar, useEnsName } from 'wagmi'
+import { useEnsName } from 'wagmi'
 import { isAddress } from 'viem'
 import makeBlockie from 'ethereum-blockies-base64'
+import { ensMetadataAvatarUrl } from '@/features/ens/ensAvatar'
 import { api } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { truncateAddress } from '@/utils/format'
@@ -287,14 +288,9 @@ function PillItem({ voter }: { voter: VoterDetail }) {
 
   const ensName = voter.ensName ?? resolvedName ?? null
 
-  const { data: resolvedAvatar } = useEnsAvatar({
-    name: ensName ?? undefined,
-    query: { enabled: !!ensName && !voter.avatarUrl },
-  })
-
   const fallbackSrc = buildFallbackAvatar(voter.address)
   const avatarSrc =
-    voter.avatarUrl ?? resolvedAvatar ?? fallbackSrc
+    voter.avatarUrl ?? (ensName ? ensMetadataAvatarUrl(ensName) : fallbackSrc)
   const label = ensName ?? truncateAddress(voter.address)
 
   return (
