@@ -34,6 +34,7 @@ import { buildVoterShareUrl } from '@/features/delegate/utils/shareCard'
 import {
   useGaslessEligibility,
   useRelayerBalance,
+  type SponsorshipBlockReason,
 } from '@/features/delegate/hooks/useGaslessRelayer'
 import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { contracts } from '@/config/contracts'
@@ -746,7 +747,13 @@ export function VoterProfilePage() {
   const walletState = useWalletState()
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const [modalOpen, setModalOpen] = useState(false)
-  const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false)
+  // Snapshot of the block reason taken when the click routes — the modal must
+  // not render off the live `eligibilityReason`: the modal's own relayer hooks
+  // refetch on mount, and while an errored query refetches the live reason
+  // flickers to null, unmounting the modal in a loop (and hammering the
+  // relayer — one outage session hit /relay/balance 258 times).
+  const [eligibilityModalReason, setEligibilityModalReason] =
+    useState<SponsorshipBlockReason | null>(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const connectedAddress =
     walletState.status !== 'disconnected' ? walletState.address : undefined
@@ -801,7 +808,7 @@ export function VoterProfilePage() {
   // early returns below so the routing effect obeys the rules of hooks.
   const routeDelegate = () => {
     if (eligibilityReason) {
-      setEligibilityModalOpen(true)
+      setEligibilityModalReason(eligibilityReason)
       return
     }
     setModalOpen(true)
@@ -985,7 +992,15 @@ export function VoterProfilePage() {
                 Delegated
               </DelegatedButton>
             ) : (
-              <Button colorStyle="bluePrimary" width="auto" onClick={handleDelegate}>
+              <Button
+                colorStyle="bluePrimary"
+                width="auto"
+                onClick={handleDelegate}
+                // A deferred click (relayer verdict still resolving) must stay
+                // visible — an inert-looking button invites rage-clicking.
+                loading={pendingDelegate}
+                disabled={pendingDelegate}
+              >
                 Delegate now{showFreeBadge && <FreeBadge>Free</FreeBadge>}
               </Button>
             )}
@@ -1092,14 +1107,14 @@ export function VoterProfilePage() {
         </TableCard>
       </VotingRecordSection>
     </Page>
-    {eligibilityModalOpen && eligibilityReason && (
+    {eligibilityModalReason && (
       <DelegationEligibilityModal
         open
-        reason={eligibilityReason}
+        reason={eligibilityModalReason}
         resetsAt={rateLimitResetsAt}
-        onClose={() => setEligibilityModalOpen(false)}
+        onClose={() => setEligibilityModalReason(null)}
         onDelegateAnyway={() => {
-          setEligibilityModalOpen(false)
+          setEligibilityModalReason(null)
           setModalOpen(true)
         }}
       />

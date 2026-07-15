@@ -16,6 +16,7 @@ import { trackEvent } from '@/utils/analytics'
 import {
   useGaslessEligibility,
   useRelayerBalance,
+  type SponsorshipBlockReason,
 } from '@/features/delegate/hooks/useGaslessRelayer'
 import { openWalletModal } from '@/features/wallet/openWalletModal'
 import { useWalletState } from '@/features/wallet/useWalletState'
@@ -314,7 +315,13 @@ export function VoterCard({
 }: VoterCardProps) {
   const walletState = useWalletState()
   const [modalOpen, setModalOpen] = useState(false)
-  const [eligibilityModalOpen, setEligibilityModalOpen] = useState(false)
+  // Snapshot of the block reason taken when the click routes — the modal must
+  // not render off the live `eligibilityReason`: the modal's own relayer hooks
+  // refetch on mount, and while an errored query refetches the live reason
+  // flickers to null, unmounting the modal in a loop (and hammering the
+  // relayer — one outage session hit /relay/balance 258 times).
+  const [eligibilityModalReason, setEligibilityModalReason] =
+    useState<SponsorshipBlockReason | null>(null)
   const isDelegated =
     walletState.status === 'delegated' &&
     walletState.delegatedTo.toLowerCase() === voter.address.toLowerCase()
@@ -367,7 +374,7 @@ export function VoterCard({
   // sponsorship) or straight to the delegation flow.
   const routeDelegate = () => {
     if (eligibilityReason) {
-      setEligibilityModalOpen(true)
+      setEligibilityModalReason(eligibilityReason)
       return
     }
     setModalOpen(true)
@@ -477,7 +484,15 @@ export function VoterCard({
               Delegated
             </DelegatedButton>
           ) : (
-            <Button colorStyle="bluePrimary" size="small" onClick={handleDelegate}>
+            <Button
+              colorStyle="bluePrimary"
+              size="small"
+              onClick={handleDelegate}
+              // A deferred click (relayer verdict still resolving) must stay
+              // visible — an inert-looking button invites rage-clicking.
+              loading={pendingDelegate}
+              disabled={pendingDelegate}
+            >
               Delegate{showFreeBadge && <FreeBadge>Free</FreeBadge>}
             </Button>
           )}
@@ -486,14 +501,14 @@ export function VoterCard({
           </ProfileLink>
         </ActionsBlock>
       </StyledCard>
-      {eligibilityModalOpen && eligibilityReason && (
+      {eligibilityModalReason && (
         <DelegationEligibilityModal
           open
-          reason={eligibilityReason}
+          reason={eligibilityModalReason}
           resetsAt={rateLimitResetsAt}
-          onClose={() => setEligibilityModalOpen(false)}
+          onClose={() => setEligibilityModalReason(null)}
           onDelegateAnyway={() => {
-            setEligibilityModalOpen(false)
+            setEligibilityModalReason(null)
             setModalOpen(true)
           }}
         />
