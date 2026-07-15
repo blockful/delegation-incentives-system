@@ -55,17 +55,8 @@ interface RelayerRateLimitResponse {
   resetsAt: string;
 }
 
-// Bound every relayer round-trip. During the 2026-07-13 outage the balance
-// endpoint took ~3s to answer 503 and the default retry policy stretched a
-// single check past 30s — while the Delegate click sat deferred with no
-// feedback. Timeout + one retry caps the wait at roughly two round-trips, and
-// a failed check degrades to the "relayer-paused" (pay your own gas) path.
 const RELAYER_TIMEOUT_MS = 6_000;
 const RELAYER_QUERY_RETRIES = 1;
-// Without a stale window, every newly mounted consumer (each voter card, the
-// eligibility modal) refires a settled-but-errored query — during the outage
-// one session hammered /relay/balance 258 times. 30s keeps the verdict fresh
-// enough while making an outage cost O(1) requests per window.
 const RELAYER_STALE_TIME_MS = 30_000;
 
 async function fetchRelayer<T>(path: string): Promise<T> {
