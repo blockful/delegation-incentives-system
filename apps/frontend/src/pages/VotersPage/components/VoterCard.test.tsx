@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { useReadContract } from 'wagmi'
 import { renderApp, userEvent } from '@/test/utils'
 import { server } from '@/test/mocks/server'
@@ -321,5 +321,64 @@ describe('VoterCard delegate trigger', () => {
       await screen.findByRole('button', { name: 'Delegate' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Free')).not.toBeInTheDocument()
+  })
+
+  it('eligibility still resolving: the click shows a loading button, then routes', async () => {
+    // Slow relayer: the click lands before the verdict. The 2026-07-13 outage
+    // showed users rage-tapping a button that gave no sign it heard them —
+    // the deferred click must be visible (spinner + disabled) until it routes.
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', async () => {
+        await delay(200)
+        return HttpResponse.json({ hasEnoughBalance: true })
+      }),
+    )
+    useReadContractMock.mockReturnValue(
+      readContractResult({ data: 200n * 10n ** 18n }),
+    )
+    const user = userEvent.setup()
+
+    renderApp(<VoterCard voter={fullVoter} />, {
+      walletState: { status: 'connected', address: CONNECTED_WALLET },
+    })
+
+    const button = screen.getByRole('button', { name: 'Delegate' })
+    await user.click(button)
+
+    expect(button).toBeDisabled()
+    expect(screen.queryByText(DELEGATION_TITLE)).not.toBeInTheDocument()
+
+    // Verdict arrives: the deferred click routes and the button recovers.
+    expect(await screen.findByText(DELEGATION_TITLE)).toBeInTheDocument()
+    expect(button).not.toBeDisabled()
+  })
+
+  it('relayer down (503): settles on the paused modal so paying gas stays possible', async () => {
+    server.use(
+      http.get('/api/gateful/ens/relay/balance', () =>
+        HttpResponse.json(
+          { error: 'authful validation request failed' },
+          { status: 503 },
+        ),
+      ),
+    )
+    useReadContractMock.mockReturnValue(readContractResult({ data: 0n }))
+    const user = userEvent.setup()
+
+    renderApp(<VoterCard voter={fullVoter} />, {
+      walletState: { status: 'connected', address: CONNECTED_WALLET },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Delegate' }))
+
+    // Bounded retries settle the check; the paused modal offers the fallback.
+    expect(
+      await screen.findByText(RELAYER_PAUSED_TITLE, undefined, { timeout: 5_000 }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Delegate and pay gas' }),
+    )
+    expect(screen.getByText(DELEGATION_TITLE)).toBeInTheDocument()
   })
 })

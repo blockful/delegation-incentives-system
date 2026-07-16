@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useReadContract } from "wagmi";
 import { formatUnits, zeroAddress, type Address } from "viem";
 
+import { errorMessageForAnalytics, trackEvent } from "@/utils/analytics";
 import { FRONTEND_CLIENT_SOURCE, RELAYER_BASE_URL } from "../relayerClient";
 
 const ENS_TOKEN_ADDRESS =
@@ -54,13 +55,22 @@ interface RelayerRateLimitResponse {
   resetsAt: string;
 }
 
+const RELAYER_TIMEOUT_MS = 6_000;
+const RELAYER_QUERY_RETRIES = 1;
+const RELAYER_STALE_TIME_MS = 30_000;
+
 async function fetchRelayer<T>(path: string): Promise<T> {
   const res = await fetch(path, {
     headers: { "x-client-source": FRONTEND_CLIENT_SOURCE },
+    signal: AbortSignal.timeout(RELAYER_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`relayer ${path} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
+
+// One report per page load, shared by every card that mounts the hook — the
+// signal is "the relayer check is failing", not one event per retry/consumer.
+let relayerErrorReported = false;
 
 interface UseRelayerBalanceResult {
   hasEnoughBalance: boolean | null;
@@ -68,10 +78,22 @@ interface UseRelayerBalanceResult {
 }
 
 export const useRelayerBalance = (): UseRelayerBalanceResult => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["relayer", "balance"],
     queryFn: () => fetchRelayer<RelayerBalanceResponse>(BALANCE_PATH),
+    retry: RELAYER_QUERY_RETRIES,
+    staleTime: RELAYER_STALE_TIME_MS,
   });
+
+  useEffect(() => {
+    if (isError && !relayerErrorReported) {
+      relayerErrorReported = true;
+      trackEvent("relayer_check_error", {
+        endpoint: "balance",
+        message: errorMessageForAnalytics(error),
+      });
+    }
+  }, [isError, error]);
 
   return {
     hasEnoughBalance: data?.hasEnoughBalance ?? null,
@@ -92,6 +114,8 @@ export const useRelayerConfig = (): UseRelayerConfigResult => {
     queryKey: ["relayer", "config"],
     queryFn: () => fetchRelayer<RelayerConfigResponse>(CONFIG_PATH),
     enabled,
+    retry: RELAYER_QUERY_RETRIES,
+    staleTime: RELAYER_STALE_TIME_MS,
   });
 
   const minVotingPower = useMemo(() => {
@@ -177,6 +201,8 @@ export const useGaslessEligibility = (
     queryFn: () =>
       fetchRelayer<RelayerRateLimitResponse>(rateLimitPath(targetAddress)),
     enabled: queryEnabled,
+    retry: RELAYER_QUERY_RETRIES,
+    staleTime: RELAYER_STALE_TIME_MS,
   });
 
   const delegationRemaining = rateLimitData?.delegation.remaining ?? null;

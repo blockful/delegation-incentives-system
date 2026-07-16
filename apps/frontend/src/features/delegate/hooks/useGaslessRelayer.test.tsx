@@ -8,6 +8,12 @@ import { TestQueryProvider } from "@/test/utils";
 import { server } from "@/test/mocks/server";
 import { readContractResult } from "@/test/mocks/wagmi";
 
+vi.mock("@/utils/analytics", () => ({
+  trackEvent: vi.fn(),
+  errorMessageForAnalytics: (err: unknown) =>
+    err instanceof Error ? err.message : String(err),
+}));
+
 const TEST_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
 
 const useReadContractMock = vi.mocked(useReadContract);
@@ -243,5 +249,99 @@ describe("useGaslessRelayer", () => {
         isLoading: false,
       }),
     );
+  });
+});
+
+// Degradation when the relayer (gateful/authful) is down — the 2026-07-13
+// outage: /relay/balance answered 503 for ~2h while users' clicks vanished
+// into an unbounded loading state. The check must settle fast and land on
+// "relayer-paused" so the pay-your-own-gas path stays reachable.
+describe("useGaslessRelayer relayer outage", () => {
+  let state: HandlerState;
+
+  beforeEach(() => {
+    // resetModules gives each test a fresh hook module (and a fresh analytics
+    // mock instance) — import both dynamically inside the test so they match.
+    vi.resetModules();
+    state = freshState();
+    installRelayerHandlers(state);
+    useReadContractMock.mockReset();
+    useReadContractMock.mockReturnValue(readContractResult());
+  });
+
+  it("balance endpoint 503: retries once, then settles ineligible as relayer-paused", async () => {
+    let balanceCalls = 0;
+    server.use(
+      http.get("/api/gateful/ens/relay/balance", () => {
+        balanceCalls += 1;
+        return HttpResponse.json(
+          { error: "authful validation request failed" },
+          { status: 503 },
+        );
+      }),
+    );
+    const { useGaslessEligibility } = await import("./useGaslessRelayer");
+
+    const { result } = renderHook(() => useGaslessEligibility(TEST_ADDRESS), {
+      wrapper: TestQueryProvider,
+    });
+
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(false);
+        expect(result.current.reason).toBe("relayer-paused");
+      },
+      { timeout: 5_000 },
+    );
+    expect(result.current.isEligible).toBe(false);
+    // Bounded retries: the per-query cap (initial call + 1 retry) must win
+    // over any client-level default, or an outage melts into endless retries.
+    expect(balanceCalls).toBe(2);
+  });
+
+  it("bounds every relayer request with an abort-on-timeout signal", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { useRelayerBalance } = await import("./useGaslessRelayer");
+
+    renderHook(() => useRelayerBalance(), { wrapper: TestQueryProvider });
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(([input]) =>
+        String(input).includes("/relay/balance"),
+      );
+      expect(call).toBeDefined();
+      expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    });
+    fetchSpy.mockRestore();
+  });
+
+  it("reports relayer_check_error once when the balance check exhausts retries", async () => {
+    server.use(
+      http.get("/api/gateful/ens/relay/balance", () =>
+        HttpResponse.json({ error: "boom" }, { status: 503 }),
+      ),
+    );
+    const { useRelayerBalance } = await import("./useGaslessRelayer");
+    const { trackEvent } = await import("@/utils/analytics");
+
+    // Two mounted consumers (e.g. two voter cards) share one failing query —
+    // the outage must be reported a single time, not once per card.
+    renderHook(
+      () => {
+        useRelayerBalance();
+        useRelayerBalance();
+      },
+      { wrapper: TestQueryProvider },
+    );
+
+    await waitFor(
+      () =>
+        expect(trackEvent).toHaveBeenCalledWith(
+          "relayer_check_error",
+          expect.objectContaining({ endpoint: "balance" }),
+        ),
+      { timeout: 5_000 },
+    );
+    expect(trackEvent).toHaveBeenCalledTimes(1);
   });
 });
