@@ -747,11 +747,6 @@ export function VoterProfilePage() {
   const walletState = useWalletState()
   const { hasEnoughBalance: relayerHasGas } = useRelayerBalance()
   const [modalOpen, setModalOpen] = useState(false)
-  // Snapshot of the block reason taken when the click routes — the modal must
-  // not render off the live `eligibilityReason`: the modal's own relayer hooks
-  // refetch on mount, and while an errored query refetches the live reason
-  // flickers to null, unmounting the modal in a loop (and hammering the
-  // relayer — one outage session hit /relay/balance 258 times).
   const [eligibilityModalReason, setEligibilityModalReason] =
     useState<SponsorshipBlockReason | null>(null)
   const [shareModalOpen, setShareModalOpen] = useState(false)
