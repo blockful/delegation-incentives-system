@@ -483,8 +483,6 @@ export function VoterCard({
               colorStyle="bluePrimary"
               size="small"
               onClick={handleDelegate}
-              // A deferred click (relayer verdict still resolving) must stay
-              // visible — an inert-looking button invites rage-clicking.
               loading={pendingDelegate}
               disabled={pendingDelegate}
             >
