@@ -95,6 +95,18 @@ export interface DelegationRepository {
 
 export interface MultiDelegateRepository {
   /**
+   * All ERC20MultiDelegate proxy vault addresses ever deployed
+   * (from ProxyDeployed events).
+   *
+   * Proxy vaults hold the pooled ENS of every depositor delegating to one
+   * voter, so they show up on-chain as large direct token holders. They must
+   * be EXCLUDED from the direct-holder set: the same tokens are already
+   * credited to each depositor individually via their ERC1155 receipts, and
+   * the proxies themselves can never claim (their bytecode is `0xff`).
+   */
+  getProxyAddresses(): Promise<readonly Address[]>;
+
+  /**
    * All ERC1155 positions (balance > 0) whose voter is in `voters`
    * at `timestamp`.
    */

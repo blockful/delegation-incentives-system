@@ -1,6 +1,6 @@
 import type { db as PonderDb } from "ponder:api";
 import { eq, and, lte, gte, inArray, asc, or } from "drizzle-orm";
-import { multiDelegateTransfer } from "ponder:schema";
+import { multiDelegateProxy, multiDelegateTransfer } from "ponder:schema";
 import type { MultiDelegateRepository } from "@ens-dis/domain";
 import type {
   Address,
@@ -17,6 +17,17 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export function createMultiDelegateAdapter(db: Db): MultiDelegateRepository {
   return {
+    async getProxyAddresses(): Promise<readonly Address[]> {
+      // Every ERC20MultiDelegate proxy vault ever deployed, from the
+      // ProxyDeployed handler (multi_delegate_proxy.id = proxy address).
+      // NOTE: deliberately NOT protocol_mapping — its childAddress column is
+      // written as the *voter*, not the proxy (see handlers/multi-delegate.ts).
+      // Handlers write ids lowercased; normalize anyway so set membership
+      // against other lowercase indexer addresses can never miss.
+      const rows = await db.select().from(multiDelegateProxy);
+      return rows.map((row) => row.id.toLowerCase() as Address);
+    },
+
     async getPositionsAtTimestamp(
       voters: readonly Address[],
       timestamp: Seconds,

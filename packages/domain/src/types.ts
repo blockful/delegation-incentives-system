@@ -342,6 +342,18 @@ export interface DeduplicationLog {
     readonly voter: Address;
     readonly amount: Wei;
   }[];
+  /**
+   * ERC20MultiDelegate proxy vaults that delegated to an active voter but
+   * were excluded from the direct-holder set: their pooled balance is
+   * already credited to depositors via the ERC1155 leg, so counting the
+   * proxy would double-count the same ENS in the TWB denominator (and pay
+   * an address whose bytecode is `0xff` — permanently unrecoverable).
+   * Absent on result_json blobs computed before the exclusion existed.
+   */
+  readonly excludedProxies?: readonly {
+    readonly proxy: Address;
+    readonly voter: Address;
+  }[];
   readonly hedgey: readonly {
     readonly vestingContract: Address;
     readonly nftOwner: Address;

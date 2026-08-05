@@ -49,6 +49,7 @@ export function createDataSource(
     getDelegationsToAtTimestamp:
       delegation.getDelegationsToAtTimestamp.bind(delegation),
     // MultiDelegateRepository
+    getProxyAddresses: multiDelegate.getProxyAddresses.bind(multiDelegate),
     getPositionsAtTimestamp:
       multiDelegate.getPositionsAtTimestamp.bind(multiDelegate),
     getErc1155BalanceEventsInRange:
