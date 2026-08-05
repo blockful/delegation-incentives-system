@@ -2,7 +2,7 @@
 
 **Scope**: Backend algorithm for computing monthly incentive distributions for ENS active voters and their token holders.
 
-**Architecture**: Ponder indexer (indexes 4 contracts via RPC) → PostgreSQL → Hono REST API. Pure domain logic with zero framework dependencies. Distribution triggered by cron calling a script after month-end.
+**Architecture**: Ponder indexer (indexes 5 contracts via RPC) → PostgreSQL → Hono REST API. Pure domain logic with zero framework dependencies. Distribution triggered by cron calling a script after month-end.
 
 **Pilot**: 3 monthly rounds, configured in repo.
 
@@ -22,7 +22,7 @@
 
 ## 1. On-Chain Data Sources
 
-Four contracts indexed by Ponder. All data written to PostgreSQL.
+Five contracts indexed by Ponder. All data written to PostgreSQL.
 
 > **Note on protocol vs. app terminology.** Event signatures and contract-level fields use the on-chain protocol terms (`delegator`, `delegate`). The pipeline maps those to our app vocabulary at the adapter boundary — see §7 Glossary. The "Used For" column below uses app terms.
 
@@ -40,15 +40,16 @@ Four contracts indexed by Ponder. All data written to PostgreSQL.
 |---|---|---|
 | `ProposalCreated(proposalId, proposer, ..., startBlock, endBlock, ...)` | Proposals table (id, status, timestamp, endBlock) | Active-voter calc (Step 3) |
 | `VoteCast(voter, proposalId, support, weight, reason)` | Votes table (voter, proposalId, support, weight, timestamp) | Active-voter calc (Step 3) |
-| `VoteCastWithParams(voter, proposalId, support, weight, reason, params)` | Same as VoteCast | Active-voter calc (Step 3) |
-| `ProposalExecuted(id)` / `ProposalDefeated(id)` / `ProposalCanceled(id)` / `ProposalQueued(id)` | Proposal status update | Finalized proposal filtering (Step 2) |
+| `ProposalExecuted(id)` / `ProposalCanceled(id)` / `ProposalQueued(id)` | Proposal status update | Finalized proposal filtering (Step 2) |
+
+> This Governor deployment emits no `ProposalDefeated` or `VoteCastWithParams` events. Defeat is implicit: a proposal whose voting period ends without being queued or executed is defeated — no on-chain event marks it.
 
 **Finalized statuses**: executed, defeated, canceled, succeeded, queued, expired.
 **Excluded statuses**: pending, active.
 
-### 1.3 ERC20MultiDelegate (`0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446`)
+### 1.3 ERC20MultiDelegate (`0x3CA5CCC96648d016D41c5aF40eED82202BD019cc`)
 
-ENS delegation-splitting contract. Users deposit ENS tokens into per-voter proxy contracts and receive ERC1155 receipt tokens. Token ID = `uint256(uint160(voterAddress))`. The ERC1155 balance is the sole proof of ownership.
+ENS delegation-splitting contract (production deployment at block 22,140,079). Users deposit ENS tokens into per-voter proxy contracts and receive ERC1155 receipt tokens. Token ID = `uint256(uint160(voterAddress))`. The ERC1155 balance is the sole proof of ownership.
 
 | Event | Indexed State | Used For |
 |---|---|---|
@@ -56,9 +57,14 @@ ENS delegation-splitting contract. Users deposit ENS tokens into per-voter proxy
 | `TransferBatch(operator, from, to, ids, values)` | Same, multiple entries per event | MultiDelegate token-holder TWB (Step 10) |
 | `ProxyDeployed(delegate, proxy)` | Proxy registry (proxy address → voter address) | Identifying MultiDelegate proxy addresses |
 
-### 1.4 Hedgey Vesting (`0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`)
+### 1.4 Hedgey Vesting & Voting Lockups
 
-Vesting contracts that hold ENS tokens and delegate on behalf of a beneficiary. The beneficiary is the current owner of the plan's ERC721 NFT.
+Two Hedgey contracts hold locked ENS on behalf of beneficiaries. In both, the beneficiary is the current owner of the plan's ERC721 NFT.
+
+- **TokenVestingPlans** (`0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`): the vesting contract itself holds the ENS and delegates on behalf of the beneficiary.
+- **VotingTokenLockupPlans** (`0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`): each voting-enabled plan locks its ENS in a dedicated per-plan VotingVault — the vault, not the lockup contract, is the on-chain delegator.
+
+Both emit the same event shapes:
 
 | Event | Indexed State | Used For |
 |---|---|---|
@@ -99,7 +105,7 @@ This step runs **twice**: once as of `startBlock` (for VP growth baseline) and o
 
 **Process**:
 1. Query all proposals with status ∈ {executed, defeated, canceled, succeeded, queued, expired}
-2. Filter to those where the status-changing event (e.g., `ProposalExecuted`, `ProposalDefeated`) occurred on or before target block
+2. Filter to those where the status-changing event (e.g., `ProposalExecuted`, `ProposalQueued`) occurred on or before target block
 3. Sort by the status-changing event timestamp descending
 4. Take the first 10
 
@@ -229,6 +235,7 @@ All addresses delegated to an active voter at `endBlock`, resolved to their true
 **8a. Direct token holders**:
 - Query current delegation state at `endBlock` (from `DelegateChanged` events)
 - Include every address whose current `toDelegate` ∈ `activeVotersEnd`
+- **Exclude** every ERC20MultiDelegate proxy address (from `ProxyDeployed` events) — see the vault/proxy exclusion rule below
 
 **8b. MultiDelegate positions**:
 - For each active voter, compute tokenId = `uint256(uint160(voterAddress))`
@@ -236,10 +243,14 @@ All addresses delegated to an active voter at `endBlock`, resolved to their true
 - Each holder is an eligible token holder; their delegated amount = their ERC1155 balance
 
 **8c. Hedgey vesting**:
-- From indexed `PlanCreated` events, build a set of all known vesting contract addresses
-- Cross-reference with 8a results: any direct token holder whose address is a known vesting contract is a Hedgey position
-- For each matched vesting contract, find the current NFT owner at `endBlock` (from Hedgey `Transfer` ERC721 events, where tokenId = planId)
-- Replace the vesting contract address with the NFT owner as `resolvedAddress`
+- From indexed `PlanCreated` events, build a set of all known Hedgey holder addresses: the TokenVestingPlans master contract (`0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`) plus every per-plan VotingVault deployed by VotingTokenLockupPlans (`0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`); lockup plan IDs are namespaced `lockup-<id>`
+- Cross-reference with 8a results: any direct token holder whose address is in that set is a Hedgey position
+- For each matched contract/vault, find the current plan-NFT owner at `endBlock` (from Hedgey `Transfer` ERC721 events, where tokenId = planId)
+- Replace the contract/vault address with the NFT owner as `resolvedAddress`
+
+**Vault/proxy exclusion rule**: once a contract's beneficiaries are credited through 8b or 8c, the contract address itself MUST be excluded from 8a — it never enters the holder set in its own right. Counting it would tally the same ENS twice in the TWB denominator and pay rewards to an unclaimable contract address. The two vault kinds are handled differently:
+- **ERC20MultiDelegate proxies** are handled by *exclusion*: dropped from 8a entirely; their depositors enter individually via ERC1155 receipts (8b).
+- **Hedgey vesting contracts and per-plan VotingVaults** are handled by *re-attribution*: replaced in 8a by the plan-NFT owner (8c); the contract/vault address never remains as a holder.
 
 **Output**: `eligibleTokenHolders` — array of:
 ```
@@ -284,7 +295,7 @@ For each source entry, compute TWB based on source type:
 
 - **Direct delegation**: Query ENS `Transfer` events for `originalAddress` in `[twbWindowStart, twbWindowEnd]`. Get the most recent balance before `twbWindowStart` as initial value (0 if none).
 - **MultiDelegate**: Query ERC1155 `TransferSingle`/`TransferBatch` events for `(originalAddress, tokenId)` in `[twbWindowStart, twbWindowEnd]`. tokenId = `uint256(uint160(voterAddress))`. Get the most recent ERC1155 balance before `twbWindowStart` as initial value (0 if none).
-- **Hedgey**: Query ENS `Transfer` events for the **vesting contract address** (`originalAddress`) in `[twbWindowStart, twbWindowEnd]`. Get the most recent balance before `twbWindowStart` as initial value (0 if none). Attributed to whoever owns the NFT at `monthEnd`.
+- **Hedgey**: Query the plan's **unredeemed ENS remainder history** for the plan ID in `[twbWindowStart, twbWindowEnd]` (plan amount minus redemptions). Get the most recent remainder before `twbWindowStart` as initial value (0 if none). Never the aggregate ENS balance of the vesting contract — see `docs/algorithm.md` (source of truth for this rule). Attributed to whoever owns the plan NFT at `monthEnd`.
 
 **TWB formula** (same for all sources):
 
