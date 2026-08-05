@@ -1,31 +1,25 @@
-import { db } from "ponder:api";
+import { db, publicClients } from "ponder:api";
 import {
-  governanceProposal,
   governanceVote,
   ensVotingPowerSnapshot,
 } from "ponder:schema";
 import {
-  getLastFinalizedProposals,
   PROPOSAL_WINDOW_SIZE,
   ACTIVE_VOTE_THRESHOLD,
   POOL_TIERS,
-  FINALIZED_STATUSES,
   computeVpGrowthPct,
   selectPoolTier,
   type Address,
   type Wei,
   type Proposal,
-  type ProposalStatus,
   type PoolTier,
-  seconds,
   wei,
   blockNumber,
 } from "@ens-dis/domain";
 import { and, eq, desc, inArray, lte } from "drizzle-orm";
+import { selectFinalizedProposalsBefore } from "../adapters/proposal-adapter.js";
 
 type Db = typeof db;
-
-const FINALIZED_STATUS_LIST = [...FINALIZED_STATUSES];
 
 /** Fetch active voters from the current indexed state. */
 export async function fetchActiveVoters(database: Db): Promise<{
@@ -35,23 +29,16 @@ export async function fetchActiveVoters(database: Db): Promise<{
   voteCounts: Map<Address, number>;
   voterProposals: Map<Address, Set<string>>;
 }> {
-  // 1. Get finalized proposals
-  const proposalRows = await database
-    .select()
-    .from(governanceProposal)
-    .where(inArray(governanceProposal.status, FINALIZED_STATUS_LIST))
-    .orderBy(desc(governanceProposal.finalizedTimestamp))
-    .limit(PROPOSAL_WINDOW_SIZE);
-
-  const proposals: Proposal[] = proposalRows.map((row) => ({
-    id: row.id,
-    status: row.status as ProposalStatus,
-    finalizedTimestamp: seconds(BigInt(row.finalizedTimestamp!)),
-    startBlock: blockNumber(BigInt(row.startBlock)),
-    endBlock: blockNumber(BigInt(row.endBlock)),
-  }));
-
-  const windowProposals = getLastFinalizedProposals(proposals, PROPOSAL_WINDOW_SIZE);
+  // 1. Get finalized proposals — same query the reward pipeline uses
+  // (proposal-adapter), bounded at the current chain head so a still-'active'
+  // proposal whose voting period already ended is included, exactly as it
+  // will be at payout time.
+  const headBlock = await publicClients.mainnet.getBlockNumber();
+  const windowProposals = await selectFinalizedProposalsBefore(
+    database,
+    blockNumber(headBlock),
+    PROPOSAL_WINDOW_SIZE,
+  );
 
   // 2. Get all votes for those proposals
   const proposalIds = windowProposals.map((p) => p.id);

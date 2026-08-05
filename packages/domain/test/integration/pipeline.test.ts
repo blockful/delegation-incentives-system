@@ -68,21 +68,21 @@ const aliasSecondary = directTokenHolder5;
 
 function makeProposal(
   id: string,
-  finalizedTs: bigint,
+  endBlock: bigint,
 ): Proposal {
   return {
     id,
     status: "executed",
-    finalizedTimestamp: seconds(finalizedTs),
     startBlock: blockNumber(100n),
-    endBlock: blockNumber(200n),
+    endBlock: blockNumber(endBlock),
   };
 }
 
-// All 10 proposals finalized before MONTH_END
+// All 10 proposals' voting periods ended before the month-end block
+// (getBlockForTimestamp returns 1_000_000 in the mock data source below)
 const PROPOSAL_BASE_TS = (MONTH_END as bigint) - 1_000_000n;
 const proposals: Proposal[] = Array.from({ length: 10 }, (_, i) =>
-  makeProposal(`prop-${i}`, PROPOSAL_BASE_TS + BigInt(i) * 100n),
+  makeProposal(`prop-${i}`, 200n + BigInt(i) * 100n),
 );
 
 // ─────────────────────────────────────────────────────────────
@@ -248,7 +248,7 @@ function createMockDataSource(): IncentivesDataSource {
 
     // ── ProposalRepository ──────────────────────────────────
     async getFinalizedProposals(
-      _beforeTimestamp: Seconds,
+      _beforeBlock: BlockNumber,
       _limit: number,
     ): Promise<readonly Proposal[]> {
       return proposals;

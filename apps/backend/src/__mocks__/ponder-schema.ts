@@ -1,7 +1,15 @@
 /**
  * Mock for ponder:schema — each table is a lightweight object with _tableName
  * so that resolveTableName() in test fakes can look up the correct store.
+ *
+ * Tables whose adapters are unit-tested against FakePonderDb (which evaluates
+ * real drizzle expressions) additionally need real drizzle column objects, so
+ * those are declared with pgTable. Column SQL names deliberately match the row
+ * property names used in test seeds (camelCase) so the expression interpreter
+ * can read values straight off the seeded rows.
  */
+import { pgTable, text, bigint } from "drizzle-orm/pg-core";
+
 function makeTable(name: string) {
   return { _tableName: name };
 }
@@ -24,7 +32,22 @@ export const ensDelegationEvent = makeTable("ens_delegation_event");
 export const ensVotingPowerSnapshot = makeTable("ens_voting_power_snapshot");
 
 // ENS Governor
-export const governanceProposal = makeTable("governance_proposal");
+// governanceProposal carries real drizzle columns: the proposal-adapter unit
+// tests run the adapter's actual drizzle where/orderBy expressions against
+// FakePonderDb.
+export const governanceProposal = Object.assign(
+  pgTable("governance_proposal", {
+    id: text("id").primaryKey(),
+    proposer: text("proposer").notNull(),
+    startBlock: bigint("startBlock", { mode: "bigint" }).notNull(),
+    endBlock: bigint("endBlock", { mode: "bigint" }).notNull(),
+    timestamp: bigint("timestamp", { mode: "bigint" }).notNull(),
+    description: text("description").notNull(),
+    status: text("status").notNull(),
+    finalizedTimestamp: bigint("finalizedTimestamp", { mode: "bigint" }),
+  }),
+  { _tableName: "governance_proposal" },
+);
 export const governanceVote = makeTable("governance_vote");
 
 // Protocol mapping

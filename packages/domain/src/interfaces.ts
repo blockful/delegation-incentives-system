@@ -21,16 +21,18 @@ import type {
 
 export interface ProposalRepository {
   /**
-   * Return finalized proposals whose status-changing event occurred before
-   * `beforeTimestamp`, ordered by that timestamp descending, capped at `limit`.
+   * Return the last `limit` proposals whose voting period ended strictly
+   * before `beforeBlock` (endBlock < beforeBlock), ordered by endBlock
+   * descending.
    *
-   * `beforeBlock` (optional) is used to detect implicitly defeated proposals
-   * whose voting period (endBlock) has passed without an explicit status event.
+   * Finalization is point-in-time and outcome-independent: a proposal is
+   * finalized the moment voting ends, whatever status it later reaches
+   * (executed/queued/succeeded/defeated/expired). Canceled proposals are
+   * excluded — see the adapter implementation for the rationale.
    */
   getFinalizedProposals(
-    beforeTimestamp: Seconds,
+    beforeBlock: BlockNumber,
     limit: number,
-    beforeBlock?: BlockNumber,
   ): Promise<readonly Proposal[]>;
 }
 

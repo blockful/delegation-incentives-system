@@ -42,15 +42,15 @@ export async function runDistributionPipeline(
   const endBlock = await dataSource.getBlockForTimestamp(monthEnd);
 
   // ── Step 2: Get finalized proposals ──────────────────────
+  // Windows are selected by voting-period end (endBlock < boundary block),
+  // never by status-event timestamps, so they are stable point-in-time.
   const proposalsAtStart = await dataSource.getFinalizedProposals(
-    monthStart,
-    PROPOSAL_WINDOW_SIZE,
     startBlock,
+    PROPOSAL_WINDOW_SIZE,
   );
   const proposalsAtEnd = await dataSource.getFinalizedProposals(
-    monthEnd,
-    PROPOSAL_WINDOW_SIZE,
     endBlock,
+    PROPOSAL_WINDOW_SIZE,
   );
 
   // ── Step 3: Determine active voters ──────────────────────

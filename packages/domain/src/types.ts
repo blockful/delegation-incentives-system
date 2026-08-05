@@ -39,23 +39,16 @@ export type ProposalStatus =
   | "executed";
 
 /**
- * Statuses that count as finalized for the incentives pipeline.
- * Canceled proposals are excluded because they never reached a terminal
- * governance outcome after voting.
+ * A proposal is finalized once its voting period has ended (endBlock passed),
+ * regardless of the eventual governance outcome. `status` is the latest
+ * on-chain lifecycle label (useful for display) and MUST NOT be used to decide
+ * finalization or to order the proposal window — later governance events
+ * (queue/execute/cancel) would retroactively change historical windows.
+ * See ProposalRepository.getFinalizedProposals.
  */
-export const FINALIZED_STATUSES: ReadonlySet<ProposalStatus> = new Set<ProposalStatus>([
-  "executed",
-  "defeated",
-  "succeeded",
-  "queued",
-  "expired",
-]);
-
 export interface Proposal {
   readonly id: string;
   readonly status: ProposalStatus;
-  /** Timestamp (seconds since epoch) when the status-changing event occurred. */
-  readonly finalizedTimestamp: Seconds;
   readonly startBlock: BlockNumber;
   readonly endBlock: BlockNumber;
 }
