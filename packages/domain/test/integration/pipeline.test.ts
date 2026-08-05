@@ -665,6 +665,100 @@ describe("runDistributionPipeline", () => {
     );
   });
 
+  it("resolves a Hedgey VotingVault delegator to the plan-NFT owner with per-plan TWB", async () => {
+    // VotingTokenLockupPlans: each voting-enabled plan holds its ENS in a
+    // dedicated per-plan VotingVault, and the VAULT is the on-chain
+    // DelegateChanged delegator. The vault must resolve through the hedgey
+    // leg to the plan-NFT owner — never enter rewards as a direct holder
+    // (round-1 bug: 21 vaults credited 246.19 unrecoverable ENS).
+    const ds = createMockDataSource();
+    const votingVault: Address = "0xC500000000000000000000000000000000000005";
+    const lockupPlanOwner: Address = "0xC600000000000000000000000000000000000006";
+    const backgroundTokenHolders: Address[] = Array.from(
+      { length: 20 },
+      (_, i) =>
+        `0xE${i.toString(16).padStart(39, "0")}` as Address,
+    );
+
+    ds.getDelegationsToAtTimestamp = async () => [
+      // The vault — not the lockup contract, not the owner — is the delegator
+      {
+        tokenHolder: votingVault,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      },
+      ...backgroundTokenHolders.map((tokenHolder) => ({
+        tokenHolder,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      })),
+    ];
+    ds.getPositionsAtTimestamp = async () => [];
+    ds.getAliases = async () => [];
+    ds.getVestingContractAddresses = async () => [votingVault];
+    // The adapter keys the lockup plan to its vault address and namespaces
+    // the planId to avoid colliding with vesting-master plan IDs.
+    ds.getPlansForContracts = async (contractAddresses) =>
+      contractAddresses.includes(votingVault)
+        ? [
+            {
+              planId: "lockup-9",
+              contractAddress: votingVault,
+              token: "0x0000000000000000000000000000000000000ENS" as Address,
+              amount: wei(200n * ENS),
+              createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
+            },
+          ]
+        : [];
+    ds.getNftOwnerAtTimestamp = async (planId: string) =>
+      planId === "lockup-9" ? lockupPlanOwner : ("0x0000000000000000000000000000000000000000" as Address);
+    ds.getPlanBalanceEventsInRange = async () => [];
+    ds.getPlanBalanceAtTimestamp = async (planId: string) =>
+      planId === "lockup-9" ? wei(200n * ENS) : wei(0n);
+    ds.getBalanceAtTimestamp = async (account: Address) => {
+      if (backgroundTokenHolders.includes(account)) return wei(1000n * ENS);
+      // Poison value: if the vault ever entered as a direct holder, this
+      // aggregate balance would massively distort its reward.
+      if (account === votingVault) return wei(1_000_000n * ENS);
+      return wei(0n);
+    };
+
+    const result = await runDistributionPipeline(MONTH, ds);
+
+    const allAddresses = [
+      ...result.rewards.map((r) => r.address),
+      ...result.lottery.buckets.flatMap((b) => b.entries.map((e) => e.address)),
+    ];
+    expect(allAddresses).toContain(lockupPlanOwner);
+    expect(allAddresses).not.toContain(votingVault);
+
+    // Reward weighted by the per-plan locked remainder, not the vault's
+    // aggregate ENS balance
+    const rewardsByAddress = new Map(
+      result.rewards.map((reward) => [reward.address, reward]),
+    );
+    const tokenHolderSubPool = 4_500n * ENS;
+    const totalTwb = (20n * 1000n + 200n) * ENS;
+    const expectedReward = (200n * ENS * tokenHolderSubPool) / totalTwb;
+    expect(rewardsByAddress.get(lockupPlanOwner)?.tokenHolderReward).toBe(
+      wei(expectedReward),
+    );
+    expect(
+      rewardsByAddress.get(lockupPlanOwner)?.tokenHolderProvenance?.sources,
+    ).toEqual(["hedgey"]);
+
+    // Dedup log records the vault → owner resolution with the lockup planId
+    expect(result.deduplication.hedgey).toContainEqual({
+      vestingContract: votingVault,
+      nftOwner: lockupPlanOwner,
+      planId: "lockup-9",
+    });
+  });
+
   it("persists per-wallet reward provenance with sources", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);

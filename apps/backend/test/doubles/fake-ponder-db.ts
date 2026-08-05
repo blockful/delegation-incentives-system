@@ -103,7 +103,15 @@ function evalDrizzleExpr(expr: DrizzleSqlExpr | undefined | null, row: Row): boo
   const sqlOps = chunks
     .filter(
       (c): c is { value: string[] } =>
-        typeof c === "object" && c !== null && !Array.isArray(c) && "value" in (c as object) && (c as any).value?.[0]?.trim() !== "",
+        typeof c === "object" &&
+        c !== null &&
+        !Array.isArray(c) &&
+        "value" in (c as object) &&
+        // Param wrappers ({ value, encoder }) carry comparison VALUES (e.g.
+        // bigints), not SQL operator strings — skip them here.
+        !("encoder" in (c as object)) &&
+        typeof (c as any).value?.[0] === "string" &&
+        (c as any).value[0].trim() !== "",
     )
     .map((c) => (c as { value: string[] }).value[0].trim())
   const op = sqlOps[0]
