@@ -11,9 +11,14 @@ export function createWalletAliasAdapter(): WalletAliasRepository {
       await ready;
       const rows = await db.select().from(walletAlias);
 
+      // Aliases are matched by exact string against lowercase indexer
+      // addresses (consolidateTokenHolders builds a Map keyed on them), so a
+      // checksummed row curated by an operator would silently never match —
+      // reopening the per-wallet cap evasion the alias exists to close.
+      // Normalize both sides here.
       return rows.map((row) => ({
-        secondary: row.secondaryAddress as Address,
-        primary: row.primaryAddress as Address,
+        secondary: row.secondaryAddress.toLowerCase() as Address,
+        primary: row.primaryAddress.toLowerCase() as Address,
       }));
     },
   };
