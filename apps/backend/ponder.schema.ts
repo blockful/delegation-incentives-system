@@ -155,6 +155,78 @@ export const lockupBalanceEvent = onchainTable("lockup_balance_event", (t) => ({
   timestampIdx: index().on(table.timestamp),
 }));
 
+// ─── Hedgey Voting Vesting tables (VotingTokenVestingPlans) ─────────────────
+//
+// The VESTING sibling of VotingTokenLockupPlans: same per-plan VotingVault
+// custody (the vault is the DelegateChanged delegator), but plans are
+// revocable by a vestingAdmin (PlanRevoked) and there is no segmentation or
+// combination. The tables mirror the lockup_* set rather than sharing it:
+// both contracts key plans by their own NFT counter, so the bigint plan-id
+// primary keys would collide in shared tables.
+
+export const votingVestingPlan = onchainTable("voting_vesting_plan", (t) => ({
+  id: t.bigint().primaryKey(),         // plan / NFT ID
+  recipient: t.text().notNull(),       // current NFT holder
+  token: t.text().notNull(),
+  amount: t.bigint().notNull(),        // vesting amount at plan creation
+  start: t.bigint().notNull(),
+  cliff: t.bigint().notNull(),
+  rate: t.bigint().notNull(),          // tokens per period
+  period: t.bigint().notNull(),
+  // Running unvested-plus-vested remainder still held by the plan (= the
+  // vault balance once voting is set up) — decreased by redemptions and
+  // revocations. Snapshotted into voting_vesting_balance_event when the
+  // plan's voting vault is funded.
+  remainder: t.bigint().notNull(),
+  createdAtBlock: t.bigint().notNull(),
+  createdAtTimestamp: t.bigint().notNull(),
+  createdAtLogIndex: t.integer().notNull(),
+}), (table) => ({
+  recipientIdx: index().on(table.recipient),
+  tokenIdx: index().on(table.token),
+}));
+
+/** Per-plan VotingVault — one vault per plan (enforced on-chain). */
+export const votingVestingVault = onchainTable("voting_vesting_vault", (t) => ({
+  id: t.bigint().primaryKey(),         // plan ID (one vault per plan)
+  vaultAddress: t.text().notNull(),    // lowercase vault contract address
+  createdAtBlock: t.bigint().notNull(),
+  createdAtTimestamp: t.bigint().notNull(),
+  createdAtLogIndex: t.integer().notNull(),
+}), (table) => ({
+  vaultAddressIdx: index().on(table.vaultAddress),
+}));
+
+export const votingVestingNftOwnership = onchainTable("voting_vesting_nft_ownership", (t) => ({
+  id: t.text().primaryKey(),            // `${planId}-${blockNumber}-${logIndex}`
+  planId: t.bigint().notNull(),
+  owner: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  planIdIdx: index().on(table.planId),
+  timestampIdx: index().on(table.timestamp),
+}));
+
+/**
+ * Remainder history per plan — one row per balance-changing event (vault
+ * funding, redemption, revocation). `planRemainder` is the amount still held
+ * by the plan AFTER the event; feeds per-plan TWB.
+ */
+export const votingVestingBalanceEvent = onchainTable("voting_vesting_balance_event", (t) => ({
+  id: t.text().primaryKey(),           // `${planId}-${blockNumber}-${logIndex}`
+  planId: t.bigint().notNull(),
+  planRemainder: t.bigint().notNull(),
+  kind: t.text().notNull(),            // "vault_funded" | "redemption" | "revocation"
+  blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  planIdIdx: index().on(table.planId),
+  timestampIdx: index().on(table.timestamp),
+}));
+
 // ─── ENS Token tables ───────────────────────────────────────────────────────
 
 /** Current ENS token balance per address (running state) */

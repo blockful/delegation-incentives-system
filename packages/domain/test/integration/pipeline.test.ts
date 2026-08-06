@@ -759,6 +759,124 @@ describe("runDistributionPipeline", () => {
     });
   });
 
+  it("resolves vaults from two Hedgey voting contracts to their own plan-NFT owners in one run", async () => {
+    // Both VotingTokenLockupPlans AND VotingTokenVestingPlans create per-plan
+    // VotingVaults that appear as delegators. The adapter namespaces their
+    // plan ids ("lockup-<id>" / "voting-vesting-<id>") so the two contracts'
+    // NFT counters never collide — this run has one vault from each source
+    // sharing the SAME numeric plan id, and each must resolve to its own
+    // owner with its own per-plan TWB.
+    const ds = createMockDataSource();
+    const lockupVault: Address = "0xC500000000000000000000000000000000000005";
+    const vestingVault: Address = "0xC700000000000000000000000000000000000007";
+    const lockupPlanOwner: Address = "0xC600000000000000000000000000000000000006";
+    const vestingPlanOwner: Address = "0xC800000000000000000000000000000000000008";
+    const backgroundTokenHolders: Address[] = Array.from(
+      { length: 20 },
+      (_, i) =>
+        `0xE${i.toString(16).padStart(39, "0")}` as Address,
+    );
+
+    ds.getDelegationsToAtTimestamp = async () => [
+      ...[lockupVault, vestingVault].map((tokenHolder) => ({
+        tokenHolder,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      })),
+      ...backgroundTokenHolders.map((tokenHolder) => ({
+        tokenHolder,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      })),
+    ];
+    ds.getPositionsAtTimestamp = async () => [];
+    ds.getAliases = async () => [];
+    ds.getVestingContractAddresses = async () => [lockupVault, vestingVault];
+    ds.getPlansForContracts = async (contractAddresses) => {
+      const plans = [];
+      if (contractAddresses.includes(lockupVault)) {
+        plans.push({
+          planId: "lockup-9",
+          contractAddress: lockupVault,
+          token: "0x0000000000000000000000000000000000000ENS" as Address,
+          amount: wei(300n * ENS),
+          createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
+        });
+      }
+      if (contractAddresses.includes(vestingVault)) {
+        plans.push({
+          planId: "voting-vesting-9", // same numeric id, different namespace
+          contractAddress: vestingVault,
+          token: "0x0000000000000000000000000000000000000ENS" as Address,
+          amount: wei(200n * ENS),
+          createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
+        });
+      }
+      return plans;
+    };
+    ds.getNftOwnerAtTimestamp = async (planId: string) => {
+      if (planId === "lockup-9") return lockupPlanOwner;
+      if (planId === "voting-vesting-9") return vestingPlanOwner;
+      return "0x0000000000000000000000000000000000000000" as Address;
+    };
+    ds.getPlanBalanceEventsInRange = async () => [];
+    ds.getPlanBalanceAtTimestamp = async (planId: string) => {
+      if (planId === "lockup-9") return wei(300n * ENS);
+      if (planId === "voting-vesting-9") return wei(200n * ENS);
+      return wei(0n);
+    };
+    ds.getBalanceAtTimestamp = async (account: Address) => {
+      if (backgroundTokenHolders.includes(account)) return wei(1000n * ENS);
+      // Poison values: if either vault entered as a direct holder, these
+      // aggregate balances would massively distort its reward.
+      if (account === lockupVault || account === vestingVault) {
+        return wei(1_000_000n * ENS);
+      }
+      return wei(0n);
+    };
+
+    const result = await runDistributionPipeline(MONTH, ds);
+
+    const allAddresses = [
+      ...result.rewards.map((r) => r.address),
+      ...result.lottery.buckets.flatMap((b) => b.entries.map((e) => e.address)),
+    ];
+    expect(allAddresses).toContain(lockupPlanOwner);
+    expect(allAddresses).toContain(vestingPlanOwner);
+    expect(allAddresses).not.toContain(lockupVault);
+    expect(allAddresses).not.toContain(vestingVault);
+
+    // Each owner is weighted by their own plan's remainder — no cross-talk
+    // between the two namespaces despite the shared numeric id
+    const rewardsByAddress = new Map(
+      result.rewards.map((reward) => [reward.address, reward]),
+    );
+    const tokenHolderSubPool = 4_500n * ENS;
+    const totalTwb = (20n * 1000n + 300n + 200n) * ENS;
+    expect(rewardsByAddress.get(lockupPlanOwner)?.tokenHolderReward).toBe(
+      wei((300n * ENS * tokenHolderSubPool) / totalTwb),
+    );
+    expect(rewardsByAddress.get(vestingPlanOwner)?.tokenHolderReward).toBe(
+      wei((200n * ENS * tokenHolderSubPool) / totalTwb),
+    );
+
+    // Dedup log records both vault → owner resolutions with namespaced ids
+    expect(result.deduplication.hedgey).toContainEqual({
+      vestingContract: lockupVault,
+      nftOwner: lockupPlanOwner,
+      planId: "lockup-9",
+    });
+    expect(result.deduplication.hedgey).toContainEqual({
+      vestingContract: vestingVault,
+      nftOwner: vestingPlanOwner,
+      planId: "voting-vesting-9",
+    });
+  });
+
   it("persists per-wallet reward provenance with sources", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);

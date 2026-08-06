@@ -9,6 +9,10 @@ import {
   lockupVotingVault,
   lockupNftOwnership,
   lockupBalanceEvent,
+  votingVestingPlan,
+  votingVestingVault,
+  votingVestingNftOwnership,
+  votingVestingBalanceEvent,
 } from "ponder:schema";
 import type { VestingRepository } from "@ens-dis/domain";
 import type {
@@ -30,40 +34,66 @@ const HEDGEY_VESTING_ADDRESS: Address =
   "0x2cde9919e81b20b4b33dd562a48a84b54c48f00c";
 
 /**
- * Namespace prefix for VotingTokenLockupPlans plan IDs. Lockup and vesting
- * plan IDs are independent counters on two different contracts, so raw
- * numeric IDs would collide; the domain treats planId as an opaque string,
- * so the prefix routes each planId back to the right tables here.
+ * A "vault leg": a Hedgey contract whose voting-enabled plans custody their
+ * tokens in dedicated per-plan VotingVaults — the vault, not the contract,
+ * is the on-chain DelegateChanged delegator, so vaults must resolve to
+ * plan-NFT owners. Two such contracts exist:
+ *
+ * - VotingTokenLockupPlans  (0x73cD…Ec3D) → tables lockup_*,        prefix "lockup-"
+ * - VotingTokenVestingPlans (0x1bb6…Ef82) → tables voting_vesting_*, prefix "voting-vesting-"
+ *
+ * Plan IDs are independent NFT counters on each contract (and on the vesting
+ * master, whose plans keep un-prefixed numeric IDs), so raw numeric IDs would
+ * collide; the domain treats planId as an opaque string, so each leg's prefix
+ * routes a planId back to the right tables here.
  */
-const LOCKUP_PLAN_ID_PREFIX = "lockup-";
+const VAULT_LEGS = [
+  {
+    prefix: "lockup-",
+    plan: lockupPlan,
+    vault: lockupVotingVault,
+    ownership: lockupNftOwnership,
+    balanceEvent: lockupBalanceEvent,
+  },
+  {
+    prefix: "voting-vesting-",
+    plan: votingVestingPlan,
+    vault: votingVestingVault,
+    ownership: votingVestingNftOwnership,
+    balanceEvent: votingVestingBalanceEvent,
+  },
+] as const;
 
-function isLockupPlanId(planId: string): boolean {
-  return planId.startsWith(LOCKUP_PLAN_ID_PREFIX);
+type VaultLeg = (typeof VAULT_LEGS)[number];
+
+function legForPlanId(planId: string): VaultLeg | undefined {
+  return VAULT_LEGS.find((leg) => planId.startsWith(leg.prefix));
 }
 
-function lockupPlanIdToBigInt(planId: string): bigint {
-  return BigInt(planId.slice(LOCKUP_PLAN_ID_PREFIX.length));
+function legPlanIdToBigInt(leg: VaultLeg, planId: string): bigint {
+  return BigInt(planId.slice(leg.prefix.length));
 }
 
 export function createVestingAdapter(db: Db): VestingRepository {
   /**
-   * All per-plan VotingVaults belonging to indexed (= ENS) lockup plans, as
+   * All per-plan VotingVaults belonging to a leg's indexed (= ENS) plans, as
    * vaultAddress → planId. Vault rows are written unconditionally by the
-   * indexer (event-ordering constraint), so they must be joined against
-   * lockup_plan to drop vaults of non-ENS plans.
+   * indexer (event-ordering constraint on the lockup leg; non-ENS plans on
+   * both), so they must be joined against the leg's plan table to drop
+   * vaults of non-ENS plans.
    *
-   * Deliberately includes vaults of fully-redeemed/burned plans: a vault's
-   * ens_delegation row outlives its balance, and a vault that delegated at
-   * month-end must still resolve through the hedgey leg (owner/balance
-   * lookups then yield 0x0/0) rather than fall through to source:"direct" —
-   * that fall-through is exactly the round-1 bug that credited 21 vaults
-   * with 246 ENS.
+   * Deliberately includes vaults of fully-redeemed/revoked/burned plans: a
+   * vault's ens_delegation row outlives its balance, and a vault that
+   * delegated at month-end must still resolve through the hedgey leg
+   * (owner/balance lookups then yield 0x0/0) rather than fall through to
+   * source:"direct" — that fall-through is exactly the round-1 bug that
+   * credited 21 lockup vaults with 246 ENS.
    */
-  async function getEnsLockupVaults(): Promise<Map<string, bigint>> {
-    const vaultRows = await db.select().from(lockupVotingVault);
+  async function getEnsVaults(leg: VaultLeg): Promise<Map<string, bigint>> {
+    const vaultRows = await db.select().from(leg.vault);
     if (vaultRows.length === 0) return new Map();
 
-    const planRows = await db.select().from(lockupPlan);
+    const planRows = await db.select().from(leg.plan);
     const ensPlanIds = new Set(planRows.map((p) => BigInt(p.id)));
 
     const vaults = new Map<string, bigint>();
@@ -90,11 +120,14 @@ export function createVestingAdapter(db: Db): VestingRepository {
         addresses.add(m.childAddress.toLowerCase());
       }
 
-      // Per-plan VotingVaults of the lockup contract — these are the
-      // addresses that actually appear as DelegateChanged delegators.
-      const lockupVaults = await getEnsLockupVaults();
-      for (const vaultAddress of lockupVaults.keys()) {
-        addresses.add(vaultAddress);
+      // Per-plan VotingVaults of the lockup and voting-vesting contracts —
+      // these are the addresses that actually appear as DelegateChanged
+      // delegators.
+      for (const leg of VAULT_LEGS) {
+        const vaults = await getEnsVaults(leg);
+        for (const vaultAddress of vaults.keys()) {
+          addresses.add(vaultAddress);
+        }
       }
 
       return [...addresses] as Address[];
@@ -104,8 +137,9 @@ export function createVestingAdapter(db: Db): VestingRepository {
       planId: string,
       timestamp: Seconds,
     ): Promise<Address> {
-      const [ownershipTable, numericPlanId] = isLockupPlanId(planId)
-        ? [lockupNftOwnership, lockupPlanIdToBigInt(planId)]
+      const leg = legForPlanId(planId);
+      const [ownershipTable, numericPlanId] = leg
+        ? [leg.ownership, legPlanIdToBigInt(leg, planId)]
         : [vestingNftOwnership, BigInt(planId)];
 
       const rows = await db
@@ -159,19 +193,20 @@ export function createVestingAdapter(db: Db): VestingRepository {
         }
       }
 
-      // Lockup leg: each requested address that is a per-plan VotingVault
-      // maps to exactly one lockup plan, keyed to the VAULT address (the
-      // vault is the on-chain delegator the pipeline matched against).
-      const lockupVaults = await getEnsLockupVaults();
-      const requestedVaultPlanIds = new Map<bigint, string>();
-      for (const addr of lowerAddresses) {
-        const planId = lockupVaults.get(addr);
-        if (planId !== undefined) requestedVaultPlanIds.set(planId, addr);
-      }
+      // Vault legs: each requested address that is a per-plan VotingVault
+      // maps to exactly one plan, keyed to the VAULT address (the vault is
+      // the on-chain delegator the pipeline matched against).
+      for (const leg of VAULT_LEGS) {
+        const vaults = await getEnsVaults(leg);
+        const requestedVaultPlanIds = new Map<bigint, string>();
+        for (const addr of lowerAddresses) {
+          const planId = vaults.get(addr);
+          if (planId !== undefined) requestedVaultPlanIds.set(planId, addr);
+        }
+        if (requestedVaultPlanIds.size === 0) continue;
 
-      if (requestedVaultPlanIds.size > 0) {
-        const planRows = await db.select().from(lockupPlan);
-        const vaultRows = await db.select().from(lockupVotingVault);
+        const planRows = await db.select().from(leg.plan);
+        const vaultRows = await db.select().from(leg.vault);
         const vaultCreatedAt = new Map(
           vaultRows.map((v) => [BigInt(v.id), BigInt(v.createdAtTimestamp)]),
         );
@@ -199,7 +234,7 @@ export function createVestingAdapter(db: Db): VestingRepository {
           }
 
           results.push({
-            planId: `${LOCKUP_PLAN_ID_PREFIX}${planId}`,
+            planId: `${leg.prefix}${planId}`,
             contractAddress: vaultAddress as Address,
             token: row.token as Address,
             amount: wei(BigInt(row.amount)),
@@ -216,35 +251,36 @@ export function createVestingAdapter(db: Db): VestingRepository {
       from: Seconds,
       to: Seconds,
     ): Promise<readonly VestingBalanceEvent[]> {
-      if (isLockupPlanId(planId)) {
-        const numericPlanId = lockupPlanIdToBigInt(planId);
+      const leg = legForPlanId(planId);
+      if (leg) {
+        const numericPlanId = legPlanIdToBigInt(leg, planId);
 
         // Tokens only count toward the vault-delegated balance from vault
         // creation onward (the "vault_funded" balance event); pre-vault
         // events (e.g. early redemptions while tokens still sat undelegated
-        // in the lockup contract) must not enter the TWB step function.
+        // in the plan contract) must not enter the TWB step function.
         const vaultRows = await db
           .select()
-          .from(lockupVotingVault)
-          .where(eq(lockupVotingVault.id, numericPlanId))
+          .from(leg.vault)
+          .where(eq(leg.vault.id, numericPlanId))
           .limit(1);
         if (vaultRows.length === 0) return [];
         const fundedAt = BigInt(vaultRows[0].createdAtTimestamp);
 
         const rows = await db
           .select()
-          .from(lockupBalanceEvent)
+          .from(leg.balanceEvent)
           .where(
             and(
-              eq(lockupBalanceEvent.planId, numericPlanId),
-              gte(lockupBalanceEvent.timestamp, from),
-              lte(lockupBalanceEvent.timestamp, to),
+              eq(leg.balanceEvent.planId, numericPlanId),
+              gte(leg.balanceEvent.timestamp, from),
+              lte(leg.balanceEvent.timestamp, to),
             ),
           )
           .orderBy(
-            asc(lockupBalanceEvent.timestamp),
-            asc(lockupBalanceEvent.blockNumber),
-            asc(lockupBalanceEvent.logIndex),
+            asc(leg.balanceEvent.timestamp),
+            asc(leg.balanceEvent.blockNumber),
+            asc(leg.balanceEvent.logIndex),
           );
 
         return rows
@@ -287,14 +323,15 @@ export function createVestingAdapter(db: Db): VestingRepository {
       planId: string,
       timestamp: Seconds,
     ): Promise<Wei> {
-      if (isLockupPlanId(planId)) {
-        const numericPlanId = lockupPlanIdToBigInt(planId);
+      const leg = legForPlanId(planId);
+      if (leg) {
+        const numericPlanId = legPlanIdToBigInt(leg, planId);
 
         // Before the vault exists the plan delegates nothing → balance 0.
         const vaultRows = await db
           .select()
-          .from(lockupVotingVault)
-          .where(eq(lockupVotingVault.id, numericPlanId))
+          .from(leg.vault)
+          .where(eq(leg.vault.id, numericPlanId))
           .limit(1);
         if (vaultRows.length === 0) return wei(0n);
         const fundedAt = BigInt(vaultRows[0].createdAtTimestamp);
@@ -304,18 +341,18 @@ export function createVestingAdapter(db: Db): VestingRepository {
         // before `timestamp` (the "vault_funded" row written at creation).
         const eventRows = await db
           .select()
-          .from(lockupBalanceEvent)
+          .from(leg.balanceEvent)
           .where(
             and(
-              eq(lockupBalanceEvent.planId, numericPlanId),
-              lte(lockupBalanceEvent.timestamp, timestamp),
-              gte(lockupBalanceEvent.timestamp, seconds(fundedAt)),
+              eq(leg.balanceEvent.planId, numericPlanId),
+              lte(leg.balanceEvent.timestamp, timestamp),
+              gte(leg.balanceEvent.timestamp, seconds(fundedAt)),
             ),
           )
           .orderBy(
-            desc(lockupBalanceEvent.timestamp),
-            desc(lockupBalanceEvent.blockNumber),
-            desc(lockupBalanceEvent.logIndex),
+            desc(leg.balanceEvent.timestamp),
+            desc(leg.balanceEvent.blockNumber),
+            desc(leg.balanceEvent.logIndex),
           )
           .limit(1);
 
@@ -326,8 +363,8 @@ export function createVestingAdapter(db: Db): VestingRepository {
         // Defensive fallback — should be unreachable given the funding row.
         const planRows = await db
           .select()
-          .from(lockupPlan)
-          .where(eq(lockupPlan.id, numericPlanId))
+          .from(leg.plan)
+          .where(eq(leg.plan.id, numericPlanId))
           .limit(1);
         if (planRows.length === 0) return wei(0n);
         return wei(BigInt(planRows[0].remainder));

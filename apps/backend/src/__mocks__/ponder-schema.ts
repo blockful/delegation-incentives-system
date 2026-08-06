@@ -107,6 +107,56 @@ export const lockupBalanceEvent = Object.assign(
   { _tableName: "lockup_balance_event" },
 );
 
+// Hedgey Voting Vesting (VotingTokenVestingPlans) — mirrors the lockup table
+// set (shared tables would collide on the bigint plan-id primary keys); real
+// drizzle columns for the same reason as the tables above.
+export const votingVestingPlan = Object.assign(
+  pgTable("voting_vesting_plan", {
+    id: bigint("id", { mode: "bigint" }).primaryKey(),
+    recipient: text("recipient").notNull(),
+    token: text("token").notNull(),
+    amount: bigint("amount", { mode: "bigint" }).notNull(),
+    remainder: bigint("remainder", { mode: "bigint" }).notNull(),
+    createdAtBlock: bigint("createdAtBlock", { mode: "bigint" }).notNull(),
+    createdAtTimestamp: bigint("createdAtTimestamp", { mode: "bigint" }).notNull(),
+    createdAtLogIndex: integer("createdAtLogIndex").notNull(),
+  }),
+  { _tableName: "voting_vesting_plan" },
+);
+export const votingVestingVault = Object.assign(
+  pgTable("voting_vesting_vault", {
+    id: bigint("id", { mode: "bigint" }).primaryKey(),
+    vaultAddress: text("vaultAddress").notNull(),
+    createdAtBlock: bigint("createdAtBlock", { mode: "bigint" }).notNull(),
+    createdAtTimestamp: bigint("createdAtTimestamp", { mode: "bigint" }).notNull(),
+    createdAtLogIndex: integer("createdAtLogIndex").notNull(),
+  }),
+  { _tableName: "voting_vesting_vault" },
+);
+export const votingVestingNftOwnership = Object.assign(
+  pgTable("voting_vesting_nft_ownership", {
+    id: text("id").primaryKey(),
+    planId: bigint("planId", { mode: "bigint" }).notNull(),
+    owner: text("owner").notNull(),
+    blockNumber: bigint("blockNumber", { mode: "bigint" }).notNull(),
+    logIndex: integer("logIndex").notNull(),
+    timestamp: bigint("timestamp", { mode: "bigint" }).notNull(),
+  }),
+  { _tableName: "voting_vesting_nft_ownership" },
+);
+export const votingVestingBalanceEvent = Object.assign(
+  pgTable("voting_vesting_balance_event", {
+    id: text("id").primaryKey(),
+    planId: bigint("planId", { mode: "bigint" }).notNull(),
+    planRemainder: bigint("planRemainder", { mode: "bigint" }).notNull(),
+    kind: text("kind").notNull(),
+    blockNumber: bigint("blockNumber", { mode: "bigint" }).notNull(),
+    logIndex: integer("logIndex").notNull(),
+    timestamp: bigint("timestamp", { mode: "bigint" }).notNull(),
+  }),
+  { _tableName: "voting_vesting_balance_event" },
+);
+
 // ENS Token
 export const ensBalance = makeTable("ens_balance");
 export const ensBalanceEvent = makeTable("ens_balance_event");

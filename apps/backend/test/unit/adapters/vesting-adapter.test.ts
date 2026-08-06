@@ -10,6 +10,8 @@ const ALICE = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const BOB = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const VAULT_9 = "0xdddddddddddddddddddddddddddddddddddddd09";
 const VAULT_10 = "0xdddddddddddddddddddddddddddddddddddddd10";
+const VV_VAULT_9 = "0xffffffffffffffffffffffffffffffffffffff09";
+const VV_VAULT_10 = "0xffffffffffffffffffffffffffffffffffffff10";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -29,6 +31,29 @@ function makeLockupPlanRow(overrides: Partial<Row> & { id: bigint }): Row {
 function makeVaultRow(overrides: Partial<Row> & { id: bigint }): Row {
   return {
     vaultAddress: VAULT_9,
+    createdAtBlock: 150n,
+    createdAtTimestamp: 1_500n,
+    createdAtLogIndex: 0,
+    ...overrides,
+  };
+}
+
+function makeVotingVestingPlanRow(overrides: Partial<Row> & { id: bigint }): Row {
+  return {
+    recipient: ALICE,
+    token: ENS_TOKEN,
+    amount: 1_000n,
+    remainder: 1_000n,
+    createdAtBlock: 100n,
+    createdAtTimestamp: 1_000n,
+    createdAtLogIndex: 0,
+    ...overrides,
+  };
+}
+
+function makeVotingVestingVaultRow(overrides: Partial<Row> & { id: bigint }): Row {
+  return {
+    vaultAddress: VV_VAULT_9,
     createdAtBlock: 150n,
     createdAtTimestamp: 1_500n,
     createdAtLogIndex: 0,
@@ -323,5 +348,134 @@ describe("createVestingAdapter lockup plan balances", () => {
     expect(await adapter.getPlanBalanceAtTimestamp("5", seconds(50n))).toBe(0n);
     expect(await adapter.getPlanBalanceAtTimestamp("5", seconds(200n))).toBe(400n);
     expect(await adapter.getPlanBalanceAtTimestamp("5", seconds(600n))).toBe(300n);
+  });
+});
+
+// ─── Voting Vesting leg (VotingTokenVestingPlans, prefix "voting-vesting-") ──
+
+describe("createVestingAdapter voting-vesting leg", () => {
+  it("includes VotingTokenVestingPlans vaults of indexed plans in the contract set", async () => {
+    const db = makeDb({
+      voting_vesting_plan: [makeVotingVestingPlanRow({ id: 9n })],
+      voting_vesting_vault: [
+        makeVotingVestingVaultRow({ id: 9n, vaultAddress: VV_VAULT_9 }),
+        // vault of a non-ENS plan — no plan row, must stay out
+        makeVotingVestingVaultRow({ id: 77n, vaultAddress: VV_VAULT_10 }),
+      ],
+    });
+    const adapter = createVestingAdapter(db as any);
+
+    const result = await adapter.getVestingContractAddresses();
+
+    expect(result).toContain(VV_VAULT_9);
+    expect(result).not.toContain(VV_VAULT_10);
+  });
+
+  it("resolves a VotingTokenVestingPlans vault to its plan with the voting-vesting- planId", async () => {
+    const db = makeDb({
+      voting_vesting_plan: [makeVotingVestingPlanRow({ id: 128n, amount: 200n })],
+      voting_vesting_vault: [makeVotingVestingVaultRow({ id: 128n, vaultAddress: VV_VAULT_9 })],
+    });
+    const adapter = createVestingAdapter(db as any);
+
+    const result = await adapter.getPlansForContracts([VV_VAULT_9 as any]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].planId).toBe("voting-vesting-128");
+    expect(result[0].contractAddress).toBe(VV_VAULT_9);
+    expect(result[0].token).toBe(ENS_TOKEN);
+    expect(result[0].amount).toBe(200n);
+  });
+
+  it("keeps the three plan-id namespaces apart for the same numeric id", async () => {
+    const db = makeDb({
+      vesting_plan: [
+        {
+          id: 9n,
+          recipient: BOB,
+          token: ENS_TOKEN,
+          amount: 777n,
+          amountRedeemed: 0n,
+          createdAtBlock: 50n,
+          createdAtTimestamp: 500n,
+          createdAtLogIndex: 0,
+        },
+      ],
+      lockup_plan: [makeLockupPlanRow({ id: 9n })],
+      lockup_voting_vault: [makeVaultRow({ id: 9n, vaultAddress: VAULT_9 })],
+      voting_vesting_plan: [makeVotingVestingPlanRow({ id: 9n })],
+      voting_vesting_vault: [makeVotingVestingVaultRow({ id: 9n, vaultAddress: VV_VAULT_9 })],
+    });
+    const adapter = createVestingAdapter(db as any);
+
+    const result = await adapter.getPlansForContracts([
+      HEDGEY_VESTING_ADDRESS as any,
+      VAULT_9 as any,
+      VV_VAULT_9 as any,
+    ]);
+
+    const planIds = result.map((p) => p.planId).sort();
+    expect(planIds).toEqual(["9", "lockup-9", "voting-vesting-9"]);
+    expect(result.find((p) => p.planId === "lockup-9")!.contractAddress).toBe(VAULT_9);
+    expect(result.find((p) => p.planId === "voting-vesting-9")!.contractAddress).toBe(VV_VAULT_9);
+  });
+
+  it("routes voting-vesting- planIds to voting_vesting_nft_ownership (vault resolves to ownerOf)", async () => {
+    const db = makeDb({
+      voting_vesting_nft_ownership: [
+        { id: "128-100-0", planId: 128n, owner: ALICE, blockNumber: 100n, logIndex: 0, timestamp: 1_000n },
+        { id: "128-200-0", planId: 128n, owner: BOB, blockNumber: 200n, logIndex: 0, timestamp: 2_000n },
+      ],
+      lockup_nft_ownership: [
+        // same numeric planId on the lockup side — must NOT be picked up
+        { id: "128-100-0", planId: 128n, owner: "0x9999999999999999999999999999999999999999", blockNumber: 100n, logIndex: 0, timestamp: 1_000n },
+      ],
+    });
+    const adapter = createVestingAdapter(db as any);
+
+    expect(await adapter.getNftOwnerAtTimestamp("voting-vesting-128", seconds(1_500n))).toBe(ALICE);
+    expect(await adapter.getNftOwnerAtTimestamp("voting-vesting-128", seconds(2_500n))).toBe(BOB);
+  });
+
+  it("gates the plan balance on vault funding and follows the revocation remainder", async () => {
+    const seed = {
+      voting_vesting_plan: [
+        makeVotingVestingPlanRow({ id: 128n, amount: 1_000n, remainder: 400n, createdAtTimestamp: 1_000n }),
+      ],
+      voting_vesting_vault: [
+        makeVotingVestingVaultRow({ id: 128n, vaultAddress: VV_VAULT_9, createdAtTimestamp: 2_000n }),
+      ],
+      voting_vesting_balance_event: [
+        // vault funding snapshot
+        { id: "128-150-0", planId: 128n, planRemainder: 1_000n, kind: "vault_funded", blockNumber: 150n, logIndex: 0, timestamp: 2_000n },
+        // vestingAdmin revoked: 400 vested stays in the vault, 600 unvested returned
+        { id: "128-300-0", planId: 128n, planRemainder: 400n, kind: "revocation", blockNumber: 300n, logIndex: 0, timestamp: 3_000n },
+      ],
+    };
+    const adapter = createVestingAdapter(makeDb(seed) as any);
+
+    // Before the vault exists the plan delegates nothing
+    expect(await adapter.getPlanBalanceAtTimestamp("voting-vesting-128", seconds(1_700n))).toBe(0n);
+    // Funded amount from vault creation onward
+    expect(await adapter.getPlanBalanceAtTimestamp("voting-vesting-128", seconds(2_500n))).toBe(1_000n);
+    // Post-revocation the vested remainder keeps vesting in the vault
+    expect(await adapter.getPlanBalanceAtTimestamp("voting-vesting-128", seconds(3_500n))).toBe(400n);
+
+    const events = await adapter.getPlanBalanceEventsInRange(
+      "voting-vesting-128",
+      seconds(0n),
+      seconds(10_000n),
+    );
+    expect(events.map((e) => [e.timestamp, e.balance])).toEqual([
+      [2_000n, 1_000n],
+      [3_000n, 400n],
+    ]);
+    expect(events.every((e) => e.planId === "voting-vesting-128")).toBe(true);
+  });
+
+  it("returns 0 for a voting-vesting plan with no vault at all", async () => {
+    const db = makeDb({ voting_vesting_plan: [makeVotingVestingPlanRow({ id: 128n })] });
+    const adapter = createVestingAdapter(db as any);
+    expect(await adapter.getPlanBalanceAtTimestamp("voting-vesting-128", seconds(9_999n))).toBe(0n);
   });
 });
