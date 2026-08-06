@@ -68,21 +68,21 @@ const aliasSecondary = directTokenHolder5;
 
 function makeProposal(
   id: string,
-  finalizedTs: bigint,
+  endBlock: bigint,
 ): Proposal {
   return {
     id,
     status: "executed",
-    finalizedTimestamp: seconds(finalizedTs),
     startBlock: blockNumber(100n),
-    endBlock: blockNumber(200n),
+    endBlock: blockNumber(endBlock),
   };
 }
 
-// All 10 proposals finalized before MONTH_END
+// All 10 proposals' voting periods ended before the month-end block
+// (getBlockForTimestamp returns 1_000_000 in the mock data source below)
 const PROPOSAL_BASE_TS = (MONTH_END as bigint) - 1_000_000n;
 const proposals: Proposal[] = Array.from({ length: 10 }, (_, i) =>
-  makeProposal(`prop-${i}`, PROPOSAL_BASE_TS + BigInt(i) * 100n),
+  makeProposal(`prop-${i}`, 200n + BigInt(i) * 100n),
 );
 
 // ─────────────────────────────────────────────────────────────
@@ -248,7 +248,7 @@ function createMockDataSource(): IncentivesDataSource {
 
     // ── ProposalRepository ──────────────────────────────────
     async getFinalizedProposals(
-      _beforeTimestamp: Seconds,
+      _beforeBlock: BlockNumber,
       _limit: number,
     ): Promise<readonly Proposal[]> {
       return proposals;
@@ -324,6 +324,9 @@ function createMockDataSource(): IncentivesDataSource {
     },
 
     // ── MultiDelegateRepository ─────────────────────────────
+    async getProxyAddresses(): Promise<readonly Address[]> {
+      return [];
+    },
     async getPositionsAtTimestamp(
       _voters: readonly Address[],
       _timestamp: Seconds,
@@ -520,6 +523,10 @@ describe("runDistributionPipeline", () => {
       aliasSecondary,
     );
     expect(result.deduplication.walletAliases[0].primary).toBe(aliasPrimary);
+
+    // No proxy vaults in this scenario — the log records an empty exclusion
+    // list (not undefined) so every persisted round carries the audit field.
+    expect(result.deduplication.excludedProxies).toEqual([]);
   });
 
   it("consolidates aliased wallets into a single reward entry", async () => {
@@ -658,6 +665,100 @@ describe("runDistributionPipeline", () => {
     );
   });
 
+  it("resolves a Hedgey VotingVault delegator to the plan-NFT owner with per-plan TWB", async () => {
+    // VotingTokenLockupPlans: each voting-enabled plan holds its ENS in a
+    // dedicated per-plan VotingVault, and the VAULT is the on-chain
+    // DelegateChanged delegator. The vault must resolve through the hedgey
+    // leg to the plan-NFT owner — never enter rewards as a direct holder
+    // (round-1 bug: 21 vaults credited 246.19 unrecoverable ENS).
+    const ds = createMockDataSource();
+    const votingVault: Address = "0xC500000000000000000000000000000000000005";
+    const lockupPlanOwner: Address = "0xC600000000000000000000000000000000000006";
+    const backgroundTokenHolders: Address[] = Array.from(
+      { length: 20 },
+      (_, i) =>
+        `0xE${i.toString(16).padStart(39, "0")}` as Address,
+    );
+
+    ds.getDelegationsToAtTimestamp = async () => [
+      // The vault — not the lockup contract, not the owner — is the delegator
+      {
+        tokenHolder: votingVault,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      },
+      ...backgroundTokenHolders.map((tokenHolder) => ({
+        tokenHolder,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      })),
+    ];
+    ds.getPositionsAtTimestamp = async () => [];
+    ds.getAliases = async () => [];
+    ds.getVestingContractAddresses = async () => [votingVault];
+    // The adapter keys the lockup plan to its vault address and namespaces
+    // the planId to avoid colliding with vesting-master plan IDs.
+    ds.getPlansForContracts = async (contractAddresses) =>
+      contractAddresses.includes(votingVault)
+        ? [
+            {
+              planId: "lockup-9",
+              contractAddress: votingVault,
+              token: "0x0000000000000000000000000000000000000ENS" as Address,
+              amount: wei(200n * ENS),
+              createdAtTimestamp: seconds((MONTH_START as bigint) - 1n),
+            },
+          ]
+        : [];
+    ds.getNftOwnerAtTimestamp = async (planId: string) =>
+      planId === "lockup-9" ? lockupPlanOwner : ("0x0000000000000000000000000000000000000000" as Address);
+    ds.getPlanBalanceEventsInRange = async () => [];
+    ds.getPlanBalanceAtTimestamp = async (planId: string) =>
+      planId === "lockup-9" ? wei(200n * ENS) : wei(0n);
+    ds.getBalanceAtTimestamp = async (account: Address) => {
+      if (backgroundTokenHolders.includes(account)) return wei(1000n * ENS);
+      // Poison value: if the vault ever entered as a direct holder, this
+      // aggregate balance would massively distort its reward.
+      if (account === votingVault) return wei(1_000_000n * ENS);
+      return wei(0n);
+    };
+
+    const result = await runDistributionPipeline(MONTH, ds);
+
+    const allAddresses = [
+      ...result.rewards.map((r) => r.address),
+      ...result.lottery.buckets.flatMap((b) => b.entries.map((e) => e.address)),
+    ];
+    expect(allAddresses).toContain(lockupPlanOwner);
+    expect(allAddresses).not.toContain(votingVault);
+
+    // Reward weighted by the per-plan locked remainder, not the vault's
+    // aggregate ENS balance
+    const rewardsByAddress = new Map(
+      result.rewards.map((reward) => [reward.address, reward]),
+    );
+    const tokenHolderSubPool = 4_500n * ENS;
+    const totalTwb = (20n * 1000n + 200n) * ENS;
+    const expectedReward = (200n * ENS * tokenHolderSubPool) / totalTwb;
+    expect(rewardsByAddress.get(lockupPlanOwner)?.tokenHolderReward).toBe(
+      wei(expectedReward),
+    );
+    expect(
+      rewardsByAddress.get(lockupPlanOwner)?.tokenHolderProvenance?.sources,
+    ).toEqual(["hedgey"]);
+
+    // Dedup log records the vault → owner resolution with the lockup planId
+    expect(result.deduplication.hedgey).toContainEqual({
+      vestingContract: votingVault,
+      nftOwner: lockupPlanOwner,
+      planId: "lockup-9",
+    });
+  });
+
   it("persists per-wallet reward provenance with sources", async () => {
     const ds = createMockDataSource();
     const result = await runDistributionPipeline(MONTH, ds);
@@ -708,6 +809,120 @@ describe("runDistributionPipeline", () => {
         ).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("regression: MultiDelegate proxy vault is excluded from rewards and the depositors' rewards reflect the smaller TWB denominator", async () => {
+    // Round-1 defect (2026-07): proxy vaults entered the snapshot as
+    // source:"direct" holders with their pooled balanceOf, while their
+    // depositors were ALSO credited via ERC1155 receipts. 8 proxies took
+    // 1,365.80 ENS (36.77% of the TWB denominator) — unrecoverable, since
+    // proxy bytecode is 0xff. The proxy must simply not exist in the holder
+    // list; its depositors enter individually via the multidelegate leg.
+    const proxyVault: Address = "0xE100000000000000000000000000000000000001";
+    const depositor1: Address = "0xE200000000000000000000000000000000000002";
+    const depositor2: Address = "0xE300000000000000000000000000000000000003";
+    const backgroundTokenHolders: Address[] = Array.from(
+      { length: 20 },
+      (_, i) =>
+        `0xF${i.toString(16).padStart(39, "0")}` as Address,
+    );
+
+    const DEP1_RECEIPT = 100n * ENS;
+    const DEP2_RECEIPT = 300n * ENS;
+    const POOLED = DEP1_RECEIPT + DEP2_RECEIPT; // proxy's balanceOf
+
+    const ds = createMockDataSource();
+    ds.getProxyAddresses = async () => [proxyVault];
+    // The proxy vault delegates its pooled balance to voter1, exactly like a
+    // large direct holder would.
+    ds.getDelegationsToAtTimestamp = async () => [
+      {
+        tokenHolder: proxyVault,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      },
+      ...backgroundTokenHolders.map((tokenHolder) => ({
+        tokenHolder,
+        voter: voter1,
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      })),
+    ];
+    // The depositors hold ERC1155 receipts for the same pooled tokens.
+    ds.getPositionsAtTimestamp = async () => [
+      {
+        holder: depositor1,
+        voter: voter1,
+        balance: wei(DEP1_RECEIPT),
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      },
+      {
+        holder: depositor2,
+        voter: voter1,
+        balance: wei(DEP2_RECEIPT),
+        timestamp: MONTH_START,
+        blockNumber: blockNumber(100n),
+        logIndex: 0,
+      },
+    ];
+    ds.getErc1155BalanceAtTimestamp = async (holder: Address) => {
+      if (holder === depositor1) return wei(DEP1_RECEIPT);
+      if (holder === depositor2) return wei(DEP2_RECEIPT);
+      return wei(0n);
+    };
+    ds.getVestingContractAddresses = async () => [];
+    ds.getAliases = async () => [];
+    ds.getBalanceAtTimestamp = async (account: Address) => {
+      // If the proxy leaked into the direct-holder set, this pooled balance
+      // would inflate the denominator (and earn the proxy a reward).
+      if (account === proxyVault) return wei(POOLED);
+      if (backgroundTokenHolders.includes(account)) return wei(1000n * ENS);
+      return wei(0n);
+    };
+
+    const result = await runDistributionPipeline(MONTH, ds);
+
+    // The proxy vault gets nothing — no direct payout, no lottery entry.
+    const allAddresses = [
+      ...result.rewards.map((r) => r.address),
+      ...result.lottery.buckets.flatMap((b) =>
+        b.entries.map((e) => e.address),
+      ),
+    ];
+    expect(allAddresses).not.toContain(proxyVault);
+    expect(allAddresses).toContain(depositor1);
+    expect(allAddresses).toContain(depositor2);
+
+    // Depositor rewards are computed against the deduplicated denominator:
+    // 20 * 1000 + 100 + 300 = 20,400 ENS — NOT 20,800 (with the proxy's
+    // pooled 400 double-counted on top of the receipts).
+    const rewardsByAddress = new Map(
+      result.rewards.map((reward) => [reward.address, reward]),
+    );
+    const tokenHolderSubPool = 4_500n * ENS;
+    const totalTwb = (20n * 1000n + 100n + 300n) * ENS;
+    expect(rewardsByAddress.get(depositor1)?.tokenHolderReward).toBe(
+      wei((DEP1_RECEIPT * tokenHolderSubPool) / totalTwb),
+    );
+    expect(rewardsByAddress.get(depositor2)?.tokenHolderReward).toBe(
+      wei((DEP2_RECEIPT * tokenHolderSubPool) / totalTwb),
+    );
+    // Background holders pick up a few wei of redistribution dust, so assert
+    // their exact pro-rata share on the pre-cap rawReward provenance.
+    expect(
+      rewardsByAddress.get(backgroundTokenHolders[0])?.tokenHolderProvenance
+        ?.rawReward,
+    ).toBe(wei((1000n * ENS * tokenHolderSubPool) / totalTwb));
+
+    // The exclusion is publicly auditable in the deduplication log.
+    expect(result.deduplication.excludedProxies).toEqual([
+      { proxy: proxyVault, voter: voter1 },
+    ]);
   });
 
   it("multiDelegate holders appear in rewards or lottery", async () => {

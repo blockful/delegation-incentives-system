@@ -42,15 +42,15 @@ export async function runDistributionPipeline(
   const endBlock = await dataSource.getBlockForTimestamp(monthEnd);
 
   // ── Step 2: Get finalized proposals ──────────────────────
+  // Windows are selected by voting-period end (endBlock < boundary block),
+  // never by status-event timestamps, so they are stable point-in-time.
   const proposalsAtStart = await dataSource.getFinalizedProposals(
-    monthStart,
-    PROPOSAL_WINDOW_SIZE,
     startBlock,
+    PROPOSAL_WINDOW_SIZE,
   );
   const proposalsAtEnd = await dataSource.getFinalizedProposals(
-    monthEnd,
-    PROPOSAL_WINDOW_SIZE,
     endBlock,
+    PROPOSAL_WINDOW_SIZE,
   );
 
   // ── Step 3: Determine active voters ──────────────────────
@@ -117,6 +117,13 @@ export async function runDistributionPipeline(
     monthEnd,
   );
 
+  // ERC20MultiDelegate proxy vaults look like large direct token holders
+  // (they custody the pooled ENS of all depositors delegating to one voter)
+  // but must never enter the holder set — the depositors already do, via
+  // their ERC1155 receipts. See resolveEligibleTokenHolders.
+  const multiDelegateProxyAddresses = await dataSource.getProxyAddresses();
+  const proxyAddressSet = new Set(multiDelegateProxyAddresses);
+
   // Hedgey: find which vesting contracts are delegating to active voters
   const vestingContractAddresses = await dataSource.getVestingContractAddresses();
   const vestingContractSet = new Set(vestingContractAddresses);
@@ -153,10 +160,28 @@ export async function runDistributionPipeline(
   const eligible = resolveEligibleTokenHolders(
     directDelegations,
     multiDelegatePositions,
+    proxyAddressSet,
     vestingContractSet,
     nftOwnerMap,
     activeVotersEnd,
   );
+
+  // Audit trail: which proxy vaults were dropped from the direct-holder set
+  // (persisted in the deduplication log so the exclusion is publicly
+  // traceable per round). Keyed per (proxy, voter) pair; a delegation
+  // snapshot has at most one voter per token holder, the Map is belt and
+  // braces against duplicate rows.
+  const excludedProxyPairs = new Map<string, { proxy: Address; voter: Address }>();
+  for (const d of directDelegations) {
+    if (!activeVotersEnd.has(d.voter)) continue;
+    if (!proxyAddressSet.has(d.tokenHolder)) continue;
+    if (vestingContractSet.has(d.tokenHolder)) continue;
+    excludedProxyPairs.set(`${d.tokenHolder}-${d.voter}`, {
+      proxy: d.tokenHolder,
+      voter: d.voter,
+    });
+  }
+  const excludedProxies = [...excludedProxyPairs.values()];
 
   // ── Step 9: Consolidate ──────────────────────────────────
   const aliases = await dataSource.getAliases();
@@ -313,7 +338,12 @@ export async function runDistributionPipeline(
   };
 
   // Build deduplication log
-  const deduplication = buildDeduplicationLog(eligible, aliases, nftOwnerMap);
+  const deduplication = buildDeduplicationLog(
+    eligible,
+    aliases,
+    nftOwnerMap,
+    excludedProxies,
+  );
 
   // Mark payout type on rewards: directPayouts get listed as-is,
   // lottery winners are also included from the buckets.
@@ -372,7 +402,12 @@ function emptyResult(
     },
     rewards: [],
     lottery: { buckets: [] },
-    deduplication: { multiDelegate: [], hedgey: [], walletAliases: [] },
+    deduplication: {
+      multiDelegate: [],
+      excludedProxies: [],
+      hedgey: [],
+      walletAliases: [],
+    },
   };
 }
 
@@ -383,6 +418,7 @@ function buildDeduplicationLog(
     Address,
     readonly { planId: string; owner: Address }[]
   >,
+  excludedProxies: readonly { proxy: Address; voter: Address }[],
 ): DeduplicationLog {
   // MultiDelegate entries
   const multiDelegate = eligible
@@ -407,7 +443,7 @@ function buildDeduplicationLog(
     primary: a.primary,
   }));
 
-  return { multiDelegate, hedgey, walletAliases };
+  return { multiDelegate, excludedProxies, hedgey, walletAliases };
 }
 
 export function validateDistributionResult(result: DistributionResult): void {

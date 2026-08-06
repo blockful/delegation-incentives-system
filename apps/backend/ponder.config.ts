@@ -88,6 +88,90 @@ const hedgeyVestingAbi = [
   },
 ] as const;
 
+// VotingTokenLockupPlans ("Hedgey Voting Lockups"). ABI from Sourcify
+// (full match for 0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D).
+// ABI TRAP: this PlanCreated is the 9-arg LOCKUP signature
+// (topic 0xe7d9b7fd810a51c7f2f160d0c100b1bb756592fdeaf6b9b84425b44eca133e9b),
+// NOT the 11-arg vesting signature above — the two ABIs must not be shared.
+// PlanSegmented / PlansCombined are indexed too: they change per-plan locked
+// remainders outside PlanRedeemed, which feeds token-holder TWB.
+const hedgeyVotingLockupAbi = [
+  {
+    type: "event",
+    name: "PlanCreated",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "recipient", type: "address", indexed: true },
+      { name: "token", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "start", type: "uint256", indexed: false },
+      { name: "cliff", type: "uint256", indexed: false },
+      { name: "end", type: "uint256", indexed: false },
+      { name: "rate", type: "uint256", indexed: false },
+      { name: "period", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "PlanRedeemed",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "amountRedeemed", type: "uint256", indexed: false },
+      { name: "planRemainder", type: "uint256", indexed: false },
+      { name: "resetDate", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "VotingVaultCreated",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "vaultAddress", type: "address", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "PlanSegmented",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "segmentId", type: "uint256", indexed: true },
+      { name: "newPlanAmount", type: "uint256", indexed: false },
+      { name: "newPlanRate", type: "uint256", indexed: false },
+      { name: "segmentAmount", type: "uint256", indexed: false },
+      { name: "segmentRate", type: "uint256", indexed: false },
+      { name: "start", type: "uint256", indexed: false },
+      { name: "cliff", type: "uint256", indexed: false },
+      { name: "period", type: "uint256", indexed: false },
+      { name: "newPlanEnd", type: "uint256", indexed: false },
+      { name: "segmentEnd", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "PlansCombined",
+    inputs: [
+      { name: "id0", type: "uint256", indexed: true },
+      { name: "id1", type: "uint256", indexed: true },
+      { name: "survivingId", type: "uint256", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "rate", type: "uint256", indexed: false },
+      { name: "start", type: "uint256", indexed: false },
+      { name: "cliff", type: "uint256", indexed: false },
+      { name: "period", type: "uint256", indexed: false },
+      { name: "end", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "Transfer",
+    inputs: [
+      { name: "from", type: "address", indexed: true },
+      { name: "to", type: "address", indexed: true },
+      { name: "tokenId", type: "uint256", indexed: true },
+    ],
+  },
+] as const;
+
 const ensTokenAbi = [
   {
     type: "event",
@@ -184,6 +268,12 @@ export default createConfig({
       abi: hedgeyVestingAbi,
       address: "0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C",
       startBlock: 18466404,
+    },
+    HedgeyVotingLockup: {
+      chain: "mainnet",
+      abi: hedgeyVotingLockupAbi,
+      address: "0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D",
+      startBlock: 17873069, // deploy block (2023-08-08)
     },
     ENSToken: {
       chain: "mainnet",

@@ -21,10 +21,17 @@ export interface VestingPlanOwner {
  * - Direct token holders (from DelegateChanged events at month-end)
  * - MultiDelegate positions (ERC1155 holders)
  * - Hedgey vesting (vesting contracts delegating, resolved to NFT owner)
+ *
+ * ERC20MultiDelegate proxy vaults (`multiDelegateProxyAddresses`) are
+ * excluded from the direct-holder set: their pooled balance belongs to the
+ * ERC1155 depositors, who already enter individually via the multidelegate
+ * leg. Counting the proxy as a direct holder would count the same ENS twice
+ * in the TWB denominator and pay rewards to an unrecoverable address.
  */
 export function resolveEligibleTokenHolders(
   directDelegations: readonly Delegation[],
   multiDelegatePositions: readonly MultiDelegatePosition[],
+  multiDelegateProxyAddresses: ReadonlySet<Address>,
   vestingContractAddresses: ReadonlySet<Address>,
   vestingNftOwners: ReadonlyMap<Address, readonly VestingPlanOwner[]>,
   activeVoters: ReadonlySet<Address>,
@@ -49,6 +56,12 @@ export function resolveEligibleTokenHolders(
         });
       }
     } else {
+      // MultiDelegate proxy vaults are NOT token holders — their depositors
+      // are, and each depositor enters via the ERC1155 branch below with
+      // their own receipt-backed TWB. Unreceipted donations to a proxy are
+      // deliberately dropped.
+      if (multiDelegateProxyAddresses.has(d.tokenHolder)) continue;
+
       results.push({
         resolvedAddress: d.tokenHolder,
         originalAddress: d.tokenHolder,

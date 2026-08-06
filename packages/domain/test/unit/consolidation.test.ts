@@ -68,6 +68,7 @@ describe("resolveEligibleTokenHolders", () => {
       delegations,
       [],
       new Set(),
+      new Set(),
       new Map(),
       activeVoters,
     );
@@ -97,6 +98,7 @@ describe("resolveEligibleTokenHolders", () => {
     const result = resolveEligibleTokenHolders(
       [],
       positions,
+      new Set(),
       new Set(),
       new Map(),
       activeVoters,
@@ -128,6 +130,7 @@ describe("resolveEligibleTokenHolders", () => {
     const result = resolveEligibleTokenHolders(
       delegations,
       [],
+      new Set(),
       vestingAddresses,
       nftOwners,
       activeVoters,
@@ -152,6 +155,7 @@ describe("resolveEligibleTokenHolders", () => {
     const result = resolveEligibleTokenHolders(
       delegations,
       [],
+      new Set(),
       vestingAddresses,
       nftOwners,
       activeVoters,
@@ -175,6 +179,7 @@ describe("resolveEligibleTokenHolders", () => {
     const result = resolveEligibleTokenHolders(
       delegations,
       positions,
+      new Set(),
       vestingAddresses,
       nftOwners,
       activeVoters,
@@ -203,6 +208,7 @@ describe("resolveEligibleTokenHolders", () => {
       delegations,
       positions,
       new Set(),
+      new Set(),
       new Map(),
       activeVoters,
     );
@@ -230,6 +236,7 @@ describe("resolveEligibleTokenHolders", () => {
     const result = resolveEligibleTokenHolders(
       delegations,
       [],
+      new Set(),
       vestingAddresses,
       nftOwners,
       activeVoters,
@@ -240,6 +247,73 @@ describe("resolveEligibleTokenHolders", () => {
     expect(result[0].source).toBe("hedgey");
     expect(result[1].resolvedAddress).toBe(bob);
     expect(result[1].source).toBe("hedgey");
+  });
+
+  it("regression: excludes MultiDelegate proxy vaults from the direct-holder set", () => {
+    // Round-1 defect: an ERC20MultiDelegate proxy vault delegates its pooled
+    // balance to the voter and entered the holder set as source:"direct",
+    // while its depositors were ALSO credited via their ERC1155 receipts —
+    // the same ENS counted twice in the TWB denominator, with 36.77% of the
+    // pool routed to unrecoverable proxy addresses (bytecode 0xff).
+    const proxy: Address = "0xProxy0000000000000000000000000000000001";
+    const delegations = [
+      makeDelegation(proxy, voter1), // the vault itself — must be dropped
+      makeDelegation(alice, voter1), // a normal direct holder — must pass
+    ];
+    // bob deposited into the vault: he holds an ERC1155 receipt for voter1.
+    const positions = [makeMultiDelegatePosition(bob, voter1)];
+    const proxyAddresses = new Set<Address>([proxy]);
+    const activeVoters = new Set<Address>([voter1]);
+
+    const result = resolveEligibleTokenHolders(
+      delegations,
+      positions,
+      proxyAddresses,
+      new Set(),
+      new Map(),
+      activeVoters,
+    );
+
+    // The proxy appears nowhere — not resolved, not as an original address.
+    expect(
+      result.some(
+        (r) => r.resolvedAddress === proxy || r.originalAddress === proxy,
+      ),
+    ).toBe(false);
+
+    // The normal direct holder passes through untouched.
+    const direct = result.filter((r) => r.source === "direct");
+    expect(direct).toHaveLength(1);
+    expect(direct[0].resolvedAddress).toBe(alice);
+
+    // The depositor still enters via the multidelegate leg.
+    const multi = result.filter((r) => r.source === "multidelegate");
+    expect(multi).toHaveLength(1);
+    expect(multi[0].resolvedAddress).toBe(bob);
+    expect(multi[0].voterAddress).toBe(voter1);
+
+    expect(result).toHaveLength(2);
+  });
+
+  it("does not drop ERC1155 depositors whose address happens to be checked against the proxy set", () => {
+    // The proxy exclusion only guards the direct-holder branch; the
+    // multidelegate leg is receipt-backed and must be unaffected by the set.
+    const proxy: Address = "0xProxy0000000000000000000000000000000001";
+    const positions = [makeMultiDelegatePosition(alice, voter1)];
+    const activeVoters = new Set<Address>([voter1]);
+
+    const result = resolveEligibleTokenHolders(
+      [],
+      positions,
+      new Set<Address>([proxy]),
+      new Set(),
+      new Map(),
+      activeVoters,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].source).toBe("multidelegate");
+    expect(result[0].resolvedAddress).toBe(alice);
   });
 });
 

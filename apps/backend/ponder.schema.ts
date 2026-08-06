@@ -84,6 +84,77 @@ export const vestingRedemption = onchainTable("vesting_redemption", (t) => ({
   timestampIdx: index().on(table.timestamp),
 }));
 
+// ─── Hedgey Voting Lockup tables (VotingTokenLockupPlans) ───────────────────
+//
+// Unlike the vesting master contract (which custodies every plan's tokens
+// itself), each voting-enabled lockup plan holds its tokens in a dedicated
+// per-plan VotingVault contract, and it is the VAULT address that appears as
+// the on-chain DelegateChanged delegator. The vault→plan mapping below is what
+// keeps those vaults out of the direct-holder set and routes their rewards to
+// the plan-NFT owner.
+
+export const lockupPlan = onchainTable("lockup_plan", (t) => ({
+  id: t.bigint().primaryKey(),         // plan / NFT ID
+  recipient: t.text().notNull(),       // current NFT holder
+  token: t.text().notNull(),
+  amount: t.bigint().notNull(),        // locked amount at plan creation
+  start: t.bigint().notNull(),
+  cliff: t.bigint().notNull(),
+  rate: t.bigint().notNull(),          // tokens per period
+  period: t.bigint().notNull(),
+  // Running locked remainder — decreased by redemptions/segments, increased
+  // by combines. Snapshotted into lockup_balance_event when the plan's
+  // voting vault is funded.
+  remainder: t.bigint().notNull(),
+  createdAtBlock: t.bigint().notNull(),
+  createdAtTimestamp: t.bigint().notNull(),
+  createdAtLogIndex: t.integer().notNull(),
+}), (table) => ({
+  recipientIdx: index().on(table.recipient),
+  tokenIdx: index().on(table.token),
+}));
+
+/** Per-plan VotingVault — one vault per plan (enforced on-chain). */
+export const lockupVotingVault = onchainTable("lockup_voting_vault", (t) => ({
+  id: t.bigint().primaryKey(),         // plan ID (one vault per plan)
+  vaultAddress: t.text().notNull(),    // lowercase vault contract address
+  createdAtBlock: t.bigint().notNull(),
+  createdAtTimestamp: t.bigint().notNull(),
+  createdAtLogIndex: t.integer().notNull(),
+}), (table) => ({
+  vaultAddressIdx: index().on(table.vaultAddress),
+}));
+
+export const lockupNftOwnership = onchainTable("lockup_nft_ownership", (t) => ({
+  id: t.text().primaryKey(),            // `${planId}-${blockNumber}-${logIndex}`
+  planId: t.bigint().notNull(),
+  owner: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  planIdIdx: index().on(table.planId),
+  timestampIdx: index().on(table.timestamp),
+}));
+
+/**
+ * Locked-remainder history per plan — one row per balance-changing event
+ * (vault funding, redemption, segmentation, combination). `planRemainder`
+ * is the locked amount AFTER the event; feeds per-plan TWB.
+ */
+export const lockupBalanceEvent = onchainTable("lockup_balance_event", (t) => ({
+  id: t.text().primaryKey(),           // `${planId}-${blockNumber}-${logIndex}`
+  planId: t.bigint().notNull(),
+  planRemainder: t.bigint().notNull(),
+  kind: t.text().notNull(),            // "vault_funded" | "redemption" | "segment" | "combine"
+  blockNumber: t.bigint().notNull(),
+  logIndex: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  planIdIdx: index().on(table.planId),
+  timestampIdx: index().on(table.timestamp),
+}));
+
 // ─── ENS Token tables ───────────────────────────────────────────────────────
 
 /** Current ENS token balance per address (running state) */

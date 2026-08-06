@@ -146,9 +146,11 @@ only receives `tokenHolderCap` once — not 2× capped.
 (1 ENS) does not receive a direct payout. Instead, their reward enters a
 lottery pool where one winner takes the combined prize.
 
-**Key design detail:** The lottery requires ≥ 2 entries per pool. A
-single sub-threshold token holder is *promoted* to a direct payout (no
-randomness needed). This test uses 5 micro-holders to form a multi-entry pool.
+**Key design detail:** A solo sub-threshold entry forms its own lottery
+bucket and wins it automatically (no randomness needed) — it is still
+classified as a lottery payout, never promoted to a direct payout. This
+test uses 5 micro-holders to form a multi-entry bucket so the weighted
+winner selection is actually exercised.
 
 **Setup:**
 
@@ -168,10 +170,10 @@ recipients: just d_tiny. So d_tiny absorbs the full remaining pool
 pro-rata share of the redistributed excess stays ≈ 0.005 ENS.
 
 **Assertions:**
-- d_tiny is NOT in `directPayouts`
-- d_tiny IS in `lotteryPools` with `originalAmount < 1 ENS`
+- d_tiny is NOT a direct payout
+- d_tiny IS a lottery bucket entry with `amount < 1 ENS`
 - d_big receives `tokenHolderCap` = 250 ENS
-- Every lottery pool has a valid winner (winner address is one of the entries)
+- Every lottery bucket has a valid winner (winner address is one of the entries)
 
 ---
 

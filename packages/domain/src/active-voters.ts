@@ -2,7 +2,9 @@ import type { Address, Proposal, Vote } from "./types.js";
 import { ACTIVE_VOTE_THRESHOLD, PROPOSAL_WINDOW_SIZE } from "./config.js";
 
 /**
- * From a list of finalized proposals, take the last N (sorted by finalizedTimestamp desc).
+ * From a list of finalized proposals, take the last N (sorted by endBlock desc).
+ * The end of the voting period is the finalization moment, so endBlock is the
+ * only sort key that keeps historical windows stable.
  * Returns up to PROPOSAL_WINDOW_SIZE proposals.
  */
 export function getLastFinalizedProposals(
@@ -11,8 +13,8 @@ export function getLastFinalizedProposals(
 ): Proposal[] {
   return [...proposals]
     .sort((a, b) => {
-      if (a.finalizedTimestamp > b.finalizedTimestamp) return -1;
-      if (a.finalizedTimestamp < b.finalizedTimestamp) return 1;
+      if (a.endBlock > b.endBlock) return -1;
+      if (a.endBlock < b.endBlock) return 1;
       return 0;
     })
     .slice(0, limit);

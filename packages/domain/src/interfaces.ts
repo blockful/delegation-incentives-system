@@ -21,16 +21,18 @@ import type {
 
 export interface ProposalRepository {
   /**
-   * Return finalized proposals whose status-changing event occurred before
-   * `beforeTimestamp`, ordered by that timestamp descending, capped at `limit`.
+   * Return the last `limit` proposals whose voting period ended strictly
+   * before `beforeBlock` (endBlock < beforeBlock), ordered by endBlock
+   * descending.
    *
-   * `beforeBlock` (optional) is used to detect implicitly defeated proposals
-   * whose voting period (endBlock) has passed without an explicit status event.
+   * Finalization is point-in-time and outcome-independent: a proposal is
+   * finalized the moment voting ends, whatever status it later reaches
+   * (executed/queued/succeeded/defeated/expired). Canceled proposals are
+   * excluded — see the adapter implementation for the rationale.
    */
   getFinalizedProposals(
-    beforeTimestamp: Seconds,
+    beforeBlock: BlockNumber,
     limit: number,
-    beforeBlock?: BlockNumber,
   ): Promise<readonly Proposal[]>;
 }
 
@@ -92,6 +94,18 @@ export interface DelegationRepository {
 }
 
 export interface MultiDelegateRepository {
+  /**
+   * All ERC20MultiDelegate proxy vault addresses ever deployed
+   * (from ProxyDeployed events).
+   *
+   * Proxy vaults hold the pooled ENS of every depositor delegating to one
+   * voter, so they show up on-chain as large direct token holders. They must
+   * be EXCLUDED from the direct-holder set: the same tokens are already
+   * credited to each depositor individually via their ERC1155 receipts, and
+   * the proxies themselves can never claim (their bytecode is `0xff`).
+   */
+  getProxyAddresses(): Promise<readonly Address[]>;
+
   /**
    * All ERC1155 positions (balance > 0) whose voter is in `voters`
    * at `timestamp`.

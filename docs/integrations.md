@@ -85,7 +85,7 @@ Update the `status` field of the corresponding `governance_proposal` row to `"ex
 **Start block**: 22,140,079
 **Handler**: `apps/backend/src/handlers/multiDelegate.ts`
 
-ERC20MultiDelegate allows a single holder to split their ENS delegation across multiple voters. It works by deploying a lightweight proxy contract per (holder, voter) pair. The proxy holds the ENS tokens and delegates them, while the holder retains economic ownership via ERC1155 tokens where each token ID encodes the voter address.
+ERC20MultiDelegate allows a single holder to split their ENS delegation across multiple voters. It works by deploying a lightweight `ERC20ProxyDelegator` contract per **delegate** (voter). The proxy holds the pooled ENS of every depositor delegating to that voter and delegates it, while each holder retains economic ownership via ERC1155 tokens where each token ID encodes the voter address.
 
 ### Events
 

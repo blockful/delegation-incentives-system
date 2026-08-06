@@ -28,6 +28,25 @@ interface DrizzleSqlExpr {
   queryChunks: SqlChunk[]
 }
 
+/**
+ * Drizzle wraps comparison values as Param { value, encoder } when the column
+ * is a real Column object (e.g. eq/ne/inArray against the pgTable-based mocks
+ * in __mocks__/ponder-schema.ts). Unwrap those back to raw values so the
+ * interpreter can compare them against seeded rows.
+ */
+function unwrapParam(v: unknown): unknown {
+  if (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    "encoder" in (v as object) &&
+    "value" in (v as object)
+  ) {
+    return (v as { value: unknown }).value
+  }
+  return v
+}
+
 function toComparable(v: unknown): bigint | string | null {
   if (v === null || v === undefined) return null
   if (typeof v === "bigint") return v
@@ -84,7 +103,15 @@ function evalDrizzleExpr(expr: DrizzleSqlExpr | undefined | null, row: Row): boo
   const sqlOps = chunks
     .filter(
       (c): c is { value: string[] } =>
-        typeof c === "object" && c !== null && !Array.isArray(c) && "value" in (c as object) && (c as any).value?.[0]?.trim() !== "",
+        typeof c === "object" &&
+        c !== null &&
+        !Array.isArray(c) &&
+        "value" in (c as object) &&
+        // Param wrappers ({ value, encoder }) carry comparison VALUES (e.g.
+        // bigints), not SQL operator strings — skip them here.
+        !("encoder" in (c as object)) &&
+        typeof (c as any).value?.[0] === "string" &&
+        (c as any).value[0].trim() !== "",
     )
     .map((c) => (c as { value: string[] }).value[0].trim())
   const op = sqlOps[0]
@@ -92,13 +119,15 @@ function evalDrizzleExpr(expr: DrizzleSqlExpr | undefined | null, row: Row): boo
   // inArray
   if (op === "in") {
     const arrChunk = chunks.find((c): c is unknown[] => Array.isArray(c))
-    if (arrChunk) return (arrChunk as unknown[]).includes(rowVal)
+    if (arrChunk) return (arrChunk as unknown[]).map(unwrapParam).includes(rowVal)
   }
 
-  // Find value after column chunk
+  // Find value after column chunk (raw literal from sql`` templates, or a
+  // Param wrapper from eq/ne/lt/... against real Column objects)
   const colIdx = chunks.indexOf(colChunk)
   const valueChunk = chunks
     .slice(colIdx + 1)
+    .map(unwrapParam)
     .find((c) => typeof c === "string" || typeof c === "bigint" || typeof c === "number")
   const valComp = toComparable(valueChunk)
 

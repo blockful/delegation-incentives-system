@@ -4,24 +4,18 @@ import {
   identifyActiveVoters,
 } from "../../src/active-voters.js";
 import type { Address, Proposal, Vote } from "../../src/types.js";
-import {
-  FINALIZED_STATUSES,
-  seconds,
-  wei,
-  blockNumber,
-} from "../../src/types.js";
+import { seconds, wei, blockNumber } from "../../src/types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeProposal(id: string, ts: number): Proposal {
+function makeProposal(id: string, endBlock: number): Proposal {
   return {
     id,
     status: "executed",
-    finalizedTimestamp: seconds(BigInt(ts)),
     startBlock: blockNumber(100n),
-    endBlock: blockNumber(200n),
+    endBlock: blockNumber(BigInt(endBlock)),
   };
 }
 
@@ -39,16 +33,7 @@ function makeVote(voter: Address, proposalId: string): Vote {
 // getLastFinalizedProposals
 // ---------------------------------------------------------------------------
 describe("getLastFinalizedProposals", () => {
-  it("excludes canceled proposals from finalized activity statuses", () => {
-    expect(FINALIZED_STATUSES.has("canceled")).toBe(false);
-    expect(FINALIZED_STATUSES.has("succeeded")).toBe(true);
-    expect(FINALIZED_STATUSES.has("queued")).toBe(true);
-    expect(FINALIZED_STATUSES.has("executed")).toBe(true);
-    expect(FINALIZED_STATUSES.has("defeated")).toBe(true);
-    expect(FINALIZED_STATUSES.has("expired")).toBe(true);
-  });
-
-  it("sorts proposals by finalizedTimestamp descending", () => {
+  it("sorts proposals by endBlock descending", () => {
     const proposals = [
       makeProposal("p1", 100),
       makeProposal("p2", 300),
@@ -66,7 +51,7 @@ describe("getLastFinalizedProposals", () => {
 
     const result = getLastFinalizedProposals(proposals, 10);
     expect(result).toHaveLength(10);
-    // Most recent first (p14 at ts 1500 down to p5 at ts 600)
+    // Most recent voting end first (p14 at endBlock 1500 down to p5 at 600)
     expect(result[0].id).toBe("p14");
     expect(result[9].id).toBe("p5");
   });

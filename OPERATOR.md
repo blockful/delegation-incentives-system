@@ -133,7 +133,7 @@ curl http://localhost:3310/tiers/progression
 
 Before caps are applied, the system consolidates addresses that belong to the same entity. This prevents a single participant from claiming multiple uncapped slots by splitting across wallets.
 
-**Protocol mappings** (auto-indexed): ERC20MultiDelegate proxy addresses and Hedgey vesting contract addresses are automatically mapped to their operator/owner during indexing. No manual action needed.
+**Protocol mappings** (auto-indexed): ERC20MultiDelegate proxy addresses and Hedgey vesting contract addresses are automatically mapped to their operator/owner during indexing — no manual data entry. Note this covers indexing only: schema changes reindex on deploy, but already-computed months are never recomputed automatically — force a recompute with `./scripts/force-recompute.sh` (see [Recomputing a month](#recomputing-a-month)).
 
 **Wallet aliases** (manual): If you know that two EOAs belong to the same entity (e.g. a voter's hot wallet and cold wallet), insert them into the `wallet_alias` table before running computation.
 

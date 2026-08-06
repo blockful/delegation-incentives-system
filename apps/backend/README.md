@@ -18,8 +18,8 @@ The ENS governance token (ERC20Votes). Indexing provides per-second balance hist
 
 ### ERC20MultiDelegate
 
-**Address**: `0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446`
-**Start Block**: 18,564,837
+**Address**: `0x3CA5CCC96648d016D41c5aF40eED82202BD019cc`
+**Start Block**: 22,140,079
 
 Allows users to deposit ENS tokens and delegate to multiple voters simultaneously. Creates proxy addresses per voter and mints ERC1155 receipt tokens.
 

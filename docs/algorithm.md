@@ -30,7 +30,17 @@ The 180-day TWB window prevents last-minute delegation farming.
 
 ### Step 2 — Fetch proposals and votes
 
-The last `PROPOSAL_WINDOW_SIZE = 10` non-active, non-canceled proposals are fetched. Valid statuses are `succeeded`, `queued`, `executed`, `defeated`, and `expired` — that is, proposals that reached a voting outcome or a later post-vote state. Canceled proposals are not valid for activity scoring. All votes cast on those proposals are fetched.
+The last `PROPOSAL_WINDOW_SIZE = 10` finalized proposals are fetched. A proposal is
+**finalized the moment its voting period ends**: `endBlock < targetBlock`, ordered by
+`endBlock` descending. Finalization is outcome-independent — whatever status the
+proposal later reaches (`succeeded`, `queued`, `executed`, `defeated`, `expired`, or
+still labeled `active` because OZ Governor emits no defeat event), it counts equally,
+and later governance events can never reorder a proposal or evict it from a
+historical window. The only exclusion is `canceled`: a proposal canceled before its
+`endBlock` never completed voting, and canceled rows are excluded uniformly since
+the indexer does not preserve *when* the cancel happened. All votes cast on those
+proposals are fetched (votes are only castable up to `endBlock`, so the vote set is
+equally point-in-time).
 
 ### Step 3 — Identify active voters
 
@@ -126,6 +136,18 @@ Implemented in `time-weighted-balance.ts`. The opening balance (at `twbWindowSta
 A token holder with no balance events in or before the window gets `TWB = 0` and is excluded from rewards.
 
 For Hedgey vesting, TWB is computed per vesting plan from the plan's unredeemed ENS remainder history, not from the aggregate ENS balance of the Hedgey master contract. The plan NFT owner at `monthEnd` receives the plan's reward weight. If a plan NFT changed owners, historical owner lookup uses block/log ordering at or before `monthEnd`.
+
+For Hedgey **voting lockup plans** (`VotingTokenLockupPlans`, one on-chain
+`VotingVault` per plan; the vault is the address that appears as the delegator), the
+same per-plan rule applies with one addition: a plan's balance history **starts at
+vault funding** (`vault_funded`, the moment `_setupVoting` moves the plan's tokens
+into its vault), not at plan creation — before the vault exists the tokens sit
+undelegated inside the lockup contract and carry no voting power. The remainder then
+decreases on `PlanRedeemed`, and `PlanSegmented`/`PlansCombined` split or merge
+remainders (and mint/burn plan NFTs) exactly as the on-chain events describe. Plan
+ids are namespaced `lockup-<id>` to keep the two Hedgey contracts' counters from
+colliding. A plan whose NFT was burned before the window has no owner and no reward
+weight.
 
 ### Step 10 — Wallet consolidation (protocol deduplication)
 
