@@ -104,9 +104,12 @@ This step runs **twice**: once as of `startBlock` (for VP growth baseline) and o
 **Input**: target block number
 
 **Process**:
-1. Query all proposals with status ∈ {executed, defeated, canceled, succeeded, queued, expired}
-2. Filter to those where the status-changing event (e.g., `ProposalExecuted`, `ProposalQueued`) occurred on or before target block
-3. Sort by the status-changing event timestamp descending
+1. Query all proposals whose voting period has ended: `endBlock < targetBlock`
+2. Exclude `canceled` proposals (voting never completed)
+3. Sort by `endBlock` descending — NOT by status-event timestamps, which later
+   governance events overwrite; finalization is the end of voting and is
+   outcome-independent (a defeated proposal that OZ Governor never labels is
+   finalized all the same)
 4. Take the first 10
 
 **Output**: `finalizedProposals` — array of up to 10 proposal IDs
