@@ -172,6 +172,73 @@ const hedgeyVotingLockupAbi = [
   },
 ] as const;
 
+// VotingTokenVestingPlans ("Hedgey Voting Vesting"). ABI from Sourcify
+// (exact match for 0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82).
+// PlanCreated here IS the 11-arg VESTING signature
+// (topic 0x6d5fb3665416b633057b4e53641a7dec63a802702a55e386df478871ea22af9b),
+// same shape as hedgeyVestingAbi above — but this contract additionally emits
+// VotingVaultCreated (per-plan vault custody, like the lockup contract) and
+// PlanRevoked (vesting is revocable by the vestingAdmin). It has NO
+// PlanSegmented / PlansCombined (verified against the runtime bytecode).
+// PlanTransferredByVestingAdmin is deliberately not indexed: the admin
+// transfer path calls ERC721 _transfer first, so the standard Transfer event
+// below already records every ownership change.
+const hedgeyVotingVestingAbi = [
+  {
+    type: "event",
+    name: "PlanCreated",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "recipient", type: "address", indexed: true },
+      { name: "token", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "start", type: "uint256", indexed: false },
+      { name: "cliff", type: "uint256", indexed: false },
+      { name: "end", type: "uint256", indexed: false },
+      { name: "rate", type: "uint256", indexed: false },
+      { name: "period", type: "uint256", indexed: false },
+      { name: "vestingAdmin", type: "address", indexed: false },
+      { name: "adminTransferOBO", type: "bool", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "PlanRedeemed",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "amountRedeemed", type: "uint256", indexed: false },
+      { name: "planRemainder", type: "uint256", indexed: false },
+      { name: "resetDate", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "PlanRevoked",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "amountRedeemed", type: "uint256", indexed: false },
+      { name: "revokedAmount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "VotingVaultCreated",
+    inputs: [
+      { name: "id", type: "uint256", indexed: true },
+      { name: "vaultAddress", type: "address", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "Transfer",
+    inputs: [
+      { name: "from", type: "address", indexed: true },
+      { name: "to", type: "address", indexed: true },
+      { name: "tokenId", type: "uint256", indexed: true },
+    ],
+  },
+] as const;
+
 const ensTokenAbi = [
   {
     type: "event",
@@ -274,6 +341,12 @@ export default createConfig({
       abi: hedgeyVotingLockupAbi,
       address: "0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D",
       startBlock: 17873069, // deploy block (2023-08-08)
+    },
+    HedgeyVotingVesting: {
+      chain: "mainnet",
+      abi: hedgeyVotingVestingAbi,
+      address: "0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82",
+      startBlock: 18466408, // deploy block (2023-10-30)
     },
     ENSToken: {
       chain: "mainnet",

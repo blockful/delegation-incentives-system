@@ -59,12 +59,13 @@ ENS delegation-splitting contract (production deployment at block 22,140,079). U
 
 ### 1.4 Hedgey Vesting & Voting Lockups
 
-Two Hedgey contracts hold locked ENS on behalf of beneficiaries. In both, the beneficiary is the current owner of the plan's ERC721 NFT.
+Three Hedgey contracts hold locked ENS on behalf of beneficiaries. In all of them, the beneficiary is the current owner of the plan's ERC721 NFT.
 
 - **TokenVestingPlans** (`0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`): the vesting contract itself holds the ENS and delegates on behalf of the beneficiary.
 - **VotingTokenLockupPlans** (`0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`): each voting-enabled plan locks its ENS in a dedicated per-plan VotingVault — the vault, not the lockup contract, is the on-chain delegator.
+- **VotingTokenVestingPlans** (`0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82`): the vesting sibling of the voting lockup contract — same per-plan VotingVault custody and delegation, but plans are revocable by a vestingAdmin (`PlanRevoked` returns the unvested tokens to the admin; the vested portion stays in the vault and keeps vesting) and there is no segmentation/combination.
 
-Both emit the same event shapes:
+All emit the same core event shapes:
 
 | Event | Indexed State | Used For |
 |---|---|---|
@@ -246,7 +247,7 @@ All addresses delegated to an active voter at `endBlock`, resolved to their true
 - Each holder is an eligible token holder; their delegated amount = their ERC1155 balance
 
 **8c. Hedgey vesting**:
-- From indexed `PlanCreated` events, build a set of all known Hedgey holder addresses: the TokenVestingPlans master contract (`0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`) plus every per-plan VotingVault deployed by VotingTokenLockupPlans (`0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`); lockup plan IDs are namespaced `lockup-<id>`
+- From indexed `PlanCreated` events, build a set of all known Hedgey holder addresses: the TokenVestingPlans master contract (`0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`) plus every per-plan VotingVault deployed by VotingTokenLockupPlans (`0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`) or by VotingTokenVestingPlans (`0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82`); plan IDs are namespaced `lockup-<id>` and `voting-vesting-<id>` respectively so the three contracts' NFT counters never collide
 - Cross-reference with 8a results: any direct token holder whose address is in that set is a Hedgey position
 - For each matched contract/vault, find the current plan-NFT owner at `endBlock` (from Hedgey `Transfer` ERC721 events, where tokenId = planId)
 - Replace the contract/vault address with the NFT owner as `resolvedAddress`

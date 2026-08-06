@@ -149,6 +149,17 @@ ids are namespaced `lockup-<id>` to keep the two Hedgey contracts' counters from
 colliding. A plan whose NFT was burned before the window has no owner and no reward
 weight.
 
+For Hedgey **voting vesting plans** (`VotingTokenVestingPlans`,
+`0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82`) the exact same per-plan VotingVault
+rule applies — balance history starts at `vault_funded`, plan ids are namespaced
+`voting-vesting-<id>` — with one difference in the event set: there is no
+segmentation or combination, but plans are **revocable** by their vestingAdmin.
+On `PlanRevoked` only the unvested portion leaves the vault (back to the
+vestingAdmin); the vested portion stays in the vault and continues vesting, so the
+plan's remainder steps down to the event's vested amount rather than to zero. A
+revoke with nothing vested deletes the plan and burns its NFT (owner becomes `0x0`,
+no reward weight), exactly like a full redemption.
+
 ### Step 10 — Wallet consolidation (protocol deduplication)
 
 Before cap calculation, addresses that represent the same economic entity are merged. Two classes:
