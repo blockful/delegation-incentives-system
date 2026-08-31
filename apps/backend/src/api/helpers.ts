@@ -9,20 +9,28 @@ import {
   POOL_TIERS,
   computeVpGrowthPct,
   selectPoolTier,
+  monthStartTimestamp,
+  seconds,
+  BlockNotFinalizedError,
   type Address,
   type Wei,
   type Proposal,
   type PoolTier,
+  type BlockNumber,
   wei,
   blockNumber,
 } from "@ens-dis/domain";
 import { and, eq, desc, inArray, lte } from "drizzle-orm";
 import { selectFinalizedProposalsBefore } from "../adapters/proposal-adapter.js";
+import { createBlockAdapter } from "../adapters/block-adapter.js";
 
 type Db = typeof db;
 
-/** Fetch active voters from the current indexed state. */
-export async function fetchActiveVoters(database: Db): Promise<{
+/**
+ * Fetch active voters from the current indexed state, or — when `atBlock`
+ * is given — from the proposal window as it stood at that block.
+ */
+export async function fetchActiveVoters(database: Db, atBlock?: BlockNumber): Promise<{
   activeVoters: Set<Address>;
   proposals: Proposal[];
   proposalIds: string[];
@@ -33,10 +41,11 @@ export async function fetchActiveVoters(database: Db): Promise<{
   // (proposal-adapter), bounded at the current chain head so a still-'active'
   // proposal whose voting period already ended is included, exactly as it
   // will be at payout time.
-  const headBlock = await publicClients.mainnet.getBlockNumber();
+  const boundaryBlock =
+    atBlock ?? blockNumber(await publicClients.mainnet.getBlockNumber());
   const windowProposals = await selectFinalizedProposalsBefore(
     database,
-    blockNumber(headBlock),
+    boundaryBlock,
     PROPOSAL_WINDOW_SIZE,
   );
 
@@ -79,6 +88,53 @@ export async function fetchActiveVoters(database: Db): Promise<{
   return { activeVoters, proposals: windowProposals, proposalIds, voteCounts, voterProposals };
 }
 
+// Month-start block resolution is an RPC binary search; the result is
+// constant for the whole month, so cache it per month string.
+let monthStartBlockCache: { month: string; block: BlockNumber } | null = null;
+
+async function getMonthStartBlock(month: string): Promise<BlockNumber | undefined> {
+  if (monthStartBlockCache?.month === month) return monthStartBlockCache.block;
+  const blockAdapter = createBlockAdapter(publicClients.mainnet);
+  let block: BlockNumber;
+  try {
+    block = await blockAdapter.getBlockForTimestamp(
+      seconds(monthStartTimestamp(month)),
+    );
+  } catch (error) {
+    // Right after month rollover the month-start block is not finalized yet
+    // (~13 min); degrade to the current window instead of failing the route.
+    if (error instanceof BlockNotFinalizedError) return undefined;
+    throw error;
+  }
+  monthStartBlockCache = { month, block };
+  return block;
+}
+
+/**
+ * Current-month VP growth with the same semantics as the settlement pipeline
+ * (runDistributionPipeline steps 2–4): the START set is the voters active in
+ * the proposal window at month start, the END set the voters active in the
+ * window at the chain head. The sets differ, so this is not "same voters,
+ * two dates" — a whale active at month start but not now shows up as
+ * negative growth, exactly as it will at payout time.
+ */
+export async function fetchCurrentGrowth(database: Db): Promise<{
+  activeVoters: Set<Address>;
+  vpStart: Wei;
+  vpEnd: Wei;
+  growthPct: number;
+  tier: PoolTier;
+}> {
+  const startBlock = await getMonthStartBlock(getCurrentMonth());
+  const [{ activeVoters: activeVotersStart }, { activeVoters }] =
+    await Promise.all([
+      fetchActiveVoters(database, startBlock),
+      fetchActiveVoters(database),
+    ]);
+  const growth = await fetchCurrentVpGrowth(database, activeVotersStart, activeVoters);
+  return { activeVoters, ...growth };
+}
+
 /** Fetch current VP growth (estimates start-of-current-month to now). */
 export async function fetchCurrentVpGrowth(
   database: Db,
@@ -105,10 +161,9 @@ export async function fetchCurrentVpGrowth(
     }
   }
 
-  // vpStart: latest VP snapshot at or before month start
-  const monthStr = getCurrentMonth();
-  const [year, monthNum] = monthStr.split("-").map(Number);
-  const monthStartTs = BigInt(Math.floor(Date.UTC(year, monthNum - 1, 1) / 1000));
+  // vpStart: latest VP snapshot at or before prevMonthEnd (monthStart - 1s),
+  // the same boundary the pipeline uses.
+  const prevMonthEndTs = monthStartTimestamp(getCurrentMonth()) - 1n;
 
   const startVoters = [...activeVotersStart];
   let vpStart = 0n;
@@ -119,7 +174,7 @@ export async function fetchCurrentVpGrowth(
       .where(
         and(
           eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()),
-          lte(ensVotingPowerSnapshot.timestamp, monthStartTs),
+          lte(ensVotingPowerSnapshot.timestamp, prevMonthEndTs),
         ),
       )
       .orderBy(desc(ensVotingPowerSnapshot.timestamp))

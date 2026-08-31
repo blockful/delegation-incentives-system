@@ -6,8 +6,7 @@ import {
   wei,
 } from "@ens-dis/domain";
 import {
-  fetchActiveVoters,
-  fetchCurrentVpGrowth,
+  fetchCurrentGrowth,
   formatEns,
   findTierIndex,
 } from "../helpers.js";
@@ -28,7 +27,7 @@ const TierEntrySchema = z.object({
 
 const TierProgressionResponse = z.object({
   currentTotalVP: z.string().openapi({ description: "Current total VP held by active voters (wei)", example: "107230000000000000000000" }),
-  previousTotalVP: z.string().openapi({ description: "Total VP at month start (wei)", example: "100000000000000000000000" }),
+  previousTotalVP: z.string().openapi({ description: "Total VP of the month-start active-voter set at month start (wei)", example: "100000000000000000000000" }),
   currentGrowthBps: z.string().openapi({ example: "723" }),
   currentGrowthPct: z.string().openapi({ example: "7.23" }),
   currentTierIndex: z.number().openapi({ example: 0 }),
@@ -60,12 +59,8 @@ const app = new OpenAPIHono();
 
 app.openapi(route, async (c) => {
   try {
-    const { activeVoters } = await fetchActiveVoters(db);
-    const { vpStart, vpEnd, growthPct } = await fetchCurrentVpGrowth(
-      db,
-      activeVoters,
-      activeVoters,
-    );
+    const { activeVoters, vpStart, vpEnd, growthPct } =
+      await fetchCurrentGrowth(db);
 
     const vpStartBig = vpStart as bigint;
     const vpEndBig = vpEnd as bigint;

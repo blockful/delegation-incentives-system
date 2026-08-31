@@ -1307,7 +1307,7 @@ export interface paths {
                              */
                             currentTotalVP: string;
                             /**
-                             * @description Total VP at month start (wei)
+                             * @description Total VP of the month-start active-voter set at month start (wei)
                              * @example 100000000000000000000000
                              */
                             previousTotalVP: string;

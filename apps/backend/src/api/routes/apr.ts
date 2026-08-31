@@ -18,8 +18,7 @@ import {
   type Address,
 } from "@ens-dis/domain";
 import {
-  fetchActiveVoters,
-  fetchCurrentVpGrowth,
+  fetchCurrentGrowth,
   formatEns,
   normalizeAddress,
   findTierIndex,
@@ -84,12 +83,7 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeVoters } = await fetchActiveVoters(db);
-    const { growthPct } = await fetchCurrentVpGrowth(
-      db,
-      activeVoters,
-      activeVoters,
-    );
+    const { activeVoters, growthPct } = await fetchCurrentGrowth(db);
     const currentTierIndex = findTierIndex(growthPct);
     const tier = POOL_TIERS[currentTierIndex];
     const totalVp = await getActiveVpTotal(db, activeVoters);
