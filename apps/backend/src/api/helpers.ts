@@ -10,6 +10,7 @@ import {
   computeVpGrowthPct,
   selectPoolTier,
   monthStartTimestamp,
+  monthEndTimestamp,
   seconds,
   BlockNotFinalizedError,
   type Address,
@@ -17,12 +18,12 @@ import {
   type Proposal,
   type PoolTier,
   type BlockNumber,
-  wei,
   blockNumber,
 } from "@ens-dis/domain";
-import { and, eq, desc, inArray, lte } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { selectFinalizedProposalsBefore } from "../adapters/proposal-adapter.js";
 import { createBlockAdapter } from "../adapters/block-adapter.js";
+import { createVotingPowerAdapter } from "../adapters/voting-power-adapter.js";
 
 type Db = typeof db;
 
@@ -88,26 +89,74 @@ export async function fetchActiveVoters(database: Db, atBlock?: BlockNumber): Pr
   return { activeVoters, proposals: windowProposals, proposalIds, voteCounts, voterProposals };
 }
 
-// Month-start block resolution is an RPC binary search; the result is
-// constant for the whole month, so cache it per month string.
-let monthStartBlockCache: { month: string; block: BlockNumber } | null = null;
+// ── Current-month growth (display) ──────────────────────────────────────────
+//
+// The month-start boundary block and its active-voter set are immutable for
+// the whole month once the boundary block is finalized, so both are cached
+// per month. The cache holds the in-flight promise (not the resolved value)
+// so concurrent cold-cache requests share one RPC binary search; entries that
+// fail or resolve "not finalized yet" are dropped so the next request retries.
+type MonthStartSet = { activeVotersStart: Set<Address> } | undefined;
 
-async function getMonthStartBlock(month: string): Promise<BlockNumber | undefined> {
-  if (monthStartBlockCache?.month === month) return monthStartBlockCache.block;
-  const blockAdapter = createBlockAdapter(publicClients.mainnet);
-  let block: BlockNumber;
-  try {
-    block = await blockAdapter.getBlockForTimestamp(
-      seconds(monthStartTimestamp(month)),
-    );
-  } catch (error) {
-    // Right after month rollover the month-start block is not finalized yet
-    // (~13 min); degrade to the current window instead of failing the route.
-    if (error instanceof BlockNotFinalizedError) return undefined;
-    throw error;
-  }
-  monthStartBlockCache = { month, block };
-  return block;
+let monthStartCache: { month: string; promise: Promise<MonthStartSet> } | null =
+  null;
+
+function getMonthStartSet(database: Db, month: string): Promise<MonthStartSet> {
+  if (monthStartCache?.month === month) return monthStartCache.promise;
+  const entry = {
+    month,
+    promise: (async (): Promise<MonthStartSet> => {
+      const blockAdapter = createBlockAdapter(publicClients.mainnet);
+      let block: BlockNumber;
+      try {
+        block = await blockAdapter.getBlockForTimestamp(
+          seconds(monthStartTimestamp(month)),
+        );
+      } catch (error) {
+        // Right after month rollover the month-start block is not finalized
+        // yet (~13 min); degrade to the current window instead of failing.
+        if (error instanceof BlockNotFinalizedError) return undefined;
+        throw error;
+      }
+      const { activeVoters } = await fetchActiveVoters(database, block);
+      return { activeVotersStart: activeVoters };
+    })(),
+  };
+  monthStartCache = entry;
+  entry.promise.then(
+    (result) => {
+      if (result === undefined && monthStartCache === entry) monthStartCache = null;
+    },
+    () => {
+      if (monthStartCache === entry) monthStartCache = null;
+    },
+  );
+  return entry.promise;
+}
+
+export interface CurrentGrowth {
+  activeVoters: Set<Address>;
+  vpStart: Wei;
+  vpEnd: Wei;
+  growthPct: number;
+  tier: PoolTier;
+  /**
+   * True while the month-start block is not finalized yet and the current
+   * voter set is used for both boundaries (pre-two-window behavior).
+   */
+  degraded: boolean;
+}
+
+// Growth inputs change at block/indexing cadence; memoize briefly so one page
+// load hitting several routes (tiers, apr, rewards, rounds) shares a single
+// computation.
+const GROWTH_MEMO_TTL_MS = 30_000;
+let growthMemo: { at: number; promise: Promise<CurrentGrowth> } | null = null;
+
+/** Reset module-level growth caches (test hook). */
+export function resetGrowthCaches(): void {
+  monthStartCache = null;
+  growthMemo = null;
 }
 
 /**
@@ -118,76 +167,68 @@ async function getMonthStartBlock(month: string): Promise<BlockNumber | undefine
  * two dates" — a whale active at month start but not now shows up as
  * negative growth, exactly as it will at payout time.
  */
-export async function fetchCurrentGrowth(database: Db): Promise<{
-  activeVoters: Set<Address>;
-  vpStart: Wei;
-  vpEnd: Wei;
-  growthPct: number;
-  tier: PoolTier;
-}> {
-  const startBlock = await getMonthStartBlock(getCurrentMonth());
-  const [{ activeVoters: activeVotersStart }, { activeVoters }] =
-    await Promise.all([
-      fetchActiveVoters(database, startBlock),
-      fetchActiveVoters(database),
-    ]);
-  const growth = await fetchCurrentVpGrowth(database, activeVotersStart, activeVoters);
-  return { activeVoters, ...growth };
+export function fetchCurrentGrowth(database: Db): Promise<CurrentGrowth> {
+  if (growthMemo && Date.now() - growthMemo.at < GROWTH_MEMO_TTL_MS) {
+    return growthMemo.promise;
+  }
+  const entry = { at: Date.now(), promise: computeCurrentGrowth(database) };
+  growthMemo = entry;
+  entry.promise.catch(() => {
+    if (growthMemo === entry) growthMemo = null;
+  });
+  return entry.promise;
 }
 
-/** Fetch current VP growth (estimates start-of-current-month to now). */
-export async function fetchCurrentVpGrowth(
-  database: Db,
-  activeVotersStart: Set<Address>,
-  activeVotersEnd: Set<Address>,
-): Promise<{
-  vpStart: Wei;
-  vpEnd: Wei;
-  growthPct: number;
-  tier: PoolTier;
-}> {
-  // vpEnd: latest VP snapshot per voter (current state)
-  const endVoters = [...activeVotersEnd];
-  let vpEnd = 0n;
-  for (const voter of endVoters) {
-    const rows = await database
-      .select({ votingPower: ensVotingPowerSnapshot.votingPower })
-      .from(ensVotingPowerSnapshot)
-      .where(eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()))
-      .orderBy(desc(ensVotingPowerSnapshot.timestamp))
-      .limit(1);
-    if (rows.length > 0) {
-      vpEnd += BigInt(rows[0].votingPower);
-    }
-  }
+async function computeCurrentGrowth(database: Db): Promise<CurrentGrowth> {
+  // Resolve the month once so a request straddling the UTC rollover cannot
+  // mix two months' boundaries.
+  const month = getCurrentMonth();
 
-  // vpStart: latest VP snapshot at or before prevMonthEnd (monthStart - 1s),
-  // the same boundary the pipeline uses.
-  const prevMonthEndTs = monthStartTimestamp(getCurrentMonth()) - 1n;
+  const [monthStart, { activeVoters }] = await Promise.all([
+    getMonthStartSet(database, month),
+    fetchActiveVoters(database),
+  ]);
 
-  const startVoters = [...activeVotersStart];
-  let vpStart = 0n;
-  for (const voter of startVoters) {
-    const rows = await database
-      .select({ votingPower: ensVotingPowerSnapshot.votingPower })
-      .from(ensVotingPowerSnapshot)
-      .where(
-        and(
-          eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()),
-          lte(ensVotingPowerSnapshot.timestamp, prevMonthEndTs),
-        ),
-      )
-      .orderBy(desc(ensVotingPowerSnapshot.timestamp))
-      .limit(1);
-    if (rows.length > 0) {
-      vpStart += BigInt(rows[0].votingPower);
-    }
-  }
+  const degraded = monthStart === undefined;
+  const activeVotersStart =
+    monthStart === undefined ? activeVoters : monthStart.activeVotersStart;
 
-  const growthPct = computeVpGrowthPct(wei(vpStart), wei(vpEnd));
-  const tier = selectPoolTier(growthPct);
+  // Same boundaries and tie-broken snapshot resolution as the pipeline:
+  // vpStart at prevMonthEnd (monthStart - 1s), vpEnd bounded at month end
+  // (i.e. "latest so far" for the running month).
+  const vpAdapter = createVotingPowerAdapter(database);
+  const [vpStart, vpEnd] = await Promise.all([
+    vpAdapter.getAggregateVpAtTimestamp(
+      [...activeVotersStart],
+      seconds(monthStartTimestamp(month) - 1n),
+    ),
+    vpAdapter.getAggregateVpAtTimestamp(
+      [...activeVoters],
+      seconds(monthEndTimestamp(month)),
+    ),
+  ]);
 
-  return { vpStart: wei(vpStart), vpEnd: wei(vpEnd), growthPct, tier };
+  return {
+    activeVoters,
+    vpStart,
+    vpEnd,
+    ...assembleGrowth(vpStart, vpEnd, activeVoters.size),
+    degraded,
+  };
+}
+
+/**
+ * Growth + tier from the two boundary aggregates, mirroring the pipeline's
+ * rules: an empty END set means growth 0 / tier 0 (its early-exit), and
+ * negative growth maps to tier 0.
+ */
+export function assembleGrowth(
+  vpStart: Wei,
+  vpEnd: Wei,
+  endSetSize: number,
+): { growthPct: number; tier: PoolTier } {
+  const growthPct = endSetSize === 0 ? 0 : computeVpGrowthPct(vpStart, vpEnd);
+  return { growthPct, tier: selectPoolTier(growthPct) };
 }
 
 /** Format Wei to ENS string (18 decimals). */
@@ -252,7 +293,11 @@ export async function getActiveVpTotal(database: Db, activeVoters: Set<Address>)
       .select({ votingPower: ensVotingPowerSnapshot.votingPower })
       .from(ensVotingPowerSnapshot)
       .where(eq(ensVotingPowerSnapshot.voterId, voter.toLowerCase()))
-      .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+      .orderBy(
+        desc(ensVotingPowerSnapshot.timestamp),
+        desc(ensVotingPowerSnapshot.blockNumber),
+        desc(ensVotingPowerSnapshot.logIndex),
+      )
       .limit(1);
     if (rows.length > 0) {
       total += BigInt(rows[0].votingPower);

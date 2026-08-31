@@ -33,6 +33,7 @@ const TierProgressionResponse = z.object({
   currentTierIndex: z.number().openapi({ example: 0 }),
   activeVoterCount: z.number().openapi({ example: 25 }),
   maxTokenHolderAprPct: z.string().openapi({ description: "Highest estimated token-holder APR across all tiers", example: "54.00" }),
+  degraded: z.boolean().openapi({ description: "True while the month-start boundary block is not finalized yet (shortly after month rollover) and growth temporarily uses the current voter set on both boundaries." }),
   tiers: z.array(TierEntrySchema),
 });
 
@@ -59,7 +60,7 @@ const app = new OpenAPIHono();
 
 app.openapi(route, async (c) => {
   try {
-    const { activeVoters, vpStart, vpEnd, growthPct } =
+    const { activeVoters, vpStart, vpEnd, growthPct, degraded } =
       await fetchCurrentGrowth(db);
 
     const vpStartBig = vpStart as bigint;
@@ -73,8 +74,11 @@ app.openapi(route, async (c) => {
       const requiredTotalVP =
         (vpStartBig * (100n + BigInt(tier.minGrowthPct))) / 100n;
 
+      // An unlocked tier is already reached; only locked tiers need more VP
+      // (under negative growth requiredTotalVP can exceed vpEnd for tier 0).
       const diff = requiredTotalVP - vpEndBig;
-      const additionalVPNeeded = diff > 0n ? diff : 0n;
+      const additionalVPNeeded =
+        index <= currentTierIndex ? 0n : diff > 0n ? diff : 0n;
 
       const estimatedAprPct = computeTierAprPct(tier, wei(vpStartBig));
 
@@ -105,6 +109,7 @@ app.openapi(route, async (c) => {
         currentTierIndex,
         activeVoterCount: activeVoters.size,
         maxTokenHolderAprPct: maxTokenHolderApr.toFixed(2),
+        degraded,
         tiers,
       },
       200,

@@ -18,7 +18,6 @@ import {
   fetchCurrentGrowth,
   normalizeAddress,
   findTierIndex,
-  getActiveVpTotal,
 } from "../helpers.js";
 
 const AddressParam = z.object({
@@ -70,8 +69,8 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeVoters, tier, growthPct } = await fetchCurrentGrowth(db);
-    const totalVp = await getActiveVpTotal(db, activeVoters);
+    const { activeVoters, tier, growthPct, vpEnd } = await fetchCurrentGrowth(db);
+    const totalVp = vpEnd as bigint;
 
     let voterReward = 0n;
     let tokenHolderReward = 0n;

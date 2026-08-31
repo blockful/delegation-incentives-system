@@ -22,7 +22,6 @@ import {
   formatEns,
   normalizeAddress,
   findTierIndex,
-  getActiveVpTotal,
 } from "../helpers.js";
 
 const AddressParam = z.object({
@@ -83,10 +82,10 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeVoters, growthPct } = await fetchCurrentGrowth(db);
+    const { activeVoters, growthPct, vpEnd } = await fetchCurrentGrowth(db);
     const currentTierIndex = findTierIndex(growthPct);
     const tier = POOL_TIERS[currentTierIndex];
-    const totalVp = await getActiveVpTotal(db, activeVoters);
+    const totalVp = vpEnd as bigint;
 
     const isVoter = activeVoters.has(address as Address);
 

@@ -162,7 +162,22 @@ export const ensBalance = makeTable("ens_balance");
 export const ensBalanceEvent = makeTable("ens_balance_event");
 export const ensDelegation = makeTable("ens_delegation");
 export const ensDelegationEvent = makeTable("ens_delegation_event");
-export const ensVotingPowerSnapshot = makeTable("ens_voting_power_snapshot");
+// Real drizzle columns: the growth helpers' where/orderBy expressions run
+// against FakePonderDb in unit tests (see test/unit/api/growth.test.ts).
+export const ensVotingPowerSnapshot = Object.assign(
+  pgTable("ens_voting_power_snapshot", {
+    id: text("id").primaryKey(),
+    voterId: text("voterId").notNull(),
+    votingPower: bigint("votingPower", { mode: "bigint" }).notNull(),
+    delta: bigint("delta", { mode: "bigint" }).notNull(),
+    deltaMod: bigint("deltaMod", { mode: "bigint" }).notNull(),
+    blockNumber: bigint("blockNumber", { mode: "bigint" }).notNull(),
+    logIndex: integer("logIndex").notNull(),
+    timestamp: bigint("timestamp", { mode: "bigint" }).notNull(),
+    transactionHash: text("transactionHash").notNull(),
+  }),
+  { _tableName: "ens_voting_power_snapshot" },
+);
 
 // ENS Governor
 // governanceProposal carries real drizzle columns: the proposal-adapter unit
