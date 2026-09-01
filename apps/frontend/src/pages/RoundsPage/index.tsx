@@ -701,6 +701,11 @@ const VpGrowthPositive = styled.span`
   font-weight: ${tokens.font.weight.medium};
 `
 
+const VpGrowthNegative = styled.span`
+  color: ${tokens.color.negative};
+  font-weight: ${tokens.font.weight.medium};
+`
+
 const RoundNumber = styled.span`
   font-weight: ${tokens.font.weight.bold};
   color: ${tokens.color.darkBlue};
@@ -1171,11 +1176,10 @@ export function RoundsPage() {
   // Per-tier progress/state is derived inside the pip render loop; we only
   // need the next-milestone tier here for the share CTA copy.
   const tierLadder = tierData.tiers ?? []
-  const nextTier =
-    tierLadder.find(
-      (t, idx) =>
-        idx > currentTierIndex && Number(t.additionalVPNeeded ?? '0') > 0,
-    ) ?? null
+  // Trust the API's authoritative flags — never derive tier state from
+  // additionalVPNeeded, which is legitimately 0 for every unlocked tier and
+  // transiently 0 everywhere while the indexer backfills.
+  const nextTier = tierLadder.find((t) => !t.isUnlocked) ?? null
 
   const nextTierTargetLabel = nextTier?.requiredTotalVP
     ? formatVpNeeded(nextTier.requiredTotalVP)
@@ -1250,20 +1254,12 @@ export function RoundsPage() {
 
         <TierLadder>
           {tierLadder.map((tier, idx) => {
-            // Pip state — binary visual: reached (green) or locked (grey).
-            // A tier counts as reached if it's at or below the current
-            // operating tier, OR if its VP threshold has already been cleared
-            // (additionalVPNeeded === 0).
-            const thresholdAlreadyCleared =
-              Number(tier.additionalVPNeeded ?? '1') <= 0
-            const state: TierPipState =
-              idx < currentTierIndex
+            // Pip state comes from the API's authoritative flags.
+            const state: TierPipState = tier.isCurrent
+              ? 'current'
+              : tier.isUnlocked
                 ? 'unlocked'
-                : idx === currentTierIndex
-                  ? 'current'
-                  : thresholdAlreadyCleared
-                    ? 'unlocked'
-                    : 'locked'
+                : 'locked'
             const icon = state === 'locked' ? faLock : faCircleCheck
 
             // Per-pip progress: 100 once a tier is reached; otherwise the
@@ -1452,6 +1448,8 @@ export function RoundsPage() {
                     <MutedCell>—</MutedCell>
                   ) : row.vpGrowth.startsWith('+') ? (
                     <VpGrowthPositive>{row.vpGrowth}</VpGrowthPositive>
+                  ) : row.vpGrowth.startsWith('-') ? (
+                    <VpGrowthNegative>{row.vpGrowth}</VpGrowthNegative>
                   ) : (
                     <span>{row.vpGrowth}</span>
                   )}

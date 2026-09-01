@@ -479,10 +479,10 @@ const StatTopRow = styled.div`
   justify-content: space-between;
 `
 
-const StatValue = styled.span`
+const StatValue = styled.span<{ $negative?: boolean }>`
   font-size: ${tokens.font.size['2xl']};
   font-weight: ${tokens.font.weight.bold};
-  color: ${tokens.color.darkBlue};
+  color: ${({ $negative }) => ($negative ? tokens.color.negative : tokens.color.darkBlue)};
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
@@ -909,7 +909,7 @@ export function RoundDetailPage() {
         </StatCard>
         <StatCard>
           <StatTopRow>
-            <StatValue>{formatVpGrowth(roundData.vpGrowthPct)}</StatValue>
+            <StatValue $negative={Number(roundData.vpGrowthPct ?? '0') < 0}>{formatVpGrowth(roundData.vpGrowthPct)}</StatValue>
             <StatIconBox aria-hidden>
               <FontAwesomeIcon icon={faArrowTrendUp} />
             </StatIconBox>

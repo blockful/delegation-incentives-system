@@ -119,6 +119,10 @@ function getMonthStartSet(database: Db, month: string): Promise<MonthStartSet> {
         throw error;
       }
       const { activeVoters } = await fetchActiveVoters(database, block);
+      // An empty start set means the indexer is still backfilling (a real
+      // month always has active voters). Degrade instead of pinning a wrong
+      // set for the whole month; the entry is dropped below and retried.
+      if (activeVoters.size === 0) return undefined;
       return { activeVotersStart: activeVoters };
     })(),
   };
@@ -151,7 +155,11 @@ export interface CurrentGrowth {
 // load hitting several routes (tiers, apr, rewards, rounds) shares a single
 // computation.
 const GROWTH_MEMO_TTL_MS = 30_000;
-let growthMemo: { at: number; promise: Promise<CurrentGrowth> } | null = null;
+let growthMemo: {
+  at: number;
+  month: string;
+  promise: Promise<CurrentGrowth>;
+} | null = null;
 
 /** Reset module-level growth caches (test hook). */
 export function resetGrowthCaches(): void {
@@ -168,10 +176,22 @@ export function resetGrowthCaches(): void {
  * negative growth, exactly as it will at payout time.
  */
 export function fetchCurrentGrowth(database: Db): Promise<CurrentGrowth> {
-  if (growthMemo && Date.now() - growthMemo.at < GROWTH_MEMO_TTL_MS) {
+  // Resolve the month once so a request straddling the UTC rollover cannot
+  // mix two months' boundaries — and key the memo by it so an entry created
+  // just before rollover is not served into the new month.
+  const month = getCurrentMonth();
+  if (
+    growthMemo &&
+    growthMemo.month === month &&
+    Date.now() - growthMemo.at < GROWTH_MEMO_TTL_MS
+  ) {
     return growthMemo.promise;
   }
-  const entry = { at: Date.now(), promise: computeCurrentGrowth(database) };
+  const entry = {
+    at: Date.now(),
+    month,
+    promise: computeCurrentGrowth(database, month),
+  };
   growthMemo = entry;
   entry.promise.catch(() => {
     if (growthMemo === entry) growthMemo = null;
@@ -179,11 +199,10 @@ export function fetchCurrentGrowth(database: Db): Promise<CurrentGrowth> {
   return entry.promise;
 }
 
-async function computeCurrentGrowth(database: Db): Promise<CurrentGrowth> {
-  // Resolve the month once so a request straddling the UTC rollover cannot
-  // mix two months' boundaries.
-  const month = getCurrentMonth();
-
+async function computeCurrentGrowth(
+  database: Db,
+  month: string,
+): Promise<CurrentGrowth> {
   const [monthStart, { activeVoters }] = await Promise.all([
     getMonthStartSet(database, month),
     fetchActiveVoters(database),

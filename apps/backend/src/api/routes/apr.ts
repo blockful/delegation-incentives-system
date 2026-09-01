@@ -146,7 +146,11 @@ app.openapi(route, async (c) => {
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
         .where(eq(ensVotingPowerSnapshot.voterId, address))
-        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .orderBy(
+          desc(ensVotingPowerSnapshot.timestamp),
+          desc(ensVotingPowerSnapshot.blockNumber),
+          desc(ensVotingPowerSnapshot.logIndex),
+        )
         .limit(1);
       userShare = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
 

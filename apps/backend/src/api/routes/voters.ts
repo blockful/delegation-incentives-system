@@ -193,7 +193,11 @@ app.openapi(route, async (c) => {
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
         .where(eq(ensVotingPowerSnapshot.voterId, addr.toLowerCase()))
-        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .orderBy(
+          desc(ensVotingPowerSnapshot.timestamp),
+          desc(ensVotingPowerSnapshot.blockNumber),
+          desc(ensVotingPowerSnapshot.logIndex),
+        )
         .limit(1);
 
       const votingPower =

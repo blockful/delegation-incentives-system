@@ -364,7 +364,11 @@ async function getVotingPowersAt(
         lte(ensVotingPowerSnapshot.timestamp, asOfTimestamp),
       ),
     )
-    .orderBy(desc(ensVotingPowerSnapshot.timestamp));
+    .orderBy(
+      desc(ensVotingPowerSnapshot.timestamp),
+      desc(ensVotingPowerSnapshot.blockNumber),
+      desc(ensVotingPowerSnapshot.logIndex),
+    );
 
   for (const row of rows) {
     const voterId = row.voterId.toLowerCase();

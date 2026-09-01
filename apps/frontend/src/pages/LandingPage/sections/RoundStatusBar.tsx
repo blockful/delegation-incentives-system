@@ -22,6 +22,8 @@ interface RoundStatusBarProps {
   poolSizeEns: string
   roundNumber: number
   roundEndDate: string
+  /** True while the backend is still resolving the month-start baseline. */
+  degraded?: boolean
 }
 
 /**
@@ -149,9 +151,11 @@ export function RoundStatusBar({
   poolSizeEns,
   roundNumber,
   roundEndDate,
+  degraded,
 }: RoundStatusBarProps) {
   const growthNum = parseFloat(currentGrowthPct)
-  const isNegative = growthNum < 0
+  // Object.is catches "-0.00", which parses to -0 and fails `< 0`.
+  const isNegative = growthNum < 0 || Object.is(growthNum, -0)
   const growthPrefix = isNegative ? '-' : '+'
   const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
   const displayRound = roundNumber
@@ -191,10 +195,19 @@ export function RoundStatusBar({
             <ColSub>{displayTimeLeft}</ColSub>
           </Col>
           <Col $align="center">
-            <GrowthLabel $negative={isNegative}>
-              {growthPrefix}{displayGrowth}%
-            </GrowthLabel>
-            <ColSub>active VP growth</ColSub>
+            {degraded ? (
+              <>
+                <GrowthLabel>…</GrowthLabel>
+                <ColSub>calculating VP growth</ColSub>
+              </>
+            ) : (
+              <>
+                <GrowthLabel $negative={isNegative}>
+                  {growthPrefix}{displayGrowth}%
+                </GrowthLabel>
+                <ColSub>active VP growth</ColSub>
+              </>
+            )}
           </Col>
           <Col $align="right">
             <ColLabel>Tier {currentTierIndex + 1}</ColLabel>
