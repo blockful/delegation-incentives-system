@@ -909,7 +909,7 @@ export function RoundDetailPage() {
         </StatCard>
         <StatCard>
           <StatTopRow>
-            <StatValue $negative={Number(roundData.vpGrowthPct ?? '0') < 0}>{formatVpGrowth(roundData.vpGrowthPct)}</StatValue>
+            <StatValue $negative={(roundData.vpGrowthPct ?? '').trim().startsWith('-')}>{formatVpGrowth(roundData.vpGrowthPct)}</StatValue>
             <StatIconBox aria-hidden>
               <FontAwesomeIcon icon={faArrowTrendUp} />
             </StatIconBox>
