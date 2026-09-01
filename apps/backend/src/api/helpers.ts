@@ -24,6 +24,7 @@ import { eq, desc, inArray } from "drizzle-orm";
 import { selectFinalizedProposalsBefore } from "../adapters/proposal-adapter.js";
 import { createBlockAdapter } from "../adapters/block-adapter.js";
 import { createVotingPowerAdapter } from "../adapters/voting-power-adapter.js";
+import { isLocalPonderReady } from "./distribution-scheduler.js";
 
 type Db = typeof db;
 
@@ -106,6 +107,11 @@ function getMonthStartSet(database: Db, month: string): Promise<MonthStartSet> {
   const entry = {
     month,
     promise: (async (): Promise<MonthStartSet> => {
+      // While Ponder is still backfilling (after a deploy's db:prune, or a
+      // resync) the vote/proposal tables are incomplete and any set computed
+      // from them is garbage. Degrade — uncached — until /ready reports the
+      // historical sync is done. The settlement scheduler uses the same gate.
+      if (!(await isLocalPonderReady())) return undefined;
       const blockAdapter = createBlockAdapter(publicClients.mainnet);
       let block: BlockNumber;
       try {

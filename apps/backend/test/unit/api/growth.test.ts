@@ -13,6 +13,12 @@ vi.mock("../../../src/adapters/block-adapter.js", () => ({
   createBlockAdapter: () => ({ getBlockForTimestamp }),
 }));
 
+const isLocalPonderReady = vi.hoisted(() => vi.fn());
+vi.mock("../../../src/api/distribution-scheduler.js", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isLocalPonderReady,
+}));
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 //
 // Frozen at 2026-08-15 so month boundaries are deterministic:
@@ -96,6 +102,8 @@ beforeEach(() => {
   resetGrowthCaches();
   getBlockForTimestamp.mockReset();
   getBlockForTimestamp.mockResolvedValue(blockNumber(MONTH_START_BLOCK));
+  isLocalPonderReady.mockReset();
+  isLocalPonderReady.mockResolvedValue(true);
   (publicClients as any).mainnet = {
     getBlockNumber: vi.fn(async () => HEAD_BLOCK),
   };
@@ -172,6 +180,26 @@ describe("fetchCurrentGrowth", () => {
     expect(recovered.degraded).toBe(false);
     expect(recovered.vpStart as bigint).toBe(4000n);
     expect(recovered.growthPct).toBe(-75);
+  });
+
+  it("degrades — without caching a partial start set — while the indexer is backfilling", async () => {
+    isLocalPonderReady.mockResolvedValueOnce(false);
+    const db = makeDb(
+      [...votesFor(WHALE, range(1, 7)), ...votesFor(VOTER, range(2, 11))],
+      [vpRow(WHALE, "3000", 100n, 10n, 0), vpRow(VOTER, "1000", 100n, 10n, 0)],
+    );
+
+    const during = await fetchCurrentGrowth(db as any);
+    expect(during.degraded).toBe(true);
+    expect(getBlockForTimestamp).not.toHaveBeenCalled();
+
+    // Once the indexer is ready (and the memo expires), the real two-set
+    // growth appears — nothing partial was pinned for the month.
+    vi.setSystemTime(new Date(NOW.getTime() + 31_000));
+    const after = await fetchCurrentGrowth(db as any);
+    expect(after.degraded).toBe(false);
+    expect(after.vpStart as bigint).toBe(4000n);
+    expect(after.growthPct).toBe(-75);
   });
 
   it("memoizes concurrent and near-in-time calls so one page load shares a single computation", async () => {
