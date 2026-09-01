@@ -1307,7 +1307,7 @@ export interface paths {
                              */
                             currentTotalVP: string;
                             /**
-                             * @description Total VP at month start (wei)
+                             * @description Total VP of the month-start active-voter set at month start (wei)
                              * @example 100000000000000000000000
                              */
                             previousTotalVP: string;
@@ -1324,6 +1324,8 @@ export interface paths {
                              * @example 54.00
                              */
                             maxTokenHolderAprPct: string;
+                            /** @description True while the month-start boundary block is not finalized yet (shortly after month rollover) and growth temporarily uses the current voter set on both boundaries. */
+                            degraded: boolean;
                             tiers: {
                                 /** @example 0 */
                                 index: number;

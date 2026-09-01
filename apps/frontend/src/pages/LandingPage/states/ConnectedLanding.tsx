@@ -21,6 +21,7 @@ export function ConnectedLanding({ tierData, roundData }: ConnectedLandingProps)
         poolSizeEns={roundData.poolSizeEns}
         roundNumber={roundData.roundNumber}
         roundEndDate={roundData.endDate}
+        degraded={tierData.degraded}
       />
       <TierTableSection tiers={tierData.tiers} />
       <HowItWorksSection />

@@ -15,11 +15,9 @@ import {
   type Address,
 } from "@ens-dis/domain";
 import {
-  fetchActiveVoters,
-  fetchCurrentVpGrowth,
+  fetchCurrentGrowth,
   normalizeAddress,
   findTierIndex,
-  getActiveVpTotal,
 } from "../helpers.js";
 
 const AddressParam = z.object({
@@ -71,13 +69,8 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeVoters } = await fetchActiveVoters(db);
-    const { tier, growthPct } = await fetchCurrentVpGrowth(
-      db,
-      activeVoters,
-      activeVoters,
-    );
-    const totalVp = await getActiveVpTotal(db, activeVoters);
+    const { activeVoters, tier, growthPct, vpEnd } = await fetchCurrentGrowth(db);
+    const totalVp = vpEnd as bigint;
 
     let voterReward = 0n;
     let tokenHolderReward = 0n;
@@ -90,7 +83,11 @@ app.openapi(route, async (c) => {
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
         .where(eq(ensVotingPowerSnapshot.voterId, address))
-        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .orderBy(
+          desc(ensVotingPowerSnapshot.timestamp),
+          desc(ensVotingPowerSnapshot.blockNumber),
+          desc(ensVotingPowerSnapshot.logIndex),
+        )
         .limit(1);
 
       const myVp = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;

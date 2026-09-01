@@ -5,8 +5,7 @@ import { and, desc, inArray, lte } from "drizzle-orm";
 import { POOL_TIERS } from "@ens-dis/domain";
 import { distributionResult, getAppDb } from "../../db/app-tables.js";
 import {
-  fetchActiveVoters,
-  fetchCurrentVpGrowth,
+  fetchCurrentGrowth,
   findTierIndex,
   formatEns,
   normalizeAddress,
@@ -365,7 +364,11 @@ async function getVotingPowersAt(
         lte(ensVotingPowerSnapshot.timestamp, asOfTimestamp),
       ),
     )
-    .orderBy(desc(ensVotingPowerSnapshot.timestamp));
+    .orderBy(
+      desc(ensVotingPowerSnapshot.timestamp),
+      desc(ensVotingPowerSnapshot.blockNumber),
+      desc(ensVotingPowerSnapshot.logIndex),
+    );
 
   for (const row of rows) {
     const voterId = row.voterId.toLowerCase();
@@ -376,12 +379,7 @@ async function getVotingPowersAt(
 }
 
 async function getCurrentTierSnapshot(): Promise<RoundTierSnapshot> {
-  const { activeVoters } = await fetchActiveVoters(db);
-  const { growthPct } = await fetchCurrentVpGrowth(
-    db,
-    activeVoters,
-    activeVoters,
-  );
+  const { growthPct } = await fetchCurrentGrowth(db);
   const tierIndex = findTierIndex(growthPct);
 
   return {

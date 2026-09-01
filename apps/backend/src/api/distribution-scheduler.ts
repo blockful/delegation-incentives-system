@@ -225,7 +225,7 @@ export function shouldAttemptMonth(month: string, now: Date, graceMs: number): b
   return now.getTime() > Date.parse(endDate) + graceMs;
 }
 
-async function isLocalPonderReady(): Promise<boolean> {
+export async function isLocalPonderReady(): Promise<boolean> {
   const port = process.env.PORT ?? process.env.BACKEND_PORT ?? "42069";
 
   try {

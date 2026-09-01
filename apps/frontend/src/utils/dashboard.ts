@@ -22,6 +22,7 @@ export function formatPayout(ens: string): string {
 /** Format pool size in compact form (e.g. "5K", "30K"). */
 export function formatPool(ens: string): string {
   const num = parseFloat(ens)
+  if (!Number.isFinite(num)) return '0'
   if (num >= 1000) return `${Math.round(num / 1000)}K`
   return Math.round(num).toString()
 }

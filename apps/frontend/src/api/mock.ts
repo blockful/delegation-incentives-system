@@ -33,6 +33,7 @@ const MOCK_TIERS: TierProgressionResponse = {
   currentTierIndex: 1,
   activeVoterCount: 47,
   maxTokenHolderAprPct: '120.00',
+  degraded: false,
   tiers: [
     {
       index: 0,

@@ -18,12 +18,10 @@ import {
   type Address,
 } from "@ens-dis/domain";
 import {
-  fetchActiveVoters,
-  fetchCurrentVpGrowth,
+  fetchCurrentGrowth,
   formatEns,
   normalizeAddress,
   findTierIndex,
-  getActiveVpTotal,
 } from "../helpers.js";
 
 const AddressParam = z.object({
@@ -84,15 +82,10 @@ app.openapi(route, async (c) => {
       return c.json({ error: "Invalid Ethereum address" }, 400);
     }
 
-    const { activeVoters } = await fetchActiveVoters(db);
-    const { growthPct } = await fetchCurrentVpGrowth(
-      db,
-      activeVoters,
-      activeVoters,
-    );
+    const { activeVoters, growthPct, vpEnd } = await fetchCurrentGrowth(db);
     const currentTierIndex = findTierIndex(growthPct);
     const tier = POOL_TIERS[currentTierIndex];
-    const totalVp = await getActiveVpTotal(db, activeVoters);
+    const totalVp = vpEnd as bigint;
 
     const isVoter = activeVoters.has(address as Address);
 
@@ -153,7 +146,11 @@ app.openapi(route, async (c) => {
         .select({ votingPower: ensVotingPowerSnapshot.votingPower })
         .from(ensVotingPowerSnapshot)
         .where(eq(ensVotingPowerSnapshot.voterId, address))
-        .orderBy(desc(ensVotingPowerSnapshot.timestamp))
+        .orderBy(
+          desc(ensVotingPowerSnapshot.timestamp),
+          desc(ensVotingPowerSnapshot.blockNumber),
+          desc(ensVotingPowerSnapshot.logIndex),
+        )
         .limit(1);
       userShare = vpRows.length > 0 ? BigInt(vpRows[0].votingPower) : 0n;
 
