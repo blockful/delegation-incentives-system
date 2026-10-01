@@ -334,13 +334,18 @@ export interface paths {
                             delegatedTo: string | null;
                             delegatedToEnsName: string | null;
                             delegatedToAvatarUrl: string | null;
-                            poolSizeEns: string;
-                            estimatedMonthlyRewardEns: string;
-                            estimatedAprPct: string;
-                            userShareWei: string;
-                            totalShareWei: string;
+                            poolSizeEns: string | null;
+                            estimatedMonthlyRewardEns: string | null;
+                            estimatedAprPct: string | null;
+                            userShareWei: string | null;
+                            totalShareWei: string | null;
                             currentBalanceEns: string;
-                            qualifiesForLottery: boolean;
+                            qualifiesForLottery: boolean | null;
+                            /**
+                             * @description True once the last configured round has ended; estimate fields are then null.
+                             * @example false
+                             */
+                            programEnded: boolean;
                         };
                     };
                 };
@@ -385,7 +390,7 @@ export interface paths {
         };
         /**
          * Current incentive round
-         * @description Returns current round dates, progress, pool size, and active tier index. Dates are UTC.
+         * @description Returns current round dates, progress, pool size, and active tier index. Dates are UTC. Before the program starts this is the first upcoming round; after it ends, the last round with its settled values (programEnded: true).
          */
         get: {
             parameters: {
@@ -426,17 +431,31 @@ export interface paths {
                             /** @example 28 */
                             daysRemaining: number;
                             /**
-                             * @description Current round tier pool size in ENS
+                             * @description Round tier pool size in ENS: the live projection while the round is live, the settled value once it has distribution data, null when neither exists (upcoming, or ended without data).
                              * @example 5000.000000000000000000
                              */
-                            poolSizeEns: string;
-                            /** @example 0 */
-                            tierIndex: number;
+                            poolSizeEns: string | null;
                             /**
-                             * @description Current month active VP growth percentage
+                             * @description Tier index, same live/settled/null rules as poolSizeEns
+                             * @example 0
+                             */
+                            tierIndex: number | null;
+                            /**
+                             * @description Active VP growth percentage, same live/settled/null rules as poolSizeEns
                              * @example 0.00
                              */
-                            vpGrowthPct: string;
+                            vpGrowthPct: string | null;
+                            /**
+                             * @description Round status, same vocabulary as /rounds
+                             * @example live
+                             * @enum {string}
+                             */
+                            status: "live" | "ended" | "upcoming" | "paid";
+                            /**
+                             * @description True once the last configured round has ended; the returned round is then that last round, with its settled values.
+                             * @example false
+                             */
+                            programEnded: boolean;
                         };
                     };
                 };
@@ -1302,30 +1321,38 @@ export interface paths {
                     content: {
                         "application/json": {
                             /**
-                             * @description Current total VP held by active voters (wei)
+                             * @description Current total VP held by active voters (wei). Null once the program has ended.
                              * @example 107230000000000000000000
                              */
-                            currentTotalVP: string;
+                            currentTotalVP: string | null;
                             /**
-                             * @description Total VP of the month-start active-voter set at month start (wei)
+                             * @description Total VP of the month-start active-voter set at month start (wei). Null once the program has ended.
                              * @example 100000000000000000000000
                              */
-                            previousTotalVP: string;
+                            previousTotalVP: string | null;
                             /** @example 723 */
-                            currentGrowthBps: string;
+                            currentGrowthBps: string | null;
                             /** @example 7.23 */
-                            currentGrowthPct: string;
-                            /** @example 0 */
-                            currentTierIndex: number;
-                            /** @example 25 */
-                            activeVoterCount: number;
+                            currentGrowthPct: string | null;
                             /**
-                             * @description Highest estimated token-holder APR across all tiers
+                             * @description Null once the program has ended
+                             * @example 0
+                             */
+                            currentTierIndex: number | null;
+                            /** @example 25 */
+                            activeVoterCount: number | null;
+                            /**
+                             * @description Highest estimated token-holder APR across all tiers. Null once the program has ended.
                              * @example 54.00
                              */
-                            maxTokenHolderAprPct: string;
+                            maxTokenHolderAprPct: string | null;
                             /** @description True while the month-start boundary block is not finalized yet (shortly after month rollover) and growth temporarily uses the current voter set on both boundaries. */
                             degraded: boolean;
+                            /**
+                             * @description True once the last configured round has ended
+                             * @example false
+                             */
+                            programEnded: boolean;
                             tiers: {
                                 /** @example 0 */
                                 index: number;
@@ -1339,23 +1366,25 @@ export interface paths {
                                 voterCapEns: string;
                                 /** @example 250.000000000000000000 */
                                 tokenHolderCapEns: string;
+                                /** @description False for every tier once the program has ended */
                                 isCurrent: boolean;
+                                /** @description False for every tier once the program has ended */
                                 isUnlocked: boolean;
                                 /**
-                                 * @description Wei needed above current VP to reach this tier
+                                 * @description Wei needed above current VP to reach this tier. Null once the program has ended.
                                  * @example 0
                                  */
-                                additionalVPNeeded: string;
+                                additionalVPNeeded: string | null;
                                 /**
-                                 * @description VP threshold to enter this tier (wei)
+                                 * @description VP threshold to enter this tier (wei). Null once the program has ended.
                                  * @example 110000000000000000000000
                                  */
-                                requiredTotalVP: string;
+                                requiredTotalVP: string | null;
                                 /**
-                                 * @description Estimated token-holder APR at this tier (calibrated against round-start VP)
+                                 * @description Estimated token-holder APR at this tier (calibrated against round-start VP). Null once the program has ended.
                                  * @example 12.50
                                  */
-                                estimatedAprPct: string;
+                                estimatedAprPct: string | null;
                             }[];
                         };
                     };
