@@ -4,12 +4,12 @@ import { buildVoterShareUrl, buildVoterOgImageUrl } from '@/features/delegate/ut
 
 /**
  * Pre-filled X copy for a delegate sharing their OWN profile (first person).
- * Compliant with ENS Labs messaging rules: no APR / yield / price language;
- * only "free, gasless" and "rewards from the DAO". The trailing colon leads
+ * Compliant with ENS Labs messaging rules: no APR / yield / price language
+ * and no reward promise; only "free, gasless". The trailing colon leads
  * into the profile URL that X appends after the text.
  */
 export const DELEGATE_TWEET_TEXT =
-  "I'm an active voter on ENS governance. Delegate your ENS to me to keep the DAO strong. It's free, gasless, and you earn rewards from the DAO for strengthening ENS:"
+  "I'm an active voter on ENS governance. Delegate your ENS to me to keep the DAO strong. It's free, gasless, and your tokens never leave your wallet:"
 
 export interface DelegateShareModalProps {
   open: boolean
@@ -34,7 +34,7 @@ export function DelegateShareModal({ open, onClose, address, ensName }: Delegate
           <>
             Share it to bring more ENS into active governance.
             <br />
-            Your delegators earn rewards from the DAO.
+            Delegating is free and tokens never leave the wallet.
           </>
         }
         tweetText={DELEGATE_TWEET_TEXT}

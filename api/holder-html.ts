@@ -47,7 +47,7 @@ export default async function handler(request: Request) {
   const ogImageUrl = `${url.origin}/api/og/voter?${ogQuery.toString()}`
 
   const pageTitle = `${displayName} just delegated their ENS`
-  const pageDescription = `Join ${displayName} on the ENS Delegation Incentives Program. Delegate your ENS, keep governance active, and earn rewards from the DAO.`
+  const pageDescription = `Join ${displayName} on the ENS Delegation Incentives Program. Delegate your ENS and help keep governance active.`
   const pageUrl = `${url.origin}/share/holder/${encodeURIComponent(rawParam)}`
 
   const indexRes = await fetch(`${url.origin}/index.html`, { redirect: 'manual' })

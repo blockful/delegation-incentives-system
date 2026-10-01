@@ -34,6 +34,7 @@ const MOCK_TIERS: TierProgressionResponse = {
   activeVoterCount: 47,
   maxTokenHolderAprPct: '120.00',
   degraded: false,
+  programEnded: false,
   tiers: [
     {
       index: 0,
@@ -474,6 +475,8 @@ function createMockRound(): RoundInfoResponse {
     poolSizeEns: '8000',
     tierIndex: 1,
     vpGrowthPct: '12.40',
+    status: 'live',
+    programEnded: false,
   }
 }
 
@@ -910,6 +913,7 @@ export const mockApi = {
       totalShareWei: '0',
       currentBalanceEns: '0',
       qualifiesForLottery: false,
+      programEnded: false,
     }),
 
   distributionList: () => delay<string[]>(['2026-02', '2026-01', '2025-12']),

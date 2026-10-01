@@ -124,7 +124,7 @@ export function StatsBar({
             <FontAwesomeIcon icon={faWallet} />
           </IconWrap>
         </ValueRow>
-        <CellLabel>wallets earning</CellLabel>
+        <CellLabel>wallets participating</CellLabel>
       </Cell>
       </Bar>
     </BarOverflowWrap>

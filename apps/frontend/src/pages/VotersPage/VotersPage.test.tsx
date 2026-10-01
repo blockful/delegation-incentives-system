@@ -12,7 +12,7 @@ describe('VotersPage', () => {
   it('renders page heading', () => {
     renderApp(<VotersPage />)
     expect(
-      screen.getByText('Pick an active voter. Earn ENS automatically.'),
+      screen.getByText('Pick an active voter. Strengthen ENS governance.'),
     ).toBeInTheDocument()
   })
 
@@ -25,7 +25,7 @@ describe('VotersPage', () => {
     expect(screen.getByText('1.3M')).toBeInTheDocument()
     expect(screen.getByText('ENS delegated to active voters')).toBeInTheDocument()
     expect(screen.getByText('412')).toBeInTheDocument()
-    expect(screen.getByText('wallets earning')).toBeInTheDocument()
+    expect(screen.getByText('wallets participating')).toBeInTheDocument()
   })
 
   it('renders voter cards after loading', async () => {

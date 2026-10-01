@@ -216,7 +216,12 @@ const PARTICLE_CONFIGS = [
   { id: 13, left: 96, size: 28, duration: 10, delay: 7 },
 ]
 
-export function HeroSection() {
+interface HeroSectionProps {
+  /** Pilot has ended: drop the live badge and any reward promise. */
+  programEnded?: boolean
+}
+
+export function HeroSection({ programEnded = false }: HeroSectionProps) {
   const gasMinEns = useGasSponsorshipMinEns()
   return (
     <Section>
@@ -234,19 +239,41 @@ export function HeroSection() {
         ))}
       </ParticlesLayer>
       <Content>
-        <HeroEyebrow>
-          <LiveDot tone="success" size={8} />
-          ENS Governance · Live program
-        </HeroEyebrow>
-        <Headline>
-          Put your ENS to work <br />
-          and earn rewards
-        </Headline>
-        <Subtitle>
-          Help secure ENS governance by delegating to an active voter.
-          <br />
-          Rewards are automatic, gas is sponsored for wallets holding {gasMinEns}+ ENS.
-        </Subtitle>
+        {programEnded ? (
+          <HeroEyebrow>
+            <LiveDot tone="blue" size={8} />
+            ENS Governance · Pilot complete
+          </HeroEyebrow>
+        ) : (
+          <HeroEyebrow>
+            <LiveDot tone="success" size={8} />
+            ENS Governance · Live program
+          </HeroEyebrow>
+        )}
+        {programEnded ? (
+          <Headline>
+            Put your ENS to work <br />
+            for ENS governance
+          </Headline>
+        ) : (
+          <Headline>
+            Put your ENS to work <br />
+            and earn rewards
+          </Headline>
+        )}
+        {programEnded ? (
+          <Subtitle>
+            Help secure ENS governance by delegating to an active voter.
+            <br />
+            Gas is sponsored for wallets holding {gasMinEns}+ ENS.
+          </Subtitle>
+        ) : (
+          <Subtitle>
+            Help secure ENS governance by delegating to an active voter.
+            <br />
+            Rewards are automatic, gas is sponsored for wallets holding {gasMinEns}+ ENS.
+          </Subtitle>
+        )}
         <Actions>
           <RouterLink to="/voters">
             <Button colorStyle="bluePrimary">
