@@ -776,10 +776,16 @@ export function RoundDetailPage() {
       ? `${formatEnsAmount(roundData.lotteryPrizeEns, { maximumFractionDigits: 2 })} ENS`
       : '—'
 
-  // Priority: live current-round payload (when viewing the ongoing round) →
-  // the rounds-list summary for the viewed round → round detail fallback.
+  const displayStatus: RoundStatus =
+    viewedRoundSummary?.status ?? roundData.status
+  // Priority: live current-round payload (only while the viewed round is
+  // actually live) → the rounds-list summary for the viewed round → round
+  // detail fallback. /rounds/current keeps returning the last round after the
+  // program ends, paired with a projection for the current calendar month, so
+  // matching on roundNumber alone would overwrite a settled round's pool/tier.
   const liveCurrentRound = currentRound.data ?? null
   const isViewingLiveRound =
+    displayStatus === 'live' &&
     liveCurrentRound != null &&
     liveCurrentRound.roundNumber === roundNumber
 
@@ -791,8 +797,6 @@ export function RoundDetailPage() {
     (isViewingLiveRound ? liveCurrentRound.endDate : null) ??
     viewedRoundSummary?.endDate ??
     roundData.endDate
-  const displayStatus: RoundStatus =
-    viewedRoundSummary?.status ?? roundData.status
   // Closed rounds: full ring. Upcoming: empty. Live: compute the actual percent
   // from the round's start/end window (always accurate, no dependency on an
   // API field that may not refresh between deploys).
