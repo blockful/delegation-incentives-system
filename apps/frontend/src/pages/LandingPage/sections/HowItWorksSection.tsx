@@ -220,7 +220,11 @@ type Step = {
   tagColor: string
 }
 
-function buildSteps(gasMinEns: string): Step[] {
+/**
+ * Steps 2-4 describe how payouts worked; once the pilot has ended they switch
+ * to past tense so the section reads as an explanation, not a promise.
+ */
+function buildSteps(gasMinEns: string, programEnded: boolean): Step[] {
   return [
     {
       number: '1',
@@ -232,24 +236,30 @@ function buildSteps(gasMinEns: string): Step[] {
     },
     {
       number: '2',
-      title: 'Your share grows with time',
-      desc: 'Rewards are based on your average ENS balance over the last 180 days. Longer holding means a bigger share.',
+      title: programEnded ? 'Your share grew with time' : 'Your share grows with time',
+      desc: programEnded
+        ? 'Rewards were based on your average ENS balance over the last 180 days. Longer holding meant a bigger share.'
+        : 'Rewards are based on your average ENS balance over the last 180 days. Longer holding means a bigger share.',
       tag: 'No claiming needed',
       tagBg: tokens.color.lightBlue,
       tagColor: tokens.color.blue,
     },
     {
       number: '3',
-      title: 'Receive ENS at round end',
-      desc: 'If your share is 1 ENS or more, it’s sent directly to your wallet at the end of each monthly round.',
+      title: programEnded ? 'ENS sent at round end' : 'Receive ENS at round end',
+      desc: programEnded
+        ? 'Shares of 1 ENS or more were sent directly to wallets at the end of each monthly round.'
+        : 'If your share is 1 ENS or more, it’s sent directly to your wallet at the end of each monthly round.',
       tag: 'Paid in ENS, funded by the DAO',
       tagBg: tokens.color.lightOrange,
       tagColor: tokens.color.orange,
     },
     {
       number: '4',
-      title: 'Small balance? Enter the lottery',
-      desc: 'Payouts under 1 ENS pool together until they reach 10 ENS, and one winner takes the full prize.',
+      title: programEnded ? 'Small balances entered the lottery' : 'Small balance? Enter the lottery',
+      desc: programEnded
+        ? 'Payouts under 1 ENS were pooled until they reached 10 ENS, and one winner took the full prize.'
+        : 'Payouts under 1 ENS pool together until they reach 10 ENS, and one winner takes the full prize.',
       tag: 'Lottery prize: 10 ENS',
       tagBg: tokens.color.lightOrange,
       tagColor: tokens.color.orange,
@@ -290,15 +300,19 @@ function RevealStep({
   )
 }
 
-export function HowItWorksSection() {
+interface HowItWorksSectionProps {
+  programEnded?: boolean
+}
+
+export function HowItWorksSection({ programEnded = false }: HowItWorksSectionProps) {
   const gasMinEns = useGasSponsorshipMinEns()
-  const steps = buildSteps(gasMinEns)
+  const steps = buildSteps(gasMinEns, programEnded)
 
   return (
     <Section id="how-it-works">
       <Inner>
           <Header>
-            <Eyebrow>How it works</Eyebrow>
+            <Eyebrow>{programEnded ? 'How the pilot worked' : 'How it works'}</Eyebrow>
             <Heading>
               Simple to join. <br />
               Better when more people do.
@@ -306,7 +320,9 @@ export function HowItWorksSection() {
             <Description>
               ENS governance is only as strong as its participation.
               <br />
-              This program makes it worth your while.
+              {programEnded
+                ? 'This pilot rewarded the wallets that took part.'
+                : 'This program makes it worth your while.'}
             </Description>
           </Header>
 

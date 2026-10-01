@@ -18,12 +18,12 @@ const BORDER = '#e8e8e8'
 const VARIANT_COPY: Record<'delegate' | 'holder', { heading: string; cta: string; headingFontSize: number }> = {
   delegate: {
     heading: 'I’m an active voter!',
-    cta: 'Check my profile, delegate and earn rewards',
+    cta: 'Check my profile and delegate to me',
     headingFontSize: 92,
   },
   holder: {
     heading: 'I just delegated my ENS!',
-    cta: 'Join me, delegate and earn rewards',
+    cta: 'Join me and delegate your ENS',
     headingFontSize: 80,
   },
 }
@@ -515,7 +515,7 @@ function renderGenericCard({ satoshiLoaded }: GenericCardProps): ReactElement {
         wordBreak: 'break-word',
       },
     },
-    'Earn ENS rewards. Strengthen governance.',
+    'Delegate your ENS. Strengthen governance.',
   )
 
   const topGroup = h(
@@ -553,7 +553,7 @@ function renderGenericCard({ satoshiLoaded }: GenericCardProps): ReactElement {
     h(
       'span',
       { style: { fontSize: 34, fontWeight: 700, color: ENS_BLUE, lineHeight: 1.1 } },
-      'Delegate for free and earn rewards',
+      'Delegate for free to an active voter',
     ),
     rightArrow(32, ENS_BLUE),
   )

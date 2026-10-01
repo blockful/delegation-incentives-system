@@ -411,7 +411,8 @@ function formatMonthLabel(month: string | null | undefined): string {
   const [y, m] = month.split('-').map(Number)
   if (!y || !m) return month
   const date = new Date(Date.UTC(y, m - 1, 1))
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  // UTC: the date is the 1st at 00:00Z, which is the previous month west of UTC.
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
 
 function formatDaysLeft(daysRemaining: number | null): string {
@@ -429,10 +430,10 @@ interface PayoutRow {
   hasReward: boolean
 }
 
-function buildPayoutRows(rounds: AddressDistributionRound[]): PayoutRow[] {
-  // Most recent first; cap at 3
+function buildPayoutRows(rounds: AddressDistributionRound[], limit = 3): PayoutRow[] {
+  // Most recent first; capped (the ended view passes Infinity to list every round)
   const sorted = [...rounds].sort((a, b) => b.roundNumber - a.roundNumber)
-  return sorted.slice(0, 3).map((r) => {
+  return sorted.slice(0, limit).map((r) => {
     const status = r.rewardStatus
     const num = Number(r.totalRewardEns ?? '0')
     const reward = Number.isFinite(num) ? num : 0
@@ -444,6 +445,15 @@ function buildPayoutRows(rounds: AddressDistributionRound[]): PayoutRow[] {
       hasReward: status === 'paid' && reward > 0,
     }
   })
+}
+
+/** Sum of every paid round's total reward for the wallet. */
+function sumPaidRewards(rounds: AddressDistributionRound[]): number {
+  return rounds.reduce((sum, r) => {
+    if (r.rewardStatus !== 'paid') return sum
+    const n = Number(r.totalRewardEns ?? '0')
+    return Number.isFinite(n) ? sum + n : sum
+  }, 0)
 }
 
 /* ─── Component ─── */
@@ -484,7 +494,10 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
 
   const gasMinEns = useGasSponsorshipMinEns()
 
-  if (loading) return <DashboardPageSkeleton />
+  // The ended hero shows the all-rounds total, so it needs the history too.
+  if (loading || (data?.programEnded && distributions.loading)) {
+    return <DashboardPageSkeleton />
+  }
 
   if (error) {
     return (
@@ -496,7 +509,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
 
   if (!data) return null
 
-  const { apr, round } = data
+  const { apr, round, programEnded, roundCount } = data
 
   const reward = Number(apr.estimatedMonthlyRewardEns ?? '0')
   const delegateEns = apr.delegatedToEnsName ?? null
@@ -510,10 +523,10 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
       (delegateAddr ? truncateAddress(delegateAddr) : 'an active voter')
     : null
 
-  const payoutRows = distributions.data?.rounds
-    ? buildPayoutRows(distributions.data.rounds as AddressDistributionRound[])
-    : []
+  const addressRounds = (distributions.data?.rounds ?? []) as AddressDistributionRound[]
+  const payoutRows = buildPayoutRows(addressRounds, programEnded ? Infinity : 3)
   const hasPayouts = payoutRows.length > 0
+  const totalEarned = sumPaidRewards(addressRounds)
 
   const tweetText = isDelegated
     ? `I'm delegating my ENS to ${delegateLabel} to help keep ENS governance active, and earning rewards from the DAO. Payouts are automatic, gas is sponsored for wallets with ${gasMinEns}+ ENS - see the program 👇`
@@ -525,19 +538,32 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
       {/* Hero card */}
       <HeroCard>
         <HeroText>
-          <RewardsStack>
-            <RewardsLabel>
-              {isDelegated ? 'Your rewards this round' : 'You’re not earning yet'}
-            </RewardsLabel>
-            <RewardsNumber $delegated={isDelegated}>
-              {isDelegated ? formatEnsReward(reward) : '0.00000'}
-            </RewardsNumber>
-            {!isDelegated && (
+          {programEnded ? (
+            <RewardsStack>
+              <RewardsLabel>Total earned in the pilot</RewardsLabel>
+              <RewardsNumber $delegated={totalEarned > 0}>
+                {formatEnsReward(totalEarned, { signed: totalEarned > 0 })}
+              </RewardsNumber>
               <AprLineMuted>
-                Pick an active voter to start earning rewards.
+                The program has ended. Delegating to an active voter still
+                keeps ENS governance strong.
               </AprLineMuted>
-            )}
-          </RewardsStack>
+            </RewardsStack>
+          ) : (
+            <RewardsStack>
+              <RewardsLabel>
+                {isDelegated ? 'Your rewards this round' : 'You’re not earning yet'}
+              </RewardsLabel>
+              <RewardsNumber $delegated={isDelegated}>
+                {isDelegated ? formatEnsReward(reward) : '0.00000'}
+              </RewardsNumber>
+              {!isDelegated && (
+                <AprLineMuted>
+                  Pick an active voter to start earning rewards.
+                </AprLineMuted>
+              )}
+            </RewardsStack>
+          )}
 
           <ChipsRow>
             <InfoChip>
@@ -552,21 +578,34 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
               </ChipIcon>
               Holding {formatBalance(balanceEns)} ENS
             </InfoChip>
-            <InfoChip>
-              <ChipIcon>
-                <FontAwesomeIcon icon={faCalendarDay} />
-              </ChipIcon>
-              Round {round.roundNumber}
-            </InfoChip>
-            <InfoChip>
-              <ChipIcon>
-                <FontAwesomeIcon icon={faClock} />
-              </ChipIcon>
-              {formatDaysLeft(round.daysRemaining)}
-            </InfoChip>
+            {programEnded ? (
+              <InfoChip>
+                <ChipIcon>
+                  <FontAwesomeIcon icon={faCalendarDay} />
+                </ChipIcon>
+                {roundCount > 0
+                  ? `Program ended after ${roundCount} ${roundCount === 1 ? 'round' : 'rounds'}`
+                  : 'Program ended'}
+              </InfoChip>
+            ) : (
+              <>
+                <InfoChip>
+                  <ChipIcon>
+                    <FontAwesomeIcon icon={faCalendarDay} />
+                  </ChipIcon>
+                  Round {round.roundNumber}
+                </InfoChip>
+                <InfoChip>
+                  <ChipIcon>
+                    <FontAwesomeIcon icon={faClock} />
+                  </ChipIcon>
+                  {formatDaysLeft(round.daysRemaining)}
+                </InfoChip>
+              </>
+            )}
           </ChipsRow>
 
-          {isDelegated ? (
+          {isDelegated && programEnded ? null : isDelegated ? (
             <HeroCtaWrap>
               <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                 <Button
@@ -612,7 +651,7 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
       {/* Recent payouts */}
       <PayoutsCard>
         <PayoutsHeader>
-          <PayoutsTitle>Recent Payouts</PayoutsTitle>
+          <PayoutsTitle>{programEnded ? 'Payouts by round' : 'Recent Payouts'}</PayoutsTitle>
           <PayoutsLink type="button" onClick={() => navigate(`/rounds?address=${address}`)}>
             View all rounds <FontAwesomeIcon icon={faArrowRight} />
           </PayoutsLink>
@@ -621,7 +660,9 @@ function DashboardContent({ address, isDelegated }: DashboardContentProps) {
 
         {!hasPayouts ? (
           <PayoutsEmpty>
-            No payouts yet. Your first round closes when the current one ends - check back in {formatDaysLeft(round.daysRemaining).replace(' left', '')}.
+            {programEnded
+              ? 'No payouts for this wallet during the pilot.'
+              : `No payouts yet. Your first round closes when the current one ends - check back in ${formatDaysLeft(round.daysRemaining).replace(' left', '')}.`}
           </PayoutsEmpty>
         ) : (
           <PayoutsRow>

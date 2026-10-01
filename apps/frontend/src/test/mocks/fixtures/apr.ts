@@ -15,4 +15,5 @@ export const aprFixture: AprEstimateResponse = {
   totalShareWei: '208700000000000000000000',
   currentBalanceEns: '1523.41',
   qualifiesForLottery: false,
+  programEnded: false,
 }

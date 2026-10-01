@@ -7,9 +7,9 @@ test.describe('Voters Page', () => {
 
   test('renders page heading', async ({ page }) => {
     // The redesigned voters page heading reads
-    // "Pick an active voter. Earn ENS automatically." (h1).
+    // "Pick an active voter. Strengthen ENS governance." (h1).
     await expect(
-      page.getByRole('heading', { level: 1, name: /Pick an active voter\. Earn ENS automatically\./i }),
+      page.getByRole('heading', { level: 1, name: /Pick an active voter\. Strengthen ENS governance\./i }),
     ).toBeVisible()
   })
 
@@ -26,7 +26,7 @@ test.describe('Voters Page', () => {
 
   test('renders stats bar', async ({ page }) => {
     await expect(page.getByText('active voters', { exact: true })).toBeVisible()
-    await expect(page.getByText('wallets earning', { exact: true })).toBeVisible()
+    await expect(page.getByText('wallets participating', { exact: true })).toBeVisible()
   })
 })
 

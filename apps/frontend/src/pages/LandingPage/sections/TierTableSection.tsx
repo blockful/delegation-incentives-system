@@ -6,9 +6,16 @@ import type { TierEntry } from '@/api/types'
 import { tokens } from '@/styles/tokens'
 import { fadeInUp } from '@/styles/primitives'
 import { formatPool } from '@/utils/dashboard'
+import type { PilotSummary } from '@/features/rounds/programStatus'
 
 interface TierTableSectionProps {
   tiers: TierEntry[]
+  /**
+   * Settled pilot summary once the program has ended. The ladder then becomes
+   * a static explanation: no live current/locked state, and the last round's
+   * settled tier is labelled "Final round".
+   */
+  pilot?: PilotSummary | null
 }
 
 /** Whole-number percent from a decimal string ('15.00' → '15'), or null. */
@@ -460,7 +467,8 @@ function RevealRow({ children }: { children: ReactNode }) {
   )
 }
 
-export function TierTableSection({ tiers }: TierTableSectionProps) {
+export function TierTableSection({ tiers, pilot }: TierTableSectionProps) {
+  const programEnded = !!pilot
   return (
     <Section>
       <ParticlesLayer aria-hidden>
@@ -481,31 +489,56 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
         <Header>
           <TitleBlock>
             <Eyebrow>Network effect</Eyebrow>
-            <Heading>
-              More delegation, <br />
-              bigger reward pool for everyone
-            </Heading>
-            <Description>
-              Rewards come from a shared pool funded by the ENS DAO. <br />
-              The more ENS delegated to active voters, the larger that pool
-              grows for everyone.
-            </Description>
+            {programEnded ? (
+              <>
+                <Heading>
+                  More delegation <br />
+                  meant a bigger pool
+                </Heading>
+                <Description>
+                  During the pilot, rewards came from a shared pool funded by
+                  the ENS DAO. <br />
+                  The more ENS delegated to active voters, the larger that pool
+                  grew.
+                </Description>
+              </>
+            ) : (
+              <>
+                <Heading>
+                  More delegation, <br />
+                  bigger reward pool for everyone
+                </Heading>
+                <Description>
+                  Rewards come from a shared pool funded by the ENS DAO. <br />
+                  The more ENS delegated to active voters, the larger that pool
+                  grows for everyone.
+                </Description>
+              </>
+            )}
           </TitleBlock>
         </Header>
 
         <List data-testid="tier-table">
           {tiers.map((tier) => {
-            const isCurrent = !!tier.isCurrent
-            const isLocked = !tier.isUnlocked && !isCurrent
+            // Ended: the live flags describe a projection for a month that
+            // isn't a round, so ignore them and only mark the final round.
+            const isCurrent = programEnded
+              ? pilot.finalTierIndex === tier.index
+              : !!tier.isCurrent
+            const isLocked = programEnded ? false : !tier.isUnlocked && !isCurrent
             const poolLabel = tier.poolSizeEns
               ? `${formatPool(tier.poolSizeEns)} ENS`
               : '—'
             const milestoneLabel = formatMilestone(tier, isLocked)
-            const statusLabel = isCurrent
-              ? 'Current tier'
-              : tier.isUnlocked
-                ? 'Unlocked'
-                : 'Locked'
+            const statusLabel = programEnded
+              ? isCurrent
+                ? 'Final round'
+                : null
+              : isCurrent
+                ? 'Current tier'
+                : tier.isUnlocked
+                  ? 'Unlocked'
+                  : 'Locked'
             return (
               <RevealRow key={tier.index}>
                 <Row $isCurrent={isCurrent} $isLocked={isLocked}>
@@ -513,12 +546,14 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
                     <TierLabel $isCurrent={isCurrent}>
                       Tier #{tier.index + 1}
                     </TierLabel>
-                    <TierStatus $isCurrent={isCurrent} $isLocked={isLocked}>
-                      {statusLabel}
-                    </TierStatus>
+                    {statusLabel && (
+                      <TierStatus $isCurrent={isCurrent} $isLocked={isLocked}>
+                        {statusLabel}
+                      </TierStatus>
+                    )}
                   </RowLeft>
                   <RowRight>
-                    <PoolValue $isUnlocked={tier.isUnlocked}>
+                    <PoolValue $isUnlocked={programEnded || tier.isUnlocked}>
                       {poolLabel}
                     </PoolValue>
                     {milestoneLabel && (
@@ -531,6 +566,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
           })}
         </List>
 
+        {!programEnded && (
         <CtaWrap>
           <ShareButton
             href={buildTwitterShareUrl()}
@@ -541,6 +577,7 @@ export function TierTableSection({ tiers }: TierTableSectionProps) {
             Share &amp; grow the pool
           </ShareButton>
         </CtaWrap>
+        )}
       </Inner>
     </Section>
   )

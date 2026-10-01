@@ -399,7 +399,7 @@ export function VotersPage() {
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '#'
     const text = encodeURIComponent(
-      "Delegate your ENS to an active voter to help keep governance active. It's free and gasless, and you earn rewards from the ENS DAO. The more people delegate, the bigger the reward pool for everyone.",
+      "Delegate your ENS to an active voter to help keep governance active. It's free and gasless, and your tokens never leave your wallet. The more people delegate, the stronger ENS governance gets.",
     )
     const url = encodeURIComponent(window.location.origin)
     return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
@@ -463,11 +463,11 @@ export function VotersPage() {
     <Page>
         <TopSection>
           <HeaderBlock>
-            <EyebrowPill>Delegate &amp; earn</EyebrowPill>
-            <PageTitle>Pick an active voter. Earn ENS automatically.</PageTitle>
+            <EyebrowPill>Active voters</EyebrowPill>
+            <PageTitle>Pick an active voter. Strengthen ENS governance.</PageTitle>
             <Description>
               Active voters cast on at least 7 of the last 10 proposals.<br />
-              Delegate to one to start earning ENS rewards.
+              Delegate your ENS to one of them in under a minute.
             </Description>
           </HeaderBlock>
 
@@ -485,7 +485,7 @@ export function VotersPage() {
 
           <ShareStrip>
             <ShareStripCopy>
-              <ShareStripCopyStrong>More delegators, bigger reward pool for everyone.</ShareStripCopyStrong>
+              <ShareStripCopyStrong>More delegators, stronger ENS governance.</ShareStripCopyStrong>
               {' '}Share the program to help it grow.
             </ShareStripCopy>
             <ShareStripLink

@@ -30,12 +30,12 @@ test.describe('All pages render on mobile', () => {
 
   test('voters page renders header and cards', async ({ page }) => {
     await page.goto('/voters')
-    await expect(page.getByText('Delegate & earn')).toBeVisible()
+    await expect(page.getByText('Active voters', { exact: true })).toBeVisible()
     await expect(
-      page.getByRole('heading', { name: /Pick an active voter\. Earn ENS automatically\./i }),
+      page.getByRole('heading', { name: /Pick an active voter\. Strengthen ENS governance\./i }),
     ).toBeVisible()
     await expect(page.getByText('active voters', { exact: true })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('wallets earning', { exact: true })).toBeVisible()
+    await expect(page.getByText('wallets participating', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /Random/i })).toBeVisible()
   })
 

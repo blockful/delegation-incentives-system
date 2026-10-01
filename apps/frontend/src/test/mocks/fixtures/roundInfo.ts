@@ -9,4 +9,6 @@ export const roundInfoFixture: RoundInfoResponse = {
   poolSizeEns: '5000.000000000000000000',
   tierIndex: 0,
   vpGrowthPct: '0.00',
+  status: 'live',
+  programEnded: false,
 }

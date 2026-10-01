@@ -15,3 +15,13 @@ export {
   roundDetailFixture,
   roundListFixture,
 } from './roundRewards'
+export {
+  endedAddressDistributionFixture,
+  endedAprFixture,
+  endedRoundInfoFixture,
+  endedRoundListFixture,
+  endedTierProgressionFixture,
+  legacyEndedAprFixture,
+  legacyEndedRoundInfoFixture,
+  legacyEndedTierProgressionFixture,
+} from './programEnded'
