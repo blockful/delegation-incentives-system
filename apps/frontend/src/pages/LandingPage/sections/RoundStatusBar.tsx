@@ -1,8 +1,10 @@
 import styled from 'styled-components'
+import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 import { tokens } from '@/styles/tokens'
-import { formatTimeLeft } from '@/utils/format'
+import { formatEnsAmount, formatTimeLeft } from '@/utils/format'
+import type { PilotSummary } from '@/features/rounds/programStatus'
 import { formatPool } from '@/utils/dashboard'
 import { LiveDot } from '@/components/shared/LiveDot'
 import { LabelWithTooltip } from '@/components/shared/LabelWithTooltip'
@@ -17,13 +19,16 @@ const GAS_SPONSORED_TOOLTIP =
   'We cover the network fee when you delegate through this site, for up to 3 delegations a month. If sponsorship is ever paused, you will see a normal gas prompt first.'
 
 interface RoundStatusBarProps {
-  currentGrowthPct: string
-  currentTierIndex: number
-  poolSizeEns: string
+  /** Null when the round has neither a live projection nor settled data. */
+  currentGrowthPct: string | null
+  currentTierIndex: number | null
+  poolSizeEns: string | null
   roundNumber: number
   roundEndDate: string
   /** True while the backend is still resolving the month-start baseline. */
   degraded?: boolean
+  /** Settled pilot totals once the program has ended; replaces the live row. */
+  pilot?: PilotSummary | null
 }
 
 /**
@@ -100,6 +105,40 @@ const DataRow = styled.div`
   padding: 12px 16px;
 `
 
+/* Same footprint as DataRow; the whole row links to the round history. */
+const SummaryLink = styled(Link)`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${tokens.spacing.md};
+  padding: 12px 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: background ${tokens.transition.fast};
+
+  &:hover {
+    background: ${tokens.color.surfaceAlt};
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${tokens.color.blue};
+    outline-offset: -2px;
+  }
+`
+
+const SummaryArrow = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: ${tokens.font.size.base};
+  font-weight: ${tokens.font.weight.bold};
+  color: ${tokens.color.blue};
+  white-space: nowrap;
+`
+
 const Col = styled.div<{ $align?: 'left' | 'center' | 'right' }>`
   display: flex;
   flex-direction: column;
@@ -152,15 +191,20 @@ export function RoundStatusBar({
   roundNumber,
   roundEndDate,
   degraded,
+  pilot,
 }: RoundStatusBarProps) {
-  const growthNum = parseFloat(currentGrowthPct)
+  const growthNum = currentGrowthPct != null ? parseFloat(currentGrowthPct) : NaN
   // Object.is catches "-0.00", which parses to -0 and fails `< 0`.
   const isNegative = growthNum < 0 || Object.is(growthNum, -0)
   const growthPrefix = isNegative ? '-' : '+'
-  const displayGrowth = isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct
+  const displayGrowth =
+    currentGrowthPct == null
+      ? '—'
+      : `${growthPrefix}${isNegative ? currentGrowthPct.replace('-', '') : currentGrowthPct}%`
   const displayRound = roundNumber
   const displayTimeLeft = formatTimeLeft(roundEndDate)
-  const displayPoolSizeEns = formatPool(poolSizeEns).toLowerCase()
+  const displayPoolSizeEns = poolSizeEns != null ? formatPool(poolSizeEns).toLowerCase() : '—'
+  const displayTier = currentTierIndex != null ? `Tier ${currentTierIndex + 1}` : 'Tier —'
 
   return (
     <Outer>
@@ -180,12 +224,28 @@ export function RoundStatusBar({
               Gas sponsored
             </LabelWithTooltip>
           </TrustItem>
-          <TrustItem>
-            <FontAwesomeIcon icon={faCircleCheck} />
-            Rewards auto-sent
-          </TrustItem>
+          {!pilot && (
+            <TrustItem>
+              <FontAwesomeIcon icon={faCircleCheck} />
+              Rewards auto-sent
+            </TrustItem>
+          )}
         </TrustRow>
         <Separator />
+        {pilot ? (
+          <SummaryLink to="/rounds">
+            <Col $align="left">
+              <ColLabel>Pilot complete</ColLabel>
+              <ColSub>
+                {formatEnsAmount(pilot.totalDistributedEns, { maximumFractionDigits: 0 })} ENS
+                distributed over {pilot.roundCount} {pilot.roundCount === 1 ? 'round' : 'rounds'}
+              </ColSub>
+            </Col>
+            <SummaryArrow>
+              View rounds <FontAwesomeIcon icon={faArrowRight} />
+            </SummaryArrow>
+          </SummaryLink>
+        ) : (
         <DataRow>
           <Col $align="left">
             <ColLabel>
@@ -202,18 +262,17 @@ export function RoundStatusBar({
               </>
             ) : (
               <>
-                <GrowthLabel $negative={isNegative}>
-                  {growthPrefix}{displayGrowth}%
-                </GrowthLabel>
+                <GrowthLabel $negative={isNegative}>{displayGrowth}</GrowthLabel>
                 <ColSub>active VP growth</ColSub>
               </>
             )}
           </Col>
           <Col $align="right">
-            <ColLabel>Tier {currentTierIndex + 1}</ColLabel>
+            <ColLabel>{displayTier}</ColLabel>
             <ColSub>{displayPoolSizeEns} ENS pool</ColSub>
           </Col>
         </DataRow>
+        )}
         </Card>
       </Wrapper>
     </Outer>

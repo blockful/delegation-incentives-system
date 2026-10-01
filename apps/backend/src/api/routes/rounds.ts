@@ -28,6 +28,7 @@ import {
   getRoundNumber,
   getRoundTiming,
   getUtcMonth,
+  isProgramEnded,
   parseRoundMonths,
 } from "../round-config.js";
 
@@ -40,9 +41,18 @@ const CurrentRoundResponse = z.object({
   endDate: z.string().openapi({ description: "ISO 8601 UTC end of the round", example: "2026-05-31T23:59:59.999Z" }),
   percentComplete: z.number().openapi({ description: "Percentage of round elapsed (0-100)", example: 10 }),
   daysRemaining: z.number().openapi({ example: 28 }),
-  poolSizeEns: z.string().openapi({ description: "Current round tier pool size in ENS", example: "5000.000000000000000000" }),
-  tierIndex: z.number().openapi({ example: 0 }),
-  vpGrowthPct: z.string().openapi({ description: "Current month active VP growth percentage", example: "0.00" }),
+  poolSizeEns: z.string().nullable().openapi({
+    description:
+      "Round tier pool size in ENS: the live projection while the round is live, the settled value once it has distribution data, null when neither exists (upcoming, or ended without data).",
+    example: "5000.000000000000000000",
+  }),
+  tierIndex: z.number().nullable().openapi({ description: "Tier index, same live/settled/null rules as poolSizeEns", example: 0 }),
+  vpGrowthPct: z.string().nullable().openapi({ description: "Active VP growth percentage, same live/settled/null rules as poolSizeEns", example: "0.00" }),
+  status: RoundStatusSchema.openapi({ description: "Round status, same vocabulary as /rounds", example: "live" }),
+  programEnded: z.boolean().openapi({
+    description: "True once the last configured round has ended; the returned round is then that last round, with its settled values.",
+    example: false,
+  }),
 });
 
 const RoundSummarySchema = z.object({
@@ -395,7 +405,7 @@ const currentRoute = createRoute({
   tags: ["Rounds"],
   summary: "Current incentive round",
   description:
-    "Returns current round dates, progress, pool size, and active tier index. Dates are UTC.",
+    "Returns current round dates, progress, pool size, and active tier index. Dates are UTC. Before the program starts this is the first upcoming round; after it ends, the last round with its settled values (programEnded: true).",
   responses: {
     200: {
       description: "Current round info",
@@ -506,20 +516,34 @@ export function createRoundsApp(deps: RoundsRouteDeps = {}) {
         roundMonths[roundMonths.length - 1] ??
         nowMonth;
       const roundNumber = getRoundNumber(month, roundMonths) ?? 1;
-      const range = getRoundDateRange(month);
-      const timing = getRoundTiming(month, now, false);
-      const tier = await getTierSnapshot();
+      // Current-month growth only projects the round being measured right now.
+      // Outside a live round (before the start, or after the program ends) it
+      // would describe a month no round covers, so it is never fetched.
+      const isLive = getRoundTiming(month, now, false).isCurrent;
+      const [rows, tier] = await Promise.all([
+        getRows(),
+        isLive ? getTierSnapshot() : Promise.resolve(null),
+      ]);
+      const summary = buildRoundSummary({
+        roundNumber,
+        month,
+        parsed: parseDistributionRows(rows).get(month) ?? null,
+        now,
+        currentTierSnapshot: tier,
+      });
 
       return c.json(
         {
           roundNumber,
-          startDate: range.startDate,
-          endDate: range.endDate,
-          percentComplete: timing.percentComplete ?? 0,
-          daysRemaining: timing.daysRemaining ?? 0,
-          poolSizeEns: tier.poolSizeEns,
-          tierIndex: tier.tierIndex,
-          vpGrowthPct: tier.vpGrowthPct,
+          startDate: summary.startDate,
+          endDate: summary.endDate,
+          percentComplete: summary.percentComplete ?? 0,
+          daysRemaining: summary.daysRemaining ?? 0,
+          poolSizeEns: summary.poolSizeEns,
+          tierIndex: summary.tierIndex,
+          vpGrowthPct: summary.vpGrowthPct,
+          status: summary.status,
+          programEnded: isProgramEnded(now, roundMonths),
         },
         200,
       );
@@ -693,21 +717,15 @@ function buildRoundSummary({
   month: string;
   parsed: ParsedDistribution | null;
   now: Date;
-  currentTierSnapshot: RoundTierSnapshot;
+  currentTierSnapshot: RoundTierSnapshot | null;
 }) {
   const range = getRoundDateRange(month);
   const timing = getRoundTiming(month, now, parsed != null);
   const snapshot = parsed ? getDistributionSnapshot(parsed) : null;
-  const isCurrentWithoutDistribution = timing.isCurrent && !snapshot;
-  const tierIndex = snapshot?.tierIndex ?? (
-    isCurrentWithoutDistribution ? currentTierSnapshot.tierIndex : null
-  );
-  const poolSizeEns = snapshot?.poolSizeEns ?? (
-    isCurrentWithoutDistribution ? currentTierSnapshot.poolSizeEns : null
-  );
-  const vpGrowthPct = snapshot?.vpGrowthPct ?? (
-    isCurrentWithoutDistribution ? currentTierSnapshot.vpGrowthPct : null
-  );
+  const liveSnapshot = timing.isCurrent && !snapshot ? currentTierSnapshot : null;
+  const tierIndex = snapshot?.tierIndex ?? liveSnapshot?.tierIndex ?? null;
+  const poolSizeEns = snapshot?.poolSizeEns ?? liveSnapshot?.poolSizeEns ?? null;
+  const vpGrowthPct = snapshot?.vpGrowthPct ?? liveSnapshot?.vpGrowthPct ?? null;
   const tierConfig = tierIndex == null ? null : POOL_TIERS[tierIndex];
 
   return {
@@ -724,7 +742,7 @@ function buildRoundSummary({
     tierLabel: tierIndex == null ? null : `Tier #${tierIndex + 1}`,
     vpGrowthPct,
     poolSize: snapshot?.poolSize ?? (
-      isCurrentWithoutDistribution && tierConfig
+      liveSnapshot && tierConfig
         ? (tierConfig.poolSize as bigint).toString()
         : null
     ),

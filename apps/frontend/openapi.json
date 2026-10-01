@@ -541,25 +541,48 @@
                       ]
                     },
                     "poolSizeEns": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "estimatedMonthlyRewardEns": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "estimatedAprPct": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "userShareWei": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "totalShareWei": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "currentBalanceEns": {
                       "type": "string"
                     },
                     "qualifiesForLottery": {
-                      "type": "boolean"
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "programEnded": {
+                      "type": "boolean",
+                      "description": "True once the last configured round has ended; estimate fields are then null.",
+                      "example": false
                     }
                   },
                   "required": [
@@ -576,7 +599,8 @@
                     "userShareWei",
                     "totalShareWei",
                     "currentBalanceEns",
-                    "qualifiesForLottery"
+                    "qualifiesForLottery",
+                    "programEnded"
                   ]
                 }
               }
@@ -627,7 +651,7 @@
           "Rounds"
         ],
         "summary": "Current incentive round",
-        "description": "Returns current round dates, progress, pool size, and active tier index. Dates are UTC.",
+        "description": "Returns current round dates, progress, pool size, and active tier index. Dates are UTC. Before the program starts this is the first upcoming round; after it ends, the last round with its settled values (programEnded: true).",
         "responses": {
           "200": {
             "description": "Current round info",
@@ -661,18 +685,44 @@
                       "example": 28
                     },
                     "poolSizeEns": {
-                      "type": "string",
-                      "description": "Current round tier pool size in ENS",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Round tier pool size in ENS: the live projection while the round is live, the settled value once it has distribution data, null when neither exists (upcoming, or ended without data).",
                       "example": "5000.000000000000000000"
                     },
                     "tierIndex": {
-                      "type": "number",
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Tier index, same live/settled/null rules as poolSizeEns",
                       "example": 0
                     },
                     "vpGrowthPct": {
-                      "type": "string",
-                      "description": "Current month active VP growth percentage",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Active VP growth percentage, same live/settled/null rules as poolSizeEns",
                       "example": "0.00"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "ended",
+                        "upcoming",
+                        "paid"
+                      ],
+                      "description": "Round status, same vocabulary as /rounds",
+                      "example": "live"
+                    },
+                    "programEnded": {
+                      "type": "boolean",
+                      "description": "True once the last configured round has ended; the returned round is then that last round, with its settled values.",
+                      "example": false
                     }
                   },
                   "required": [
@@ -683,7 +733,9 @@
                     "daysRemaining",
                     "poolSizeEns",
                     "tierIndex",
-                    "vpGrowthPct"
+                    "vpGrowthPct",
+                    "status",
+                    "programEnded"
                   ]
                 }
               }
@@ -2701,39 +2753,66 @@
                   "type": "object",
                   "properties": {
                     "currentTotalVP": {
-                      "type": "string",
-                      "description": "Current total VP held by active voters (wei)",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Current total VP held by active voters (wei). Null once the program has ended.",
                       "example": "107230000000000000000000"
                     },
                     "previousTotalVP": {
-                      "type": "string",
-                      "description": "Total VP of the month-start active-voter set at month start (wei)",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Total VP of the month-start active-voter set at month start (wei). Null once the program has ended.",
                       "example": "100000000000000000000000"
                     },
                     "currentGrowthBps": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
                       "example": "723"
                     },
                     "currentGrowthPct": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
                       "example": "7.23"
                     },
                     "currentTierIndex": {
-                      "type": "number",
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Null once the program has ended",
                       "example": 0
                     },
                     "activeVoterCount": {
-                      "type": "number",
+                      "type": [
+                        "number",
+                        "null"
+                      ],
                       "example": 25
                     },
                     "maxTokenHolderAprPct": {
-                      "type": "string",
-                      "description": "Highest estimated token-holder APR across all tiers",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Highest estimated token-holder APR across all tiers. Null once the program has ended.",
                       "example": "54.00"
                     },
                     "degraded": {
                       "type": "boolean",
                       "description": "True while the month-start boundary block is not finalized yet (shortly after month rollover) and growth temporarily uses the current voter set on both boundaries."
+                    },
+                    "programEnded": {
+                      "type": "boolean",
+                      "description": "True once the last configured round has ended",
+                      "example": false
                     },
                     "tiers": {
                       "type": "array",
@@ -2765,24 +2844,35 @@
                             "example": "250.000000000000000000"
                           },
                           "isCurrent": {
-                            "type": "boolean"
+                            "type": "boolean",
+                            "description": "False for every tier once the program has ended"
                           },
                           "isUnlocked": {
-                            "type": "boolean"
+                            "type": "boolean",
+                            "description": "False for every tier once the program has ended"
                           },
                           "additionalVPNeeded": {
-                            "type": "string",
-                            "description": "Wei needed above current VP to reach this tier",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Wei needed above current VP to reach this tier. Null once the program has ended.",
                             "example": "0"
                           },
                           "requiredTotalVP": {
-                            "type": "string",
-                            "description": "VP threshold to enter this tier (wei)",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "VP threshold to enter this tier (wei). Null once the program has ended.",
                             "example": "110000000000000000000000"
                           },
                           "estimatedAprPct": {
-                            "type": "string",
-                            "description": "Estimated token-holder APR at this tier (calibrated against round-start VP)",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Estimated token-holder APR at this tier (calibrated against round-start VP). Null once the program has ended.",
                             "example": "12.50"
                           }
                         },
@@ -2811,6 +2901,7 @@
                     "activeVoterCount",
                     "maxTokenHolderAprPct",
                     "degraded",
+                    "programEnded",
                     "tiers"
                   ]
                 }

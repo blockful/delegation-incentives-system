@@ -17,6 +17,7 @@ import { api, ApiClientError } from '@/api'
 import type { AddressDistributionRound, RoundStatus, RoundSummary } from '@/api/types'
 import { useAsync } from '@/hooks/useAsync'
 import { useRounds } from '@/features/rounds/useRounds'
+import { resolveProgramEnded } from '@/features/rounds/programStatus'
 import { useWalletState } from '@/features/wallet/useWalletState'
 import { tokens, ErrorMessage } from '@/styles'
 import { SkeletonBlock } from '@/components/shared/Skeleton'
@@ -1169,6 +1170,11 @@ export function RoundsPage() {
     )
   }
 
+  // Once no round is live, the tier card's "currently on" and next-tier copy
+  // would describe a projection for a month that isn't a round, so hide it.
+  const programEnded = resolveProgramEnded(tierData.programEnded, roundList.data)
+  const roundCount = roundList.data.rounds.length
+
   const progressPct = progressPercent(currentRound.startDate, currentRound.endDate)
   const daysLeftLabel = formatDaysRemaining(currentRound.daysRemaining, currentRound.status)
 
@@ -1223,7 +1229,9 @@ export function RoundsPage() {
           <LiveDot $status={currentRound.status} aria-hidden />
         </TitleRow>
         <Description>
-          Each round pays out from a shared pool to active voters and the wallets that delegate to them. Track the current round below, and look up any address to see what it earned across history.
+          {programEnded
+            ? `The pilot ran for ${roundCount} ${roundCount === 1 ? 'round' : 'rounds'}, each paying out from a shared pool to active voters and the wallets that delegated to them. Look up any address to see what it earned across history.`
+            : 'Each round pays out from a shared pool to active voters and the wallets that delegate to them. Track the current round below, and look up any address to see what it earned across history.'}
         </Description>
       </HeaderBlock>
 
@@ -1243,6 +1251,7 @@ export function RoundsPage() {
         </ProgressBlock>
       </SummaryBlock>
 
+      {!programEnded && (
       <TierCard>
         <TierCardHeader>
           <TierCardLabel>
@@ -1270,8 +1279,8 @@ export function RoundsPage() {
               const prev = idx > 0 ? tierLadder[idx - 1] : null
               return computeVpProgress(
                 prev?.requiredTotalVP ?? '0',
-                tier.requiredTotalVP,
-                tier.additionalVPNeeded,
+                tier.requiredTotalVP ?? undefined,
+                tier.additionalVPNeeded ?? undefined,
               )
             })()
 
@@ -1318,6 +1327,7 @@ export function RoundsPage() {
           </TierShareLink>
         </TierShareRow>
       </TierCard>
+      )}
 
       <InspectCard>
         <InspectHeader>

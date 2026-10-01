@@ -3,6 +3,7 @@ import { api } from '@/api'
 import { LandingPageSkeleton } from '@/components/shared/PageSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useWalletState } from '@/features/wallet/useWalletState'
+import { resolveProgramEnded, summarizePilot, useRoundList } from '@/features/rounds/programStatus'
 import { ErrorMessage } from '@/styles'
 import { DisconnectedLanding } from './states/DisconnectedLanding'
 import { ConnectedLanding } from './states/ConnectedLanding'
@@ -13,9 +14,10 @@ export function LandingPage() {
   const fetchRound = useCallback(() => api.currentRound(), [])
   const tiers = useAsync(fetchTiers)
   const round = useAsync(fetchRound)
+  const roundList = useRoundList()
   const walletState = useWalletState()
 
-  if (tiers.loading || round.loading) {
+  if (tiers.loading || round.loading || roundList.loading) {
     return <LandingPageSkeleton />
   }
 
@@ -27,12 +29,21 @@ export function LandingPage() {
     return <ErrorMessage>Failed to load current round data: {round.error}</ErrorMessage>
   }
 
+  const programEnded = resolveProgramEnded(
+    round.data.programEnded ?? tiers.data.programEnded,
+    roundList.data,
+  )
+  // Null while the program is live; the hero and tier ladder switch to the
+  // settled pilot summary once it has ended.
+  const pilot = programEnded ? summarizePilot(roundList.data?.rounds ?? []) : null
+  const props = { tierData: tiers.data, roundData: round.data, pilot }
+
   switch (walletState.status) {
     case 'connected':
-      return <ConnectedLanding tierData={tiers.data} roundData={round.data} />
+      return <ConnectedLanding {...props} />
     case 'delegated':
-      return <DelegatedLanding tierData={tiers.data} roundData={round.data} />
+      return <DelegatedLanding {...props} />
     default:
-      return <DisconnectedLanding tierData={tiers.data} roundData={round.data} />
+      return <DisconnectedLanding {...props} />
   }
 }

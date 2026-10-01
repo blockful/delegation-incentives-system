@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDistributionsApp } from "../../../src/api/routes/distributions.js";
-import { createRoundsApp, parseRoundMonths } from "../../../src/api/routes/rounds.js";
+import {
+  createRoundsApp,
+  parseRoundMonths,
+  type RoundTierSnapshot,
+} from "../../../src/api/routes/rounds.js";
 import type { DistributionStorageRow } from "../../../src/api/distribution-utils.js";
 
 const ENS = 10n ** 18n;
@@ -167,16 +171,17 @@ function makeRoundsApp(
       addresses: readonly string[],
       asOfTimestamp: bigint,
     ) => Promise<Map<string, string>>;
+    getTierSnapshot?: () => Promise<RoundTierSnapshot>;
     now?: () => Date;
   } = {},
 ) {
   return createRoundsApp({
     getRows: async () => rows,
-    getTierSnapshot: async () => ({
+    getTierSnapshot: options.getTierSnapshot ?? (async () => ({
       tierIndex: 0,
       poolSizeEns: "5000.000000000000000000",
       vpGrowthPct: "0.00",
-    }),
+    })),
     getVotingPowers: options.getVotingPowers ?? (async () => new Map()),
     now: options.now ?? (() => new Date("2026-05-03T12:00:00.000Z")),
   });
@@ -225,6 +230,9 @@ describe("round month configuration", () => {
     expect(body.endDate).toBe("2026-05-31T23:59:59.999Z");
     expect(body.poolSizeEns).toBe("5000.000000000000000000");
     expect(body.tierIndex).toBe(0);
+    expect(body.vpGrowthPct).toBe("0.00");
+    expect(body.status).toBe("live");
+    expect(body.programEnded).toBe(false);
   });
 
   it("resolves to the next upcoming round when no round is active yet", async () => {
@@ -244,6 +252,29 @@ describe("round month configuration", () => {
     expect(body.endDate).toBe("2026-03-31T23:59:59.999Z");
   });
 
+  it("does not attach a live projection to an upcoming round", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+    const getTierSnapshot = vi.fn(async () => ({
+      tierIndex: 2,
+      poolSizeEns: "12000.000000000000000000",
+      vpGrowthPct: "25.00",
+    }));
+
+    const res = await makeRoundsApp([], {
+      getTierSnapshot,
+      now: () => new Date("2026-02-15T12:00:00.000Z"),
+    }).request("/rounds/current");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.status).toBe("upcoming");
+    expect(body.programEnded).toBe(false);
+    expect(body.poolSizeEns).toBeNull();
+    expect(body.tierIndex).toBeNull();
+    expect(body.vpGrowthPct).toBeNull();
+    expect(getTierSnapshot).not.toHaveBeenCalled();
+  });
+
   it("resolves to the last round when the program is over", async () => {
     process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
 
@@ -258,6 +289,67 @@ describe("round month configuration", () => {
     expect(body.roundNumber).toBe(3);
     expect(body.startDate).toBe("2026-05-01T00:00:00.000Z");
     expect(body.endDate).toBe("2026-05-31T23:59:59.999Z");
+  });
+
+  it("returns the last round's settled values once the program is over", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+    // A current-month projection that differs from the settled round: it
+    // must never leak into the ended program's last round.
+    const getTierSnapshot = vi.fn(async () => ({
+      tierIndex: 0,
+      poolSizeEns: "5000.000000000000000000",
+      vpGrowthPct: "-0.03",
+    }));
+
+    const res = await makeRoundsApp([makeDistributionRow("2026-05")], {
+      getTierSnapshot,
+      now: () => new Date("2026-08-15T12:00:00.000Z"),
+    }).request("/rounds/current");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      roundNumber: 3,
+      status: "paid",
+      programEnded: true,
+      percentComplete: 100,
+      daysRemaining: 0,
+      poolSizeEns: "8000.000000000000000000",
+      tierIndex: 1,
+      vpGrowthPct: "20.00",
+    });
+    expect(getTierSnapshot).not.toHaveBeenCalled();
+
+    // Same values /rounds reports for that round.
+    const list = await makeRoundsApp([makeDistributionRow("2026-05")], {
+      now: () => new Date("2026-08-15T12:00:00.000Z"),
+    }).request("/rounds");
+    const lastRound = (await list.json()).rounds.find((r: any) => r.roundNumber === 3);
+    expect(lastRound).toMatchObject({
+      status: body.status,
+      poolSizeEns: body.poolSizeEns,
+      tierIndex: body.tierIndex,
+      vpGrowthPct: body.vpGrowthPct,
+    });
+  });
+
+  it("returns null settled values when the ended last round has no distribution", async () => {
+    process.env.ROUND_MONTHS = "2026-03,2026-04,2026-05";
+
+    const res = await makeRoundsApp([], {
+      now: () => new Date("2026-06-02T12:00:00.000Z"),
+    }).request("/rounds/current");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      roundNumber: 3,
+      status: "ended",
+      programEnded: true,
+      poolSizeEns: null,
+      tierIndex: null,
+      vpGrowthPct: null,
+    });
   });
 });
 

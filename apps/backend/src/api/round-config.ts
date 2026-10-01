@@ -56,6 +56,20 @@ export function getRoundMonth(roundNumber: number, roundMonths: readonly string[
   return roundMonths[roundNumber - 1] ?? null;
 }
 
+/**
+ * True once the last configured round's month is over. Rounds are calendar
+ * months, so nothing after that end date belongs to any round: current-month
+ * growth stops being a projection of anything payable.
+ */
+export function isProgramEnded(
+  now: Date,
+  roundMonths: readonly string[] = getConfiguredRoundMonths(),
+): boolean {
+  const lastMonth = roundMonths[roundMonths.length - 1];
+  if (!lastMonth) return false;
+  return now.getTime() > Date.parse(getRoundDateRange(lastMonth).endDate);
+}
+
 export function getRoundDateRange(month: string): RoundDateRange {
   const match = month.match(/^(\d{4})-(\d{2})$/);
   if (!match) {

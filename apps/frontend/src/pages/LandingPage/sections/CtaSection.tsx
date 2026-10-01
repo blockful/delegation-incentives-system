@@ -257,9 +257,12 @@ const PillName = styled.span`
 const SHARE_TWEET_TEXT =
   'Delegate your ENS to an active voter and earn rewards from the ENS DAO. The more people who join, the bigger the pool for everyone.'
 
-function buildTwitterShareUrl(): string {
+const ENDED_SHARE_TWEET_TEXT =
+  'Delegate your ENS to an active voter and help keep ENS governance active. It takes under a minute and your tokens never leave your wallet.'
+
+function buildTwitterShareUrl(programEnded: boolean): string {
   if (typeof window === 'undefined') return '#'
-  const text = encodeURIComponent(SHARE_TWEET_TEXT)
+  const text = encodeURIComponent(programEnded ? ENDED_SHARE_TWEET_TEXT : SHARE_TWEET_TEXT)
   const url = encodeURIComponent(window.location.origin)
   return `https://twitter.com/intent/tweet?text=${text}&url=${url}`
 }
@@ -335,7 +338,11 @@ function PillRow({ voters, direction, duration }: PillRowProps) {
   )
 }
 
-export function CtaSection() {
+interface CtaSectionProps {
+  programEnded?: boolean
+}
+
+export function CtaSection({ programEnded = false }: CtaSectionProps) {
   const fetchVoters = useCallback(() => api.activeVoters(), [])
   const { data } = useAsync(fetchVoters)
 
@@ -358,26 +365,41 @@ export function CtaSection() {
     <Section data-testid="cta-section">
       <Card>
         <Inner>
-          <Heading>
-            Earn ENS rewards.<br />
-            Strengthen governance.
-          </Heading>
-          <Subtitle>
-            Delegate in under a minute. The more people who join, the bigger
-            the pool for&nbsp;everyone.
-          </Subtitle>
+          {programEnded ? (
+            <>
+              <Heading>
+                Delegate your ENS.<br />
+                Strengthen governance.
+              </Heading>
+              <Subtitle>
+                Delegate in under a minute. The more people who join, the
+                stronger ENS governance&nbsp;gets.
+              </Subtitle>
+            </>
+          ) : (
+            <>
+              <Heading>
+                Earn ENS rewards.<br />
+                Strengthen governance.
+              </Heading>
+              <Subtitle>
+                Delegate in under a minute. The more people who join, the bigger
+                the pool for&nbsp;everyone.
+              </Subtitle>
+            </>
+          )}
           <Actions>
             <PrimaryCta to="/voters">
               Delegate to an active voter
               <FontAwesomeIcon icon={faArrowRight} />
             </PrimaryCta>
             <SecondaryCta
-              href={buildTwitterShareUrl()}
+              href={buildTwitterShareUrl(programEnded)}
               target="_blank"
               rel="noopener noreferrer"
             >
               <FontAwesomeIcon icon={faShareNodes} />
-              Share the program
+              {programEnded ? 'Share' : 'Share the program'}
             </SecondaryCta>
           </Actions>
         </Inner>

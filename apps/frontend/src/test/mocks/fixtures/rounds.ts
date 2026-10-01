@@ -9,6 +9,7 @@ export const roundsFixture: TierProgressionResponse = {
   activeVoterCount: 47,
   maxTokenHolderAprPct: '5400.00',
   degraded: false,
+  programEnded: false,
   tiers: [
     {
       index: 0,
